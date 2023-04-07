@@ -10,7 +10,6 @@ from matplotlib.axes import Axes
 
 from trainer.analysis.plot import Plot
 from trainer.config.run import Optim
-import plotly.graph_objects as go
 import seaborn as sns
 import typing as ty
 from matplotlib.figure import Figure

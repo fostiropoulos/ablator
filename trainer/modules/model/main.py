@@ -218,7 +218,7 @@ class ModelBase(ABC):
         self.optimizer = optimizer
         self.scheduler = scheduler
 
-    def load_model(self, save_dict, device=None, use_amp=None, ignore_diffs=False):
+    def load_model(self, save_dict, device=None, use_amp=None):
 
         if not hasattr(self, "run_config") or self.run_config is None:
             raise NotImplementedError(
@@ -226,11 +226,8 @@ class ModelBase(ABC):
             )
 
         run_config = type(self.run_config)(**save_dict["run_config"])
-        if not ignore_diffs:
-            run_config.assert_state(self.run_config)
-            self.run_config.assert_state(run_config)
 
-        self.run_config = run_config.merge(self.run_config, force=ignore_diffs)
+        self.run_config = run_config.assign_stateless(self.run_config)
 
         self.metrics.update(save_dict["metrics"])
 

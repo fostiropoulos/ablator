@@ -4,15 +4,30 @@ import typing as ty
 from enum import Enum as _Enum
 
 T = ty.TypeVar("T")
-List = ty.List
-Tuple = ty.Tuple
-Type = ty.Type
-Literal = ty.Literal
-Optional = ty.Optional
-
+# List = ty.List
 
 class Dict(ty.Dict[str, T]):
     pass
+
+class List(ty.List[T]):
+    pass
+
+class Tuple(ty.Tuple[T]):
+    pass
+
+# class Type(ty.Type):
+#     pass
+
+# class Literal(ty.Literal):
+#     pass
+
+class Optional(ty.Generic[T]):
+    pass
+
+# Tuple = ty.Tuple
+Type = ty.Type
+Literal = ty.Literal
+# Optional = ty.Optional
 
 
 class Enum(_Enum):
@@ -38,7 +53,6 @@ ALLOWED_TYPES = (int, float, str, None)
 ALLOWED_COLLECTIONS = (
     None,
     List,
-    list,
     Dict,
     Tuple,
     Type,
@@ -50,70 +64,84 @@ Annotation = namedtuple(
 )
 
 
-def get_value_type(annotation):
-    origin = ty.get_origin(annotation)
-    assert origin is None
-    # primitive type
-    assert annotation in ALLOWED_TYPES
-    return {"type": annotation}
+doc_type_hint_structure = f"""
+[Derived,Stateless, None][Optional,None][{ALLOWED_COLLECTIONS}][{ALLOWED_TYPES}*]
+
+Only Tuple allows non-homogenous types (must be of fixed length)
+For more flexibility you can define another "Type" which is a class
+and supply a dictionary in the yaml file, i.e.
+
+class MyClass:
+    def __init__(self, arg1:int, arg2:str):
+        pass
+
+TODO
+Parsing the dictionary however can be error prone if you have complex arguments
+and is not advised.
+"""
 
 
-def strip_hint_state(type_hint):
+def _strip_hint_state(type_hint):
     origin = ty.get_origin(type_hint)
     if origin is None:
         return Stateful, type_hint
     if origin in [Derived, Stateless]:
         assert len(type_hint.__args__) == 1
-        return type_hint, type_hint.__args__[0]
+        return origin, type_hint.__args__[0]
 
     else:
         return Stateful, type_hint
 
 
-def strip_hint_optional(type_hint):
+def _strip_hint_optional(type_hint):
 
     origin = ty.get_origin(type_hint)
-    if origin == ty.Union and type_hint._name == "Optional":
+    if origin == Optional: #ty.Union and type_hint._name == "Optional":
         args = ty.get_args(type_hint)
-        assert len(args) == 2
+        assert len(args) == 1
         return True, args[0]
     return False, type_hint
 
 
-def strip_hint_collection(type_hint):
+def _strip_hint_collection(type_hint):
     origin = ty.get_origin(type_hint)
-    assert origin in ALLOWED_COLLECTIONS, f"Invalid collection {origin}"
-    if origin is None:
-        return type_hint
-    elif origin in [Dict, list]:
+    assert (
+        origin in ALLOWED_COLLECTIONS
+    ), f"Invalid collection {origin}. type_hints must be structured as:"
+    if origin is None and type_hint in ALLOWED_TYPES:
+        return None, type_hint
+    elif origin in [Dict, List]:
         args = ty.get_args(type_hint)
         assert len(args) == 1
         # Dict and list annotations only support a single type
         assert args[0] in ALLOWED_TYPES, f"Invalid type_hint: {type_hint}."
         collection = Dict if origin == Dict else List
         return collection, args[0]
-    elif isinstance(origin, Tuple):
+    elif origin == Tuple:
         args = ty.get_args(type_hint)
         # if the user requires support for multiple types they should use tuple
         return Tuple, args
-    elif issubclass(origin, Type):
-        return Type, None
+
     elif origin == Literal:
         return Literal, type_hint.__args__
-    elif issubclass(origin, Enum):
-        valid_values = [_v.value for _v in list(origin)]
-        return origin, valid_values
+    elif issubclass(type_hint, Enum):
+        valid_values = [_v.value for _v in list(type_hint)]
+        return type_hint, valid_values
+    elif isinstance(type(type_hint), Type):
+        assert origin is None
+        return Type, type_hint
+
     else:
         raise NotImplementedError
 
 
 def parse_type_hint(type_hint):
 
-    state, type_hint = strip_hint_state(type_hint)
+    state, _type_hint = _strip_hint_state(type_hint)
 
-    optional, type_hint = strip_hint_optional(type_hint)
+    optional, _type_hint = _strip_hint_optional(_type_hint)
 
-    collection, variable_type = strip_hint_collection(type_hint)
+    collection, variable_type = _strip_hint_collection(_type_hint)
 
     return Annotation(
         state=state,
@@ -122,16 +150,56 @@ def parse_type_hint(type_hint):
         variable_type=variable_type,
     )
 
-def parse_value(val, type_hint):
-    stripped_type_hint = parse_type_hint(type_hint)
+
+def _parse_class(cls, kwargs):
+
+    if isinstance(kwargs, cls):
+        # This is when initializing directly from config
+        pass
+    elif isinstance(kwargs, dict):
+        # This is when initializing from a dictionary
+        # TODO or not, is to assert that kwargs is composed of primitives?
+        kwargs = cls(**kwargs)
+    else:
+        # not sure what to do.....
+        raise RuntimeError(f"Incompatible kwargs {type(kwargs)}: {kwargs}\nand {cls}.")
+    return kwargs
+
+
+def parse_value(val, annot: Annotation, name=None):
+    # annot = parse_type_hint(type_hint)
+    if val is None:
+        if not (annot.state in [Derived, Stateless] or annot.optional):
+            raise RuntimeError(f"Missing required value for {name}.")
+        return None
+    if annot.collection == Literal:
+        assert val in annot.variable_type, f"{val} is not a valid Literal {annot.variable_type}"
+        return val
+    elif annot.collection == Dict:
+        return {str(_k): annot.variable_type(_v) for _k, _v in val.items()}
+    elif annot.collection == List:
+        return [annot.variable_type(_v) for _v in val]
+    elif annot.collection == Tuple:
+        assert len(val) == len(
+            annot.variable_type
+        ), f"Incompatible lengths for {name} between {val} and type_hint: {annot.variable_type}"
+        return [tp(_v) for tp, _v in zip(annot.variable_type, val)]
+    elif annot.collection == Type:
+        return _parse_class(annot.variable_type, val)
+    elif annot.collection is None:
+        return annot.variable_type(val)
+    elif issubclass(annot.collection, Enum):
+        assert (
+            val in annot.variable_type
+        ), f"{val} is not supported by {annot.collection}"
+        return annot.collection(val)
+    else:
+        raise NotImplementedError
 
 
 def get_annotation_state(annotation):
     origin = ty.get_origin(annotation)
     if origin is None:
-        # assert (
-        #     annotation in ALLOWED_TYPE_ARGS
-        # ), f"{annotation} is not in the allowed types."
         return Stateful
     if origin in [Derived, Stateless]:
         return annotation
@@ -139,66 +207,11 @@ def get_annotation_state(annotation):
     else:
         return Stateful
 
-    # args = ty.get_args(annotation)
-    # assert len(args) == 2
-    # val = cls._parse_value_types(args[0])
-    # val.required = False
-    # return val
 
-
-# class _Annotation(ty._GenericAlias):
-#     """Runtime representation of an annotated type.
-
-#     The class is derived from `ty._AnnotatedAlias` (python 3.10), with some differences.
-
-#     _Annotation is an alias for the type 't'. The alias behaves like a normal typing alias,
-#     instantiating is the same as instantiating the underlying type, binding
-#     it to types is also the same.
-#     """
-
-#     def __init__(self, origin, metadata):
-#         super().__init__(origin)
-#         self.__metadata__ = metadata
-
-#     def copy_with(self, params):
-#         assert len(params) == 1
-#         new_type = params[0]
-#         return _Annotation(new_type, self.__metadata__)
-
-#     def __repr__(self):
-#         return "{}[{}]".format(self.__metadata__, ty._type_repr(self.__origin__))
-
-#     def __reduce__(self):
-#         return operator.getitem, (_Annotation, (self.__origin__,) + self.__metadata__)
-
-#     def __eq__(self, other):
-#         if not isinstance(other, type(self)):
-#             return NotImplemented
-#         return (
-#             self.__origin__ == other.__origin__
-#             and self.__metadata__ == other.__metadata__
-#         )
-
-#     def __hash__(self):
-#         return hash((self.__origin__, self.__metadata__))
-
-#     def __getattr__(self, attr):
-#         if attr in {"__name__", "__qualname__"}:
-#             return type(self).__name__
-#         return super().__getattr__(attr)
-
-
-class Missing:
+class Stateful(ty.Generic[T]):
     """
-    This type is for computing the diff ONLY for attributes that are missing
-    """
-
-    pass
-
-
-class Stateful:
-    """
-    TODO is not derived
+    This is for attributes that are fixed between experiments. By default
+    all type_hints are stateful. Do not need to use.
     """
 
     pass
@@ -209,40 +222,11 @@ class Derived(ty.Generic[T]):
     This type is for attributes are derived during the experiment.
     """
 
-    # __slots__ = ()
 
-    # def __new__(cls, *args, **kwargs):
-    #     raise TypeError("Type Derived cannot be instantiated.")
-
-    # @ty._tp_cache
-    # def __class_getitem__(cls, params):
-    #     msg = "Derived[t]: t must be a type."
-    #     origin = ty._type_check(params, msg, allow_special_forms=True)
-    #     return _Annotation(origin, cls)
-
-    # def __init_subclass__(cls, *args, **kwargs):
-    #     raise TypeError(
-    #         "Cannot subclass {}.Derived".format(cls.__module__)
-    #     )
-
-
-class Stateless:
+class Stateless(ty.Generic[T]):
     """
-    This type is for attributes that can change between different runs of the same experiment.
-    For example changing verbosity.
+    This type is for attributes that can take different value assignments
+    between experiments
     """
 
-    __slots__ = ()
-
-    def __new__(cls, *args, **kwargs):
-        raise TypeError("Type Stateless cannot be instantiated.")
-
-    @ty._tp_cache
-    def __class_getitem__(cls, params):
-        msg = "Stateless[t]: t must be a type."
-        origin = ty._type_check(params, msg, allow_special_forms=True)
-
-        return _Annotation(origin, cls)
-
-    def __init_subclass__(cls, *args, **kwargs):
-        raise TypeError("Cannot subclass {}.Stateless".format(cls.__module__))
+    pass

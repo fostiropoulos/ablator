@@ -10,7 +10,6 @@ import scipy
 import torch
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from plotly.graph_objects import Figure
 
 from trainer.config.run import Optim
 
