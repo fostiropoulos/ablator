@@ -1,0 +1,26 @@
+experiment_dir: "/tmp/dir"
+train_config:
+  dataset: cifar10
+  eval_epoch: 0.1
+  eval_subsample: 0.1
+  batch_size: 128
+  epochs: 1
+  log_epoch: 0.1
+  device: cuda
+  amp: true
+  debug: false
+  resume: false
+  init_chkpt: null
+  early_stopping_iter: 4000
+  verbose: true
+  stop_div_factor: 10
+  stop_div_step_frac: 0.3
+  keep_n_checkpoints: 10
+  optimizer_config:
+    name: adam
+    arguments:
+      lr: 1.0e-4
+      weight_decay: 0.0
+      betas: [0.5, 0.9]
+model_config:
+  name: resnet18
