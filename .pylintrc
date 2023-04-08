@@ -96,18 +96,13 @@ enable=
 # --disable=W"
 
 disable=
-    attribute-defined-outside-init,
     invalid-name,
     missing-docstring,
-    protected-access,
     too-few-public-methods,
-    # handled by black
-    format,
     # We anticipate #3512 where it will become optional
     fixme,
-    cyclic-import,
-    import-error,
-    R6002
+    ; R6002,
+    R6003
 
 
 [REPORTS]
@@ -161,10 +156,10 @@ notes=FIXME,XXX,TODO
 min-similarity-lines=6
 
 # Ignore comments when computing similarities.
-ignore-comments=yes
+ignore-comments=no
 
 # Ignore docstrings when computing similarities.
-ignore-docstrings=yes
+ignore-docstrings=no
 
 # Ignore imports when computing similarities.
 ignore-imports=yes

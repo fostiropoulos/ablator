@@ -1,14 +1,15 @@
+from collections import abc
 import copy
 import hashlib
 import json
 from functools import reduce
-from typing import Any, Dict, List
+import typing as ty
 
 
-def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> Dict[str, Any]:
+def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.Any]:
     flatten_dict = copy.deepcopy(_dict)
     for k, v in _dict.items():
-        _gen = None
+        _gen: ty.Optional[abc.Iterable] = None
         if isinstance(v, dict):
             _gen = v.items()
 
@@ -25,7 +26,7 @@ def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> Dict[str, Any
     return flatten_dict
 
 
-def dict_hash(*dictionaries: List[Dict[str, Any]], hash_len=4):
+def dict_hash(*dictionaries: list[dict[str, ty.Any]], hash_len=4):
     """MD5 hash of a dictionary."""
     concat_dictionaries = [
         copy.deepcopy(_) if isinstance(_, dict) else copy.deepcopy(_).__dict__

@@ -21,7 +21,7 @@ class Optional(ty.Generic[T]):
     pass
 
 
-Type = ty.Type
+Type = type
 Literal = ty.Literal
 
 
@@ -161,7 +161,7 @@ def parse_value(val, annot: Annotation, name=None):
         if not (annot.state in [Derived, Stateless] or annot.optional):
             raise RuntimeError(f"Missing required value for {name}.")
         return None
-    if annot.collection == Literal:
+    if annot.collection is Literal:
         assert (
             val in annot.variable_type
         ), f"{val} is not a valid Literal {annot.variable_type}"
@@ -215,4 +215,3 @@ class Stateless(ty.Generic[T]):
     This type is for attributes that can take different value assignments
     between experiments
     """
-

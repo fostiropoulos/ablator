@@ -82,7 +82,11 @@ def test_attrs(tmp_path: Path):
     e.annotations
     assert len(e.annotations) == 0
     p = ParentTestConfig()
-    # print({k:f"Annotation(state={v.state.__name__}, optional={v.optional}, collection={v.collection}, variable_type={v.variable_type.__name__})" for k,v in p.annotations.items()})
+    # NOTE: to make new test cases:
+    # print({k:f"Annotation(state={v.state.__name__},
+    # optional={v.optional}, collection={v.collection},
+    # variable_type={v.variable_type.__name__})"
+    # for k,v in p.annotations.items()})
     for k, v in p.annotations.items():
         assert annotations[k] == v
     assert list(p.keys()) == list(p.annotations.keys())
@@ -121,6 +125,7 @@ def test_attrs(tmp_path: Path):
     # TODO do we want them immutable?
     assert loaded_p.get_val_with_dot_path("c2.a1") == "a"
     assert loaded_p.get_type_with_dot_path("c2.a1") == str
+    assert loaded_p.get_annot_type_with_dot_path("c2.a1") == int
     assert p.get_val_with_dot_path("c2.a1") == 10
     assert p.get_type_with_dot_path("c2.a1") == int
 

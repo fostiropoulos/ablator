@@ -29,17 +29,14 @@ def configclass(cls):
 
 class Missing:
     """
-    This type is raising an error
+    This type is defined only for raising an error
     """
-
-    pass
 
 
 @dataclass(repr=False)
 class ConfigBase:
-    # TODO: investigate https://github.com/crdoconnor/strictyaml as an alternative
     # NOTE: this allows for non-defined arguments to be created. It is very bug-prone and will be disabled.
-    config_class = False
+    config_class = type(None)
 
     def __init__(self, *args, add_attributes=False, **kwargs):
         class_name = type(self).__name__
@@ -62,7 +59,7 @@ class ConfigBase:
         ), f"All variables must be annotated. {non_annotated_variables}"
         if len(args) > 0:
             raise ValueError(f"{class_name} does not support positional arguments.")
-        if not (type(self) == self.config_class):
+        if not isinstance(self, self.config_class):
             raise RuntimeError(
                 f"You must decorate your Config class '{class_name}' with trainer.configclass."
             )
@@ -102,15 +99,15 @@ class ConfigBase:
 
     @classmethod
     def load(cls, path: ty.Union[Path, str]):
-        kwargs: ty.Dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text()))  # type: ignore
+        kwargs: dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text(encoding="utf-8")))  # type: ignore
         return cls(**kwargs)
 
     @property
-    def annotations(self) -> ty.Dict[str, Annotation]:
+    def annotations(self) -> dict[str, Annotation]:
         annotations = {}
         if hasattr(self, "__annotations__"):
             annotation_types = dict(self.__annotations__)
-
+            # pylint: disable=no-member
             dataclass_types = {k: v.type for k, v in self.__dataclass_fields__.items()}
             annotation_types.update(dataclass_types)
 
@@ -120,17 +117,22 @@ class ConfigBase:
             }
         return annotations
 
-    def get_val_with_dot_path(self, dot_path):
+    def get_val_with_dot_path(self, dot_path: str):
         return operator.attrgetter(dot_path)(self)
 
-    def get_type_with_dot_path(self, dot_path):
+    def get_type_with_dot_path(self, dot_path: str):
         val = self.get_val_with_dot_path(dot_path)
-        # TODO Fixme. This will break because infering type for optional values will be troublesome. returns None.
         return type(val)
+
+    def get_annot_type_with_dot_path(self, dot_path: str):
+        *base_path, element = dot_path.split(".")
+        annot_dot_path = ".".join(base_path + ["annotations"])
+        annot: dict[str, Annotation] = self.get_val_with_dot_path(annot_dot_path)
+        return annot[element].variable_type
 
     def make_dict(
         self,
-        annotations: ty.Dict[str, Annotation],
+        annotations: dict[str, Annotation],
         ignore_stateless=False,
         flatten=False,
     ):
@@ -144,13 +146,12 @@ class ConfigBase:
                 val = _val
             elif annot.collection == Type:
                 val = _val.__dict__
-            elif issubclass(annot.collection, ConfigBase):
-                _val: ConfigBase
+            elif issubclass(type(_val), ConfigBase):
                 val = _val.make_dict(
                     _val.annotations, ignore_stateless=ignore_stateless, flatten=flatten
                 )
-            elif issubclass(annot.collection, Enum):
-                _val: Enum
+            elif issubclass(type(_val), Enum):
+                # _val: Enum
                 val = _val.value
 
             else:
@@ -160,11 +161,11 @@ class ConfigBase:
             return_dict = flatten_nested_dict(return_dict)
         return return_dict
 
-    def write(self, path: ty.Union[Path , str]):
-
+    def write(self, path: ty.Union[Path, str]):
         Path(path).write_text(str(self), encoding="utf-8")
 
     def to_str(self):
+        # TODO: investigate https://github.com/crdoconnor/strictyaml as an alternative to OmegaConf
         conf = OmegaConf.create(self.to_dict())
         return OmegaConf.to_yaml(conf)
 
@@ -172,10 +173,10 @@ class ConfigBase:
         diffs = sorted(self.diff_str(config, ignore_stateless=True))
         diff = "\n\t".join(diffs)
         assert len(diffs) == 0, f"Differences between configurations:\n\t{diff}"
-
         return True
 
-    def merge(self, config: "ConfigBase") -> "ty.Self":
+    def merge(self, config: "ConfigBase") -> "ty.Self":  # type: ignore
+        # TODO ty.Self is currently supported by mypy? fixme above
         # replaces stateless and derived properties
         self_config = copy.deepcopy(self)
 
@@ -205,7 +206,7 @@ class ConfigBase:
 
     def diff(
         self, config: "ConfigBase", ignore_stateless=False
-    ) -> ty.List[ty.Tuple[str, ty.Tuple[ty.Type, ty.Any], ty.Tuple[ty.Type, ty.Any]]]:
+    ) -> list[tuple[str, tuple[type, ty.Any], tuple[type, ty.Any]]]:
         left_config = copy.deepcopy(self)
         right_config = copy.deepcopy(config)
         left_dict = left_config.make_dict(
@@ -217,9 +218,7 @@ class ConfigBase:
         )
         left_keys = set(left_dict.keys())
         right_keys = set(right_dict.keys())
-        diffs: ty.List[
-            ty.Tuple[str, ty.Tuple[ty.Type, ty.Any], ty.Tuple[ty.Type, ty.Any]]
-        ] = []
+        diffs: list[tuple[str, tuple[type, ty.Any], tuple[type, ty.Any]]] = []
         for k in left_keys.union(right_keys):
             if k not in left_dict:
                 right_v = right_dict[k]
