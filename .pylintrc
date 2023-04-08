@@ -107,6 +107,7 @@ disable=
     fixme,
     cyclic-import,
     import-error,
+    R6002
 
 
 [REPORTS]
