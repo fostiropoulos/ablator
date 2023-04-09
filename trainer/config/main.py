@@ -15,6 +15,7 @@ from trainer.config.types import (
     Stateless,
     Tuple,
     Type,
+    Literal,
     parse_type_hint,
     parse_value,
 )
@@ -142,7 +143,7 @@ class ConfigBase:
                 continue
 
             _val = getattr(self, field_name)
-            if annot.collection is None or annot.collection in [Dict, List, Tuple]:
+            if annot.collection is None or annot.collection in [Dict, List, Tuple, Literal]:
                 val = _val
             elif annot.collection == Type:
                 val = _val.__dict__
