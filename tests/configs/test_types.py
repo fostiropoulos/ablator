@@ -113,7 +113,7 @@ class ErrorConfigList(ConfigBase):
     a4: List[str] = "a"
 
 
-def test_types():
+def test_types(assert_error_msg):
     e = MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2"})
     assert e.a5.a == 1
     assert e.p1.a == 10
@@ -124,19 +124,16 @@ def test_types():
     assert e.c4.a1 == 2
     assert e.a8 == "10"
     assert e.a9 is None
-    try:
-        e = MultiTypeConfig()
-        assert False
-    except Exception as excp:
-        assert str(excp) == "Missing required value ['a5', 'c3', 'c4']"
-    try:
-        e = MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2.2"})
-        assert False
-    except Exception as excp:
-        assert str(excp) == "invalid literal for int() with base 10: '2.2'"
+    assert_error_msg(
+        lambda: MultiTypeConfig(), "Missing required value ['a5', 'c3', 'c4']"
+    )
+    assert_error_msg(
+        lambda: MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2.2"}),
+        "invalid literal for int() with base 10: '2.2'",
+    )
 
 
-def test_error_configs():
+def test_error_configs(assert_error_msg):
     ERROR_CONFIGS = [
         (MultiTypeConfig, "Missing required value ['a5', 'c3', 'c4']"),
         (
@@ -171,14 +168,8 @@ def test_error_configs():
         (ErrorConfigType, "invalid literal for int() with base 10: '2.2'"),
     ]
     for error_config, error_msg in ERROR_CONFIGS:
-        try:
-            error_config()
-            assert False
-        except Exception as excp:
-            if not error_msg == str(excp):
-                raise excp
+        assert_error_msg(error_config, error_msg)
     assert True
-    pass
 
 
 def test_hierarchical():
@@ -200,6 +191,7 @@ def test_hierarchical():
 
 
 if __name__ == "__main__":
-    test_types()
+    from ..conftest import assert_error_msg
+    test_types(assert_error_msg)
     test_hierarchical()
-    test_error_configs()
+    test_error_configs(assert_error_msg)
