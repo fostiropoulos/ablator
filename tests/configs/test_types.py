@@ -59,6 +59,7 @@ class MultiTypeConfig(ConfigBase):
     c3: SimpleConfig
     c4: SimpleConfig
     a6: myEnum = "a"
+    a7: bool = True
 
 
 @configclass
@@ -115,6 +116,7 @@ class ErrorConfigList(ConfigBase):
 
 def test_types(assert_error_msg):
     e = MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2"})
+    assert e.uid
     assert e.a5.a == 1
     assert e.p1.a == 10
     assert e.p2.a == "10"
@@ -191,7 +193,15 @@ def test_hierarchical():
 
 
 if __name__ == "__main__":
-    from ..conftest import assert_error_msg
+    # from ..conftest import assert_error_msg
+    def assert_error_msg(fn, error_msg):
+        try:
+            fn()
+            assert False
+        except Exception as excp:
+            if not error_msg == str(excp):
+                raise excp
+
     test_types(assert_error_msg)
     test_hierarchical()
     test_error_configs(assert_error_msg)
