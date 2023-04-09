@@ -1,4 +1,5 @@
 from trainer.config.main import configclass, ConfigBase
+from trainer.main.configs import RunConfig, ModelConfig, TrainConfig
 from trainer.config.types import (
     Derived,
     Stateless,
