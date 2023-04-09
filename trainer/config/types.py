@@ -43,7 +43,7 @@ class Enum(_Enum):
 # Each annotation is of the format
 # "STATE", "OPTIONAL", "COLLECTION", "TYPE"
 
-ALLOWED_TYPES = (int, float, str,bool, None)
+ALLOWED_TYPES = (int, float, str, bool, None)
 
 ALLOWED_COLLECTIONS = (
     None,
@@ -123,7 +123,9 @@ def _strip_hint_collection(type_hint):
     if isinstance(type(type_hint), Type) and hasattr(type_hint, "__dict__"):
         assert origin is None
         return Type, type_hint
-    raise NotImplementedError(f"{type_hint} is not a valid hint. Custom classes must implement __dict__.")
+    raise NotImplementedError(
+        f"{type_hint} is not a valid hint. Custom classes must implement __dict__."
+    )
 
 
 def parse_type_hint(type_hint):
