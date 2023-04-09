@@ -22,6 +22,7 @@ class RunConfig(ConfigBase):
     train_config: TrainConfig
     model_config: ModelConfig
     keep_n_checkpoints: Stateless[int] = 3
+    tensorboard: bool = True
 
     @property
     def uid(self) -> str:
