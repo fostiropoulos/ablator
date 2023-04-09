@@ -185,8 +185,6 @@ def test_summary_logger(tmp_path: Path):
         event_acc.Images("img")[0].encoded_image_string
         == img_byte_arr
     )
-    breakpoint()
-    return
 
 
 if __name__ == "__main__":

@@ -17,7 +17,6 @@ def assert_console_output(fn,assert_fn):
 
 def test_file_logger(tmp_path: Path):
     logpath = tmp_path.joinpath("test.log")
-    logpath.unlink()
     l = FileLogger(logpath, verbose=True, prefix="1")
     assert_console_output(lambda: l.info("hello"), lambda s: s.endswith("1 - hello\n"))
     lines = logpath.read_text().split("\n")
@@ -32,8 +31,6 @@ def test_file_logger(tmp_path: Path):
     assert_console_output(lambda: l.warn("hello", verbose=False), lambda s: len(s)==0)
     assert_console_output(lambda: l.error("hello"), lambda s: s.endswith("\x1b[91mhello\x1b[0m\n"))
 
-    breakpoint()
-    return
 
 
 if __name__ == "__main__":
