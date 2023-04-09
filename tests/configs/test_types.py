@@ -44,7 +44,7 @@ class Pass:
 
 @configclass
 class MultiTypeConfig(ConfigBase):
-    # a0: Derived[Literal["a", "b", "2"]] = "a"
+    a0: Derived[Literal["a", "b", "2"]] = "a"
     # a1: int = 10
     # a2: int = 10
     a5: Pass
@@ -116,6 +116,7 @@ class ErrorConfigList(ConfigBase):
 
 def test_types(assert_error_msg):
     e = MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2"})
+    assert e.to_dict()
     assert e.uid
     assert e.a5.a == 1
     assert e.p1.a == 10
