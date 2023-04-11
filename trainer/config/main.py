@@ -95,9 +95,6 @@ class ConfigBase:
     def keys(self):
         return self.to_dict().keys()
 
-    # def __getitem__(self, item):
-    #     return self.to_dict()[item]
-
     @classmethod
     def load(cls, path: ty.Union[Path, str]):
         kwargs: dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text(encoding="utf-8")))  # type: ignore
@@ -139,18 +136,27 @@ class ConfigBase:
     ):
         return_dict = {}
         for field_name, annot in annotations.items():
-            if ignore_stateless and annot.state == Stateless:
+            if ignore_stateless and (annot.state in {Stateless, Derived}):
                 continue
 
             _val = getattr(self, field_name)
-            if annot.collection is None or annot.collection in [Dict, List, Tuple, Literal]:
+            if annot.collection is None or annot.collection in [
+                Dict,
+                List,
+                Tuple,
+                Literal,
+            ]:
                 val = _val
-            elif annot.collection == Type:
-                val = _val.__dict__
             elif issubclass(type(_val), ConfigBase):
                 val = _val.make_dict(
                     _val.annotations, ignore_stateless=ignore_stateless, flatten=flatten
                 )
+
+            elif annot.collection == Type:
+                if annot.optional and _val is None:
+                    val = None
+                else:
+                    val = _val.__dict__
             elif issubclass(type(_val), Enum):
                 # _val: Enum
                 val = _val.value
@@ -174,6 +180,7 @@ class ConfigBase:
         diffs = sorted(self.diff_str(config, ignore_stateless=True))
         diff = "\n\t".join(diffs)
         assert len(diffs) == 0, f"Differences between configurations:\n\t{diff}"
+        self.assert_unambigious()
         return True
 
     def merge(self, config: "ConfigBase") -> "ty.Self":  # type: ignore
@@ -259,3 +266,16 @@ class ConfigBase:
     @property
     def uid(self):
         return dict_hash(self.make_dict(self.annotations, ignore_stateless=True))[:5]
+
+    def assert_unambigious(self):
+        for k, annot in self.annotations.items():
+            if not annot.optional:
+                assert (
+                    getattr(self, k) is not None
+                ), f"Ambigious configuration. Must provide value for {k}"
+            if (
+                isinstance(annot.variable_type, type)
+                and issubclass(annot.variable_type, ConfigBase)
+                and getattr(self, k) is not None
+            ):
+                getattr(self, k).assert_unambigious()
