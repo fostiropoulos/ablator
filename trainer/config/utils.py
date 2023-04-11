@@ -5,24 +5,30 @@ import json
 from functools import reduce
 import typing as ty
 
-"""Flatten nested dictionary,list,tuple
-
-Parameters
-----------
-_dict : Dict[str, Any]
-    dict to be flattened
-expand_list : bool, optional
-    whether to expand list or not, by default True
-seperator : str, optional
-    seperator to use for flattening, by default "."
-
-Returns
--------
-Dict[str, Any]
-    flattened dictionary
-
-"""
 def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.Any]:
+    """
+    Flattens a nested dictionary, expanding lists and tuples if specified.
+
+    Parameters
+    ----------
+    _dict : dict
+        The input dictionary to be flattened.
+    expand_list : bool, optional
+        Whether to expand lists and tuples in the dictionary, by default True.
+    seperator : str, optional
+        The separator used for joining the keys, by default ".".
+
+    Returns
+    -------
+    dict[str, ty.Any]
+        The flattened dictionary.
+
+    Example
+    -------
+    >>> nested_dict = {"a": {"b": 1, "c": {"d": 2}}, "e": [3, 4]}
+    >>> flatten_nested_dict(nested_dict)
+    {'a.b': 1, 'a.c.d': 2, 'e.0': 3, 'e.1': 4}
+    """
     flatten_dict = copy.deepcopy(_dict)
     for k, v in _dict.items():
         _gen: ty.Optional[abc.Iterable] = None
@@ -41,12 +47,31 @@ def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.
         return flatten_nested_dict(flatten_dict)
     return flatten_dict
 
-"""MD5 hash of a dictionary.
 
-"""
 
 def dict_hash(*dictionaries: list[dict[str, ty.Any]], hash_len=4):
-    """MD5 hash of a dictionary."""
+    """
+    Calculates the MD5 hash of one or more dictionaries.
+
+    Parameters
+    ----------
+    *dictionaries : list[dict[str, ty.Any]]
+        One or more dictionaries to calculate the hash for.
+    hash_len : int, optional
+        The length of the hash to return, by default 4.
+
+    Returns
+    -------
+    str
+        The MD5 hash of the dictionaries.
+
+    Example
+    -------
+    >>> dict1 = {"a": 1, "b": 2}
+    >>> dict2 = {"c": 3, "d": 4}
+    >>> dict_hash(dict1, dict2)
+    '6d75e6'
+    """
     concat_dictionaries = [
         copy.deepcopy(_) if isinstance(_, dict) else copy.deepcopy(_).__dict__
         for _ in dictionaries
