@@ -1,11 +1,8 @@
-import math
-from functools import cached_property
-from typing import Any, Callable, Dict, Optional, Set
-
-import numpy as np
+import typing as ty
+from collections.abc import Callable, Iterable
 
 import trainer.utils.base as butils
-from trainer.modules.metrics.stores import ArrayStore, MovingAverage, PredictionStore
+from trainer.modules.metrics.stores import MovingAverage, PredictionStore
 
 
 class LossDivergedError(Exception):
@@ -26,15 +23,17 @@ class TrainMetrics:
         *args,
         batch_limit=30,
         memory_limit=1e8,
-        evaluation_functions: Optional[Dict[str, Callable]] = None,
+        evaluation_functions: dict[str, Callable] | None = None,
         moving_average_limit=3000,
-        tags=["train"],
+        tags: list[str] | None = None,
         # metrics with their initial value that are updated manually, i.e. learning rate
-        static_aux_metrics: Optional[dict[str, Any]] = None,
+        static_aux_metrics: dict[str, ty.Any] | None = None,
         # metrics for which we update with their moving average, i.e. loss
-        moving_aux_metrics: Optional[set[str]] = None,
+        moving_aux_metrics: Iterable[str] | None = None,
     ):
-        assert len(args) == 0, f"Metrics takes no positional arguments."
+        if tags is None:
+            tags = ["train"]
+        assert len(args) == 0, "Metrics takes no positional arguments."
 
         _static_aux_metrics = {} if static_aux_metrics is None else static_aux_metrics
         _moving_aux_metrics = (
@@ -49,35 +48,33 @@ class TrainMetrics:
         self.__moving_average_limit__ = moving_average_limit
         self.__evaluation_functions__ = _evaluation_functions
         self.__static_aux_attributes__: list[str] = sorted(
-            list(set(_static_aux_metrics.keys()))
+            list(_static_aux_metrics.keys())
         )
+        self.__tags__: list[str] = sorted(list(tags))
         self.__moving_aux_attributes__: list[str] = sorted(
-            list(set(_moving_aux_metrics))
+            list(
+                f"{tag}_{eval_metric}"
+                for tag in self.__tags__
+                for eval_metric in list(set(_moving_aux_metrics))
+            )
         )
-        self.__tags__: list[str] = sorted(list(set(tags)))
         self.__moving_eval_attributes__: list[str] = sorted(
             list(
-                set(
-                    {
-                        f"{tag}_{eval_fn}"
-                        for tag in self.__tags__
-                        for eval_fn in self.__evaluation_functions__
-                    }
-                )
+                f"{tag}_{eval_fn}"
+                for tag in self.__tags__
+                for eval_fn in self.__evaluation_functions__
             )
         )
-        _intersection = (
-            set(self.__moving_aux_attributes__)
-            .intersection(self.__moving_eval_attributes__)
-            .union(
-                set(self.__moving_aux_attributes__).intersection(
-                    self.__static_aux_attributes__
-                )
-            )
+        _all_attr_names = (
+            self.__moving_aux_attributes__
+            + self.__moving_eval_attributes__
+            + self.__static_aux_attributes__
         )
-        assert _intersection == set(
-            {}
-        ), f"Overlapping metric names with built-ins {_intersection}"
+        duplicates = {x for x in _all_attr_names if _all_attr_names.count(x) > 1}
+
+        assert (
+            len(duplicates) == 0
+        ), f"Duplicate metric names with built-ins {duplicates}"
 
         for tag, v in _static_aux_metrics.items():
             setattr(self, tag, v)
@@ -89,34 +86,42 @@ class TrainMetrics:
         for tag in tags:
             self._init_preds(tag)
 
-    def update_static_metrics(self, metric_dict: Dict[str, Any]):
+    def update_static_metrics(self, metric_dict: dict[str, ty.Any]):
+        """
+        NOTE: Not all metric_dict items must be preset from static_aux_attributes.
+        i.e. metric_dict.items - static_aux_attributes =/= static_aux_attributes - metric_dict.items
+        """
         diff_metrics = set(metric_dict.keys()).difference(
             self.__static_aux_attributes__
         )
         metric_keys = sorted(list(metric_dict.keys()))
-        assert (
-            len(diff_metrics) == 0
-        ), f"There are difference in the class metrics: {self.__static_aux_attributes__} and updated metrics {metric_keys}"
+        assert len(diff_metrics) == 0, (
+            "There are difference in the class metrics: "
+            f"{self.__static_aux_attributes__} and updated metrics {metric_keys}"
+        )
         metric_dict = butils.iter_to_numpy(metric_dict)
         for k, v in metric_dict.items():
             setattr(self, k, v)
 
-    def update_ma_metrics(self, metric_dict: Dict[str, Any]):
-        diff_metrics = set(metric_dict.keys()).difference(
-            set(self.__moving_aux_attributes__)
+    def update_ma_metrics(self, metric_dict: dict[str, ty.Any], tag: str):
+        metric_keys = {f"{tag}_{k}" for k in metric_dict}
+        diff_metrics = metric_keys.difference(set(self.__moving_aux_attributes__))
+        assert len(diff_metrics) == 0, (
+            "There are difference in the class metrics: "
+            f"{self.__moving_aux_attributes__} and parsed metrics {sorted(list(metric_keys))}"
         )
-        metric_keys = sorted(list(metric_dict.keys()))
-        assert (
-            len(diff_metrics) == 0
-        ), f"There are difference in the class metrics: {self.__moving_aux_attributes__} and updated metrics {metric_keys}"
-        self._update_ma_metrics(metric_dict)
+        self._update_ma_metrics(metric_dict, tag)
 
-    def _update_ma_metrics(self, metric_dict: Dict[str, Any], tag=None):
+    def _update_ma_metrics(self, metric_dict: dict[str, ty.Any], tag=None):
         # metric dict should contain scalars
         metric_dict = butils.iter_to_numpy(metric_dict)
         for k, v in metric_dict.items():
             attr_name = f"{tag}_{k}" if tag is not None else k
             self._get_ma(attr_name).append(v)
+
+    def reset(self, tag: str):
+        preds = self._get_preds(tag)
+        preds.reset()
 
     def evaluate(self, tag, reset=True, update_ma=True):
         preds = self._get_preds(tag)

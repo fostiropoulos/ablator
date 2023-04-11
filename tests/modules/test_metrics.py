@@ -19,21 +19,33 @@ def test_metrics(assert_error_msg):
                 moving_average_limit=moving_average_limit,
                 tags=["my_tag"],
                 static_aux_metrics={"some": float("inf")},
-                moving_aux_metrics={"some"},
+                moving_aux_metrics={"mean"},
             ),
-            "Overlapping metric names with built-ins {'some'}",
+            "Duplicate metric names with built-ins {'my_tag_mean'}",
         ),
         (
             lambda: TrainMetrics(
                 batch_limit=30,
                 memory_limit=None,
-                evaluation_functions={"mean": lambda x: np.mean(x)},
+                evaluation_functions={"some": lambda x: np.mean(x)},
                 moving_average_limit=moving_average_limit,
                 tags=["my_tag"],
-                static_aux_metrics={"some": float("inf")},
-                moving_aux_metrics={"my_tag_mean"},
+                static_aux_metrics={"my_tag_some": float("inf")},
+                moving_aux_metrics={"mean"},
             ),
-            "Overlapping metric names with built-ins {'my_tag_mean'}",
+            "Duplicate metric names with built-ins {'my_tag_some'}",
+        ),
+        (
+            lambda: TrainMetrics(
+                batch_limit=30,
+                memory_limit=None,
+                evaluation_functions={"some": lambda x: np.mean(x)},
+                moving_average_limit=moving_average_limit,
+                tags=["my_tag"],
+                static_aux_metrics={"my_tag_mean": float("inf")},
+                moving_aux_metrics={"mean"},
+            ),
+            "Duplicate metric names with built-ins {'my_tag_mean'}",
         ),
     ]
     for error_obj, error_msg in error_init:
@@ -48,34 +60,38 @@ def test_metrics(assert_error_msg):
         static_aux_metrics={"some": float("inf")},
         moving_aux_metrics={"ma_some"},
     )
-    assert m.to_dict() == {"my_tag_mean": None, "ma_some": None, "some": float("inf")}
+    assert m.to_dict() == {
+        "my_tag_mean": np.nan,
+        "my_tag_ma_some": np.nan,
+        "some": float("inf"),
+    }
     assert_error_msg(
-        lambda: m.update_ma_metrics({"ma_some": 0.1, "ma_some_2": 2}),
-        "There are difference in the class metrics: ['ma_some'] and updated metrics ['ma_some', 'ma_some_2']",
+        lambda: m.update_ma_metrics({"ma_some": 0.1, "ma_some_2": 2}, tag="my_tag"),
+        "There are difference in the class metrics: ['my_tag_ma_some'] and parsed metrics ['my_tag_ma_some', 'my_tag_ma_some_2']",
     )
     assert_error_msg(
-        lambda: m.update_ma_metrics({"a": 0.1}),
-        "There are difference in the class metrics: ['ma_some'] and updated metrics ['a']",
+        lambda: m.update_ma_metrics({"a": 0.1}, tag="my_tag"),
+        "There are difference in the class metrics: ['my_tag_ma_some'] and parsed metrics ['my_tag_a']",
     )
     assert_error_msg(
         lambda: m.update_static_metrics({"some_2": 1}),
         "There are difference in the class metrics: ['some'] and updated metrics ['some_2']",
     )
     assert_error_msg(
-        lambda: m.update_ma_metrics({"ma_some": ""}),
+        lambda: m.update_ma_metrics({"ma_some": ""}, tag="my_tag"),
         "Invalid MovingAverage value type <class 'str'>",
     )
     m.update_static_metrics({"some": ""})
-    assert m.to_dict() == {"ma_some": None, "my_tag_mean": None, "some": ""}
+    assert m.to_dict() == {"my_tag_ma_some": np.nan, "my_tag_mean": np.nan, "some": ""}
 
-    m.update_ma_metrics({"ma_some": np.array([0])})
-    assert m.to_dict() == {"ma_some": 0.0, "my_tag_mean": None, "some": ""}
+    m.update_ma_metrics({"ma_some": np.array([0])}, tag="my_tag")
+    assert m.to_dict() == {"my_tag_ma_some": 0.0, "my_tag_mean": np.nan, "some": ""}
 
     for i in np.arange(moving_average_limit + 10):
-        m.update_ma_metrics({"ma_some": int(i)})
+        m.update_ma_metrics({"ma_some": int(i)}, tag="my_tag")
     assert m.to_dict() == {
-        "ma_some": np.mean(np.arange(10, moving_average_limit + 10)),
-        "my_tag_mean": None,
+        "my_tag_ma_some": np.mean(np.arange(10, moving_average_limit + 10)),
+        "my_tag_mean": np.nan,
         "some": "",
     }
 
@@ -89,10 +105,10 @@ def test_metrics(assert_error_msg):
         moving_aux_metrics={"ma_some"},
     )
     for i in range(1000):
-        m.update_ma_metrics({"ma_some": int(i)})
+        m.update_ma_metrics({"ma_some": int(i)}, tag="my_tag")
 
-    assert sys.getsizeof(m._get_ma("ma_some").arr) < memory_limit
-    assert m.to_dict() == {"ma_some": 997.5, "my_tag_mean": None, "some": 0}
+    assert sys.getsizeof(m._get_ma("my_tag_ma_some").arr) < memory_limit
+    assert m.to_dict() == {"my_tag_ma_some": 997.5, "my_tag_mean": np.nan, "some": 0}
 
     assert_error_msg(
         lambda: m.append_batch(1, preds="", labels=None, tag=""),
@@ -171,5 +187,13 @@ def test_metrics(assert_error_msg):
 
 
 if __name__ == "__main__":
-    from ..conftest import assert_error_msg
+
+    def assert_error_msg(fn, error_msg):
+        try:
+            fn()
+            assert False
+        except Exception as excp:
+            if not error_msg == str(excp):
+                raise excp
+
     test_metrics(assert_error_msg)
