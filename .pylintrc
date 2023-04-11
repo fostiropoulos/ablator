@@ -55,7 +55,7 @@ unsafe-load-any-extension=no
 extension-pkg-allow-list=
 
 # Minimum supported python version
-py-version = 3.7.2
+py-version = 3.10
 
 # Control the amount of potential inferred values when inferring a single
 # object. This can help the performance when dealing with large functions or
@@ -102,7 +102,8 @@ disable=
     # We anticipate #3512 where it will become optional
     fixme,
     ; R6002,
-    R6003
+    consider-alternative-union-syntax, # R6003
+    unsupported-binary-operation # E1131
 
 
 [REPORTS]
