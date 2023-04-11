@@ -1,18 +1,16 @@
+import random
+import sys
 import typing as ty
-from copy import deepcopy
-from multiprocessing import Process
+from collections.abc import Callable, Iterable, Sequence
+from pathlib import Path
 
 import numpy as np
 import torch
-from pynvml.smi import nvidia_smi
-
-from trainer.config.main import Enum
-# from trainer.main.configs import RunConfig
-import random
+from torch import nn
 
 
 class Dummy:
-    def __init__(*args, **kwargs):
+    def __init__(self, *args, **kwargs):
         pass
 
     def __call__(self, *args, **kwargs):
@@ -32,33 +30,28 @@ def iter_to_numpy(iterable):
     )
 
 
-def apply_lambda_to_iter(iterable, fn: ty.Callable):
+def iter_to_device(
+    data_dict, device
+) -> ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]:
+    return apply_lambda_to_iter(
+        data_dict, lambda v: v.to(device) if isinstance(v, torch.Tensor) else v
+    )
+
+
+def apply_lambda_to_iter(iterable, fn: Callable):
     if isinstance(iterable, dict):
         return {
-            k: apply_lambda_to_iter(v, fn) if isinstance(v, (ty.Iterable)) else fn(v)
+            k: apply_lambda_to_iter(v, fn) if isinstance(v, (Iterable)) else fn(v)
             for k, v in iterable.items()
         }
-    elif isinstance(iterable, list):
+    if isinstance(iterable, list):
         return [apply_lambda_to_iter(v, fn) for v in iterable]
-    else:
-        return fn(iterable)
+
+    return fn(iterable)
 
 
 def set_seed(seed: int):
     assert seed is not None, "Must provide a seed"
-    # if seed is None:
-    #     seed = random.getrandbits(32)
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    return seed
-
-
-def set_seed(seed: int):
-    assert seed is not None, "Must provide a seed"
-    # if seed is None:
-    #     seed = random.getrandbits(32)
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -67,7 +60,7 @@ def set_seed(seed: int):
 
 
 def get_lr(optimizer):
-    if type(optimizer) == dict:
+    if isinstance(optimizer, dict):
         param_groups = optimizer["param_groups"]
     else:
         param_groups = optimizer.param_groups
@@ -75,38 +68,40 @@ def get_lr(optimizer):
     return param_groups[0]["lr"]
 
 
-# def get_memory_use(model, config: RunConfig):
-#     """get_memory_use returns the memory of the model and also works as a smoke_test"""
-
-#     model: ModelWrapper
-#     run_config = deepcopy(config)
-
-#     run_config.train_config.verbose = False
-
-#     torch.cuda.empty_cache()
-
-#     smi = nvidia_smi.getInstance()
-
-#     p: Process = model.mock_train(run_config, block=False)
-
-#     mem_usages = []
-
-#     while p.is_alive():
-#         mem_usage = get_process_memory(run_config.uid, smi_instance=smi)
-#         mem_usages.append(mem_usage)
-#     del smi
-#     del run_config
-#     torch.cuda.empty_cache()
-#     return max(mem_usages)
+def debugger_is_active() -> bool:
+    """Return if the debugger is currently active"""
+    gettrace = getattr(sys, "gettrace", lambda: None)
+    return gettrace() is not None
 
 
-# def get_process_memory(process_name, smi_instance=None):
-#     if smi_instance is None:
-#         smi_instance = nvidia_smi.getInstance()
-#     used_memory = 0
-#     for gpu in smi_instance.DeviceQuery()["gpu"]:
-#         if "processes" in gpu and gpu["processes"] is not None:
-#             for process in gpu["processes"]:
-#                 if process["process_name"] == process_name:
-#                     used_memory += process["used_memory"]
-#     return used_memory
+def get_latest_chkpts(checkpoint_dir: Path) -> list[Path]:
+    return sorted(list(checkpoint_dir.glob("*.pt")))[::-1]
+
+
+def parse_device(device: ty.Union[str, list[str]]):
+    if isinstance(device, str):
+        if device in {"cpu", "cuda"}:
+            return device
+        if device.startswith("cuda:"):
+            return device
+        raise ValueError
+    if isinstance(device, int):
+        return device
+    if isinstance(device, Iterable):
+        return [parse_device(_device) for _device in device]
+
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def init_weights(module: nn.Module):
+    if isinstance(module, nn.Linear):
+        module.weight.data.normal_(mean=0.0, std=1.0)
+        if module.bias is not None:
+            module.bias.data.zero_()
+    elif isinstance(module, nn.Embedding):
+        module.weight.data.normal_(mean=0.0, std=1.0)
+        if module.padding_idx is not None:
+            module.weight.data[module.padding_idx].zero_()
+    elif isinstance(module, nn.LayerNorm):
+        module.bias.data.zero_()
+        module.weight.data.fill_(1.0)
