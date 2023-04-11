@@ -1,12 +1,12 @@
-from trainer.modules.optimizer import (
-    OptimizerConfig,
-    OPTIMIZER_CONFIG_MAP,
-)
-
 import torch
 from torch import nn
 
-from trainer.modules.scheduler import SCHEDULER_CONFIG_MAP, SchedulerConfig
+from trainer import (
+    OPTIMIZER_CONFIG_MAP,
+    OptimizerConfig,
+    SCHEDULER_CONFIG_MAP,
+    SchedulerConfig,
+)
 
 
 class MyModel(nn.Module):
