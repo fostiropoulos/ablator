@@ -55,7 +55,7 @@ unsafe-load-any-extension=no
 extension-pkg-allow-list=
 
 # Minimum supported python version
-py-version = 3.7.2
+py-version = 3.10
 
 # Control the amount of potential inferred values when inferring a single
 # object. This can help the performance when dealing with large functions or
@@ -96,18 +96,14 @@ enable=
 # --disable=W"
 
 disable=
-    attribute-defined-outside-init,
     invalid-name,
     missing-docstring,
-    protected-access,
     too-few-public-methods,
-    # handled by black
-    format,
     # We anticipate #3512 where it will become optional
     fixme,
-    cyclic-import,
-    import-error,
-    R6002
+    ; R6002,
+    consider-alternative-union-syntax, # R6003
+    unsupported-binary-operation # E1131
 
 
 [REPORTS]
@@ -161,10 +157,10 @@ notes=FIXME,XXX,TODO
 min-similarity-lines=6
 
 # Ignore comments when computing similarities.
-ignore-comments=yes
+ignore-comments=no
 
 # Ignore docstrings when computing similarities.
-ignore-docstrings=yes
+ignore-docstrings=no
 
 # Ignore imports when computing similarities.
 ignore-imports=yes

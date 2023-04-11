@@ -28,7 +28,7 @@ class Optional(ty.Generic[T]):
     pass
 
 
-Type = ty.Type
+Type = type
 Literal = ty.Literal
 
 
@@ -50,7 +50,7 @@ class Enum(_Enum):
 # Each annotation is of the format
 # "STATE", "OPTIONAL", "COLLECTION", "TYPE"
 
-ALLOWED_TYPES = (int, float, str, None)
+ALLOWED_TYPES = (int, float, str, bool, None)
 
 ALLOWED_COLLECTIONS = (
     None,
@@ -124,8 +124,7 @@ type_hint: type
 
 
 def _strip_hint_optional(type_hint):
-    origin = ty.get_origin(type_hint)
-    if origin == Optional:  # ty.Union and type_hint._name == "Optional":
+    if ty.get_origin(type_hint) == Optional:
         args = ty.get_args(type_hint)
         assert len(args) == 1
         return True, args[0]
@@ -173,10 +172,12 @@ def _strip_hint_collection(type_hint):
     if issubclass(type_hint, Enum):
         valid_values = [_v.value for _v in list(type_hint)]
         return type_hint, valid_values
-    if isinstance(type(type_hint), Type):
+    if isinstance(type(type_hint), Type) and hasattr(type_hint, "__dict__"):
         assert origin is None
         return Type, type_hint
-    raise NotImplementedError
+    raise NotImplementedError(
+        f"{type_hint} is not a valid hint. Custom classes must implement __dict__."
+    )
 
 
 """Parse a raw type annotation into a type hint
@@ -262,7 +263,7 @@ def parse_value(val, annot: Annotation, name=None):
         if not (annot.state in [Derived, Stateless] or annot.optional):
             raise RuntimeError(f"Missing required value for {name}.")
         return None
-    if annot.collection == Literal:
+    if annot.collection is Literal:
         assert (
             val in annot.variable_type
         ), f"{val} is not a valid Literal {annot.variable_type}"
