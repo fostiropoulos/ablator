@@ -20,8 +20,19 @@ from trainer.config.types import (
     parse_value,
 )
 from trainer.config.utils import dict_hash, flatten_nested_dict
+"""
+    Decorator for ConfigBase subclasses, adds the config_class attribute to the class.
 
+    Parameters
+    ----------
+    cls : Type[ConfigBase]
+        The class to be decorated.
 
+    Returns
+    -------
+    Type[ConfigBase]
+        The decorated class with the config_class attribute.
+"""
 def configclass(cls):
     assert issubclass(cls, ConfigBase), f"{cls.__name__} must inherit from ConfigBase"
     setattr(cls, "config_class", cls)
@@ -37,22 +48,15 @@ class Missing:
 @dataclass(repr=False)
 class ConfigBase:
     # NOTE: this allows for non-defined arguments to be created. It is very bug-prone and will be disabled.
-
-    """Base class for all config classes. Has the functionality to parse type hints and
-    automatically assign values to the class. 
+    """Base class for configuration objects.
 
     First, it checks if there are any unannotated variables inside the child config class. If there are, it will raise an assert error.
 
 
-    Parameters
+    Attributes
     ----------
-    add_attributes : bool, optional
-        if True, any additional arguments that are not defined in config class will be added as attributes to the class, by default False
-    **kwargs : dict
-        configuration key value pairs
-    args : list
-        positional arguments, not supported, dont use
-
+    config_class : Type
+        The class of the configuration object.
 
     Notes
     -----
@@ -62,6 +66,25 @@ class ConfigBase:
 
 
     def __init__(self, *args, add_attributes=False, **kwargs):
+        """
+        Initialize the ConfigBase object.
+
+        Parameters
+        ----------
+        *args : Any
+            Positional arguments.
+        add_attributes : bool, optional
+            Whether to add attributes, by default False.
+        **kwargs : Any
+            Keyword arguments.
+
+        Raises
+        ------
+        ValueError
+            If positional arguments are provided.
+        KeyError
+            If unexpected arguments are provided.
+        """
         class_name = type(self).__name__
         added_variables = {
             item[0]
@@ -97,7 +120,6 @@ class ConfigBase:
                 ):
                     missing_vals.append(k)
         assert len(missing_vals) == 0, f"Missing required value {missing_vals}"
-        #additional check?
         for k, annotation in self.annotations.items():
             if k in kwargs:
                 v = kwargs[k]
@@ -115,26 +137,44 @@ class ConfigBase:
             raise KeyError(f"Unexpected arguments: `{unspected_args}`")
 
     def keys(self):
+        """
+        Get the keys of the configuration dictionary.
+
+        Returns
+        -------
+        KeysView[str]
+            The keys of the configuration dictionary.
+        """
         return self.to_dict().keys()
 
     @classmethod
     def load(cls, path: ty.Union[Path, str]):
+        """
+        Load a configuration object from a file.
+
+        Parameters
+        ----------
+        path : Union[Path, str]
+            The path to the configuration file.
+
+        Returns
+        -------
+        ConfigBase
+            The loaded configuration object.
+        """
         kwargs: dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text(encoding="utf-8")))  # type: ignore
         return cls(**kwargs)
 
-    """Parse member variable types and return a dictionary them
-
-    First, it get all the type definitions from annotaions, and from dataclass fields in case of inheritance.
-    Then, it parses the type hints and returns a dictionary of field names and their type hints for further processing.
-
-
-    Returns
-    -------
-    ty.Dict[str, Annotation]:dictionary of field names and their type hints
-    
-    """
     @property
     def annotations(self) -> dict[str, Annotation]:
+        """
+        Get the parsed annotations of the configuration object.
+
+        Returns
+        -------
+        dict[str, Annotation]
+            A dictionary of parsed annotations.
+        """
         annotations = {}
         if hasattr(self, "__annotations__"):
             annotation_types = dict(self.__annotations__)
@@ -149,9 +189,35 @@ class ConfigBase:
         return annotations
 
     def get_val_with_dot_path(self, dot_path: str):
+        """
+        Get the value of a configuration object attribute using dot notation.
+
+        Parameters
+        ----------
+        dot_path : str
+            The dot notation path to the attribute.
+
+        Returns
+        -------
+        Any
+            The value of the attribute.
+        """
         return operator.attrgetter(dot_path)(self)
 
     def get_type_with_dot_path(self, dot_path: str):
+        """
+        Get the type of a configuration object attribute using dot notation.
+
+        Parameters
+        ----------
+        dot_path : str
+            The dot notation path to the attribute.
+
+        Returns
+        -------
+        Type
+            The type of the attribute.
+        """
         val = self.get_val_with_dot_path(dot_path)
         return type(val)
 
@@ -159,6 +225,19 @@ class ConfigBase:
 
 
     def get_annot_type_with_dot_path(self, dot_path: str):
+        """
+        Get the type of a configuration object annotation using dot notation.
+
+        Parameters
+        ----------
+        dot_path : str
+            The dot notation path to the annotation.
+
+        Returns
+        -------
+        Type
+            The type of the annotation.
+        """
         *base_path, element = dot_path.split(".")
         annot_dot_path = ".".join(base_path + ["annotations"])
         annot: dict[str, Annotation] = self.get_val_with_dot_path(annot_dot_path)
@@ -171,6 +250,23 @@ class ConfigBase:
         ignore_stateless=False,
         flatten=False,
     ):
+        """
+        Create a dictionary representation of the configuration object.
+
+        Parameters
+        ----------
+        annotations : dict[str, Annotation]
+            A dictionary of annotations.
+        ignore_stateless : bool, optional, default=False
+            Whether to ignore stateless values.
+        flatten : bool, optional, default=False
+            Whether to flatten nested dictionaries.
+
+        Returns
+        -------
+        dict
+            The dictionary representation of the configuration object.
+        """
         return_dict = {}
         for field_name, annot in annotations.items():
             if ignore_stateless and (annot.state in {Stateless, Derived}):
@@ -205,25 +301,47 @@ class ConfigBase:
         if flatten:
             return_dict = flatten_nested_dict(return_dict)
         return return_dict
-    """Save the config class to a yaml file
-
-    Parameters:
-    ----------
-    path : ty.Union[Path, str]
-        path to save the config file
-    """
     def write(self, path: ty.Union[Path, str]):
+        """
+        Write the configuration object to a file.
 
+        Parameters
+        ----------
+        path : Union[Path, str]
+            The path to the file.
+
+        """
         Path(path).write_text(str(self), encoding="utf-8")
 
     def to_str(self):
+        """
+        Convert the configuration object to a string.
+
+        Returns
+        -------
+        str
+            The string representation of the configuration object.
+        """
         # TODO: investigate https://github.com/crdoconnor/strictyaml as an alternative to OmegaConf
         conf = OmegaConf.create(self.to_dict())
         return OmegaConf.to_yaml(conf)
-    """
-    
-    """
+
+
     def assert_state(self, config: "ConfigBase") -> bool:
+        """
+        Assert that the configuration object has a valid state.
+
+        Parameters
+        ----------
+        config : ConfigBase
+            The configuration object to compare.
+
+        Returns
+        -------
+        bool
+            True if the configuration object has a valid state, False otherwise.
+
+        """
         diffs = sorted(self.diff_str(config, ignore_stateless=True))
         diff = "\n\t".join(diffs)
         assert len(diffs) == 0, f"Differences between configurations:\n\t{diff}"
@@ -233,6 +351,20 @@ class ConfigBase:
     def merge(self, config: "ConfigBase") -> "ty.Self":  # type: ignore
         # TODO ty.Self is currently supported by mypy? fixme above
         # replaces stateless and derived properties
+        """
+        Merge the current configuration object with another configuration object.
+
+        Parameters
+        ----------
+        config : ConfigBase
+            The configuration object to merge.
+
+        Returns
+        -------
+        ty.Self
+            The merged configuration object.
+
+        """
         self_config = copy.deepcopy(self)
 
         left_config = self_config
@@ -250,21 +382,24 @@ class ConfigBase:
                 setattr(left_config, k, right_val)
 
         return left_config
-    """Returns the diff as a strting
 
-    Parameters:
-    ----------
-    config : ConfigBase
-        config class to compare with
-    ignore_stateless : bool, optional
-        if True, stateless variables will be ignored, by default False
-    
-    Rewturns:
-    -------
-    
-    
-    """
     def diff_str(self, config: "ConfigBase", ignore_stateless=False):
+        """
+        Get the differences between the current configuration object and another configuration object as strings.
+
+        Parameters
+        ----------
+        config : ConfigBase
+            The configuration object to compare.
+        ignore_stateless : bool, optional, default=False
+            Whether to ignore stateless values.
+
+        Returns
+        -------
+        list[str]
+            The list of differences as strings.
+
+        """
         diffs = self.diff(config, ignore_stateless=ignore_stateless)
         str_diffs = []
         for p, (l_t, l_v), (r_t, r_v) in diffs:
@@ -272,27 +407,47 @@ class ConfigBase:
             str_diffs.append(_diff)
         return str_diffs
 
-    """Find the differences between two config classes
-
-    Parameters:
-    ----------
-    config : ConfigBase
-        config class to compare with
-    ignore_stateless : bool, optional
-        if True, stateless variables will be ignored, by default False
     
-    Returns:
-    -------
-    diffs: ty.List[ty.Tuple[str, ty.Tuple[ty.Type, ty.Any], ty.Tuple[ty.Type, ty.Any]]]
-        list of differences between the two config classes
-        where the config deos not exist will be a [Missing,None]
-        for example: if the config class itself does not have a field, 
-        but the config comparing to has it, it will be [Missing,None],[Field,Value]
-
-    """
     def diff(
         self, config: "ConfigBase", ignore_stateless=False
     ) -> list[tuple[str, tuple[type, ty.Any], tuple[type, ty.Any]]]:
+        """
+        Get the differences between the current configuration object and another configuration object.
+
+        Parameters
+        ----------
+        config : ConfigBase
+            The configuration object to compare.
+        ignore_stateless : bool, optional, default=False
+            Whether to ignore stateless values.
+
+        Returns
+        -------
+        list[tuple[str, tuple[type, Any], tuple[type, Any]]]
+            The list of differences as tuples.
+
+        Examples
+        --------
+        Let's say we have two configuration objects `config1` and `config2` with the following attributes:
+
+        config1:
+            learning_rate: 0.01
+            optimizer: 'Adam'
+            num_layers: 3
+
+        config2:
+            learning_rate: 0.02
+            optimizer: 'SGD'
+            num_layers: 3
+
+        The diff between these two configurations would look like:
+
+        >>> config1.diff(config2)
+        [('learning_rate', (float, 0.01), (float, 0.02)), ('optimizer', (str, 'Adam'), (str, 'SGD'))]
+
+        In this example, the learning_rate and optimizer values are different between the two configuration objects.
+
+        """
         left_config = copy.deepcopy(self)
         right_config = copy.deepcopy(config)
         left_dict = left_config.make_dict(
@@ -327,25 +482,89 @@ class ConfigBase:
         return diffs
 
     def to_dict(self, ignore_stateless=False):
+        """
+        Convert the configuration object to a dictionary.
+
+        Parameters
+        ----------
+        ignore_stateless : bool, optional, default=False
+            Whether to ignore stateless values.
+
+        Returns
+        -------
+        dict
+            The dictionary representation of the configuration object.
+
+        """
         return self.make_dict(self.annotations, ignore_stateless=ignore_stateless)
 
     def to_yaml(self):
+        """
+        Convert the configuration object to YAML format.
+
+        Returns
+        -------
+        str
+            The YAML representation of the configuration object.
+
+        """
         return str(self)
 
     def to_dot_path(self, ignore_stateless=False):
+        """
+        Convert the configuration object to a dictionary with dot notation paths as keys.
+
+        Parameters
+        ----------
+        ignore_stateless : bool, optional, default=False
+            Whether to ignore stateless values.
+
+        Returns
+        -------
+        str
+            The YAML representation of the configuration object in dot notation paths.
+
+        """
         _flat_dict = self.make_dict(
             self.annotations, ignore_stateless=ignore_stateless, flatten=True
         )
         return OmegaConf.to_yaml(OmegaConf.create(_flat_dict))
 
     def __repr__(self) -> str:
+        """
+        Return the string representation of the configuration object.
+
+        Returns
+        -------
+        str
+            The string representation of the configuration object.
+
+        """
         return self.to_str()
 
     @property
     def uid(self):
+        """
+        Get the unique identifier for the configuration object.
+
+        Returns
+        -------
+        str
+            The unique identifier for the configuration object.
+
+        """
         return dict_hash(self.make_dict(self.annotations, ignore_stateless=True))[:5]
 
     def assert_unambigious(self):
+        """
+        Assert that the configuration object is unambiguous and has all the required values.
+
+        Raises
+        ------
+        AssertionError
+            If the configuration object is ambiguous or missing required values.
+
+        """
         for k, annot in self.annotations.items():
             if not annot.optional:
                 assert (

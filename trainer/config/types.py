@@ -3,7 +3,7 @@ from collections import namedtuple
 from enum import Enum as _Enum
 
 """
-custom enhanced types to restrict the number of parameters that can be passed to types
+Custom enhanced types to restrict the number of parameters that can be passed to types
 
 eg.
 Tuple[int,str] is not allowed, mypy will yield an error
@@ -82,23 +82,28 @@ Parsing the dictionary however can be error prone if you have complex arguments
 and is not advised.
 """
 
-"""Get the state hint from a type
 
-Parameters:
-----------
-type_hint: type
-
-Returns:
--------
-state: Stateful, Stateless, Derived
-
-Note:
------
-If not specified, the default state is Stateful
-"""
 
 
 def _strip_hint_state(type_hint):
+    """
+    Strips the hint state from a type hint.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The input type hint to strip the state from.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the state and the remaining type hint.
+
+    Example
+    -------
+    >>> _strip_hint_state(Stateful[int])
+    (Stateful, int)
+    """
     origin = ty.get_origin(type_hint)
     if origin is None:
         return Stateful, type_hint
@@ -109,46 +114,59 @@ def _strip_hint_state(type_hint):
     return Stateful, type_hint
 
 
-"""
-check if the type is optional
 
-Parameters:
-----------
-type_hint: type
-
-Returns:
--------
-optional: bool (True if optional)
-type_hint: type 
-"""
 
 
 def _strip_hint_optional(type_hint):
+    """
+    Strips the optional part of a type hint.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The input type hint to strip the optional part from.
+
+    Returns
+    -------
+    tuple
+        A tuple containing a boolean indicating if the type hint is optional and the remaining type hint.
+
+    Example
+    -------
+    >>> _strip_hint_optional(Optional[int])
+    (True, int)
+    """
     if ty.get_origin(type_hint) == Optional:
         args = ty.get_args(type_hint)
         assert len(args) == 1
         return True, args[0]
     return False, type_hint
-"""
-Get the collection type and the type of the variable
 
-Parameters:
-----------
-type_hint: type
-
-Returns:
--------
-collection: Dict, List, Tuple, None
-variable_type: type
-
-Note:
------
-Dict and List only support ALLOWED_TYPES = (int, float, str, None)
-Tuple supports multiple types
-
-"""
 
 def _strip_hint_collection(type_hint):
+    """
+    Strips the collection from a type hint.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The input type hint to strip the collection from.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the collection and the variable type.
+
+    Raises
+    ------
+    NotImplementedError
+        If the type hint is not valid or custom classes don't implement __dict__.
+
+    Example
+    -------
+    >>> _strip_hint_collection(List[int])
+    (List, int)
+    """
     origin = ty.get_origin(type_hint)
     assert (
         origin in ALLOWED_COLLECTIONS
@@ -180,27 +198,26 @@ def _strip_hint_collection(type_hint):
     )
 
 
-"""Parse a raw type annotation into a type hint
-
-Parameters
-----------
-type_hint : original type annotation
-
-Returns
--------
-Annotation: (parsed type hint)
-
-Examples
---------
-Tuple[int]-> Annotation(state=<class '__main__.Stateful'>, optional=False, collection=<class '__main__.Tuple'>, variable_type=(<class 'int'>,))
-bool-> Annotation(state=<class '__main__.Stateful'>, optional=False, collection=<class '__main__.Tuple'>, variable_type=(<class 'int'>,))
-Literal[1,2,3]->Annotation(state=<class '__main__.Stateful'>, optional=False, collection=typing.Literal, variable_type=(1, 2, 3))
-Derived[Tuple[int]]->Annotation(state=<class '__main__.Stateful'>, optional=False, collection=typing.Literal, variable_type=(1, 2, 3))
-str->Annotation(state=<class '__main__.Stateful'>, optional=False, collection=None, variable_type=<class 'str'>)
-"""
-
 
 def parse_type_hint(type_hint):
+    """
+    Parses a type hint and returns a parsed annotation.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The input type hint to parse.
+
+    Returns
+    -------
+    Annotation
+        A namedtuple containing state, optional, collection, and variable_type information.
+
+    Example
+    -------
+    >>> parse_type_hint(Optional[List[int]])
+    Annotation(state=Stateful, optional=True, collection=List, variable_type=int)
+    """
     state, _type_hint = _strip_hint_state(type_hint)
 
     optional, _type_hint = _strip_hint_optional(_type_hint)
@@ -214,20 +231,29 @@ def parse_type_hint(type_hint):
         variable_type=variable_type,
     )
 
-"""
-parse values whose types are not  a collection or in ALLOWED_TYPES
-eg. bool, added dict(tune configs)
 
-Parameters:
-----------
-cls: variable type
-kwargs: value to be parsed
-
-Returns:
--------
-val: parsed value
-"""
 def _parse_class(cls, kwargs):
+    """
+    Parse values whose types are not  a collection or in ALLOWED_TYPES
+    eg. bool, added dict(tune configs)
+
+    Parameters
+    ----------
+    cls : Type
+        The input Type
+    kwargs : dict or object
+        The keyword arguments or object to parse with the given type
+
+    Returns
+    -------
+    object
+        Parsed object
+
+    Raises
+    ------
+    RuntimeError
+        If the input kwargs is incompatible 
+    """
     if isinstance(kwargs, cls):
         # This is when initializing directly from config
         pass
@@ -240,24 +266,36 @@ def _parse_class(cls, kwargs):
         raise RuntimeError(f"Incompatible kwargs {type(kwargs)}: {kwargs}\nand {cls}.")
     return kwargs
 
-"""parse config values based on type hints
-
-Parameters:
-----------
-val: 
-    value to be parsed
-anno:Annotation
-    type hint
-name: str
-    variable name
-
-Returns:
--------
-val: parsed value
-
-"""
 
 def parse_value(val, annot: Annotation, name=None):
+    """
+    Parses a value based on the given annotation.
+
+    Parameters
+    ----------
+    val : Any
+        The input value to parse.
+    annot : Annotation
+        The annotation namedtuple to guide the parsing.
+    name : str, optional
+        The name of the value, by default None.
+
+    Returns
+    -------
+    Any
+        The parsed value.
+
+    Raises
+    ------
+    RuntimeError
+        If the required value is missing and it is not optional or derived or stateless.
+
+    Example
+    -------
+    >>> annotation = parse_type_hint(Optional[List[int]])
+    >>> parse_value([1, 2, 3], annotation)
+    [1, 2, 3]
+    """
     # annot = parse_type_hint(type_hint)
     if val is None:
         if not (annot.state in [Derived, Stateless] or annot.optional):
@@ -288,18 +326,21 @@ def parse_value(val, annot: Annotation, name=None):
         return annot.collection(val)
     raise NotImplementedError
 
-"""Get state of an annotation
 
-Parameters
-----------
-annotation : type annotation
-
-Returns
--------
-Stateful, Derived, Stateless, or None
-(Stateful is the default)
-"""
 def get_annotation_state(annotation):
+    """
+    Get state of an annotation
+
+    Parameters
+    ----------
+    annotation: 
+        type annotation
+
+    Returns
+    -------
+    Stateful, Derived, Stateless, or None
+    (Stateful is the default)
+    """
     origin = ty.get_origin(annotation)
     if origin is None:
         return Stateful
