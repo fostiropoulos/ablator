@@ -2,8 +2,7 @@ import typing as ty
 from abc import abstractmethod
 
 from torch import nn
-from torch.optim.lr_scheduler import (OneCycleLR, ReduceLROnPlateau, StepLR,
-                                      _LRScheduler)
+from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau, StepLR, _LRScheduler
 
 from trainer.config.main import ConfigBase, Derived, configclass
 from trainer.config.types import Literal
@@ -29,15 +28,14 @@ class SchedulerConfig(ConfigBase):
     arguments: SchedulerArgs
 
     def __init__(self, name, arguments: dict[str, ty.Any]):
-        argument_cls = SCHEDULER_CONFIG_MAP[name]
-
-        self.name = name
-        if argument_cls is None:
-            self.arguments = StepLRConfig(gamma=1)
+        _arguments: None | StepLRConfig | OneCycleConfig | PlateuaConfig
+        if (argument_cls := SCHEDULER_CONFIG_MAP[name]) is None:
+            _arguments = StepLRConfig(gamma=1)
         else:
-            self.arguments = argument_cls(**arguments)
+            _arguments = argument_cls(**arguments)
+        super().__init__(name=name, arguments=_arguments)
 
-    def make_scheduler(self, model, optimizer):
+    def make_scheduler(self, model, optimizer) -> Scheduler:
         return self.arguments.init_scheduler(model, optimizer)
 
 
@@ -45,6 +43,8 @@ class SchedulerConfig(ConfigBase):
 class OneCycleConfig(SchedulerArgs):
     max_lr: float
     total_steps: Derived[int]
+    # TODO fix mypy errors for custom types
+    # type: ignore
     step_when: StepType = "train"
 
     def init_scheduler(self, model: nn.Module, optimizer: nn.Module):
@@ -62,6 +62,8 @@ class PlateuaConfig(SchedulerArgs):
     factor: float = 0.0
     threshold: float = 1e-4
     verbose: bool = False
+    # TODO fix mypy errors for custom types
+    # type: ignore
     step_when: StepType = "val"
 
     def init_scheduler(self, model: nn.Module, optimizer: nn.Module):
@@ -75,6 +77,8 @@ class PlateuaConfig(SchedulerArgs):
 class StepLRConfig(SchedulerArgs):
     step_size: int = 1
     gamma: float = 0.99
+    # TODO fix mypy errors for custom types
+    # type: ignore
     step_when: StepType = "epoch"
 
     def init_scheduler(self, model: nn.Module, optimizer: nn.Module):

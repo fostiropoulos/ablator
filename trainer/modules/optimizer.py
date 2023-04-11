@@ -3,15 +3,13 @@ from abc import abstractmethod
 
 import torch
 from torch import nn
-from torch.optim import SGD, Adam, AdamW
+from torch.optim import SGD, Adam, AdamW, Optimizer
 
 from trainer.config.main import ConfigBase, configclass
 from trainer.config.types import Tuple
 
 
-def get_parameter_names(
-    model: torch.nn.Module, forbidden_layer_types: ty.List[ty.Type]
-):
+def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type]):
     """
     Returns the names of the model parameters that are not inside a forbidden layer.
     """
@@ -29,7 +27,7 @@ def get_parameter_names(
 
 def get_optim_parameters(
     model: torch.nn.Module,
-    weight_decay: ty.Optional[float] = None,
+    weight_decay: float | None = None,
     only_requires_grad: bool = True,
 ):
     """
@@ -42,7 +40,7 @@ def get_optim_parameters(
     params_to_update = {}
     if only_requires_grad:
         for name, param in model.named_parameters():
-            if param.requires_grad == True:
+            if param.requires_grad:
                 params_to_update[name] = param
     else:
         params_to_update = model.named_parameters()
@@ -87,15 +85,11 @@ class OptimizerConfig(ConfigBase):
 
     def __init__(self, name, arguments: dict[str, ty.Any]):
         argument_cls = OPTIMIZER_CONFIG_MAP[name]
-        self.name = name
-        self.arguments = argument_cls(**arguments)
+        _arguments = argument_cls(**arguments)
+        super().__init__(name=name, arguments=_arguments)
 
-    def make_optimizer(self, model: nn.Module):
+    def make_optimizer(self, model: nn.Module) -> Optimizer:
         return self.arguments.init_optimizer(model)
-
-    @property
-    def lr(self):
-        return self.arguments.lr
 
 
 @configclass
@@ -138,4 +132,8 @@ class AdamConfig(OptimizerArgs):
         return Adam(model_parameters, **kwargs)
 
 
-OPTIMIZER_CONFIG_MAP = {"adamw": AdamWConfig, "adam": AdamConfig, "sgd": SGDConfig}
+OPTIMIZER_CONFIG_MAP: dict[str, type] = {
+    "adamw": AdamWConfig,
+    "adam": AdamConfig,
+    "sgd": SGDConfig,
+}
