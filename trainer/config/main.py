@@ -39,6 +39,26 @@ class Missing:
 class ConfigBase:
     # TODO: investigate https://github.com/crdoconnor/strictyaml as an alternative
     # NOTE: this allows for non-defined arguments to be created. It is very bug-prone and will be disabled.
+    """Base class for all config classes. Has the functionality to parse type hints and
+    automatically assign values to the class. 
+
+    First, it checks if there are any unannotated variables inside the child config class. If there are, it will raise an assert error.
+
+
+    Parameters
+    ----------
+    add_attributes : bool, optional
+        if True, any additional arguments that are not defined in config class will be added as attributes to the class, by default False
+    **kwargs : dict
+        configuration key value pairs
+    args : list
+        positional arguments, not supported, dont use
+
+
+    Notes
+    -----
+    all config class must be decorated with @configclass
+    """
     config_class = False
 
     def __init__(self, *args, add_attributes=False, **kwargs):
@@ -77,7 +97,7 @@ class ConfigBase:
                 ):
                     missing_vals.append(k)
         assert len(missing_vals) == 0, f"Missing required value {missing_vals}"
-
+        #additional check?
         for k, annotation in self.annotations.items():
             if k in kwargs:
                 v = kwargs[k]
@@ -105,6 +125,17 @@ class ConfigBase:
         kwargs: ty.Dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text()))  # type: ignore
         return cls(**kwargs)
 
+    """Parse member variable types and return a dictionary them
+
+    First, it get all the type definitions from annotaions, and from dataclass fields in case of inheritance.
+    Then, it parses the type hints and returns a dictionary of field names and their type hints for further processing.
+
+
+    Returns
+    -------
+    ty.Dict[str, Annotation]:dictionary of field names and their type hints
+    
+    """
     @property
     def annotations(self) -> ty.Dict[str, Annotation]:
         annotations = {}
@@ -127,7 +158,22 @@ class ConfigBase:
         val = self.get_val_with_dot_path(dot_path)
         # TODO Fixme. This will break because infering type for optional values will be troublesome. returns None.
         return type(val)
+    """Return a dictionary of the config class
 
+    Parameters:
+    ----------
+    ignore_stateless : bool, optional
+        if True, stateless variables will be ignored, by default False
+    flatten : bool, optional
+        if True, nested variables will be flattened, by default False
+    annotations : ty.Dict[str, Annotation], optional
+        dictionary of field names and their type hints
+    
+    Returns
+    -------
+    ty.Dict[str, ty.Any]: 
+        dictionary of field names and their values
+    """
     def make_dict(
         self,
         annotations: ty.Dict[str, Annotation],
@@ -143,7 +189,7 @@ class ConfigBase:
             if annot.collection is None or annot.collection in [Dict, List, Tuple]:
                 val = _val
             elif annot.collection == Type:
-                val = _val.__dict__
+                val = _val.__dict__ #bool
             elif issubclass(annot.collection, ConfigBase):
                 _val: ConfigBase
                 val = _val.make_dict(
@@ -159,15 +205,23 @@ class ConfigBase:
         if flatten:
             return_dict = flatten_nested_dict(return_dict)
         return return_dict
+    """Save the config class to a yaml file
 
-    def write(self, path: ty.Union[Path , str]):
+    Parameters:
+    ----------
+    path : ty.Union[Path, str]
+        path to save the config file
+    """
+    def write(self, path: ty.Union[Path, str]):
 
         Path(path).write_text(str(self), encoding="utf-8")
 
     def to_str(self):
         conf = OmegaConf.create(self.to_dict())
         return OmegaConf.to_yaml(conf)
-
+    """
+    
+    """
     def assert_state(self, config: "ConfigBase") -> bool:
         diffs = sorted(self.diff_str(config, ignore_stateless=True))
         diff = "\n\t".join(diffs)
@@ -175,6 +229,9 @@ class ConfigBase:
 
         return True
 
+    """
+
+    """
     def merge(self, config: "ConfigBase") -> "ty.Self":
         # replaces stateless and derived properties
         self_config = copy.deepcopy(self)
@@ -194,7 +251,20 @@ class ConfigBase:
                 setattr(left_config, k, right_val)
 
         return left_config
+    """Returns the diff as a strting
 
+    Parameters:
+    ----------
+    config : ConfigBase
+        config class to compare with
+    ignore_stateless : bool, optional
+        if True, stateless variables will be ignored, by default False
+    
+    Rewturns:
+    -------
+    
+    
+    """
     def diff_str(self, config: "ConfigBase", ignore_stateless=False):
         diffs = self.diff(config, ignore_stateless=ignore_stateless)
         str_diffs = []
@@ -203,6 +273,24 @@ class ConfigBase:
             str_diffs.append(_diff)
         return str_diffs
 
+    """Find the differences between two config classes
+
+    Parameters:
+    ----------
+    config : ConfigBase
+        config class to compare with
+    ignore_stateless : bool, optional
+        if True, stateless variables will be ignored, by default False
+    
+    Returns:
+    -------
+    diffs: ty.List[ty.Tuple[str, ty.Tuple[ty.Type, ty.Any], ty.Tuple[ty.Type, ty.Any]]]
+        list of differences between the two config classes
+        where the config deos not exist will be a [Missing,None]
+        for example: if the config class itself does not have a field, 
+        but the config comparing to has it, it will be [Missing,None],[Field,Value]
+
+    """
     def diff(
         self, config: "ConfigBase", ignore_stateless=False
     ) -> ty.List[ty.Tuple[str, ty.Tuple[ty.Type, ty.Any], ty.Tuple[ty.Type, ty.Any]]]:

@@ -2,6 +2,13 @@ import typing as ty
 from collections import namedtuple
 from enum import Enum as _Enum
 
+"""
+custom enhanced types to restrict the number of parameters that can be passed to types
+
+eg.
+Tuple[int,str] is not allowed, mypy will yield an error
+"""
+
 T = ty.TypeVar("T")
 
 
@@ -75,6 +82,21 @@ Parsing the dictionary however can be error prone if you have complex arguments
 and is not advised.
 """
 
+"""Get the state hint from a type
+
+Parameters:
+----------
+type_hint: type
+
+Returns:
+-------
+state: Stateful, Stateless, Derived
+
+Note:
+-----
+If not specified, the default state is Stateful
+"""
+
 
 def _strip_hint_state(type_hint):
     origin = ty.get_origin(type_hint)
@@ -87,6 +109,20 @@ def _strip_hint_state(type_hint):
     return Stateful, type_hint
 
 
+"""
+check if the type is optional
+
+Parameters:
+----------
+type_hint: type
+
+Returns:
+-------
+optional: bool (True if optional)
+type_hint: type 
+"""
+
+
 def _strip_hint_optional(type_hint):
     origin = ty.get_origin(type_hint)
     if origin == Optional:  # ty.Union and type_hint._name == "Optional":
@@ -94,7 +130,24 @@ def _strip_hint_optional(type_hint):
         assert len(args) == 1
         return True, args[0]
     return False, type_hint
+"""
+Get the collection type and the type of the variable
 
+Parameters:
+----------
+type_hint: type
+
+Returns:
+-------
+collection: Dict, List, Tuple, None
+variable_type: type
+
+Note:
+-----
+Dict and List only support ALLOWED_TYPES = (int, float, str, None)
+Tuple supports multiple types
+
+"""
 
 def _strip_hint_collection(type_hint):
     origin = ty.get_origin(type_hint)
@@ -126,6 +179,26 @@ def _strip_hint_collection(type_hint):
     raise NotImplementedError
 
 
+"""Parse a raw type annotation into a type hint
+
+Parameters
+----------
+type_hint : original type annotation
+
+Returns
+-------
+Annotation: (parsed type hint)
+
+Examples
+--------
+Tuple[int]-> Annotation(state=<class '__main__.Stateful'>, optional=False, collection=<class '__main__.Tuple'>, variable_type=(<class 'int'>,))
+bool-> Annotation(state=<class '__main__.Stateful'>, optional=False, collection=<class '__main__.Tuple'>, variable_type=(<class 'int'>,))
+Literal[1,2,3]->Annotation(state=<class '__main__.Stateful'>, optional=False, collection=typing.Literal, variable_type=(1, 2, 3))
+Derived[Tuple[int]]->Annotation(state=<class '__main__.Stateful'>, optional=False, collection=typing.Literal, variable_type=(1, 2, 3))
+str->Annotation(state=<class '__main__.Stateful'>, optional=False, collection=None, variable_type=<class 'str'>)
+"""
+
+
 def parse_type_hint(type_hint):
     state, _type_hint = _strip_hint_state(type_hint)
 
@@ -140,7 +213,19 @@ def parse_type_hint(type_hint):
         variable_type=variable_type,
     )
 
+"""
+parse values whose types are not  a collection or in ALLOWED_TYPES
+eg. bool, added dict(tune configs)
 
+Parameters:
+----------
+cls: variable type
+kwargs: value to be parsed
+
+Returns:
+-------
+val: parsed value
+"""
 def _parse_class(cls, kwargs):
     if isinstance(kwargs, cls):
         # This is when initializing directly from config
@@ -154,6 +239,22 @@ def _parse_class(cls, kwargs):
         raise RuntimeError(f"Incompatible kwargs {type(kwargs)}: {kwargs}\nand {cls}.")
     return kwargs
 
+"""parse config values based on type hints
+
+Parameters:
+----------
+val: 
+    value to be parsed
+anno:Annotation
+    type hint
+name: str
+    variable name
+
+Returns:
+-------
+val: parsed value
+
+"""
 
 def parse_value(val, annot: Annotation, name=None):
     # annot = parse_type_hint(type_hint)
@@ -186,7 +287,17 @@ def parse_value(val, annot: Annotation, name=None):
         return annot.collection(val)
     raise NotImplementedError
 
+"""Get state of an annotation
 
+Parameters
+----------
+annotation : type annotation
+
+Returns
+-------
+Stateful, Derived, Stateless, or None
+(Stateful is the default)
+"""
 def get_annotation_state(annotation):
     origin = ty.get_origin(annotation)
     if origin is None:
@@ -215,4 +326,3 @@ class Stateless(ty.Generic[T]):
     This type is for attributes that can take different value assignments
     between experiments
     """
-

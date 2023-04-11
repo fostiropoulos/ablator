@@ -4,7 +4,23 @@ import json
 from functools import reduce
 from typing import Any, Dict, List
 
+"""Flatten nested dictionary,list,tuple
 
+Parameters
+----------
+_dict : Dict[str, Any]
+    dict to be flattened
+expand_list : bool, optional
+    whether to expand list or not, by default True
+seperator : str, optional
+    seperator to use for flattening, by default "."
+
+Returns
+-------
+Dict[str, Any]
+    flattened dictionary
+
+"""
 def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> Dict[str, Any]:
     flatten_dict = copy.deepcopy(_dict)
     for k, v in _dict.items():
@@ -24,6 +40,9 @@ def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> Dict[str, Any
         return flatten_nested_dict(flatten_dict)
     return flatten_dict
 
+"""MD5 hash of a dictionary.
+
+"""
 
 def dict_hash(*dictionaries: List[Dict[str, Any]], hash_len=4):
     """MD5 hash of a dictionary."""
