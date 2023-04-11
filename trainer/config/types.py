@@ -88,8 +88,7 @@ def _strip_hint_state(type_hint):
 
 
 def _strip_hint_optional(type_hint):
-    origin = ty.get_origin(type_hint)
-    if origin == Optional:  # ty.Union and type_hint._name == "Optional":
+    if ty.get_origin(type_hint) == Optional:
         args = ty.get_args(type_hint)
         assert len(args) == 1
         return True, args[0]

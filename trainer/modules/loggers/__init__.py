@@ -12,27 +12,27 @@ class LoggerConfig(ConfigBase):
 
 class LoggerBase(ABC):
     @abstractmethod
-    def _add_image(self, k, v, itr, dataformats="CHW"):
+    def add_image(self, k, v, itr, dataformats="CHW"):
         pass
 
     @abstractmethod
-    def _add_table(self, k, v, itr):
+    def add_table(self, k, v, itr):
         pass
 
     @abstractmethod
-    def _add_text(self, k, v, itr):
+    def add_text(self, k, v, itr):
         pass
 
     @abstractmethod
-    def _add_scalars(self, k, v, itr):
+    def add_scalars(self, k, v, itr):
         pass
 
     @abstractmethod
-    def _add_scalar(self, k, v, itr):
+    def add_scalar(self, k, v, itr):
         pass
 
     @abstractmethod
-    def _write_config(self, config: ConfigBase):
+    def write_config(self, config: ConfigBase):
         pass
 
     @abstractmethod
@@ -40,4 +40,3 @@ class LoggerBase(ABC):
         """
         Must work for a single trial
         """
-        pass

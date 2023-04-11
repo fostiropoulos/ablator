@@ -2,7 +2,6 @@ from datetime import datetime
 import os
 
 from pathlib import Path
-import typing as ty
 
 
 class FileLogger:
@@ -24,7 +23,7 @@ class FileLogger:
 
     def _write(self, msg: str):
         if self.path is not None:
-            with open(self.path, "a") as f:
+            with open(self.path, "a", encoding="utf-8") as f:
                 f.write(f"{msg}\n")
 
     def _print(self, msg: str, verbose=False):
@@ -43,7 +42,7 @@ class FileLogger:
         self(msg, True)
 
     def __call__(self, msg: str, verbose=True):
-        now = datetime.now()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         msg = f"{now}: {self.prefix}{msg}"
         self._write(msg)
         self._print(msg, verbose)
@@ -59,7 +58,7 @@ class FileLogger:
         parent_dir = self.path.parent
         parent_dir.mkdir(exist_ok=True, parents=True)
         mode = "a" if os.path.exists(path) else "w"
-        now = datetime.now()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        with open(path, mode) as f:
+        with open(path, mode, encoding="utf-8") as f:
             f.write(f"Starting Logger {now} \n")

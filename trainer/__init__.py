@@ -13,3 +13,6 @@ from trainer.config.types import (
     Optional,
     Annotation,
 )
+from trainer.main.model.wrapper import ModelWrapper
+from trainer.modules.optimizer import OPTIMIZER_CONFIG_MAP, OptimizerConfig
+from trainer.modules.scheduler import SCHEDULER_CONFIG_MAP, SchedulerConfig

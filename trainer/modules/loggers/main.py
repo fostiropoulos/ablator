@@ -1,20 +1,19 @@
-from collections import defaultdict
 import copy
+import json
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
 from PIL import Image
+
+import trainer.utils.file as futils
 from trainer.main.configs import RunConfig
 from trainer.modules.loggers import LoggerBase
 from trainer.modules.loggers.file import FileLogger
 from trainer.modules.loggers.tensor import TensorboardLogger
 from trainer.modules.metrics.main import TrainMetrics
 from trainer.modules.metrics.stores import MovingAverage
-import trainer.utils.file as futils
-from trainer.config.main import ConfigBase
-import json
 
 
 class DuplicateRunError(Exception):
@@ -29,11 +28,11 @@ class SummaryLogger:
     METADATA_JSON = "metadata.json"
     CHKPT_DIR_NAMES = ["best", "recent"]
     CHKPT_DIR_VALUES = ["best_checkpoints", "checkpoints"]
-    CHKPT_DIRS: Dict[str, Path]
+    CHKPT_DIRS: dict[str, Path]
 
     def __init__(
         self,
-        run_config: RunConfig | None = None,
+        run_config: RunConfig,
         model_dir: str | None | Path = None,
         resume: bool = False,
         keep_n_checkpoints: int | None = None,
@@ -42,28 +41,35 @@ class SummaryLogger:
         run_config = copy.deepcopy(run_config)
         self.uid = run_config.uid
         self.keep_n_checkpoints: int = (
-            keep_n_checkpoints if keep_n_checkpoints is not None else float("inf")
+            keep_n_checkpoints if keep_n_checkpoints is not None else int(1e6)
         )
         self.log_iteration: int = 0
         self.checkpoint_iteration: dict[str, dict[str, int]] = {}
-
+        self.log_file_path: Path | None = None
+        self.dashboard: LoggerBase | None = None
+        self.model_dir: Path | None = None
         if model_dir is not None:
-            self.model_dir: Path = Path(model_dir)
+            self.model_dir = Path(model_dir)
             if not resume and self.model_dir.exists():
                 raise DuplicateRunError(
                     f"SummaryLogger: Resume is set to {resume} but {self.model_dir} exists."
                 )
-            elif resume and self.model_dir.exists():
+            if resume and self.model_dir.exists():
                 _run_config = type(run_config).load(
                     self.model_dir.joinpath(self.CONFIG_FILE_NAME)
                 )
                 assert (
                     run_config.train_config == _run_config.train_config
                     and run_config.model_config == _run_config.model_config
-                ), f"Different supplied run_config than existing run_config {self.model_dir}. \n{run_config}----\n{_run_config}"
+                ), (
+                    "Different supplied run_config than"
+                    f" existing run_config {self.model_dir}. \n{run_config}----\n{_run_config}"
+                )
 
                 metadata = json.loads(
-                    self.model_dir.joinpath(self.METADATA_JSON).read_text()
+                    self.model_dir.joinpath(self.METADATA_JSON).read_text(
+                        encoding="utf-8"
+                    )
                 )
                 self.checkpoint_iteration = metadata["checkpoint_iteration"]
                 self.log_iteration = metadata["log_iteration"]
@@ -77,14 +83,14 @@ class SummaryLogger:
 
             self.result_json_path = self.model_dir / self.RESULTS_JSON_NAME
             self.log_file_path = self.model_dir.joinpath(self.LOG_FILE_NAME)
-        self.dashboard: LoggerBase | None = self._make_dashboard(
-            self.summary_dir, run_config
-        )
-        self.logger = FileLogger(path=self.log_file_path.as_posix(), verbose=verbose)
-        self._write_config(run_config)
-        self._update_metadata()
+            self.dashboard = self._make_dashboard(self.summary_dir, run_config)
+            self._write_config(run_config)
+            self._update_metadata()
+        self.logger = FileLogger(path=self.log_file_path, verbose=verbose)
 
     def _update_metadata(self):
+        if self.model_dir is None:
+            return
         metadata_path = self.model_dir.joinpath(self.METADATA_JSON)
         metadata_path.write_text(
             json.dumps(
@@ -92,7 +98,8 @@ class SummaryLogger:
                     "log_iteration": self.log_iteration,
                     "checkpoint_iteration": self.checkpoint_iteration,
                 }
-            )
+            ),
+            encoding="utf-8",
         )
 
     def _make_dashboard(
@@ -103,50 +110,57 @@ class SummaryLogger:
         return TensorboardLogger(summary_dir.joinpath("tensorboard"))
 
     def _write_config(self, run_config: RunConfig):
-        with open(self.model_dir.joinpath(self.CONFIG_FILE_NAME), "w") as fp:
-            fp.write(str(run_config))
+        if self.model_dir is None:
+            return
+        self.model_dir.joinpath(self.CONFIG_FILE_NAME).write_text(
+            str(run_config), encoding="utf-8"
+        )
+
         if self.dashboard is not None:
-            self.dashboard._write_config(run_config)
+            self.dashboard.write_config(run_config)
 
     def _add_metric(self, k, v, itr):
         if self.dashboard is None:
             return
-        if isinstance(v, (list,np.ndarray)):
+        if isinstance(v, (list, np.ndarray)):
             v = np.array(v)
-            if v.dtype.kind in ["b", "i", "u", "f", "c"]:
+            if v.dtype.kind in {"b", "i", "u", "f", "c"}:
                 v_dict = {str(i): _v for i, _v in enumerate(v)}
-                self.dashboard._add_scalars(k, v_dict, itr)
+                self.dashboard.add_scalars(k, v_dict, itr)
 
             else:
-                self.dashboard._add_text(k, " ".join(v), itr)
+                self.dashboard.add_text(k, " ".join(v), itr)
         elif isinstance(v, dict):
             for sub_k, sub_v in v.items():
-                self.dashboard._add_scalar(f"{k}_{sub_k}", sub_v, itr)
+                self.dashboard.add_scalar(f"{k}_{sub_k}", sub_v, itr)
         elif isinstance(v, MovingAverage):
-            self.dashboard._add_scalar(k, v.get(), itr)
+            self.dashboard.add_scalar(k, v.get(), itr)
         elif isinstance(v, str):
-            self.dashboard._add_text(k, v, itr)
+            self.dashboard.add_text(k, v, itr)
 
         elif isinstance(v, Image.Image):
-            self.dashboard._add_image(
+            self.dashboard.add_image(
                 k, np.array(v).transpose(2, 0, 1), itr, dataformats="CHW"
             )
         elif isinstance(v, pd.DataFrame):
-            self.dashboard._add_table(k, v, itr)
+            self.dashboard.add_table(k, v, itr)
         elif isinstance(v, (int, float)):
-            self.dashboard._add_scalar(k, v, itr)
+            self.dashboard.add_scalar(k, v, itr)
         else:
-            raise ValueError(f"Unsupported dashboard value {v}. Must be [int,float, pd.DataFrame, Image.Image, str, MovingAverage, dict[str,float|int], list[float,int], np.ndarray] ")
+            raise ValueError(
+                f"Unsupported dashboard value {v}. Must be "
+                "[int,float, pd.DataFrame, Image.Image, str, "
+                "MovingAverage, dict[str,float|int], list[float,int], np.ndarray] "
+            )
 
     def _append_metrics(self, metrics):
         if self.result_json_path is not None:
-            with open(self.result_json_path, "a") as fp:
+            with open(self.result_json_path, "a", encoding="utf-8") as fp:
                 fp.write(futils.dict_to_json(metrics) + "\n")
 
     def update(
         self,
-        metrics: Union[TrainMetrics, Dict],
-        aux_metrics: dict | None = None,
+        metrics: Union[TrainMetrics, dict],
         itr: Optional[int] = None,
     ):
         if itr is None:
@@ -164,9 +178,6 @@ class SummaryLogger:
 
         for k, v in dict_metrics.items():
             self._add_metric(k, v, itr)
-        if aux_metrics is not None:
-            for k, v in aux_metrics.items():
-                self._add_metric(k, v, itr)
 
         self._update_metadata()
 
@@ -175,8 +186,11 @@ class SummaryLogger:
         save_dict: object,
         file_name: str,
         itr: int | None = None,
-        dir_name: Union[Literal["recent", "best"], str] = "recent",
+        is_best: bool = False,
     ):
+        if self.model_dir is None:
+            return
+        dir_name = "best" if is_best else "recent"
         if self.keep_n_checkpoints > 0:
             if dir_name not in self.checkpoint_iteration:
                 self.checkpoint_iteration[dir_name] = {}
@@ -186,9 +200,10 @@ class SummaryLogger:
                 self.checkpoint_iteration[dir_name][file_name] += 1
                 itr = self.checkpoint_iteration[dir_name][file_name]
             else:
+                cur_iter = self.checkpoint_iteration[dir_name][file_name]
                 assert (
-                    itr > self.checkpoint_iteration[dir_name][file_name]
-                ), f"Current iteration > {itr}. Can not save checkpoint."
+                    itr > cur_iter
+                ), f"Checkpoint iteration {cur_iter} > training iteration {itr}. Can not save checkpoint."
                 self.checkpoint_iteration[dir_name][file_name] = itr
 
             dir_path = self.model_dir.joinpath(self.CHKPT_DIRS[dir_name])
@@ -201,6 +216,8 @@ class SummaryLogger:
             self._update_metadata()
 
     def clean_checkpoints(self, keep_n_checkpoints: int):
+        if self.model_dir is None:
+            return
         for chkpt_dir in self.CHKPT_DIR_VALUES:
             dir_path = self.model_dir.joinpath(chkpt_dir)
             futils.clean_checkpoints(dir_path, keep_n_checkpoints)

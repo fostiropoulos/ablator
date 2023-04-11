@@ -194,7 +194,6 @@ def test_hierarchical():
 
 
 if __name__ == "__main__":
-    # from ..conftest import assert_error_msg
     def assert_error_msg(fn, error_msg):
         try:
             fn()

@@ -1,14 +1,15 @@
+import glob
+import json
+from os.path import join
 from pathlib import Path
-from typing import List, Union
+from typing import Union
+
 import numpy as np
 import pandas as pd
-import json
 import torch
-import glob
-from os.path import join
 
 
-def make_sub_dirs(parent: Union[str, Path], *dir_names) -> List[Path]:
+def make_sub_dirs(parent: Union[str, Path], *dir_names) -> list[Path]:
     dirs = []
     for dir_name in dir_names:
         dir_path = Path(parent).joinpath(dir_name)

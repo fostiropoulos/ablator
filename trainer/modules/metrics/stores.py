@@ -1,10 +1,15 @@
+import inspect
 import sys
-from typing import Any, Callable, Dict, Generic, List, Optional, Sequence, TypeVar
+import typing as ty
+from collections.abc import (
+    Callable,
+    Sequence,
+)
+
 import numpy as np
 import torch
-import typing as ty
+
 import trainer.utils.base as butils
-import inspect
 
 
 class ArrayStore(Sequence):
@@ -12,14 +17,14 @@ class ArrayStore(Sequence):
         self,
         batch_limit: int = 30,
         # 100 MB memory limit
-        memory_limit: Optional[int] = int(1e8),
+        memory_limit: int | None = int(1e8),
     ):
         super().__init__()
-        self.arr: List[ty.Union[np.ndarray, int, float]] = []
+        self.arr: list[np.ndarray | int | float] = []
         self.limit = batch_limit
         self.memory_limit = memory_limit
 
-    def append(self, val: ty.Union[np.ndarray, float, int]):
+    def append(self, val: np.ndarray | float | int):
         """Appends a batch of values"""
         # Appending by batch is faster than converting numpy to list
         assert isinstance(
@@ -47,7 +52,7 @@ class ArrayStore(Sequence):
         return self.arr[i]
 
     def reset(self):
-        self.vals = []
+        self.arr = []
 
 
 class PredictionStore:
@@ -57,20 +62,20 @@ class PredictionStore:
         # 100 MB memory limit
         memory_limit: int = int(1e8),
         moving_average_limit: int = 3000,
-        evaluation_functions: Optional[Dict[str, Callable]] = None,
+        evaluation_functions: dict[str, Callable] | None = None,
     ):
         super().__init__()
         # self.labels = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
         # self.preds = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
         self.limit = batch_limit
         self.memory_limit = memory_limit
-        self.metrics: Dict[str, MovingAverage] = (
+        self.metrics: dict[str, MovingAverage] = (
             {k: MovingAverage(moving_average_limit) for k in evaluation_functions}
             if evaluation_functions is not None
             else {}
         )
         self.__evaluation_functions__ = evaluation_functions
-        self._keys: Optional[list[str]] = None
+        self._keys: list[str] | None = None
 
     def _init_arr(self, tag):
         attr_name = f"__{tag}_arr__"
@@ -106,7 +111,7 @@ class PredictionStore:
         for k in self._keys:
             self._get_arr(k).limit = new_limit
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         if self._keys is None:
             raise RuntimeError("PredictionStore has no predictions to evaluate.")
         batches = {k: self._get_arr(k).get() for k in self._keys}
@@ -115,19 +120,21 @@ class PredictionStore:
             return {}
         metrics = {}
         for k, v in self.__evaluation_functions__.items():
-            fn_args = sorted(list(inspect.getargspec(v)[0]))
+            fn_args = sorted(list(inspect.getfullargspec(v)[0]))
 
-            assert self._keys == fn_args, f"Evaluation function arguments {fn_args} different than stored predictions: {self._keys}"
+            assert (
+                self._keys == fn_args
+            ), f"Evaluation function arguments {fn_args} different than stored predictions: {self._keys}"
             metric = v(**batches)
             if isinstance(metric, torch.Tensor):
                 metric = metric.item()
             metrics[k] = metric
             try:
                 self.metrics[k].append(metric)
-            except ValueError:
+            except Exception as exc:
                 raise ValueError(
                     f"Invalid value {metric} returned by evaluation function {v.__name__}. Must be numeric scalar."
-                )
+                ) from exc
         return metrics
 
     def reset(self):
@@ -148,8 +155,7 @@ class MovingAverage(ArrayStore):
     def value(self):
         if len(self.arr) > 0:
             return self.__mean__
-        else:
-            return None
+        return np.nan
 
     def __lt__(self, __o: float) -> bool:
         return float(self.value).__lt__(__o)
@@ -166,15 +172,15 @@ class MovingAverage(ArrayStore):
     def __repr__(self) -> str:
         return f"{self.value:.2e}"
 
-    def append(self, vals: ty.Union[np.ndarray, torch.Tensor, float, int]):
-        if not isinstance(vals, (np.ndarray, torch.Tensor, int, float)):
-            raise ValueError(f"Invalid MovingAverage value type {type(vals)}")
-        if isinstance(vals, (np.ndarray, torch.Tensor)):
-            npval = butils.iter_to_numpy(vals)
+    def append(self, val: ty.Union[np.ndarray, torch.Tensor, float, int]):
+        if not isinstance(val, (np.ndarray, torch.Tensor, int, float)):
+            raise ValueError(f"Invalid MovingAverage value type {type(val)}")
+        if isinstance(val, (np.ndarray, torch.Tensor)):
+            npval = butils.iter_to_numpy(val)
             try:
                 scalar = npval.item()
-            except:
-                raise ValueError(f"MovingAverage value must be scalar. {vals}")
+            except Exception as exc:
+                raise ValueError(f"MovingAverage value must be scalar. {val}") from exc
         else:
-            scalar = vals
+            scalar = val
         super().append(scalar)
