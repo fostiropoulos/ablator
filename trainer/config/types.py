@@ -3,10 +3,7 @@ from collections import namedtuple
 from enum import Enum as _Enum
 
 """
-Custom enhanced types to restrict the number of parameters that can be passed to types
-
-eg.
-Tuple[int,str] is not allowed, mypy will yield an error
+Custom types for runtime checking 
 """
 
 T = ty.TypeVar("T")
@@ -33,13 +30,72 @@ Literal = ty.Literal
 
 
 class Enum(_Enum):
+    """
+    A custom Enum class that provides additional equality and hashing methods.
+
+    Methods
+    -------
+    __eq__(self, __o: object) -> bool:
+        Checks for equality between the Enum instance and another object.
+
+    __hash__(self) -> int:
+        Calculates the hash of the Enum instance.
+
+    Examples
+    --------
+    >>> from enum import Enum as _Enum
+    >>> class Color(Enum):
+    ...     RED = 1
+    ...     GREEN = 2
+    ...     BLUE = 3
+    ...
+    >>> Color.RED == Color.RED
+    True
+    >>> Color.RED == 1
+    True
+    >>> hash(Color.RED) == hash(Color.RED)
+    True
+    """
     def __eq__(self, __o: object) -> bool:
+        """
+        Checks for equality between the Enum instance and another object.
+
+        Parameters
+        ----------
+        __o : object
+            The object to compare with the Enum instance.
+
+        Returns
+        -------
+        bool
+            True if the objects are equal, False otherwise.
+
+        Examples
+        --------
+        >>> Color.RED == Color.RED
+        True
+        >>> Color.RED == 1
+        True
+        """
         val = __o
         if not isinstance(val, type(self)):
             val = type(self)(val)
         return super().__eq__(val)
 
     def __hash__(self):
+        """
+        Calculates the hash of the Enum instance.
+
+        Returns
+        -------
+        int
+            The hash value of the Enum instance.
+
+        Examples
+        --------
+        >>> hash(Color.RED) == hash(Color.RED)
+        True
+        """
         return _Enum.__hash__(self)
 
 
