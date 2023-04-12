@@ -14,8 +14,7 @@ from torch.utils.data import DataLoader
 
 import trainer.utils.base as butils
 from trainer.main.configs import ModelConfig, RunConfig, TrainConfig
-from trainer.main.model.main import (EvaluationError, ModelBase,
-                                     TrainPlateauError)
+from trainer.main.model.main import EvaluationError, ModelBase, TrainPlateauError
 from trainer.modules.metrics.main import LossDivergedError, TrainMetrics
 from trainer.modules.optimizer import OptimizerConfig
 from trainer.modules.scheduler import Scheduler, SchedulerConfig
@@ -451,6 +450,7 @@ class ModelWrapper(ModelBase):
         # TODO make new metrics
         msg = self.metrics.to_dict()
         self.logger.info(f"Current metrics: {msg}")
+        metrics = {}
         for loader, tag in zip(
             [self.test_dataloader, self.val_dataloader], ["test", "val"]
         ):
@@ -463,18 +463,19 @@ class ModelWrapper(ModelBase):
                     moving_average_limit=len(loader),
                     evaluation_functions=self.evaluation_functions(),
                     tags=[tag],
-                    static_aux_metrics=self.train_stats,
                     moving_aux_metrics=["loss"] + getattr(self, "aux_metric_names", []),
                 )
                 self._validation_loop(
                     model=self.model,
                     dataloader=loader,
-                    tag=tag, # type: ignore
+                    tag=tag,  # type: ignore
                     metrics=eval_metrics,
                     subsample=1,
                 )
+                metrics[tag] = eval_metrics
                 msg = self.metrics.to_dict()
                 self.logger.info(f"Evaluation: {msg}")
+        return metrics
 
     def apply_loss(
         self,
@@ -519,6 +520,12 @@ class ModelWrapper(ModelBase):
     ) -> dict[str, float]:
         was_training = model.training
         model.eval()
+        batch_lim = metrics.__batch_limit__
+        if batch_lim < len(dataloader):
+            self.logger.warn(
+                f"Metrics batch-limit {batch_lim} is smaller than "
+                 f"the validation dataloader length {len(dataloader)}. "
+            )
         metrics_dict = self.validation_loop(
             model, dataloader, metrics, tag, subsample, smoke_test
         )
