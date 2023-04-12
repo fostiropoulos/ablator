@@ -2,6 +2,10 @@ import typing as ty
 from collections import namedtuple
 from enum import Enum as _Enum
 
+"""
+Custom types for runtime checking 
+"""
+
 T = ty.TypeVar("T")
 
 
@@ -26,13 +30,72 @@ Literal = ty.Literal
 
 
 class Enum(_Enum):
+    """
+    A custom Enum class that provides additional equality and hashing methods.
+
+    Methods
+    -------
+    __eq__(self, __o: object) -> bool:
+        Checks for equality between the Enum instance and another object.
+
+    __hash__(self) -> int:
+        Calculates the hash of the Enum instance.
+
+    Examples
+    --------
+    >>> from enum import Enum as _Enum
+    >>> class Color(Enum):
+    ...     RED = 1
+    ...     GREEN = 2
+    ...     BLUE = 3
+    ...
+    >>> Color.RED == Color.RED
+    True
+    >>> Color.RED == 1
+    True
+    >>> hash(Color.RED) == hash(Color.RED)
+    True
+    """
     def __eq__(self, __o: object) -> bool:
+        """
+        Checks for equality between the Enum instance and another object.
+
+        Parameters
+        ----------
+        __o : object
+            The object to compare with the Enum instance.
+
+        Returns
+        -------
+        bool
+            True if the objects are equal, False otherwise.
+
+        Examples
+        --------
+        >>> Color.RED == Color.RED
+        True
+        >>> Color.RED == 1
+        True
+        """
         val = __o
         if not isinstance(val, type(self)):
             val = type(self)(val)
         return super().__eq__(val)
 
     def __hash__(self):
+        """
+        Calculates the hash of the Enum instance.
+
+        Returns
+        -------
+        int
+            The hash value of the Enum instance.
+
+        Examples
+        --------
+        >>> hash(Color.RED) == hash(Color.RED)
+        True
+        """
         return _Enum.__hash__(self)
 
 
@@ -76,7 +139,27 @@ and is not advised.
 """
 
 
+
+
 def _strip_hint_state(type_hint):
+    """
+    Strips the hint state from a type hint.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The input type hint to strip the state from.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the state and the remaining type hint.
+
+    Example
+    -------
+    >>> _strip_hint_state(Stateful[int])
+    (Stateful, int)
+    """
     origin = ty.get_origin(type_hint)
     if origin is None:
         return Stateful, type_hint
@@ -87,7 +170,28 @@ def _strip_hint_state(type_hint):
     return Stateful, type_hint
 
 
+
+
+
 def _strip_hint_optional(type_hint):
+    """
+    Strips the optional part of a type hint.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The input type hint to strip the optional part from.
+
+    Returns
+    -------
+    tuple
+        A tuple containing a boolean indicating if the type hint is optional and the remaining type hint.
+
+    Example
+    -------
+    >>> _strip_hint_optional(Optional[int])
+    (True, int)
+    """
     if ty.get_origin(type_hint) == Optional:
         args = ty.get_args(type_hint)
         assert len(args) == 1
@@ -96,6 +200,29 @@ def _strip_hint_optional(type_hint):
 
 
 def _strip_hint_collection(type_hint):
+    """
+    Strips the collection from a type hint.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The input type hint to strip the collection from.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the collection and the variable type.
+
+    Raises
+    ------
+    NotImplementedError
+        If the type hint is not valid or custom classes don't implement __dict__.
+
+    Example
+    -------
+    >>> _strip_hint_collection(List[int])
+    (List, int)
+    """
     origin = ty.get_origin(type_hint)
     assert (
         origin in ALLOWED_COLLECTIONS
@@ -127,7 +254,26 @@ def _strip_hint_collection(type_hint):
     )
 
 
+
 def parse_type_hint(type_hint):
+    """
+    Parses a type hint and returns a parsed annotation.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The input type hint to parse.
+
+    Returns
+    -------
+    Annotation
+        A namedtuple containing state, optional, collection, and variable_type information.
+
+    Example
+    -------
+    >>> parse_type_hint(Optional[List[int]])
+    Annotation(state=Stateful, optional=True, collection=List, variable_type=int)
+    """
     state, _type_hint = _strip_hint_state(type_hint)
 
     optional, _type_hint = _strip_hint_optional(_type_hint)
@@ -143,6 +289,27 @@ def parse_type_hint(type_hint):
 
 
 def _parse_class(cls, kwargs):
+    """
+    Parse values whose types are not  a collection or in ALLOWED_TYPES
+    eg. bool, added dict(tune configs)
+
+    Parameters
+    ----------
+    cls : Type
+        The input Type
+    kwargs : dict or object
+        The keyword arguments or object to parse with the given type
+
+    Returns
+    -------
+    object
+        Parsed object
+
+    Raises
+    ------
+    RuntimeError
+        If the input kwargs is incompatible 
+    """
     if isinstance(kwargs, cls):
         # This is when initializing directly from config
         pass
@@ -157,6 +324,34 @@ def _parse_class(cls, kwargs):
 
 
 def parse_value(val, annot: Annotation, name=None):
+    """
+    Parses a value based on the given annotation.
+
+    Parameters
+    ----------
+    val : Any
+        The input value to parse.
+    annot : Annotation
+        The annotation namedtuple to guide the parsing.
+    name : str, optional
+        The name of the value, by default None.
+
+    Returns
+    -------
+    Any
+        The parsed value.
+
+    Raises
+    ------
+    RuntimeError
+        If the required value is missing and it is not optional or derived or stateless.
+
+    Example
+    -------
+    >>> annotation = parse_type_hint(Optional[List[int]])
+    >>> parse_value([1, 2, 3], annotation)
+    [1, 2, 3]
+    """
     # annot = parse_type_hint(type_hint)
     if val is None:
         if not (annot.state in [Derived, Stateless] or annot.optional):
@@ -189,6 +384,19 @@ def parse_value(val, annot: Annotation, name=None):
 
 
 def get_annotation_state(annotation):
+    """
+    Get state of an annotation
+
+    Parameters
+    ----------
+    annotation: 
+        type annotation
+
+    Returns
+    -------
+    Stateful, Derived, Stateless, or None
+    (Stateful is the default)
+    """
     origin = ty.get_origin(annotation)
     if origin is None:
         return Stateful
