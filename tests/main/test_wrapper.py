@@ -128,9 +128,11 @@ class DisambigiousTestWrapper(ModelWrapper):
     def make_dataloader_val(self, run_config: RunConfig):
         dl = [torch.rand(100) for i in range(100)]
         return dl
+
     def config_parser(self, run_config: RunConfig):
         run_config.model_config.ambigious_var = 10
         return run_config
+
 
 def assert_error_msg(fn, error_msg):
     try:
@@ -176,14 +178,29 @@ def capture_output(fn):
 
 def test_verbosity():
     verbose_config = RunConfig(
-        train_config=train_config, model_config=ModelConfig(), verbose="tqdm"
+        train_config=train_config,
+        model_config=ModelConfig(),
+        verbose="tqdm",
+        metrics_n_batches=100,
     )
     out, err = capture_output(
         lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
     )
 
     assert err.strip().startswith("0%|          | 0/100") and len(out) == 0
-
+    verbose_config = RunConfig(
+        train_config=train_config,
+        model_config=ModelConfig(),
+        verbose="tqdm",
+        metrics_n_batches=32,
+    )
+    out, err = capture_output(
+        lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
+    )
+    assert (
+        "Metrics batch-limit 32 is smaller than the validation dataloader length 100."
+        in out
+    )
     console_config = RunConfig(
         train_config=train_config, model_config=ModelConfig(), verbose="console"
     )
@@ -238,12 +255,10 @@ def test_state():
     disambigious_wrapper = DisambigiousTestWrapper(MyCustomModel)
     disambigious_wrapper._init_state(run_config=_config)
 
-    _config=copy.deepcopy(config)
+    _config = copy.deepcopy(config)
     _config.random_seed = 100
     wrapper = TestWrapper(MyCustomModel)
     wrapper._init_state(run_config=_config)
-
-
 
     assert len(wrapper.train_dataloader) == 100 and len(wrapper.val_dataloader) == 100
     train_stats = {
@@ -334,4 +349,5 @@ if __name__ == "__main__":
     # test_load_save(tmp_path)
     # test_error_models()
     # test_train_stats()
-    test_state()
+    # test_state()
+    test_verbosity()
