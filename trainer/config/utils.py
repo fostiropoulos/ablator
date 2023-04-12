@@ -7,6 +7,23 @@ import typing as ty
 
 
 def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.Any]:
+    """
+    Flatten a nested dictionary into a single-level dictionary with dot-separated keys.
+
+    Parameters
+    ----------
+    _dict : dict
+        The input nested dictionary to be flattened.
+    expand_list : bool, optional (default=True)
+        If True, expand list and tuple values into separate keys in the flattened dictionary.
+    seperator : str, optional (default=".")
+        The separator to use when concatenating nested keys.
+
+    Returns
+    -------
+    dict[str, ty.Any]
+        A flattened dictionary with dot-separated keys.
+    """
     flatten_dict = copy.deepcopy(_dict)
     for k, v in _dict.items():
         _gen: ty.Optional[abc.Iterable] = None
@@ -27,7 +44,25 @@ def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.
 
 
 def dict_hash(*dictionaries: list[dict[str, ty.Any]], hash_len=4):
-    """MD5 hash of a dictionary."""
+    """
+    Generate a short, fixed-length MD5 hash of one or more dictionaries.
+
+    Parameters
+    ----------
+    *dictionaries : list[dict[str, ty.Any]]
+        One or more dictionaries to be hashed.
+    hash_len : int, optional (default=4)
+        The length of the returned hash.
+
+    Returns
+    -------
+    str
+        A fixed-length MD5 hash of the input dictionaries.
+
+    Notes
+    -------
+    MD5 hash of a dictionary.
+    """
     concat_dictionaries = [
         copy.deepcopy(_) if isinstance(_, dict) else copy.deepcopy(_).__dict__
         for _ in dictionaries

@@ -6,18 +6,44 @@ T = ty.TypeVar("T")
 
 
 class Dict(ty.Dict[str, T]):
+    """
+    A custom Dict class that extends Python's typing.Dict, providing a more concise
+    and convenient way to represent dictionaries with string keys and values of a
+    generic type T.
+
+    Example usage: Dict[int] represents a dictionary with string keys and integer values.
+    """
     pass
 
 
 class List(ty.List[T]):
+    """
+    A custom List class that extends Python's typing.List, providing a more concise
+    and convenient way to represent lists with values of a generic type T.
+
+    Example usage: List[int] represents a list of integers.
+    """
     pass
 
 
 class Tuple(ty.Tuple[T]):
+    """
+    A custom Tuple class that extends Python's typing.Tuple, providing a more concise
+    and convenient way to represent tuples with values of a generic type T.
+
+    Example usage: Tuple[int, str] represents a tuple with an integer as the first element
+    and a string as the second element.
+    """
     pass
 
 
 class Optional(ty.Generic[T]):
+    """
+    A custom Optional class that extends Python's typing.Generic, providing a more concise
+    and convenient way to represent optional values of a generic type T.
+
+    Example usage: Optional[int] represents a value that can be an integer or None.
+    """
     pass
 
 
@@ -26,13 +52,55 @@ Literal = ty.Literal
 
 
 class Enum(_Enum):
+    """
+    A custom Enum class that extends Python's Enum class with additional functionality
+    for equality comparisons and hashing.
+
+    This Enum class makes it easier to compare instances of the Enum with other values
+    and ensures that instances of the Enum can be used as keys in dictionaries or sets.
+
+    Methods
+    -------
+    __eq__(self, __o: object) -> bool:
+        Compares the current Enum instance with another object for equality.
+
+    __hash__(self) -> int:
+        Returns the hash value of the current Enum instance.
+    """
     def __eq__(self, __o: object) -> bool:
+        """
+        Compares the current Enum instance with another object for equality.
+
+        If the other object is not an instance of the same Enum class, this method
+        attempts to convert the other object to the same Enum class before performing
+        the equality comparison.
+
+        Parameters
+        ----------
+        __o : object
+            The other object to compare for equality with the current Enum instance.
+
+        Returns
+        -------
+        bool
+            True if the Enum instances are equal, False otherwise.
+        """
         val = __o
         if not isinstance(val, type(self)):
             val = type(self)(val)
         return super().__eq__(val)
 
     def __hash__(self):
+        """
+        Returns the hash value of the current Enum instance.
+
+        This method allows Enum instances to be used as keys in dictionaries or sets.
+
+        Returns
+        -------
+        int
+            The hash value of the current Enum instance.
+        """
         return _Enum.__hash__(self)
 
 
@@ -77,6 +145,25 @@ and is not advised.
 
 
 def _strip_hint_state(type_hint):
+    """
+    Extracts the state (Stateful, Derived, or Stateless) from the given type hint.
+
+    This function checks if the provided type hint has a state (Stateful, Derived, or Stateless)
+    and returns a tuple containing the state and the underlying type hint. If the type hint has
+    no state specified, it defaults to Stateful.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The type hint to be analyzed for its state.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - state (Type): The state of the type hint (Stateful, Derived, or Stateless).
+        - type_hint (Type): The underlying type hint without the state information.
+    """
     origin = ty.get_origin(type_hint)
     if origin is None:
         return Stateful, type_hint
@@ -88,6 +175,26 @@ def _strip_hint_state(type_hint):
 
 
 def _strip_hint_optional(type_hint):
+    """
+    Checks if the given type hint is an Optional type, and if so, extracts its underlying type.
+
+    This function checks if the provided type hint is an Optional type (e.g., `Optional[int]`).
+    If the type hint is Optional, it returns a tuple with a flag set to True and the underlying
+    type of the Optional. Otherwise, it returns a tuple with the flag set to False and the original
+    type hint.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The type hint to be analyzed for Optional.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - optional (bool): A flag indicating whether the type hint is an Optional type.
+        - type_hint (Type): The underlying type of the Optional or the original type hint if not Optional.
+    """
     origin = ty.get_origin(type_hint)
     if origin == Optional:  # ty.Union and type_hint._name == "Optional":
         args = ty.get_args(type_hint)
@@ -97,6 +204,32 @@ def _strip_hint_optional(type_hint):
 
 
 def _strip_hint_collection(type_hint):
+    """
+    Analyzes the type hint to identify the collection type and variable type(s) associated with it.
+
+    This function processes various collection-related type hints, such as Dict, List,
+    Tuple, Literal, Enum, and Type. It extracts the collection type (if present) and the
+    variable type(s) within the collection. If the type hint does not correspond to a collection,
+    it returns the type hint as is.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The type hint to be analyzed.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - collection (Type): The collection type of the type hint, if any (e.g. List, Dict, Tuple).
+        - variable_type (Type or tuple of Types): The variable type(s) within the collection or the standalone variable type.
+        In case of Literal and Enum, a tuple of valid values is returned.
+    
+    Raises
+    ------
+    NotImplementedError
+        If the type_hint is not valid or custom classes don't implement __dict__.
+    """
     origin = ty.get_origin(type_hint)
     assert (
         origin in ALLOWED_COLLECTIONS
@@ -127,6 +260,25 @@ def _strip_hint_collection(type_hint):
 
 
 def parse_type_hint(type_hint):
+    """
+    Parse a type hint to extract its state, optional status, collection type, and
+    variable type. This function breaks down the type hint into its constituent
+    parts, allowing for easier processing of the type hint during runtime.
+
+    Parameters
+    ----------
+    type_hint : Type
+        The type hint to be parsed.
+
+    Returns
+    -------
+    Annotation
+        A namedtuple containing the following fields:
+        - state (Stateful, Derived, Stateless): The state of the type hint.
+        - optional (bool): Indicates if the type hint is optional.
+        - collection (Type): The collection type of the type hint (e.g. List, Dict, Tuple).
+        - variable_type (Type): The variable type within the collection or standalone variable.
+    """
     state, _type_hint = _strip_hint_state(type_hint)
 
     optional, _type_hint = _strip_hint_optional(_type_hint)
@@ -142,6 +294,31 @@ def parse_type_hint(type_hint):
 
 
 def _parse_class(cls, kwargs):
+    """
+    Parse and initialize an instance of a custom class based on the provided
+    keyword arguments. This function handles the initialization of a custom
+    class either directly from a config object or from a dictionary.
+    
+    Parameters
+    ----------
+    cls : Type
+        The custom class or type that needs to be initialized.
+    kwargs : Union[dict, object]
+        The keyword arguments or object to be parsed with the given type.
+
+    Returns
+    -------
+    object
+        An instance of the custom class initialized with the provided keyword
+    arguments.
+
+    Raises
+    ------
+    RuntimeError
+        If the keyword arguments are of an incompatible type with the custom class,
+    a RuntimeError is raised with a message indicating the incompatibility.
+        
+    """
     if isinstance(kwargs, cls):
         # This is when initializing directly from config
         pass
@@ -156,6 +333,41 @@ def _parse_class(cls, kwargs):
 
 
 def parse_value(val, annot: Annotation, name=None):
+    """
+    Parse a value based on the provided annotation. This function helps
+    in converting the input value according to the expected type and structure
+    defined by the annotation. It handles different collection types, optional
+    values, literals, enums, and custom classes.
+
+    Parameters
+    ----------
+    val : Any
+        The value to be parsed.
+    annot : Annotation
+        The annotation object that describes the expected type and structure
+        of the input value.
+    name : Optional[str]
+        The name of the value, used for error messages (default: None).
+
+    Returns
+    -------
+    Any
+        The parsed value, converted according to the expected type and structure
+        defined by the annotation. This can include dictionaries, lists, tuples,
+        instances of custom classes, enum values, or literals, depending on the
+        annotation.
+
+    Raises
+    ------
+    RuntimeError
+        If a required value is missing or an incompatible length is provided
+        for a tuple.
+    AssertionError
+        If the value is not a valid literal or not supported by the enum.
+    NotImplementedError
+        If the collection type is not supported.
+    """
+
     # annot = parse_type_hint(type_hint)
     if val is None:
         if not (annot.state in [Derived, Stateless] or annot.optional):
@@ -188,6 +400,20 @@ def parse_value(val, annot: Annotation, name=None):
 
 
 def get_annotation_state(annotation):
+    """
+    Get the state of a given annotation. The state can be Stateful, Derived,
+    or Stateless, depending on the annotation's origin.
+
+    Parameters
+    ----------
+    annotation : Type
+        The annotation for which the state is required.
+
+    Returns
+    -------
+    Type
+        The state of the given annotation, either Stateful, Derived, or Stateless.
+    """
     origin = ty.get_origin(annotation)
     if origin is None:
         return Stateful
