@@ -1,15 +1,14 @@
-import glob
+import copy
 import json
-from os.path import join
+import typing as ty
 from pathlib import Path
-from typing import Union
 
 import numpy as np
 import pandas as pd
 import torch
 
 
-def make_sub_dirs(parent: Union[str, Path], *dir_names) -> list[Path]:
+def make_sub_dirs(parent: str | Path, *dir_names) -> list[Path]:
     dirs = []
     for dir_name in dir_names:
         dir_path = Path(parent).joinpath(dir_name)
@@ -22,8 +21,8 @@ def save_checkpoint(state, filename="checkpoint.pt"):
     torch.save(state, filename)
 
 
-def clean_checkpoints(checkpoint_folder, n_checkpoints):
-    chkpts = sorted(glob.glob(join(checkpoint_folder, "*.pt")))[::-1]
+def clean_checkpoints(checkpoint_folder: Path, n_checkpoints: int):
+    chkpts = sorted(list(checkpoint_folder.glob("*.pt")))[::-1]
 
     # Keep only last n checkpoints (or first n because we sort in reverse)
     if len(chkpts) > n_checkpoints:
@@ -52,3 +51,14 @@ def dict_to_json(_dict):
     # make sure it can be decoded
     json_to_dict(_json)
     return _json
+
+
+def nested_set(_dict, keys: list[str], value: ty.Any):
+    original_dict = copy.deepcopy(_dict)
+    x = original_dict
+    for key in keys[:-1]:
+        if key not in x:
+            x[key] = {}
+        x = x[key]
+    x[keys[-1]] = value
+    return original_dict
