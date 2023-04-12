@@ -237,6 +237,8 @@ class ModelBase(ABC):
             self._load_model(self.current_checkpoint, model_only=True)
 
         elif resume and not smoke_test:
+            if "recent" not in self.logger.CHKPT_DIRS:
+                raise RuntimeError("Checkpoint folder was not found.")
             recent_checkpoint_dir = self.logger.CHKPT_DIRS["recent"]
             # NOTE: current_checkpoint is found in _find_load_valid_checkpoint
             self._find_load_valid_checkpoint(recent_checkpoint_dir)

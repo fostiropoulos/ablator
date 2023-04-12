@@ -48,6 +48,7 @@ class SummaryLogger:
         self.log_file_path: Path | None = None
         self.dashboard: LoggerBase | None = None
         self.model_dir: Path | None = None
+        self.CHKPT_DIRS = {}
         if model_dir is not None:
             self.model_dir = Path(model_dir)
             if not resume and self.model_dir.exists():
@@ -77,7 +78,6 @@ class SummaryLogger:
             (self.summary_dir, *chkpt_dirs) = futils.make_sub_dirs(
                 model_dir, self.SUMMARY_DIR_NAME, *self.CHKPT_DIR_VALUES
             )
-            self.CHKPT_DIRS = {}
             for name, path in zip(self.CHKPT_DIR_NAMES, chkpt_dirs):
                 self.CHKPT_DIRS[name] = path
 
