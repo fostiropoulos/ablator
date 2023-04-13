@@ -199,6 +199,7 @@ def test_summary_logger(tmp_path: Path):
 
 
 if __name__ == "__main__":
+    # TODO test results.json
     test_summary_logger(Path("/tmp/"))
 
     pass

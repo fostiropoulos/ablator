@@ -153,7 +153,7 @@ class SummaryLogger:
                 "MovingAverage, dict[str,float|int], list[float,int], np.ndarray] "
             )
 
-    def _append_metrics(self, metrics):
+    def _append_metrics(self, metrics: dict[str, float]):
         if self.result_json_path is not None:
             with open(self.result_json_path, "a", encoding="utf-8") as fp:
                 fp.write(futils.dict_to_json(metrics) + "\n")
@@ -178,7 +178,7 @@ class SummaryLogger:
 
         for k, v in dict_metrics.items():
             self._add_metric(k, v, itr)
-
+        self._append_metrics(dict_metrics)
         self._update_metadata()
 
     def checkpoint(
