@@ -48,6 +48,7 @@ class SummaryLogger:
         self.log_file_path: Path | None = None
         self.dashboard: LoggerBase | None = None
         self.model_dir: Path | None = None
+        self.result_json_path: Path | None = None
         self.CHKPT_DIRS = {}
         if model_dir is not None:
             self.model_dir = Path(model_dir)
