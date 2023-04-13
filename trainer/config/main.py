@@ -20,6 +20,7 @@ from trainer.config.types import (
     parse_value,
 )
 from trainer.config.utils import dict_hash, flatten_nested_dict
+
 """
     Decorator for ConfigBase subclasses, adds the config_class attribute to the class.
 
@@ -33,6 +34,8 @@ from trainer.config.utils import dict_hash, flatten_nested_dict
     Type[ConfigBase]
         The decorated class with the config_class attribute.
 """
+
+
 def configclass(cls):
     assert issubclass(cls, ConfigBase), f"{cls.__name__} must inherit from ConfigBase"
     setattr(cls, "config_class", cls)
@@ -63,7 +66,6 @@ class ConfigBase:
     all config class must be decorated with @configclass
     """
     config_class = type(None)
-
 
     def __init__(self, *args, add_attributes=False, **kwargs):
         """
@@ -221,9 +223,6 @@ class ConfigBase:
         val = self.get_val_with_dot_path(dot_path)
         return type(val)
 
-    
-
-
     def get_annot_type_with_dot_path(self, dot_path: str):
         """
         Get the type of a configuration object annotation using dot notation.
@@ -242,7 +241,6 @@ class ConfigBase:
         annot_dot_path = ".".join(base_path + ["annotations"])
         annot: dict[str, Annotation] = self.get_val_with_dot_path(annot_dot_path)
         return annot[element].variable_type
-
 
     def make_dict(
         self,
@@ -268,20 +266,29 @@ class ConfigBase:
             The dictionary representation of the configuration object.
         """
         return_dict = {}
+
+        def __parse_nested_value(val):
+            if issubclass(type(val), Type):
+                return val.__dict__
+            elif issubclass(type(val), ConfigBase):
+                return val.make_dict(val.annotations)
+            else:
+                return val
+
         for field_name, annot in annotations.items():
             if ignore_stateless and (annot.state in {Stateless, Derived}):
                 continue
 
             _val = getattr(self, field_name)
-            if annot.collection is None or annot.collection in [
-                Dict,
-                List,
-                Tuple,
-                Literal,
-            ]:
+            if annot.collection in [None, Literal] or _val is None:
                 val = _val
+            elif annot.collection == List:
+                val = [__parse_nested_value(_lval) for _lval in _val]
+            elif annot.collection == Tuple:
+                val = tuple([__parse_nested_value(_lval) for _lval in _val])
+            elif annot.collection in [Dict]:
+                val = {k: __parse_nested_value(_dval) for k, _dval in _val.items()}
             elif issubclass(type(_val), ConfigBase):
-
                 val = _val.make_dict(
                     _val.annotations, ignore_stateless=ignore_stateless, flatten=flatten
                 )
@@ -301,6 +308,7 @@ class ConfigBase:
         if flatten:
             return_dict = flatten_nested_dict(return_dict)
         return return_dict
+
     def write(self, path: ty.Union[Path, str]):
         """
         Write the configuration object to a file.
@@ -325,7 +333,6 @@ class ConfigBase:
         # TODO: investigate https://github.com/crdoconnor/strictyaml as an alternative to OmegaConf
         conf = OmegaConf.create(self.to_dict())
         return OmegaConf.to_yaml(conf)
-
 
     def assert_state(self, config: "ConfigBase") -> bool:
         """
@@ -407,7 +414,6 @@ class ConfigBase:
             str_diffs.append(_diff)
         return str_diffs
 
-    
     def diff(
         self, config: "ConfigBase", ignore_stateless=False
     ) -> list[tuple[str, tuple[type, ty.Any], tuple[type, ty.Any]]]:
@@ -575,4 +581,9 @@ class ConfigBase:
                 and issubclass(annot.variable_type, ConfigBase)
                 and getattr(self, k) is not None
             ):
-                getattr(self, k).assert_unambigious()
+                if annot.collection in [List, Tuple]:
+                    [_lval.assert_unambigious() for _lval in getattr(self, k)]
+                elif annot.collection in [Dict]:
+                    [_lval.assert_unambigious() for _lval in getattr(self, k).values()]
+                else:
+                    getattr(self, k).assert_unambigious()

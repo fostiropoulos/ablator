@@ -162,7 +162,6 @@ def test_error_configs(assert_error_msg):
         (
             ErrorConfigBadAnnotatedTwo,
             "Invalid collection typing.Union. type_hints must be structured as:"
-            # "Invalid collection <class 'trainer.config.types.Derived'>. type_hints must be structured as:",
         ),
         (
             ErrorConfigHintOrder,
@@ -194,6 +193,7 @@ def test_hierarchical():
 
 
 if __name__ == "__main__":
+    # TODO tests for iterable Type
     def assert_error_msg(fn, error_msg):
         try:
             fn()

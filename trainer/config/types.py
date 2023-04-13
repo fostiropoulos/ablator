@@ -3,7 +3,7 @@ from collections import namedtuple
 from enum import Enum as _Enum
 
 """
-Custom types for runtime checking 
+Custom types for runtime checking
 """
 
 T = ty.TypeVar("T")
@@ -56,6 +56,7 @@ class Enum(_Enum):
     >>> hash(Color.RED) == hash(Color.RED)
     True
     """
+
     def __eq__(self, __o: object) -> bool:
         """
         Checks for equality between the Enum instance and another object.
@@ -139,8 +140,6 @@ and is not advised.
 """
 
 
-
-
 def _strip_hint_state(type_hint):
     """
     Strips the hint state from a type hint.
@@ -168,9 +167,6 @@ def _strip_hint_state(type_hint):
         return origin, type_hint.__args__[0]
 
     return Stateful, type_hint
-
-
-
 
 
 def _strip_hint_optional(type_hint):
@@ -233,7 +229,9 @@ def _strip_hint_collection(type_hint):
         args = ty.get_args(type_hint)
         assert len(args) == 1
         # Dict and list annotations only support a single type
-        assert args[0] in ALLOWED_TYPES, f"Invalid type_hint: {type_hint}."
+        assert args[0] in ALLOWED_TYPES or issubclass(
+            type(args[0]), (Enum, Type)
+        ), f"Invalid type_hint: {type_hint}."
         collection = Dict if origin == Dict else List
         return collection, args[0]
     if origin == Tuple:
@@ -252,7 +250,6 @@ def _strip_hint_collection(type_hint):
     raise NotImplementedError(
         f"{type_hint} is not a valid hint. Custom classes must implement __dict__."
     )
-
 
 
 def parse_type_hint(type_hint):
@@ -308,7 +305,7 @@ def _parse_class(cls, kwargs):
     Raises
     ------
     RuntimeError
-        If the input kwargs is incompatible 
+        If the input kwargs is incompatible
     """
     if isinstance(kwargs, cls):
         # This is when initializing directly from config
@@ -362,8 +359,20 @@ def parse_value(val, annot: Annotation, name=None):
             val in annot.variable_type
         ), f"{val} is not a valid Literal {annot.variable_type}"
         return val
-    if annot.collection == Dict:
+    if annot.collection == Dict and (
+        annot.variable_type in ALLOWED_TYPES or issubclass(annot.variable_type, Enum)
+    ):
         return {str(_k): annot.variable_type(_v) for _k, _v in val.items()}
+    if annot.collection == Dict and issubclass(type(annot.variable_type), Type):
+        return_dictionary = {}
+        for _k, _v in val.items():
+            if isinstance(_v, dict):
+                return_dictionary[_k] = annot.variable_type(**_v)
+            elif isinstance(_v, annot.variable_type):
+                return_dictionary[_k] = _v
+            else:
+                raise ValueError(f"Invalid type {type(_v)} for {_k} and field {name}")
+        return return_dictionary
     if annot.collection == List:
         return [annot.variable_type(_v) for _v in val]
     if annot.collection == Tuple:
@@ -389,7 +398,7 @@ def get_annotation_state(annotation):
 
     Parameters
     ----------
-    annotation: 
+    annotation:
         type annotation
 
     Returns
