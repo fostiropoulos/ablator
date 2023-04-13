@@ -1,11 +1,8 @@
-import copy
-import io
 import logging
+import typing as ty
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Type, Union
 
 import matplotlib.pyplot as plt
-import optuna
 import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -15,21 +12,18 @@ from ablator.analysis.main import Analysis
 from ablator.analysis.plot import Plot
 from ablator.analysis.plot.cat_plot import ViolinPlot
 from ablator.analysis.plot.num_plot import LinearPlot
-from ablator.config.main import Optim
+from ablator.main.configs import Optim
 
 logger = logging.getLogger(__name__)
 
 
 class PlotAnalysis(Analysis):
-    def __init__(self, *args, save_dir: Optional[str] = None, **kwargs) -> None:
-        super().__init__(*args, save_dir=save_dir, **kwargs)
-
     @classmethod
     def _write_images(
         cls,
-        fig_map: Dict[str, Union[Axes, Figure, Image.Image]],
+        fig_map: dict[str, ty.Union[Axes, Figure, Image.Image]],
         path: Path,
-        file_format: Literal["png", "pdf", "jpg"] = "png",
+        file_format: ty.Literal["png", "pdf", "jpg"] = "png",
     ):
         path.mkdir(exist_ok=True, parents=True)
         for name, fig in fig_map.items():
@@ -44,13 +38,13 @@ class PlotAnalysis(Analysis):
     @classmethod
     def _make_metric_plots(
         cls,
-        path: Optional[Path],
-        plot_cls: Type[Plot],
+        path: Path | None,
+        plot_cls: type[Plot],
         metrics: pd.DataFrame,
         results: pd.DataFrame,
-        metric_map: Dict[str, Optim],
+        metric_map: dict[str, Optim],
         append=False,
-        ax: Optional[Axes] = None,
+        ax: Axes | None = None,
         metric_name_remap=None,
         attribute_name_remap=None,
         **kwargs,
@@ -60,6 +54,12 @@ class PlotAnalysis(Analysis):
         (results, metrics, metric_map) = cls._remap_results(
             results, metrics, metric_map, metric_name_remap, attribute_name_remap
         )
+        inv_metric_name_remap = None
+        if metric_name_remap is not None:
+            inv_metric_name_remap = {v: k for k, v in metric_name_remap.items()}
+        inv_attribute_name_remap = None
+        if attribute_name_remap is not None:
+            inv_attribute_name_remap = {v: k for k, v in attribute_name_remap.items()}
 
         for metric_name in metrics.columns:
             metric_values = metrics[metric_name]
@@ -71,12 +71,18 @@ class PlotAnalysis(Analysis):
                 results=results,
                 append=append,
                 ax=ax,
+                inv_attribute_name_map=inv_attribute_name_remap,
                 **kwargs,
             )
+            if inv_metric_name_remap is not None:
+                original_metric_name = inv_metric_name_remap[metric_name]
+            else:
+                original_metric_name = metric_name
             if path is not None:
-                p = path.joinpath(metric_name)
+                p = path.joinpath(original_metric_name)
                 cls._write_images(axes_map, p)
-            [plt.close(ax.figure) for ax in axes_map.values()]
+            for ax in axes_map.values():
+                plt.close(ax.figure)
             axes[metric_name] = axes_map
         return axes
 
@@ -85,16 +91,17 @@ class PlotAnalysis(Analysis):
         cls,
         metric_values: pd.Series,
         results: pd.DataFrame,
-        plot_cls: Type[Plot],
+        plot_cls: type[Plot],
         metric_obj_fn: Optim,
         append=False,
-        ax: Optional[Axes] = None,
+        ax: Axes | None = None,
+        inv_attribute_name_map: dict[str, str] | None = None,
         **kwargs,
-    ) -> Dict[str, Axes]:
+    ) -> dict[str, Axes]:
         axes_map = {}
         for attribute_name in results.columns:
             attribute_values = results[attribute_name]
-            figure, axes = plot_cls(
+            _, axes = plot_cls(
                 metric=metric_values,
                 attributes=attribute_values,
                 metric_obj_fn=metric_obj_fn,
@@ -102,25 +109,29 @@ class PlotAnalysis(Analysis):
                 x_axis=attribute_name,
                 ax=ax,
             ).make(**kwargs)
+            if inv_attribute_name_map is not None:
+                original_attribute_name = inv_attribute_name_map[attribute_name]
+            else:
+                original_attribute_name = attribute_name
             if append:
                 ax = axes
             else:
-                axes_map[attribute_name] = axes
+                axes_map[original_attribute_name] = axes
                 plt.close()
         if append:
-            axes_map[attribute_name] = axes
+            axes_map["combined_attribute"] = axes
             plt.close()
         return axes_map
 
     def make_violinplot(
         self,
-        attribute_names: List[str],
-        metrics: List[str],
-        save_dir: Union[Path, str],
+        attribute_names: list[str],
+        metrics: list[str],
+        save_dir: ty.Union[Path, str],
         **plt_kwargs,
     ):
         save_path = Path(save_dir).joinpath("violinplot")
-        metric_map = {k: v for k, v in self.metric_map.items() if k in metrics}
+        metric_map = {k: v for k, v in self.optim_metrics.items() if k in metrics}
         self._make_metric_plots(
             path=save_path,
             plot_cls=ViolinPlot,
@@ -132,13 +143,13 @@ class PlotAnalysis(Analysis):
 
     def make_linearplot(
         self,
-        attribute_names: List[str],
-        metrics: List[str],
-        save_dir: Union[Path, str],
+        attribute_names: list[str],
+        metrics: list[str],
+        save_dir: ty.Union[Path, str],
         **plt_kwargs,
     ):
         save_path = Path(save_dir).joinpath("linearplot")
-        metric_map = {k: v for k, v in self.metric_map.items() if k in metrics}
+        metric_map = {k: v for k, v in self.optim_metrics.items() if k in metrics}
 
         return self._make_metric_plots(
             path=save_path,
@@ -151,36 +162,33 @@ class PlotAnalysis(Analysis):
 
     def make_figures(
         self,
-        save_dir: Optional[str] = None,
-        metric_name_remap: Optional[Dict[str, str]] = None,
-        attribute_name_remap: Optional[Dict[str, str]] = None,
+        metric_name_remap: dict[str, str] | None = None,
+        attribute_name_remap: dict[str, str] | None = None,
         **plt_kwargs,
     ):
-        # TODO make remapping integral to PlotAnalysis
-        report_dir = self._init_directories(save_dir)
-        cat_attrs = set(self.categorical_attributes)
-        num_attrs = set(self.numerical_attributes)
+        cat_attrs = list(self.categorical_attributes)
+        num_attrs = list(self.numerical_attributes)
         if attribute_name_remap is not None:
-            cat_attrs = set(attribute_name_remap.keys()).intersection(cat_attrs)
-            num_attrs = set(attribute_name_remap.keys()).intersection(num_attrs)
+            cat_attrs = list(set(attribute_name_remap.keys()).intersection(cat_attrs))
+            num_attrs = list(set(attribute_name_remap.keys()).intersection(num_attrs))
 
-        if len(cat_attrs):
-            for plot_fn in ["make_violinplot"]:
+        if len(cat_attrs) > 0:
+            for plot_fn in ("make_violinplot"):
                 getattr(self, plot_fn)(
                     cat_attrs,
                     self.metric_names,
                     metric_name_remap=metric_name_remap,
                     attribute_name_remap=attribute_name_remap,
-                    save_dir=report_dir,
+                    save_dir=self.save_dir,
                     **plt_kwargs,
                 )
-        if len(num_attrs):
-            for plot_fn in ["make_linearplot"]:
+        if len(num_attrs) > 0:
+            for plot_fn in ("make_linearplot"):
                 getattr(self, plot_fn)(
                     num_attrs,
                     self.metric_names,
                     metric_name_remap=metric_name_remap,
                     attribute_name_remap=attribute_name_remap,
-                    save_dir=report_dir,
+                    save_dir=self.save_dir,
                     **plt_kwargs,
                 )

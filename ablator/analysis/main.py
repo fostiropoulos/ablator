@@ -1,4 +1,3 @@
-import copy
 import logging
 from pathlib import Path
 
@@ -6,7 +5,6 @@ import pandas as pd
 from joblib import Memory
 
 from ablator.analysis.plot.utils import parse_name_remap
-from ablator.analysis.results import Results
 from ablator.main.configs import Optim
 
 logger = logging.getLogger(__name__)
@@ -15,24 +13,20 @@ logger = logging.getLogger(__name__)
 class Analysis:
     def __init__(
         self,
-        results: Results,
+        results: pd.DataFrame,
+        categorical_attributes: list[str],
+        numerical_attributes: list[str],
+        optim_metrics: dict[str, Optim],
         save_dir: str | None = None,
         cache=False,
-        aux_metrics: dict[str, Optim] | None = None,
     ) -> None:
-        self._results = results
-
-        self.config = results.config
-        self.metric_map = copy.deepcopy(self._results.metric_map)
-        if aux_metrics is not None:
-            # TODO assert types of `aux_metrics`
-            self.metric_map = aux_metrics
+        self.optim_metrics = optim_metrics
         self.save_dir: Path | None = None
         self.cache: Memory | None = None
         if save_dir is not None:
             self.save_dir = Path(save_dir)
             if not self.save_dir.parent.exists():
-                raise ValueError(
+                raise FileNotFoundError(
                     f"Save directory does not exist. `{self.save_dir.parent}`"
                 )
             self.save_dir.mkdir(exist_ok=True)
@@ -40,21 +34,21 @@ class Analysis:
             if not cache:
                 self.cache.clear()
                 self.cache = None
-        self.categorical_attributes = self.results.categorical_attributes
-        self.numerical_attributes = self.results.numerical_attributes
+        self.categorical_attributes: list[str] = categorical_attributes
+        self.numerical_attributes: list[str] = numerical_attributes
         self.experiment_attributes: list[str] = (
             self.categorical_attributes + self.numerical_attributes
         )
 
-        self.results: pd.DataFrame = self._results.data[
+        self.results: pd.DataFrame = results[
             self.experiment_attributes
-            + list(self.metric_map.keys())
+            + list(self.optim_metrics.keys())
             + ["path", "index"]
         ]
 
     @property
     def metric_names(self):
-        return list(self.metric_map.keys())
+        return list(self.optim_metrics.keys())
 
     @classmethod
     def _get_best_results_by_metric(
@@ -65,8 +59,7 @@ class Analysis:
         def _best_perf(row: pd.DataFrame, name, obj_fn):
             if Optim(obj_fn) == Optim.min:
                 return row.sort_values(name, na_position="last").iloc[0]
-            else:
-                return row.sort_values(name, na_position="first").iloc[-1]
+            return row.sort_values(name, na_position="first").iloc[-1]
 
         _ress = []
         for name, obj_fn in metric_map.items():
@@ -105,10 +98,3 @@ class Analysis:
         attributes.columns = [attribute_name_remap[c] for c in attributes.columns]
         metrics.columns = [metric_name_remap[c] for c in metrics.columns]
         return attributes, metrics, metric_map
-
-    def _init_directories(self, save_dir):
-        report_dir = Path(save_dir)
-        if not report_dir.parent.exists():
-            raise FileNotFoundError(f"{report_dir.parent}")
-        report_dir.mkdir(exist_ok=True)
-        return report_dir

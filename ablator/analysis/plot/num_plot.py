@@ -1,5 +1,4 @@
 import logging
-from typing import Optional, Tuple
 
 import pandas as pd
 import seaborn as sns
@@ -16,18 +15,16 @@ class Numerical(Plot):
 
 
 class LinearPlot(Numerical):
-
     def _make(
         self,
         scatter_plot: bool = True,
-        polynomial_fit: Optional[int] = None,
-    ) -> Tuple[Figure, Axes]:
+        polynomial_fit: int | None = None,
+    ) -> tuple[Figure, Axes]:
         if not scatter_plot and polynomial_fit is None:
             raise ValueError(
                 "Must specify `polynomial_fit` when setting `scatter_plot` to False."
             )
         attributes = self.attributes.values
-        attribute_name = self.attributes.name
         metric = self.metric.values
         df = pd.concat(
             [

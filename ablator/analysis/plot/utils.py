@@ -1,15 +1,12 @@
 import logging
-from typing import Dict, List, Optional
-
 
 
 logger = logging.getLogger(__name__)
 
 
 def parse_name_remap(
-    defaults: Optional[List[str]] = None, name_map: Optional[Dict[str, str]] = None
-) -> Dict[str, str]:
-    """ """
+    defaults: list[str] | None = None, name_map: dict[str, str] | None = None
+) -> dict[str, str]:
     if name_map is not None and defaults is None:
         name_remap = name_map
     elif name_map is not None and defaults is not None:
@@ -19,4 +16,3 @@ def parse_name_remap(
     else:
         raise NotImplementedError("`defaults` or `name_map` argument required.")
     return name_remap
-

@@ -1,17 +1,13 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple, Union
 
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy
-import torch
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from ablator.config.run import Optim
+from ablator.main.configs import Optim
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +18,11 @@ class Plot(ABC):
         metric: pd.Series,
         attributes: pd.Series,
         metric_obj_fn: Optim,
-        y_axis: Optional[str] = None,
-        x_axis: Optional[str] = None,
-        x_ticks: Optional[np.ndarray] = None,
-        ax: Optional[Axes] = None,
+        y_axis: str | None = None,
+        x_axis: str | None = None,
+        x_ticks: np.ndarray | None = None,
+        ax: Axes | None = None,
     ) -> None:
-
         self.attributes = self._parse_attributes(metric, attributes)
         self.metric = self._parse_metrics(metric)
         self.metrics_obj_fn = metric_obj_fn
@@ -36,10 +31,10 @@ class Plot(ABC):
         self.x_ticks = x_ticks
         self.figure, self.ax = self._make_figure(ax)
 
-    def _make_figure(self,ax: Optional[Axes] = None) -> Tuple[Optional[Figure], Axes]:
+    def _make_figure(self, ax: Axes | None = None) -> tuple[Figure | None, Axes]:
         figure = None
         if ax is None:
-            figure = plt.figure(figsize=(4,4))
+            figure = plt.figure(figsize=(4, 4))
             ax = figure.add_subplot(1, 1, 1)
         return figure, ax
 
@@ -57,9 +52,9 @@ class Plot(ABC):
     def _parse_figure_axis(
         self,
         ax: Axes,
-        x_axis: Optional[str] = None,
-        y_axis: Optional[str] = None,
-        labels: Optional[List[str]] = None,
+        x_axis: str | None = None,
+        y_axis: str | None = None,
+        labels: list[str] | None = None,
     ):
         if labels is not None:
             ax.set_xticklabels(labels, size=14)
