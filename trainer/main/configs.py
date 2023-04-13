@@ -1,9 +1,20 @@
 # TODO fix mypy that does not recognize correctly the types i.e. Stateless
 # type: ignore
 from trainer.config.main import ConfigBase, configclass
-from trainer.config.types import Optional, Stateless, Literal
+from trainer.config.types import (
+    Optional,
+    Stateless,
+    Literal,
+    Tuple,
+    List,
+    Enum,
+    Dict,
+    Type,
+)
 from trainer.modules.optimizer import OptimizerConfig
 from trainer.modules.scheduler import SchedulerConfig
+from trainer.modules.storage.cloud import GcpConfig
+from trainer.modules.storage.remote import RemoteConfig
 
 
 @configclass
@@ -49,3 +60,45 @@ class RunConfig(ConfigBase):
         model_uid = self.model_config.uid
         uid = f"{train_uid}_{model_uid}"
         return uid
+
+
+class SearchType(Enum):
+    integer = "int"
+    numerical = "float"
+
+
+@configclass
+class SearchSpace(ConfigBase):
+    value_range: Optional[Tuple[str, str]]
+    categorical_values: Optional[List[str]]
+    value_type: SearchType
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        assert (
+            self.value_range is None or self.categorical_values is None
+        ), "Can not specify value_range and categorical_values for SearchSpace."
+
+
+class SearchAlgo(Enum):
+    random = "random"
+    tpe = "tpe"
+
+
+class Optim(Enum):
+    min = "min"
+    max = "max"
+
+
+@configclass
+class ParallelConfig(RunConfig):
+    total_trials: int
+    concurrent_trials: Stateless[int]
+    search_space: Dict[SearchSpace]
+    optim_metrics: Stateless[Dict[Optim]]
+    gpu_mb_per_experiment: Stateless[int] = None
+    cpus_per_experiment: Stateless[float] = None
+    search_algo: Stateless[SearchAlgo] = SearchAlgo.tpe
+    ignore_invalid_params: Stateless[bool] = False
+    remote_config: Stateless[Optional[RemoteConfig]] = None
+    gcp_config: Stateless[Optional[GcpConfig]] = None
