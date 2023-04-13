@@ -30,7 +30,7 @@ class ProtoTrainer:
         shared between trainers.
         """
 
-    def init_state(self):
+    def _init_state(self):
         """
         initialize the data state of the wrapper to force downloading and processing any data artifacts
         in the main train process as opposed to inside the wrapper.
@@ -40,7 +40,7 @@ class ProtoTrainer:
         mock_wrapper._init_state(run_config=copy.deepcopy(self.run_config), debug=True)
 
     def launch(self, debug: bool = False):
-        self.init_state()
+        self._init_state()
         metrics = self.wrapper.train(run_config=self.run_config, debug=debug)
         self.sync()
         return metrics

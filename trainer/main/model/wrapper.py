@@ -429,7 +429,7 @@ class ModelWrapper(ModelBase):
     @ty.final
     def train(
         self, run_config: RunConfig, smoke_test: bool = False, debug: bool = False
-    ):
+    )-> TrainMetrics:
         self._init_state(run_config=run_config, smoke_test=smoke_test, debug=debug)
 
         try:

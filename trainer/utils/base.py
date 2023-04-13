@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from torch import nn
+from pynvml.smi import nvidia_smi as smi
 
 
 class Dummy:
@@ -105,3 +106,18 @@ def init_weights(module: nn.Module):
     elif isinstance(module, nn.LayerNorm):
         module.bias.data.zero_()
         module.weight.data.fill_(1.0)
+
+
+def get_gpu_max_mem() -> ty.List[int]:
+    return get_gpu_mem(mem_type="total")
+
+
+def get_gpu_mem(
+    mem_type: ty.Literal["used", "total", "free"] = "total"
+) -> ty.List[int]:
+    # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
+    instance = smi.getInstance()
+    memory = []
+    for gpu in instance.DeviceQuery()["gpu"]:
+        memory.append(gpu["fb_memory_usage"][mem_type])
+    return memory
