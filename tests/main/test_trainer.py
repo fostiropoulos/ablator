@@ -1,7 +1,7 @@
 from pathlib import Path
 import torch
 from torch import nn
-from trainer import (
+from ablator import (
     ModelConfig,
     OptimizerConfig,
     RunConfig,
@@ -65,9 +65,9 @@ def test_proto(tmp_path: Path):
         "Must specify an experiment directory.",
     )
     config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
-    trainer = ProtoTrainer(wrapper=wrapper, run_config=config)
-    metrics = trainer.launch()
-    val_metrics = trainer.evaluate()
+    ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
+    metrics = ablator.launch()
+    val_metrics = ablator.evaluate()
     assert (
         abs((metrics.to_dict()["val_loss"] - val_metrics["val"].to_dict()["val_loss"]))
         < 0.01

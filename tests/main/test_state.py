@@ -4,13 +4,13 @@ import tempfile
 import numpy as np
 
 
-from trainer import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
-from trainer.main.configs import ParallelConfig, SearchSpace
-from trainer.main.state import ExperimentState, TrialState
+from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
+from ablator.main.configs import ParallelConfig, SearchSpace
+from ablator.main.state import ExperimentState, TrialState
 import io
 from contextlib import redirect_stderr, redirect_stdout
 
-from trainer.modules.loggers.file import FileLogger
+from ablator.modules.loggers.file import FileLogger
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
 train_config = TrainConfig(

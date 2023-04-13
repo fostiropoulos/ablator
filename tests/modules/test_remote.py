@@ -1,5 +1,5 @@
 from pathlib import Path
-from trainer.modules.storage.remote import RemoteConfig
+from ablator.modules.storage.remote import RemoteConfig
 import os
 
 import torch

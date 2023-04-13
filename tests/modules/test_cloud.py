@@ -1,5 +1,5 @@
 from pathlib import Path
-from trainer.modules.storage.cloud import GcpConfig
+from ablator.modules.storage.cloud import GcpConfig
 from unittest import mock
 import socket
 import torch

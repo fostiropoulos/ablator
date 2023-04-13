@@ -1,0 +1,46 @@
+import logging
+from typing import Optional, Tuple
+
+import pandas as pd
+import seaborn as sns
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+
+from ablator.analysis.plot import Plot
+
+logger = logging.getLogger(__name__)
+
+
+class Numerical(Plot):
+    DATA_TYPE = "numerical"
+
+
+class LinearPlot(Numerical):
+
+    def _make(
+        self,
+        scatter_plot: bool = True,
+        polynomial_fit: Optional[int] = None,
+    ) -> Tuple[Figure, Axes]:
+        if not scatter_plot and polynomial_fit is None:
+            raise ValueError(
+                "Must specify `polynomial_fit` when setting `scatter_plot` to False."
+            )
+        attributes = self.attributes.values
+        attribute_name = self.attributes.name
+        metric = self.metric.values
+        df = pd.concat(
+            [
+                pd.DataFrame(attributes, columns=["x"]),
+                pd.DataFrame(metric, columns=["y"]),
+            ],
+            axis=1,
+        )
+        g = sns.lmplot(df, x="x", y="y", markers=".", scatter_kws={"alpha": 0.3})
+        self.ax = g.ax
+        self.figure = g.ax.figure
+
+        return self.figure, self.ax
+
+    def _parse_legend(self, ax):
+        pass

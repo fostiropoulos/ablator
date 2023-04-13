@@ -1,6 +1,6 @@
 import typing as ty
 
-from trainer import (
+from ablator import (
     ConfigBase,
     Derived,
     Dict,
@@ -165,7 +165,7 @@ def test_error_configs(assert_error_msg):
         ),
         (
             ErrorConfigHintOrder,
-            "Invalid collection <class 'trainer.config.types.Derived'>. type_hints must be structured as:",
+            "Invalid collection <class 'ablator.config.types.Derived'>. type_hints must be structured as:",
         ),
         (ErrorConfigType, "invalid literal for int() with base 10: '2.2'"),
     ]

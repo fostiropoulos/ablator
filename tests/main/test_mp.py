@@ -7,18 +7,18 @@ import ray
 import torch
 from torch import nn
 
-from trainer import (
+from ablator import (
     ModelConfig,
     ModelWrapper,
     OptimizerConfig,
     RunConfig,
     TrainConfig,
 )
-from trainer.analysis.results import Results
-from trainer.config.main import configclass
-from trainer.main.configs import ParallelConfig, SearchSpace
-from trainer.main.mp import ParallelTrainer
-from trainer import Derived
+from ablator.analysis.results import Results
+from ablator.config.main import configclass
+from ablator.main.configs import ParallelConfig, SearchSpace
+from ablator.main.mp import ParallelTrainer
+from ablator import Derived
 
 
 class CustomModelConfig(ModelConfig):
@@ -134,11 +134,11 @@ def test_mp(tmp_path: Path):
     config.device = "cuda"
     config.gpu_mb_per_experiment = 0.001
     config.cpus_per_experiment = 0.001
-    trainer = ParallelTrainer(wrapper=wrapper, run_config=config)
-    trainer.gpu = 1 / config.concurrent_trials
-    trainer.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
-    res = Results(MyParallelConfig, trainer.experiment_dir)
-    assert res.data.shape[0] // 2 == len(trainer.experiment_state.complete_trials)
+    ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
+    ablator.gpu = 1 / config.concurrent_trials
+    ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
+    res = Results(MyParallelConfig, ablator.experiment_dir)
+    assert res.data.shape[0] // 2 == len(ablator.experiment_state.complete_trials)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 import copy
 from pathlib import Path
 
-from trainer import (
+from ablator import (
     Annotation,
     ConfigBase,
     Derived,

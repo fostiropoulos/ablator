@@ -11,8 +11,8 @@ import pytest
 from PIL import Image
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from trainer import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
-from trainer.modules.loggers.main import SummaryLogger
+from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
+from ablator.modules.loggers.main import SummaryLogger
 
 
 def assert_console_output(fn, assert_fn):

@@ -3,7 +3,7 @@ from pathlib import Path
 
 package_path = __file__
 setup(
-    name="trainer",
+    name="ablator",
     version="0.1",
     author="Iordanis Fostiropoulos",
     author_email="danny.fostiropoulos@gmail.com",

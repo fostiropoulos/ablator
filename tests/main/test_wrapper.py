@@ -7,7 +7,7 @@ import torch
 from torch import nn
 
 from torch.cuda.amp import GradScaler
-from trainer import (
+from ablator import (
     ModelConfig,
     ModelWrapper,
     OptimizerConfig,
