@@ -96,19 +96,21 @@ def sample_trial_params(
     for k, v in search_space.items():
         # TODO conditional sampling
         if v.value_range is not None and v.value_type == SearchType.integer:
+            low, high = v.value_range
+            low = int(low)
+            high = int(high)
             assert (
-                min(v.value_range) == v.value_range[0]
+                min(low, high) == low
             ), "`value_range` must be in the format of (min,max)"
-            parameter[k] = optuna_trial.suggest_int(
-                k, v.value_range[0], v.value_range[1]
-            )
+            parameter[k] = optuna_trial.suggest_int(k, low, high)
         elif v.value_range is not None and v.value_type == SearchType.numerical:
+            low, high = v.value_range
+            low = float(low)
+            high = float(high)
             assert (
-                min(v.value_range) == v.value_range[0]
+                min(low, high) == low
             ), "`value_range` must be in the format of (min,max)"
-            parameter[k] = optuna_trial.suggest_float(
-                k, v.value_range[0], v.value_range[1]
-            )
+            parameter[k] = optuna_trial.suggest_float(k, low, high)
         elif v.categorical_values is not None:
             parameter[k] = optuna_trial.suggest_categorical(k, v.categorical_values)
         else:

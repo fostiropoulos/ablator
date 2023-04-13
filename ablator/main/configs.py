@@ -70,7 +70,7 @@ class SearchType(Enum):
 class SearchSpace(ConfigBase):
     value_range: Optional[Tuple[str, str]]
     categorical_values: Optional[List[str]]
-    value_type: SearchType
+    value_type: SearchType = "float"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -95,8 +95,8 @@ class ParallelConfig(RunConfig):
     concurrent_trials: Stateless[int]
     search_space: Dict[SearchSpace]
     optim_metrics: Stateless[Dict[Optim]]
-    gpu_mb_per_experiment: Stateless[int] = None
-    cpus_per_experiment: Stateless[float] = None
+    gpu_mb_per_experiment: Stateless[int]
+    cpus_per_experiment: Stateless[float]
     search_algo: Stateless[SearchAlgo] = SearchAlgo.tpe
     ignore_invalid_params: Stateless[bool] = False
     remote_config: Stateless[Optional[RemoteConfig]] = None
