@@ -7,13 +7,17 @@ from pathlib import Path
 import numpy as np
 import optuna
 from optuna.trial import TrialState as OptunaTrialState
-from sqlalchemy import (Integer, PickleType, String, create_engine,
-                        select)
+from sqlalchemy import Integer, PickleType, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 import trainer.utils.base as butils
-from trainer.main.configs import (Optim, ParallelConfig, SearchAlgo,
-                                  SearchSpace, SearchType)
+from trainer.main.configs import (
+    Optim,
+    ParallelConfig,
+    SearchAlgo,
+    SearchSpace,
+    SearchType,
+)
 from trainer.modules.loggers.file import FileLogger
 from trainer.utils.file import nested_set
 
@@ -36,7 +40,7 @@ class TrialState(enum.IntEnum):
     )
     RECOVERABLE_ERROR = 8  # Trial that was pruned during execution for poor performance
 
-    def to_optuna_state(self) -> OptunaTrialState:
+    def to_optuna_state(self) -> OptunaTrialState | None:
         if self in [
             TrialState.PRUNED,
             TrialState.PRUNED_INVALID,
@@ -46,8 +50,8 @@ class TrialState(enum.IntEnum):
             return OptunaTrialState.PRUNED
         if self in {TrialState.RUNNING}:
             return None
-        else:
-            return OptunaTrialState(self)
+
+        return OptunaTrialState(self)
 
 
 def augment_trial_kwargs(
@@ -70,8 +74,8 @@ def parse_metrics(
     metric_directions: OrderedDict, metrics: dict[str, float]
 ) -> dict[str, float]:
     vals = OrderedDict()
-    metric_keys = {k for k in metric_directions}
-    user_metrics = {k for k in metrics}
+    metric_keys = set(metric_directions)
+    user_metrics = set(metrics)
     assert (
         user_metrics == metric_keys
     ), f"Different specified metric directions `{metric_keys}` and `{user_metrics}`"
@@ -175,9 +179,7 @@ class OptunaState:
     ):
         if metrics is None and state == TrialState.COMPLETE:
             raise RuntimeError(f"Missing metrics for complete trial {trial_num}.")
-        elif metrics is None:
-            return
-        elif state != TrialState.COMPLETE:
+        if metrics is None or state != TrialState.COMPLETE:
             return
         optuna_state = state.to_optuna_state()
         optuna_metrics = self._optuna_optim_values(metrics)
@@ -203,7 +205,7 @@ class ExperimentState:
     ) -> None:
         self.optuna_trial_map: dict[str, optuna.Trial] = {}
         self.config = config
-        self.logger = logger if logger is not None else butils.Dummy()
+        self.logger: FileLogger = logger if logger is not None else butils.Dummy()
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
         default_vals = self.config.make_dict(self.config.annotations, flatten=True)
@@ -338,7 +340,9 @@ class ExperimentState:
                 > error_upper_bound
             ):
                 raise RuntimeError(
-                    f"Reached maximum limit of misconfigured trials. {error_upper_bound}\nFound {len(self.pruned_duplicate_trials)} duplicate and {len(self.pruned_errored_trials)} invalid trials."
+                    f"Reached maximum limit of misconfigured trials. {error_upper_bound}\n"
+                    f"Found {len(self.pruned_duplicate_trials)} duplicate and "
+                    f"{len(self.pruned_errored_trials)} invalid trials."
                 )
 
             trial_num, parameter = self.optuna_state.sample_trial()
@@ -370,7 +374,8 @@ class ExperimentState:
         state: TrialState = TrialState.RUNNING,
     ) -> None:
         if state == TrialState.RECOVERABLE_ERROR:
-            return self._inc_error_count(config_uid, state)
+            self._inc_error_count(config_uid, state)
+            return
 
         self._update_internal_trial_state(config_uid, metrics, state)
         # NOTE currently it is error prone to update the optuna state

@@ -1,30 +1,30 @@
 import copy
-import multiprocessing
 import multiprocessing as mp
 import os
 import socket
 import subprocess
+import sys
 import traceback
-from pathlib import Path
-import typing as ty
 import types as tys
+import typing as ty
+from pathlib import Path
 
 import numpy as np
 import ray
 import torch
 
+import trainer as trainer_module
 from trainer.main.configs import ParallelConfig
 from trainer.main.model.main import TrainPlateauError
 from trainer.main.model.wrapper import ModelWrapper
 from trainer.main.proto import ProtoTrainer
 from trainer.main.state import ExperimentState, TrialState
 from trainer.modules.loggers.file import FileLogger
-from trainer.modules.metrics.main import LossDivergedError, TrainMetrics
+from trainer.modules.metrics.main import LossDivergedError
 from trainer.utils.base import get_gpu_max_mem
-import trainer as trainer_module
 
 # The exceptions that are unrecoverable i.e.  [DuplicateRunError]
-CRASH_EXCEPTION_TYPES: list[ty.Type] = []
+CRASH_EXCEPTION_TYPES: list[type] = []
 
 
 def parse_rsync_paths(
@@ -54,7 +54,7 @@ def train_main_remote(
     mp_logger: FileLogger,
     root_dir: Path,
     fault_tollerant: bool = True,
-    crash_exceptions_types: list[ty.Type] | None = None,
+    crash_exceptions_types: list[type] | None = None,
 ) -> tuple[ParallelConfig, dict[str, float] | None, TrialState]:
     if crash_exceptions_types is None:
         crash_exceptions_types = []
@@ -79,7 +79,7 @@ def train_main_remote(
         res = model.train(run_config)
         mp_logger.info(f"Finished training - {run_config.uid}")
         return run_config, res.to_dict(), TrialState.COMPLETE
-    except (LossDivergedError, TrainPlateauError) as e:
+    except (LossDivergedError, TrainPlateauError):
         return (
             run_config,
             model.metrics.to_dict(),
@@ -93,8 +93,8 @@ def train_main_remote(
                 None,
                 TrialState.RECOVERABLE_ERROR,
             )
-        else:
-            return handle_exception(e)
+
+        return handle_exception(e)
 
     except Exception as e:
         return handle_exception(e)
@@ -141,12 +141,10 @@ class ParallelTrainer(ProtoTrainer):
         self.total_mem_usage = 0
 
     def _make_gpu(self):
-        gpu = self.run_config.gpu_mb_per_experiment / self.gpu_mem_bottleneck
-
-        if gpu > 0:
+        if (gpu := self.run_config.gpu_mb_per_experiment / self.gpu_mem_bottleneck) > 0:
             assert (
                 self.device == "cuda"
-            ), f"Device must be set to 'cuda' if `gpu_mb_per_experiment` > 0"
+            ), "Device must be set to 'cuda' if `gpu_mb_per_experiment` > 0"
             assert (
                 torch.cuda.is_available()
             ), "Could not find a torch.cuda installation on your system."
@@ -158,14 +156,12 @@ class ParallelTrainer(ProtoTrainer):
                     f"of system available memory {sys_mem}MiB."
                 )
                 self.logger.warn(
-                    f"Consider adjusting `concurrent_trials` or `gpu_mb_per_experiment`."
+                    "Consider adjusting `concurrent_trials` or `gpu_mb_per_experiment`."
                 )
         return gpu
 
     def _make_cpu(self) -> int:
-        cpu = self.run_config.cpus_per_experiment
-
-        if cpu > 1:
+        if (cpu := self.run_config.cpus_per_experiment) > 1:
             cpu = np.floor(cpu)
 
         assert cpu > 0, "Invalid experiment_per_cpu count"
@@ -175,7 +171,7 @@ class ParallelTrainer(ProtoTrainer):
                 f"Expected CPU core util. exceed system capacity {mp.cpu_count()}."
             )
             self.logger.warn(
-                f"Consider adjusting `concurrent_trials` or `cpus_per_experiment`."
+                "Consider adjusting `concurrent_trials` or `cpus_per_experiment`."
             )
 
         return cpu
@@ -212,8 +208,7 @@ class ParallelTrainer(ProtoTrainer):
             diffs = "\n\t".join(diffs)
             msg = f"Scheduling uid: {run_config.uid}\nParameters: \n\t{diffs}\n-----"
             self.logger.info(msg)
-            remote_fn = self._make_remote_fn()
-            if remote_fn is not None:
+            if (remote_fn := self._make_remote_fn()) is not None:
                 remotes.append(
                     remote_fn.remote(
                         model_obj,
@@ -342,12 +337,12 @@ class ParallelTrainer(ProtoTrainer):
         metrics: dict[str, float] | None
         trial_state: TrialState
         n_trials_to_sample = 1
-        while len(futures):
+        while len(futures) > 0:
             try:
                 done_id, futures = ray.wait(
                     futures, num_returns=n_trials_to_sample, timeout=60
                 )
-                if len(done_id):
+                if len(done_id) > 0:
                     config, metrics, trial_state = ray.get(done_id[0])
                     metrics = parse_metrics(
                         list(self.run_config.optim_metrics.keys()), metrics
@@ -362,7 +357,8 @@ class ParallelTrainer(ProtoTrainer):
                         f"Waiting for {len(futures)} trials to finish running."
                     )
             except Exception as e:
-                # NOTE we do not know which trial caused the error, only the pending trials (which we can assume one is the errored)
+                # NOTE we do not know which trial caused the error, only
+                # the pending trials (which we can assume one is the errored)
                 exception = traceback.format_exc()
                 self.logger.error(exception)
 
@@ -371,7 +367,7 @@ class ParallelTrainer(ProtoTrainer):
                     self.logger.warn(
                         f"There are {len(pending_trials)} unfinished trials. with ids: {pending_trials}"
                     )
-                    exit(0)
+                    sys.exit(0)
 
         complete_ids = [c.uid for c in self.experiment_state.complete_trials]
         self.logger.info(

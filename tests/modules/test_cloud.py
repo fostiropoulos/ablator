@@ -39,7 +39,7 @@ def assert_tensor_list_diff(a, b):
     assert all([all(_a != _b) for _a, _b in zip(a, b)])
 
 
-def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis-data/"):
+def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
     rand_folder = f"{torch.rand(1).item()}"
     rand_destination = bucket + rand_folder
     # GcpConfig(bucket=rand_destination)._make_process(["gsutil", "-m", "rm", "-rf", rand_destination], verbose=False)
@@ -88,7 +88,7 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis-data/"):
 if __name__ == "__main__":
     import shutil
 
-    bucket = "gs://iordanis-data/"
+    bucket = "gs://iordanis/"
 
     rand_folder = f"aabb"
     rand_destination = bucket + rand_folder
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     except:
         pass
     tmp_path = Path("/tmp/gcp_test")
-    shutil.rmtree(tmp_path)
+    shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir(exist_ok=True)
     test_gcp(tmp_path, bucket)
     breakpoint()

@@ -58,8 +58,9 @@ class ModelWrapper(ModelBase):
         scaler_state = save_dict["scaler"] if "scaler" in save_dict else None
 
         model_class = self.model_class
+        model: nn.Module
         if (model_config := self.model_config) is not None:
-            model: torch.nn.Module = model_class(model_config)
+            model = model_class(model_config)
         else:
             # Support of decleartive paradigm without model over-writing
             model = model_class()
@@ -332,7 +333,7 @@ class ModelWrapper(ModelBase):
         run_config: ty.Optional[RunConfig] = None,
         run_async=True,
         block: bool = True,
-    ) -> mp.Process:
+    ) -> mp.Process | TrainMetrics:
         mock_model = copy.deepcopy(self)
 
         if run_config is None:
@@ -429,7 +430,7 @@ class ModelWrapper(ModelBase):
     @ty.final
     def train(
         self, run_config: RunConfig, smoke_test: bool = False, debug: bool = False
-    )-> TrainMetrics:
+    ) -> TrainMetrics:
         self._init_state(run_config=run_config, smoke_test=smoke_test, debug=debug)
 
         try:
@@ -520,11 +521,10 @@ class ModelWrapper(ModelBase):
     ) -> dict[str, float]:
         was_training = model.training
         model.eval()
-        batch_lim = metrics.__batch_limit__
-        if batch_lim < len(dataloader):
+        if (batch_lim := metrics.__batch_limit__) < len(dataloader):
             self.logger.warn(
                 f"Metrics batch-limit {batch_lim} is smaller than "
-                 f"the validation dataloader length {len(dataloader)}. "
+                f"the validation dataloader length {len(dataloader)}. "
             )
         metrics_dict = self.validation_loop(
             model, dataloader, metrics, tag, subsample, smoke_test

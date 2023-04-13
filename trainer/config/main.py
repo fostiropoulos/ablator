@@ -21,7 +21,9 @@ from trainer.config.types import (
 )
 from trainer.config.utils import dict_hash, flatten_nested_dict
 
-"""
+
+def configclass(cls):
+    """
     Decorator for ConfigBase subclasses, adds the config_class attribute to the class.
 
     Parameters
@@ -33,10 +35,8 @@ from trainer.config.utils import dict_hash, flatten_nested_dict
     -------
     Type[ConfigBase]
         The decorated class with the config_class attribute.
-"""
+    """
 
-
-def configclass(cls):
     assert issubclass(cls, ConfigBase), f"{cls.__name__} must inherit from ConfigBase"
     setattr(cls, "config_class", cls)
     return dataclass(cls, init=False, repr=False, kw_only=True)
@@ -270,10 +270,10 @@ class ConfigBase:
         def __parse_nested_value(val):
             if issubclass(type(val), Type):
                 return val.__dict__
-            elif issubclass(type(val), ConfigBase):
+            if issubclass(type(val), ConfigBase):
                 return val.make_dict(val.annotations)
-            else:
-                return val
+
+            return val
 
         for field_name, annot in annotations.items():
             if ignore_stateless and (annot.state in {Stateless, Derived}):
@@ -285,7 +285,7 @@ class ConfigBase:
             elif annot.collection == List:
                 val = [__parse_nested_value(_lval) for _lval in _val]
             elif annot.collection == Tuple:
-                val = tuple([__parse_nested_value(_lval) for _lval in _val])
+                val = tuple(__parse_nested_value(_lval) for _lval in _val)
             elif annot.collection in [Dict]:
                 val = {k: __parse_nested_value(_dval) for k, _dval in _val.items()}
             elif issubclass(type(_val), ConfigBase):

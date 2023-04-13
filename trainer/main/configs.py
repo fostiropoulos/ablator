@@ -9,7 +9,6 @@ from trainer.config.types import (
     List,
     Enum,
     Dict,
-    Type,
 )
 from trainer.modules.optimizer import OptimizerConfig
 from trainer.modules.scheduler import SchedulerConfig

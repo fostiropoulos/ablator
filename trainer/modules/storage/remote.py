@@ -10,8 +10,9 @@ from trainer.config.main import ConfigBase, configclass
 from trainer.config.types import Optional
 
 
-def run_cmd_wait(cmd, timeout=300, raise_errors=False):
+def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> None | str:
     # timeout is in seconds
+    output = None
     with subprocess.Popen(
         cmd, shell=True, stdout=subprocess.PIPE, preexec_fn=os.setsid
     ) as process:
@@ -23,6 +24,7 @@ def run_cmd_wait(cmd, timeout=300, raise_errors=False):
             traceback.print_exc()
             if raise_errors:
                 raise e
+    return output
 
 
 @configclass
@@ -46,7 +48,7 @@ class RemoteConfig(ConfigBase):
         if self.exclude_glob is not None:
             cmd += f' --exclude="{self.exclude_glob}"'
         if self.exclude_chkpts:
-            cmd += f' --exclude="*.pt"'
+            cmd += ' --exclude="*.pt"'
         cmd += f" {local_path}  {username}@{host}:{path}"
         return cmd
 
@@ -54,22 +56,15 @@ class RemoteConfig(ConfigBase):
         username = self.username
         host = self.hostname
         path = Path(self.remote_path) / destination
-        cmd = [f"rsync", "-art", f"--rsync-path", f'"mkdir -p {destination} && rsync"']
+        cmd = ["rsync", "-art", "--rsync-path", f'"mkdir -p {destination} && rsync"']
         if verbose:
             cmd[1] += "v"
         args = 'ssh -o "StrictHostKeyChecking=no"'
         if self.port is not None:
             args += f" -p {self.port}"
-        cmd += [f"-e", f'"{args}"']
+        cmd += ["-e", f'"{args}"']
         cmd += [f"{username}@{host}:{path}/", str(Path(local_path).parent)]
         return " ".join(cmd)
-
-    def _rsync_in_process(
-        self,
-        model_dir,
-    ):
-        cmd = self._make_cmd_up(model_dir)
-        subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, preexec_fn=os.setsid)
 
     def rsync_up(
         self,

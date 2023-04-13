@@ -1,15 +1,13 @@
-from multiprocessing import Process
-from pathlib import Path
+import json
+import os
 import socket
-from trainer.config.types import Optional
-import trainer.utils.file as futils
+import subprocess
+import typing as ty
+from pathlib import Path
 
 from trainer.config.main import ConfigBase, configclass
-import subprocess
-import os
-import typing as ty
+from trainer.config.types import Optional
 from trainer.modules.loggers.file import FileLogger
-import json
 
 
 @configclass
@@ -30,10 +28,8 @@ class GcpConfig(ConfigBase):
         assert (
             len(nodes) == 1
             and sum(
-                [
-                    network_interface["networkIP"] == ip_address
-                    for network_interface in nodes[0]["networkInterfaces"]
-                ]
+                network_interface["networkIP"] == ip_address
+                for network_interface in nodes[0]["networkInterfaces"]
             )
             == 1
         ), "Can only use GcpConfig from Google Cloud Server. Consider switching to RemoteConfig."
@@ -41,18 +37,18 @@ class GcpConfig(ConfigBase):
     def _make_cmd_up(self, local_path: Path, destination: str):
         destination = Path(self.bucket) / destination / local_path.name
         src = local_path
-        cmd = ["gsutil", "-m", f"rsync", "-r"]
+        cmd = ["gsutil", "-m", "rsync", "-r"]
         if self.exclude_glob is not None:
-            cmd += [f"--exclude", f"{self.exclude_glob}"]
+            cmd += ["--exclude", f"{self.exclude_glob}"]
         if self.exclude_chkpts:
-            cmd += [f"--exclude", "*.pt"]
+            cmd += ["--exclude", "*.pt"]
         cmd += [f"{src}", f"gs://{destination}"]
         return cmd
 
     def _make_cmd_down(self, src_path: str, local_path: Path):
         src = Path(self.bucket) / src_path / local_path.name
         destination = local_path
-        cmd = ["gsutil", "-m", f"rsync", "-r"]
+        cmd = ["gsutil", "-m", "rsync", "-r"]
         cmd += [f"gs://{src}", f"{destination}"]
         return cmd
 
@@ -66,9 +62,11 @@ class GcpConfig(ConfigBase):
 
         p = self._make_process(cmd, verbose=False)
         stdout, stderr = p.communicate()
-        assert (
-            len(stderr) == 0
-        ), f"There was an error running `{' '.join(cmd)}`. Make sure gsutil is installed and that the destination exists. `{stderr.decode('utf-8').strip()}`"
+        assert len(stderr) == 0, (
+            f"There was an error running `{' '.join(cmd)}`. "
+            "Make sure gsutil is installed and that the destination exists. "
+            f"`{stderr.decode('utf-8').strip()}`"
+        )
         return stdout.decode("utf-8").strip().split("\n")
 
     def rsync_up(
@@ -152,4 +150,5 @@ class GcpConfig(ConfigBase):
             if logger is not None:
                 logger.info(f"Rsync {cmd[-2]} to {name}:{cmd[-1]}")
 
-        [p.wait() for p in ps]
+        for p in ps:
+            p.wait()
