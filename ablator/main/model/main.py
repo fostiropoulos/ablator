@@ -41,21 +41,12 @@ class ModelBase(ABC):
     Requires the user to implement specific to their use-case load model and
     creation functionality.
 
-    This abstract base class provides a structure for handling the common tasks associated
-    with training, testing, and evaluating models, while allowing for customization
-    through the implementation of required abstract methods.
-
-    Parameters
-    ----------
-    model_class : type[nn.Module]
-        The base class for user's model, which defines the neural network.
-
     Attributes
     ----------
     model_class : Type[nn.Module]
         The class definition of the model's structure, which is a subclass of nn.Module.
-    run_config : RunConfigBase
-        The configuration for the dataloader, model training, and evaluation processes.
+    run_config : RunConfig
+        An instance of RunConfig containing configuration details.
     train_dataloader : DataLoader
         A DataLoader object responsible for model training.
     val_dataloader : Optional[DataLoader]
@@ -67,9 +58,9 @@ class ModelBase(ABC):
     device : str
         The type of device used for running the experiment. i.e. "cuda", "cpu", "cuda:0".
     model_dir : Path
-        Directory for the model file.
+        The model directory.
     experiment_dir : Path
-        Directory for recording training, testing, and evaluation information.
+        The experiment directory.
     autocast : torch.autocast
         Enables autocasting for chosen regions. Autocasting automatically chooses the precision for GPU operations 
         to improve performance while maintaining accuracy.
@@ -87,13 +78,13 @@ class ModelBase(ABC):
     metrics : Metrics
         Training metrics including model information. i.e. learning rate and loss value.
     current_state : dict
-        The current state of the model during training, including its parameters and optimizer state.
+        The currrent state of the model, including run_config, metrics and other necessary states.
     learning_rate : float
-        The learning rate used during training.
+        The current learning rate.
     total_steps : int
-        The total number of steps taken during training.
+        The total steps for the training process.
     epochs : int
-        The number of epochs to train the model for.
+        The total epochs for the training process.
     current_iteration : int
         The current iteration of training.
     best_iteration : int
@@ -115,6 +106,11 @@ class ModelBase(ABC):
         model_class: type[nn.Module],
     ):
         """Initializes the ModelBase class with the required model_class and optional configurations.
+
+        Parameters
+        ----------
+        model_class : type[nn.Module]
+            The base class for user's model, which defines the neural network.
         """
 
         self.model_class = model_class
@@ -155,7 +151,7 @@ class ModelBase(ABC):
         OrderedDict
             An ordered dictionary with the following keys and values:
             - learning_rate: The current learning rate.
-            - total_steps: The total number of steps taken during training.
+            - total_steps: The total steps for the training process.
             - epochs: The number of epochs for training.
             - current_epoch: The current epoch during training.
             - current_iteration: The current iteration during training.
@@ -209,24 +205,24 @@ class ModelBase(ABC):
     @cached_property
     def eval_itr(self):
         """
-        Calculates the number of iterations (batches) required for each evaluation cycle.
+        calculate the interval between evaluations.
 
         Returns
         -------
         int
-            The number of batches to process before performing model evaluation, rounded up to the nearest integer.
+            The interval between evaluations.
         """
         return math.ceil(self.run_config.eval_epoch * self.epoch_len)
 
     @cached_property
     def log_itr(self):
         """
-        Calculates the number of iterations (batches) required for each logging cycle.
+        Calculate the interval between logging steps.
 
         Returns
         -------
         int
-            The number of batches to process before performing model logging, rounded up to the nearest integer.
+            The interval between logging steps.
         """
         return math.ceil(self.run_config.log_epoch * self.epoch_len)
 
@@ -293,8 +289,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         is_best : bool, optional
-            If True, the current checkpoint is considered the best and should be saved accordingly,
-            by default False.
+            Indicates if the current checkpoint is the best model so far, by default False.
         """
         raise NotImplementedError
 
@@ -311,10 +306,9 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details for the training process.
+            An instance of RunConfig containing configuration details.
         smoke_test : bool, optional
-            If True, runs a shorter version of the training process to test for possible issues,
-            by default False.
+            Whether to run as a smoke test, by default False.
         """
         raise NotImplementedError
 
@@ -330,7 +324,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details for the evaluation process.
+            An instance of RunConfig containing configuration details.
         """
         raise NotImplementedError
 
@@ -348,7 +342,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details for creating the dataloaders.
+            An instance of RunConfig containing configuration details.
         """
         raise NotImplementedError
 
@@ -363,7 +357,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details to be parsed and applied.
+            An instance of RunConfig containing configuration details.
         """
         raise NotImplementedError
 
@@ -397,7 +391,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            The configuration object containing settings for the training process.
+            An instance of RunConfig containing configuration details.
         """
         self.make_dataloaders(run_config)
         assert (
@@ -472,7 +466,7 @@ class ModelBase(ABC):
         resume : bool, optional
             If True, tries to resume training from a checkpoint, by default False.
         smoke_test : bool, optional
-            If True, disables the loading of the most recent checkpoint when resuming, by default False.
+            Whether to run as a smoke test, by default False.
         """
         if self.run_config.init_chkpt is not None and resume:
             self.current_checkpoint = Path(self.run_config.init_chkpt)
@@ -512,9 +506,9 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of the RunConfig class containing the training configuration.
+            An instance of RunConfig containing configuration details.
         smoke_test : bool, optional
-            If True, disables the loading of the most recent checkpoint when resuming, by default False.
+            Whether to run as a smoke test, by default False.
         debug : bool, optional
             If True, disables logging and model directory creation, by default False.
         resume : bool, optional
