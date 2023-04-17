@@ -434,6 +434,13 @@ class ModelWrapper(ModelBase):
         -----------
         batch: Iterable
             The batch of input data to pass through the model,it could be a list, dict or a single tensor.
+
+        Returns:
+        --------
+        outputs: dict[str, torch.Tensor] | None
+            The output of the model.
+        train_metrics: dict[str, ty.Any]
+            The training metrics.
         """
         model = self.model
         optimizer = self.optimizer
@@ -497,6 +504,13 @@ class ModelWrapper(ModelBase):
             Whether to run the mock train in a separate process.
         block: bool
             Whether to block the current process until the mock train is finished.
+
+        Returns:
+        --------
+        p: mp.Process
+            The process running the mock train.
+        metrics: TrainMetrics
+            The metrics from the mock train.
         """
         mock_model = copy.deepcopy(self)
 
@@ -552,7 +566,7 @@ class ModelWrapper(ModelBase):
     @ty.final
     def eval(self, smoke_test=False):
         """
-        Evaluate the model if the current iteration is an evaluation step.
+        Evaluate the model then update schedular and save checkpoint if the current iteration is an evaluation step.
         """
         # Evaluation step
         if self._is_step(self.eval_itr):
@@ -580,7 +594,7 @@ class ModelWrapper(ModelBase):
 
     def train_loop(self, smoke_test=False):
         """
-        Train the model in many steps.
+        Train the model in many steps, evaluate the model and log the metrics in between.
 
         Parameters:
         -----------
@@ -634,6 +648,11 @@ class ModelWrapper(ModelBase):
             Whether to run a smoke test.
         debug: bool
             Whether to run in debug mode.
+        
+        Returns:
+        --------
+        TrainMetrics
+            The metrics from the training.
         """
         self._init_state(run_config=run_config, smoke_test=smoke_test, debug=debug)
 
@@ -650,7 +669,7 @@ class ModelWrapper(ModelBase):
         run_config: RunConfig,
     ):
         """
-        Evaluate the model.
+        Evaluate the model after training on the test and validation sets.
 
         Parameters:
         -----------
@@ -713,7 +732,11 @@ class ModelWrapper(ModelBase):
             The scaler to use for mixed precision training.
         scheduler: ty.Optional[Scheduler]
             The scheduler to step.
-        
+
+        Returns:
+        --------
+        float | None
+            The loss value.
         """
         if loss is not None:
             loss = torch.mean(loss)
@@ -772,7 +795,7 @@ class ModelWrapper(ModelBase):
         smoke_test: bool = False,
     ) -> dict[str, float]:
         """
-        Validate the model with the given dataloader.
+        Validate the model with the given tag and dataloader.
 
         Parameters:
         -----------
@@ -783,11 +806,16 @@ class ModelWrapper(ModelBase):
         metrics: TrainMetrics
             The metrics to use for validation.
         tag: ty.Literal["train", "test", "val"]
-            The tag to use for validation.
+            The tag to use for validation. Also see `TrainMetrics` for details.
         subsample: float
             The fraction of the dataloader to use for validation.
         smoke_test: bool
             Whether it is a smoke test.
+        
+        Returns:
+        --------
+        dict[str, float]
+            The metrics from the validation.
         """
         cutoff_itr = len(dataloader) * subsample
         for i, batch in enumerate(dataloader):
@@ -816,16 +844,62 @@ class ModelWrapper(ModelBase):
 
     @abstractmethod
     def make_dataloader_train(self, run_config: RunConfig) -> DataLoader:
+        """
+        Function to make the training dataloader.
+
+        Parameters:
+        -----------
+        run_config: RunConfig
+            The run configuration.
+        
+        Returns:
+        --------
+        DataLoader
+            The training dataloader.
+        """
         pass
 
     def evaluation_functions(self) -> dict[str, Callable] | None:
+        """
+        Returns:
+        --------
+        dict[str, Callable]
+            The evaluation functions to use.Also see `TrainMetrics` for details.
+        """
+        
         return None
 
     # Functions that can be optionally over-written.
     def make_dataloader_test(self, run_config: RunConfig) -> DataLoader | None:
+        """
+        Function to make the test dataloader.
+        
+        Parameters:
+        -----------
+        run_config: RunConfig
+            The run configuration.
+        
+        Returns:
+        --------
+        DataLoader | None
+            The test dataloader.
+        """
         pass
 
     def make_dataloader_val(self, run_config: RunConfig) -> DataLoader | None:
+        """
+        Function to make the validation dataloader.
+        
+        Parameters:
+        -----------
+        run_config: RunConfig
+            The run configuration.
+
+        Returns:
+        --------
+        DataLoader | None
+            The validation dataloader.
+        """
         pass
 
     def custom_evaluation(
@@ -836,6 +910,24 @@ class ModelWrapper(ModelBase):
     def aux_metrics(
         self, output_dict: dict[str, torch.Tensor] | None
     ) -> ty.Optional[dict[str, ty.Any]]:
+        """
+        Auxiliary metrics to be computed during training.
+
+        Parameters:
+        -----------
+        output_dict: dict[str, torch.Tensor] | None
+            The output dictionary from the model.
+        
+        Returns:   
+        --------
+        ty.Optional[dict[str, ty.Any]]
+            The auxiliary metrics.
+
+        Notes:
+        ------
+        Auxiliary metrics are computed during training and are used for moving_aux_metrics in `TrainMetrics`.
+        Check `TrainMetrics` for more details.
+        """
         pass
 
     def config_parser(self, run_config: RunConfig):
@@ -855,7 +947,7 @@ class ModelWrapper(ModelBase):
 
     def checkpoint(self, is_best=False):
         """
-        Make a checkpoint of the model.
+        Save a checkpoint of the model.
 
         Parameters:
         -----------
