@@ -29,9 +29,9 @@ class ArrayStore(Sequence):
         Parameters
         -----------
         batch_limit : int, optional
-            The maximum number of batches to store predictions. Default is 30.
+            The maximum number of batches of values to store for this single store. Default is 30.
         memory_limit : int or None, optional
-            The maximum memory allowed for all predictions in bytes. Default is 1e8.
+            The maximum memory allowed for all values in bytes. Default is 1e8.
         
         Examples
         --------
@@ -50,7 +50,7 @@ class ArrayStore(Sequence):
         """
         Appends a batch of values, or a single value, constrained on the limits.
         If after appending a new batch, `batch_limit` is exceeded, only `batch_limit` number
-        of latest batches is kept. If memory limit is exceeded, `batch_limit` will be reduced
+        of latest batches is kept. If memory limit is exceeded, `batch_limit` will be reduced.
 
         Parameters
         -----------
@@ -64,6 +64,8 @@ class ArrayStore(Sequence):
 
         Examples
         --------
+        The following example shows a case where batch limit is exceeded
+        (100 values/batches to be appended while only 10 is allowed)
         >>> from ablator.modules.metrics.stores import ArrayStore
         >>> array_store = ArrayStore(
         ...     batch_limit=10,
@@ -75,6 +77,11 @@ class ArrayStore(Sequence):
         [90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
         >>> array_store.limit
         10
+
+        This example shows a case where memory limit is exceeded. As soon as the 5th
+        value is appended, memory of the list is 104 > 100), so `batch_limit` is set
+        to the length of the store so far (which is 5) reduced by 1, which equals to 4.
+        Therefore, from then on, only 4 values/batches is allowed.
         >>> array_store = ArrayStore(
         ...     batch_limit=10,
         ...     memory_limit=100
@@ -167,10 +174,12 @@ class PredictionStore:
         Parameters
         -----------
         batch_limit : int, optional
-            Maximum number of batches to keep, so only batch_limit number of latest batches is stored. Default is 30.
+            Maximum number of batches to keep for each array store corresponding to each category of prediction
+            outputs (e.g preds, labels), so only `batch_limit` number of latest batches is stored per set of
+            array store. Default is 30.
         memory_limit : int or None, optional
-            Maximum memory (in bytes) of batches to keep. Every time this limit is exceeded, batch_limit will be
-            reduced by 1. Default is 1e8.
+            Maximum memory (in bytes) of batches to keep for each array store corresponding to each category of
+            prediction outputs (e.g preds, labels). Default is 1e8.
         moving_average_limit : int, optional
             The maximum number of values allowed to store moving average metrics. Default is 3000.
         evaluation_functions : dict[str, Callable], optional

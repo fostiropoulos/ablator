@@ -37,10 +37,11 @@ class TrainMetrics:
         Parameters
         -----------
         batch_limit : int, optional
-            Maximum number of batches to keep, so only batch_limit number of latest batches is stored. Default is 30.
+            Maximum number of batches to keep for every category of data (specified by `tags`), so only `batch_limit`
+            number of latest batches is stored for each of the categories. Default is 30.
         memory_limit : int, optional
-            Maximum memory (in bytes) of batches to keep in the TrainMetrics object. Every time this limit
-            is exceeded, batch_limit will be reduced by 1. Default is 1e8.
+            Maximum memory (in bytes) of batches to keep for every category of data (specified by `tags`). Every time
+            this limit is exceeded, `batch_limit` will be reduced by 1. Default is 1e8.
         evaluation_functions : dict[str, Callable], optional
             A dictionary of key-value pairs, keys are evaluation function names, values are 
             callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
