@@ -1,7 +1,7 @@
 from pathlib import Path
-from trainer.modules.loggers.file import FileLogger
-from trainer.modules.loggers.main import SummaryLogger
-from trainer.modules.loggers.tensor import TensorboardLogger
+from ablator.modules.loggers.file import FileLogger
+from ablator.modules.loggers.main import SummaryLogger
+from ablator.modules.loggers.tensor import TensorboardLogger
 import sys
 from contextlib import redirect_stdout
 import io

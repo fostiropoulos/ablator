@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from trainer import (
+from ablator import (
     OPTIMIZER_CONFIG_MAP,
     OptimizerConfig,
     SCHEDULER_CONFIG_MAP,
