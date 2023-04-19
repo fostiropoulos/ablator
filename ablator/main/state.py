@@ -141,7 +141,7 @@ def parse_metrics(
     >>> metric_directions = OrderedDict([('a', 'max'), ('b', 'min')])
     >>> metrics = {'a': 1, 'b': None}
     >>> parse_metrics(metric_directions, metrics)
-    OrderedDict([('a', 1.0), ('b', -inf)])
+    OrderedDict([('a', 1.0), ('b', inf)])
     """
     vals = OrderedDict()
     metric_keys = set(metric_directions)
@@ -184,7 +184,7 @@ def sample_trial_params(
     Examples
     --------
     >>> optuna_trial = optuna.create_trial('test', {'x': 0.5, 'y': 'a', 'z': True})
-    >>> search_space = {'x': SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0)), 'y': SearchSpace(value_type=SearchType.categorical, categorical_values=['a', 'b']), 'z': SearchSpace(value_type=SearchType.integer, value_range=(1, 10))}
+    >>> search_space = {'x': SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0)), 'y': SearchSpace(categorical_values=['a', 'b']), 'z': SearchSpace(value_type=SearchType.integer, value_range=(1, 10))}
     >>> sample_trial_params(optuna_trial, search_space)
     {'x': 0.030961748695615783, 'y': 'a', 'z': 9}
     """
