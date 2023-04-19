@@ -26,7 +26,26 @@ class Base(DeclarativeBase):
     pass
 
 
+
 class TrialState(enum.IntEnum):
+    """
+    An enumeration of possible states for a trial with more pruned states.
+
+    Attributes:
+        RUNNING (int): A trial that has been succesfully scheduled to run
+        COMPLETE (int): Succesfully completed trial
+        PRUNED (int): Trial pruned because of various reasons
+        FAIL (int): Trial that produced an error during execution
+        WAITING (int): Trial that has been sampled but is not scheduled to run yet
+        PRUNED_INVALID (int): Trial that was pruned during sampling as it was invalid
+        PRUNED_DUPLICATE (int): Trial that was sampled but was already present
+        PRUNED_POOR_PERFORMANCE (int): Trial that was pruned during execution for poor performance
+        RECOVERABLE_ERROR (int): Trial that was pruned during execution for poor performance
+
+    Methods:
+        to_optuna_state: Convert this TrialState to an OptunaTrialState.
+
+    """
     # extension of "optuna.trial.TrialState"
     RUNNING = 0  # A trial that has been succesfully scheduled to run
     COMPLETE = 1  # Succesfully completed trial
@@ -41,6 +60,13 @@ class TrialState(enum.IntEnum):
     RECOVERABLE_ERROR = 8  # Trial that was pruned during execution for poor performance
 
     def to_optuna_state(self) -> OptunaTrialState | None:
+        """
+        Convert this TrialState to an OptunaTrialState.
+
+        Returns:
+            OptunaTrialState | None: 
+                Corresponding OptunaTrialState or None if the state is not applicable.
+        """
         if self in [
             TrialState.PRUNED,
             TrialState.PRUNED_INVALID,
@@ -57,6 +83,28 @@ class TrialState(enum.IntEnum):
 def augment_trial_kwargs(
     trial_kwargs: dict[str, ty.Any], augmentation: dict[str, ty.Any]
 ) -> dict[str, ty.Any]:
+    """
+    Augment the trial_kwargs with additional key-value pairs specified in the augmentation dictionary.
+
+    Parameters
+    ----------
+    trial_kwargs : dict
+        The dictionary containing the key-value pairs to be augmented.
+    augmentation : dict
+        The dictionary containing the additional key-value pairs.
+
+    Returns
+    -------
+    dict
+        The augmented dictionary.
+
+    Examples
+    --------
+    >>> trial_kwargs = {'a': 1, 'b': 2}
+    >>> augmentation = {'c': 3, 'd.e': 4}
+    >>> augment_trial_kwargs(trial_kwargs, augmentation)
+    {'a': 1, 'b': 2, 'c': 3, 'd': {'e': 4}}
+    """
     trial_kwargs = copy.deepcopy(trial_kwargs)
     config_dot_path: str
     dot_paths = list(augmentation.keys())
@@ -73,6 +121,28 @@ def augment_trial_kwargs(
 def parse_metrics(
     metric_directions: OrderedDict, metrics: dict[str, float]
 ) -> dict[str, float]:
+    """
+    Convert metrics to ordered dictionary of float values using their direction (minimize or maximize).
+
+    Parameters
+    ----------
+    metric_directions : OrderedDict
+        The ordered dictionary containing the directions of the metrics (minimize or maximize).
+    metrics : dict
+        The dictionary containing the metric values.
+
+    Returns
+    -------
+    OrderedDict
+        The ordered dictionary of metric values converted to float using their direction.
+
+    Examples
+    --------
+    >>> metric_directions = OrderedDict([('a', 'max'), ('b', 'min')])
+    >>> metrics = {'a': 1, 'b': None}
+    >>> parse_metrics(metric_directions, metrics)
+    OrderedDict([('a', 1.0), ('b', -inf)])
+    """
     vals = OrderedDict()
     metric_keys = set(metric_directions)
     user_metrics = set(metrics)
@@ -91,6 +161,33 @@ def sample_trial_params(
     optuna_trial: optuna.Trial,
     search_space: dict[str, SearchSpace],
 ) -> dict[str, ty.Any]:
+    """
+    Sample parameter values from the search space for a given Optuna trial.
+
+    Parameters
+    ----------
+    optuna_trial : optuna.Trial
+        The Optuna trial object.
+    search_space : dict of str to SearchSpace
+        The search space containing the parameters to sample from.
+
+    Returns
+    -------
+    dict of str to any
+        The dictionary containing the sampled parameter values.
+
+    Raises
+    ------
+    ValueError
+        If the search space contains an invalid `SearchSpace` object.
+
+    Examples
+    --------
+    >>> optuna_trial = optuna.create_trial('test', {'x': 0.5, 'y': 'a', 'z': True})
+    >>> search_space = {'x': SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0)), 'y': SearchSpace(value_type=SearchType.categorical, categorical_values=['a', 'b']), 'z': SearchSpace(value_type=SearchType.integer, value_range=(1, 10))}
+    >>> sample_trial_params(optuna_trial, search_space)
+    {'x': 0.030961748695615783, 'y': 'a', 'z': 9}
+    """
     parameter: dict[str, ty.Any] = {}
 
     for k, v in search_space.items():
@@ -134,6 +231,18 @@ class Trial(Base):
 
 
 class OptunaState:
+    """
+    A class to store the state of the Optuna study.
+
+    Attributes:
+    ----------
+    optim_metrics: OrderedDict
+        The ordered dictionary containing the names of the metrics to optimize and their direction (minimize or maximize).
+    search_space: dict of str to SearchSpace
+        The search space containing the parameters to sample from.
+    optuna_study: optuna.study.Study
+        The Optuna study object.
+    """
     def __init__(
         self,
         storage: str,
@@ -142,6 +251,29 @@ class OptunaState:
         search_algo,
         search_space: dict[str, SearchSpace],
     ) -> None:
+        """
+        Initialize the Optuna state.
+
+        Parameters
+        ----------
+        storage : str
+            The path to the database URL or a database URL.
+        study_name : str
+            The name of the study.
+        optim_metrics : dict[str, Optim]
+            A dictionary of metric names and their optimization directions (either 'max' or 'min').
+        search_algo : SearchAlgo
+            The search algorithm to use ('random' or 'tpe').
+        search_space : dict[str, SearchSpace]
+            A dictionary of parameter names and their corresponding SearchSpace instances.
+
+        Raises
+        ------
+        NotImplementedError
+            If the specified search algorithm is not implemented.
+        ValueError
+            If `optim_metrics` is None.
+        """
         sampler: optuna.samplers.BaseSampler
 
         if search_algo == SearchAlgo.random:
@@ -171,6 +303,29 @@ class OptunaState:
         )
 
     def _optuna_optim_values(self, metrics: dict[str, float]) -> list[float]:
+        """
+        Convert the input metrics dictionary to a list of metric values.
+
+        Parameters
+        ----------
+        metrics : dict[str, float]
+            A dictionary of metric names and their values.
+
+        Returns
+        -------
+        list[float]
+            A list of metric values corresponding to the input metrics dictionary.
+
+        Examples
+        --------
+        >>> optuna_state = OptunaState(storage="sqlite:///example.db", study_name="test_study", 
+        ...                             optim_metrics={"accuracy": Optim.max}, search_algo=SearchAlgo.tpe, 
+        ...                             search_space={"x": SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0))})
+        >>> metrics = {"accuracy": 0.9}
+        >>> optuna_optim_values = optuna_state._optuna_optim_values(metrics)
+        >>> print(optuna_optim_values)
+        [0.9]
+        """
         return list(parse_metrics(self.optim_metrics, metrics).values())
 
     def update_trial(
@@ -179,6 +334,23 @@ class OptunaState:
         metrics: dict[str, float] | None,
         state: TrialState,
     ):
+        """
+        Update the state of a trial.
+
+        Parameters
+        ----------
+        trial_num : int
+            The trial number.
+        metrics : dict[str, float] or None
+            A dictionary of metric names and their corresponding values, or None if the trial is not complete.
+        state : TrialState
+            The state of the trial.
+
+        Raises
+        ------
+        RuntimeError
+            If `metrics` is None and `state` is COMPLETE.
+        """
         if metrics is None and state == TrialState.COMPLETE:
             raise RuntimeError(f"Missing metrics for complete trial {trial_num}.")
         if metrics is None or state != TrialState.COMPLETE:
@@ -190,6 +362,14 @@ class OptunaState:
         self.optuna_study.tell(trial_num, optuna_metrics, optuna_state)
 
     def sample_trial(self):
+        """
+        Sample a new set of trial parameters.
+
+        Returns
+        -------
+        Tuple[int, dict[str, Any]]
+            A tuple of the trial number and a dictionary of parameter names and their corresponding values.
+        """
         optuna_trial = self.optuna_study.ask()
         return (
             optuna_trial.number,
@@ -205,6 +385,29 @@ class ExperimentState:
         logger: FileLogger | None = None,
         resume: bool = False,
     ) -> None:
+        """
+        Initializes the ExperimentState.
+
+        Parameters
+        ----------
+        experiment_dir : Path
+            The directory where the experiment data will be stored.
+        config : ParallelConfig
+            The configuration object that defines the experiment settings.
+        logger : FileLogger, optional
+            The logger to use for outputting experiment logs. If not specified, a dummy logger will be used.
+        resume : bool, optional
+            Whether to resume a previously interrupted experiment. Default is False.
+
+        Raises
+        ------
+        RuntimeError
+            If the specified `search_space` parameter is not found in the configuration.
+        AssertionError
+            If `config.search_space` is empty.
+        RuntimeError
+            if the optuna database already exists and `resume` is False.        
+        """
         self.optuna_trial_map: dict[str, optuna.Trial] = {}
         self.config = config
         self.logger: FileLogger = logger if logger is not None else butils.Dummy()
@@ -242,6 +445,28 @@ class ExperimentState:
 
     @staticmethod
     def search_space_dot_path(trial: ParallelConfig) -> dict[str, ty.Any]:
+        """
+        Returns a dictionary of parameter names and their corresponding values for a given trial.
+
+        Parameters
+        ----------
+        trial : ParallelConfig
+            The trial object to get the search space dot paths from.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary of parameter names and their corresponding values.
+
+    Examples
+        --------
+        >>> from myapp.config import MyConfig
+        >>> config = MyConfig()
+        >>> config.x = 42
+        >>> config.y = {'a': 'foo', 'b': {'c': 3.14}}
+        >>> ParallelConfig.search_space_dot_path(config)
+        {'x': 42, 'y.a': 'foo', 'y.b.c': 3.14}
+        """
         return {
             dot_path: trial.get_val_with_dot_path(dot_path)
             for dot_path in trial.search_space.keys()
@@ -249,14 +474,53 @@ class ExperimentState:
 
     @staticmethod
     def tune_trial_str(trial: ParallelConfig) -> str:
+        """
+        Generate a string representation of a trial object.
+
+        Parameters
+        ----------
+        trial : ParallelConfig
+            The trial object to generate a string representation for.
+
+        Returns
+        -------
+        str
+            A string representation of the trial object.
+
+        Examples
+        --------
+        GcJhRw:
+            x -> 79
+            y -> p
+            z -> 0.662443745080052
+        """
         trial_map = ExperimentState.search_space_dot_path(trial)
         msg = f"\n{trial.uid}:\n\t"
         msg = "\n\t".join(
             [f"{dot_path} -> {val} " for dot_path, val in trial_map.items()]
         )
+        
         return msg
 
     def _init_trials(self, resume: bool = False) -> list[ParallelConfig]:
+        """
+        Initialize trials for the experiment.
+
+        Parameters
+        ----------
+        resume : bool, optional, default=False
+            Whether to resume an existing experiment.
+
+        Returns
+        -------
+        list[ParallelConfig]
+            The list of initialized trials.
+
+        Raises
+        ------
+        RuntimeError
+            If an experiment exists and `resume` is False.
+        """
         max_trials_conc = min(self.config.concurrent_trials, self.config.total_trials)
 
         if self.config.search_algo in [
@@ -314,6 +578,23 @@ class ExperimentState:
         optuna_trial_num: int,
         trial_state: TrialState,
     ) -> bool:
+        """
+        Append a trial to the database.
+
+        Parameters
+        ----------
+        trial_kwargs : dict[str, Any]
+            config instance with new sampled hyperparameters.
+        optuna_trial_num : int
+            The optuna trial number.
+        trial_state : TrialState
+            The state of the trial.
+        
+        Returns
+        -------
+        bool
+            True if the trial state is not pruned, False otherwise.
+        """
         if trial_state in {TrialState.PRUNED_INVALID, TrialState.PRUNED_DUPLICATE}:
             # self.optuna_state.update_trial(optuna_trial_num, None, trial_state)
             self.__append_trial_internal(
@@ -332,6 +613,28 @@ class ExperimentState:
         prev_trials: list[ParallelConfig] | None = None,
         ignore_errors=False,
     ) -> list[ParallelConfig]:
+        """
+        Samples a specified number of trials from the search space and persists them to the
+
+        Parameters
+        ----------
+        n_trials : int
+            The number of trials to sample.
+        prev_trials : list[ParallelConfig] | None, optional
+            A list of previously sampled trials, by default None.
+        ignore_errors : bool, optional
+            Whether to ignore invalid parameters and continue sampling, by default False.
+
+        Returns
+        -------
+        list[ParallelConfig]
+            A list of the sampled trials.
+
+        Raises
+        ------
+        RuntimeError
+            If the number of invalid or duplicate trials exceeds the error_upper_bound.
+        """
         error_upper_bound = n_trials * 10
         sampled_trials: list[ParallelConfig] = (
             [] if prev_trials is None else prev_trials
