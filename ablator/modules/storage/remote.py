@@ -11,6 +11,25 @@ from ablator.config.types import Optional
 
 
 def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> None | str:
+    """
+    Run a command and wait for it to finish.
+    If the command takes longer than `timeout` seconds, kill it.
+    If `raise_errors` is True, raise a TimeoutExpired exception.
+
+    Parameters
+    ----------
+    cmd : str
+        The command to run.
+    timeout : int
+        The timeout in seconds.
+    raise_errors : bool
+        Whether to raise errors.
+    
+    Returns
+    -------
+    str
+        The output of the command.
+    """
     # timeout is in seconds
     output = None
     with subprocess.Popen(
@@ -29,6 +48,24 @@ def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> None | str:
 
 @configclass
 class RemoteConfig(ConfigBase):
+    """ 
+    Configuration for a remote storage.
+
+    Attributes
+    ----------
+    remote_path : str
+        The path to the remote storage.
+    username : str
+        The username to use for the remote storage.
+    hostname : str
+        The hostname of the remote storage.
+    port : None | int
+        The port to use for the remote storage.
+    exclude_glob : None | str  
+        A glob to exclude from the rsync.
+    exclude_chkpts : bool
+        Whether to exclude checkpoints from the rsync.
+    """
     remote_path: str
     username: str
     hostname: str
@@ -37,6 +74,21 @@ class RemoteConfig(ConfigBase):
     exclude_chkpts: bool = False
 
     def _make_cmd_up(self, local_path: Path, destination: str):
+        """
+        Make the rsync command to upload a file to the remote storage.
+
+        Parameters
+        ----------
+        local_path : Path
+            The local path to upload.
+        destination : str
+            The destination path in the remote storage.
+        
+        Returns
+        -------
+        str
+            The rsync command.       
+        """
         username = self.username
         host = self.hostname
         path = Path(self.remote_path) / destination
@@ -53,6 +105,23 @@ class RemoteConfig(ConfigBase):
         return cmd
 
     def _make_cmd_down(self, local_path: Path, destination: str, verbose=True):
+        """
+        Make the rsync command to download a file from the remote storage.
+
+        Parameters
+        ----------
+        local_path : Path
+            The local path to download to.
+        destination : str
+            The destination path in the remote storage.
+        verbose : bool
+            Whether to print the output.
+        
+        Returns
+        -------
+        str
+            The rsync command.
+        """
         username = self.username
         host = self.hostname
         path = Path(self.remote_path) / destination
@@ -73,6 +142,20 @@ class RemoteConfig(ConfigBase):
         timeout_s: int | None = None,
         run_async=False,
     ):
+        """
+        Upload a file to the remote storage.
+
+        Parameters
+        ----------
+        local_path : Path
+            The local path to upload.
+        destination : str
+            The destination path in the remote storage.
+        timeout_s : int | None
+            The timeout in seconds.
+        run_async : bool
+            Whether to run the command asynchronously.
+        """
         cmd = self._make_cmd_up(local_path=local_path, destination=destination)
         p = Process(target=run_cmd_wait, args=(cmd, timeout_s))
         p.start()
@@ -86,6 +169,20 @@ class RemoteConfig(ConfigBase):
         timeout_s: int | None = None,
         run_async=False,
     ):
+        """
+        Download a file from the remote storage.
+
+        Parameters
+        ----------
+        local_path : Path
+            The local path to download to.
+        destination : str
+            The destination path in the remote storage.
+        timeout_s : int | None
+            The timeout in seconds.
+        run_async : bool
+            Whether to run the command asynchronously.
+        """
         cmd = self._make_cmd_down(local_path=local_path, destination=destination)
         p = Process(target=run_cmd_wait, args=(cmd, timeout_s))
         p.start()
