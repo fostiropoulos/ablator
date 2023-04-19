@@ -81,10 +81,12 @@ def apply_lambda_to_iter(iterable, fn: Callable):
         The input iterable.
     fn : Callable
         The function to apply to each element.
+        
     Returns
     -------
     any
-        The updated iterable with the function applied to its elements.
+        The resulting data structure after applying `fn` to each element of the input `iterable`.
+        The type of the returned object matches the type of the input `iterable`.
     """
     if isinstance(iterable, dict):
         return {
