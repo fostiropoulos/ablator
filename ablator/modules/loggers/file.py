@@ -67,6 +67,8 @@ class FileLogger:
         ----------
         msg : str
             The message to print.
+        verbose : bool, optional
+            Whether to print messages to the console, by default True.
         """
         
         if self.verbose or verbose:
@@ -79,6 +81,8 @@ class FileLogger:
         ----------
         msg : str
             The message to log.
+        verbose : bool, optional
+            Whether to print messages to the console, by default False.
         """
         self(msg, verbose)
 
@@ -89,6 +93,8 @@ class FileLogger:
         ----------
         msg : str
             The message to log.
+        verbose : bool, optional
+            Whether to print messages to the console, by default True.
         """
         msg = f"{FileLogger.WARNING}{msg}{FileLogger.ENDC}"
         self(msg, verbose)
@@ -111,6 +117,8 @@ class FileLogger:
         ----------
         msg : str
             The message to log.
+        verbose : bool, optional
+            Whether to print messages to the console, by default True.
         """
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         msg = f"{now}: {self.prefix}{msg}"

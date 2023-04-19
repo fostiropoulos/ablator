@@ -42,6 +42,20 @@ class SummaryLogger:
         List of checkpoint directory values.
     CHKPT_DIRS : dict[str, Path]
         Dictionary containing checkpoint directories.
+    keep_n_checkpoints : int
+        Number of checkpoints to keep.
+    log_iteration : int
+        Current log iteration.
+    checkpoint_iteration : dict[str, dict[str, int]]
+        Dictionary containing checkpoint iterations.
+    log_file_path : Path | None
+        Path to the log file.
+    dashboard : LoggerBase | None
+        Dashboard logger.
+    model_dir : Path | None
+        the model directory.
+    result_json_path : Path | None
+        Path to the results JSON file.
     """
     SUMMARY_DIR_NAME = "dashboard"
     RESULTS_JSON_NAME = "results.json"
@@ -169,7 +183,7 @@ class SummaryLogger:
 
     def _write_config(self, run_config: RunConfig):
         """
-        Write the run configuration to the model directory.
+        Write the run configuration to the model directory and to the dashboard.
 
         Parameters
         ----------
@@ -249,6 +263,7 @@ class SummaryLogger:
         itr: Optional[int] = None,
     ):
         """ Update the dashboard with the given metrics.
+        write some metrics to json files and update the current metadata(log_iteration)
 
         Parameters
         ----------
@@ -282,7 +297,7 @@ class SummaryLogger:
         itr: int | None = None,
         is_best: bool = False,
     ):
-        """Save a checkpoint.
+        """Save a checkpoint and update the checkpoint iteration
         
         Parameters
         ----------
