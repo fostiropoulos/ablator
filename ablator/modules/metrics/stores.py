@@ -13,18 +13,86 @@ import ablator.utils.base as butils
 
 
 class ArrayStore(Sequence):
+    """
+    Base class for manipulations (storing, getting, resetting) of batches of values.
+
+    """
     def __init__(
         self,
         batch_limit: int = 30,
         # 100 MB memory limit
         memory_limit: int | None = int(1e8),
     ):
+        """
+        Initialize the storage settings.
+
+        Parameters
+        -----------
+        batch_limit : int, optional
+            The maximum number of batches of values to store for this single store. Default is 30.
+        memory_limit : int or None, optional
+            The maximum memory allowed for all values in bytes. Default is 1e8.
+        
+        Examples
+        --------
+        >>> from ablator.modules.metrics.stores import ArrayStore
+        >>> train_metrics = ArrayStore(
+        ...     batch_limit=50,
+        ...     memory_limit=1000
+        ... )
+        """
         super().__init__()
         self.arr: list[np.ndarray | int | float] = []
         self.limit = batch_limit
         self.memory_limit = memory_limit
 
     def append(self, val: np.ndarray | float | int):
+        """
+        Appends a batch of values, or a single value, constrained on the limits.
+        If after appending a new batch, `batch_limit` is exceeded, only `batch_limit` number
+        of latest batches is kept. If memory limit is exceeded, `batch_limit` will be reduced.
+
+        Parameters
+        -----------
+        val : np.ndarray or float or int
+            The data, can be a batch of data, or a scalar.
+            
+        Raises
+        -------
+        AssertionError:
+            If appended value is not numpy array, an integer, or a float number.
+
+        Examples
+        --------
+        The following example shows a case where batch limit is exceeded
+        (100 values/batches to be appended while only 10 is allowed)
+        >>> from ablator.modules.metrics.stores import ArrayStore
+        >>> array_store = ArrayStore(
+        ...     batch_limit=10,
+        ...     memory_limit=1000
+        ... )
+        >>> for i in range(100):
+        >>>     array_store.append(int(i))
+        >>> array_store.arr
+        [90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
+        >>> array_store.limit
+        10
+
+        This example shows a case where memory limit is exceeded. As soon as the 5th
+        value is appended, memory of the list is 104 > 100), so `batch_limit` is set
+        to the length of the store so far (which is 5) reduced by 1, which equals to 4.
+        Therefore, from then on, only 4 values/batches is allowed.
+        >>> array_store = ArrayStore(
+        ...     batch_limit=10,
+        ...     memory_limit=100
+        ... )
+        >>> for i in range(100):
+        >>>     array_store.append(int(i))
+        >>> array_store.arr
+        [96, 97, 98, 99]
+        >>> array_store.limit
+        4
+        """
         """Appends a batch of values"""
         # Appending by batch is faster than converting numpy to list
         assert isinstance(
@@ -40,7 +108,21 @@ class ArrayStore(Sequence):
             self.limit = len(self.arr) - 1
 
     def get(self) -> np.ndarray:
-        """Returns a flatten array of values"""
+        """
+        Returns a flatten array of values
+        
+        Examples
+        --------
+        >>> from ablator.modules.metrics.stores import ArrayStore
+        >>> array_store = ArrayStore(
+        ...     batch_limit=10,
+        ...     memory_limit=1000
+        ... )
+        >>> for i in range(100):
+        >>>     array_store.append(np.array([int(i)]))
+        >>> array_store.get()
+        [[90 91 92 93 94 95 96 97 98 99]]
+        """
         if len(self.arr) > 0:
             self.arr = [np.concatenate(self.arr)]
         return np.array(self.arr)
@@ -52,10 +134,32 @@ class ArrayStore(Sequence):
         return self.arr[i]
 
     def reset(self):
+        """
+        Reset list of values to empty.
+
+        Examples
+        --------
+        >>> from ablator.modules.metrics.stores import ArrayStore
+        >>> array_store = ArrayStore(
+        ...     batch_limit=10,
+        ...     memory_limit=1000
+        ... )
+        >>> for i in range(100):
+        >>>     array_store.append(int(i))
+        >>> array_store.arr
+        [90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
+        >>> array_store.reset()
+        >>> array_store.arr
+        []
+        """
         self.arr = []
 
 
 class PredictionStore:
+    """
+    A class for storing prediction scores. This allows for evaluating prediction results using evaluation functions
+
+    """
     def __init__(
         self,
         batch_limit: int = 30,
@@ -64,6 +168,38 @@ class PredictionStore:
         moving_average_limit: int = 3000,
         evaluation_functions: dict[str, Callable] | None = None,
     ):
+        """
+        Initialize the storage settings.
+
+        Parameters
+        -----------
+        batch_limit : int, optional
+            Maximum number of batches to keep for each array store corresponding to each category of prediction
+            outputs (e.g preds, labels), so only `batch_limit` number of latest batches is stored per set of
+            array store. Default is 30.
+        memory_limit : int or None, optional
+            Maximum memory (in bytes) of batches to keep for each array store corresponding to each category of
+            prediction outputs (e.g preds, labels). Default is 1e8.
+        moving_average_limit : int, optional
+            The maximum number of values allowed to store moving average metrics. Default is 3000.
+        evaluation_functions : dict[str, Callable], optional
+            A dictionary of key-value pairs, keys are evaluation function names, values are 
+            callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
+            must match with names of prediction batches that the model returns. So if model prediction over
+            a batch looks like this: {"preds": <batch of predictions>, "labels": <batch of predicted labels>}, 
+            then callable's arguments should be `preds` and `labels`, e.g `evaluation_functions=
+            {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}`. Default is None.
+
+        Examples
+        --------
+        >>> from ablator.modules.metrics.stores import PredictionStore
+        >>> pred_store = PredictionStore(
+        ...     batch_limit=10,
+        ...     memory_limit=1000,
+        ...     moving_average_limit=1000,
+        ...     evaluation_functions={"mean": lambda x: np.mean(x)}
+        ... )
+        """
         super().__init__()
         # self.labels = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
         # self.preds = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
@@ -89,6 +225,35 @@ class PredictionStore:
         return arr
 
     def append(self, **batches: dict[str, np.ndarray]):
+        """
+        Appends batches of values, constrained on the limits.
+        
+        Parameters
+        ----------
+        tag : str
+            A tag that specifies which set of predictions to evaluate.
+        **batches : dict[str, np.ndarray]
+            A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
+            and value is a batch of prediction values. Note that the passed keys in **batches must match arguments in 
+            evaluation functions arguments in the Callable in evaluation_functions when we initialize PredictionStore object
+
+        Raises
+        ------
+        AssertionError
+            If passed keys do not match arguments in evaluation functions, or when batches among the keys are different in size.
+        
+        Examples
+        --------
+        >>> from ablator.modules.metrics.stores import PredictionStore
+        >>> pred_store = PredictionStore(
+        ...     batch_limit=10,
+        ...     memory_limit=1000,
+        ...     moving_average_limit=1000,
+        ...     evaluation_functions={"mean": lambda preds, labels: np.mean(preds) + np.mean(labels)}
+        ... )
+        >>> pred_store.append(preds=np.array([4,3,0]), labels=np.array([5,1,1]))
+
+        """
         if self._keys is None:
             for k in batches:
                 self._init_arr(k)
@@ -112,6 +277,35 @@ class PredictionStore:
             self._get_arr(k).limit = new_limit
 
     def evaluate(self) -> dict[str, float]:
+        """
+        Apply evaluation_functions to predictions sets, e.g preds, labels.
+
+        Returns
+        --------
+        metrics : dict
+            A dictionary of metric values calculated from different sets of predictions.
+
+        
+        Raises
+        ------
+        AssertionError
+            If passed keys do not match arguments in evaluation functions.
+        
+        ValueError
+            If evaluation result is not a numeric scalar.
+        
+        Examples
+        --------
+        >>> from ablator.modules.metrics.main import PredictionStore
+        >>> pred_store = PredictionStore(
+        ...     batch_limit=30,
+        ...     evaluation_functions={"mean": lambda preds, labels: np.mean(preds) + np.mean(labels)
+        ...     moving_average_limit=100
+        ... )
+        >>> pred_store.append(preds=np.array([4,3,0]), labels=np.array([5,1,3]))
+        >>> pred_store.evaluate()
+        {'mean': 5.333333333333334}
+        """
         if self._keys is None:
             raise RuntimeError("PredictionStore has no predictions to evaluate.")
         batches = {k: self._get_arr(k).get() for k in self._keys}
@@ -138,13 +332,29 @@ class PredictionStore:
         return metrics
 
     def reset(self):
+        """
+        Reset to empty all prediction sequences (e.g predictions, labels).
+        
+        Examples
+        --------
+        >>> from ablator.modules.metrics.main import PredictionStore
+        >>> pred_store = PredictionStore(
+        ...     batch_limit=30,
+        ...     memory_limit=None,
+        ...     evaluation_functions={"sum": lambda pred: np.mean(pred)},
+        ...     moving_average_limit=100
+        ... )
+        >>> pred_store.append(preds=np.array([4,3,0]), labels=np.array([5,1,3]))
+        >>> pred_store.reset()
+        """
         for k in self._keys:
             self._get_arr(k).reset()
 
 
 class MovingAverage(ArrayStore):
     """
-    Moving average
+    This class is used to store moving average metrics 
+
     """
 
     @property
@@ -173,6 +383,28 @@ class MovingAverage(ArrayStore):
         return f"{self.value:.2e}"
 
     def append(self, val: ty.Union[np.ndarray, torch.Tensor, float, int]):
+        """
+        Appends a batch of values, or a single value, constrained on the limits.
+
+        Parameters
+        -----------
+        val : ty.Union[np.ndarray, torch.Tensor, float, int]
+            The data to be appended
+            
+        Raises
+        -------
+        ValueError:
+            If appended value is of required type, or if val is not a scalar.
+
+        Examples
+        --------
+        >>> from ablator.modules.metrics.stores import MovingAverage
+        >>> ma_store = MovingAverage()
+        >>> for i in range(100):
+        >>>     ma_store.append(np.array([int(i)]))
+        >>> ma_store.arr
+        [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
+        """
         if not isinstance(val, (np.ndarray, torch.Tensor, int, float)):
             raise ValueError(f"Invalid MovingAverage value type {type(val)}")
         if isinstance(val, (np.ndarray, torch.Tensor)):
