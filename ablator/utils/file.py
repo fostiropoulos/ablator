@@ -67,19 +67,19 @@ def clean_checkpoints(checkpoint_folder: Path, n_checkpoints: int):
 
 
 def default_val_parser(val):
-    """
-    Convert the input value into a JSON-serializable format.
+    """Converts the input value to a JSON compatible format.
 
     Parameters
     ----------
-    val : any
-        The input value to be serialized.
+    val : ty.Any
+        The value to be converted.
 
     Returns
     -------
-    any
-        The JSON-serializable representation of the input value.
+    ty.Any
+        The converted value.
     """
+    
     if isinstance(val, np.ndarray):
         return val.tolist()
     if isinstance(val, torch.Tensor):

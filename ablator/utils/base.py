@@ -26,7 +26,7 @@ class Dummy:
 
 def iter_to_numpy(iterable):
     """
-    Convert all torch.Tensor elements NumPy arrays.
+    Convert torch.Tensor elements to NumPy arrays.
 
     Parameters
     ----------
@@ -48,7 +48,7 @@ def iter_to_device(
     data_dict, device
 ) -> ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]:
     """
-    Move a dictionary or list of torch.Tensor elements to the specified device.
+    Convert torch.Tensor elements to the specified device.
 
     Parameters
     ----------
@@ -69,7 +69,11 @@ def iter_to_device(
 
 def apply_lambda_to_iter(iterable, fn: Callable):
     """
-    Apply a given function to each element in the iterable.
+    Applies a given function `fn` to each element of an iterable data structure.
+
+    This function recursively applies `fn` to elements within nested dictionaries or lists.
+    It can be used for converting torch.Tensor elements to NumPy arrays or moving tensors
+    to a specified device.
 
     Parameters
     ----------
@@ -91,7 +95,7 @@ def apply_lambda_to_iter(iterable, fn: Callable):
         return [apply_lambda_to_iter(v, fn) for v in iterable]
 
     return fn(iterable)
-
+    
 
 def set_seed(seed: int):
     """
