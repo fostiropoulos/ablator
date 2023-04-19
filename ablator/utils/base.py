@@ -48,7 +48,7 @@ def iter_to_device(
     data_dict, device
 ) -> ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]:
     """
-    Convert torch.Tensor elements to the specified device.
+    Moving torch.Tensor elements to the specified device.
 
     Parameters
     ----------
