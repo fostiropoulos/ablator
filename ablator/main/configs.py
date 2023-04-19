@@ -18,6 +18,9 @@ from ablator.modules.storage.remote import RemoteConfig
 
 @configclass
 class TrainConfig(ConfigBase):
+    """
+    Training configuration.
+    """
     dataset: str
     batch_size: int
     epochs: int
@@ -28,11 +31,17 @@ class TrainConfig(ConfigBase):
 
 @configclass
 class ModelConfig(ConfigBase):
+    """
+    Model configuration.
+    """
     pass
 
 
 @configclass
 class RunConfig(ConfigBase):
+    """
+    base configuration for running an experiment.
+    """
     # location to store experiment artifacts
     experiment_dir: Stateless[Optional[str]] = None
     random_seed: Optional[int] = None
@@ -62,12 +71,18 @@ class RunConfig(ConfigBase):
 
 
 class SearchType(Enum):
+    """
+    type of search space.
+    """
     integer = "int"
     numerical = "float"
 
 
 @configclass
 class SearchSpace(ConfigBase):
+    """
+    search space configuration.
+    """
     value_range: Optional[Tuple[str, str]]
     categorical_values: Optional[List[str]]
     value_type: SearchType = "float"
@@ -80,17 +95,26 @@ class SearchSpace(ConfigBase):
 
 
 class SearchAlgo(Enum):
+    """
+    type of search algorithm.
+    """
     random = "random"
     tpe = "tpe"
 
 
 class Optim(Enum):
+    """
+    type of optimization direction.
+    """
     min = "min"
     max = "max"
 
 
 @configclass
 class ParallelConfig(RunConfig):
+    """
+    parallel training configuration.
+    """
     total_trials: int
     concurrent_trials: Stateless[int]
     search_space: Dict[SearchSpace]

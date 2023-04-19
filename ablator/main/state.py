@@ -273,6 +273,11 @@ class OptunaState:
             If the specified search algorithm is not implemented.
         ValueError
             If `optim_metrics` is None.
+
+        Notes
+        -----
+        For tuning, add an attribute to the searchspace whose name is the name of the hyperparameter and whose value is the search space
+        eg. search_space = {"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 0.1], value_type="float")}
         """
         sampler: optuna.samplers.BaseSampler
 
@@ -320,11 +325,11 @@ class OptunaState:
         --------
         >>> optuna_state = OptunaState(storage="sqlite:///example.db", study_name="test_study", 
         ...                             optim_metrics={"accuracy": Optim.max}, search_algo=SearchAlgo.tpe, 
-        ...                             search_space={"x": SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0))})
-        >>> metrics = {"accuracy": 0.9}
+        ...                             search_space = {"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 0.1], value_type="float")})
+        >>> metrics = {"accuracy": None}
         >>> optuna_optim_values = optuna_state._optuna_optim_values(metrics)
         >>> print(optuna_optim_values)
-        [0.9]
+        [-inf]
         """
         return list(parse_metrics(self.optim_metrics, metrics).values())
 
@@ -458,14 +463,10 @@ class ExperimentState:
         dict[str, Any]
             A dictionary of parameter names and their corresponding values.
 
-    Examples
+        Examples
         --------
-        >>> from myapp.config import MyConfig
-        >>> config = MyConfig()
-        >>> config.x = 42
-        >>> config.y = {'a': 'foo', 'b': {'c': 3.14}}
-        >>> ParallelConfig.search_space_dot_path(config)
-        {'x': 42, 'y.a': 'foo', 'y.b.c': 3.14}
+        >>> search_space = {"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 0.1], value_type="float")}
+        >>> {"train_config.optimizer_config.arguments.lr": 0.1}
         """
         return {
             dot_path: trial.get_val_with_dot_path(dot_path)
@@ -486,13 +487,6 @@ class ExperimentState:
         -------
         str
             A string representation of the trial object.
-
-        Examples
-        --------
-        GcJhRw:
-            x -> 79
-            y -> p
-            z -> 0.662443745080052
         """
         trial_map = ExperimentState.search_space_dot_path(trial)
         msg = f"\n{trial.uid}:\n\t"
@@ -554,6 +548,19 @@ class ExperimentState:
         return trials
 
     def sample_trials(self, n_trials_to_sample: int) -> list[ParallelConfig] | None:
+        """
+        Sample n trials from the search space and update database.
+
+        Parameters
+        ----------
+        n_trials_to_sample : int
+            The number of trials to sample.
+        
+        Returns
+        -------
+        list[ParallelConfig] | None
+            The list of sampled trials.
+        """
         # Return pending trials when sampling first.
         assert n_trials_to_sample > 0
         n_trials_to_sample = min(self.n_trials_remaining, n_trials_to_sample)
@@ -584,7 +591,7 @@ class ExperimentState:
         Parameters
         ----------
         trial_kwargs : dict[str, Any]
-            config instance with new sampled hyperparameters.
+            config dict with new sampled hyperparameters.
         optuna_trial_num : int
             The optuna trial number.
         trial_state : TrialState
@@ -678,6 +685,22 @@ class ExperimentState:
         metrics: dict[str, float] | None = None,
         state: TrialState = TrialState.RUNNING,
     ) -> None:
+        """
+        Update the state of a trial in both the Experiment and Optuna state.
+
+        Parameters
+        ----------
+        config_uid : str
+            The uid of the trial to update.
+        metrics : dict[str, float] | None, optional
+            The metrics of the trial, by default None.
+        state : TrialState, optional
+            The state of the trial, by default TrialState.RUNNING
+
+        Examples
+        --------
+        >>> experiment.update_trial_state("fje_2211", {"loss": 0.1}, TrialState.COMPLETED)
+        """
         if state == TrialState.RECOVERABLE_ERROR:
             self._inc_error_count(config_uid, state)
             return
@@ -688,6 +711,19 @@ class ExperimentState:
         self.optuna_state.update_trial(trial_num, metrics, state)
 
     def _get_optuna_trial_num(self, config_uid: str) -> int:
+        """
+        Get the optuna trial number from the database.
+
+        Parameters
+        ----------
+        config_uid : str
+            The uid of the trial 
+        
+        Returns
+        -------
+        int
+            The optuna trial number.
+        """
         with Session(self.engine) as session:
             stmt = select(Trial).where(Trial.config_uid == config_uid)
             res = session.scalar(stmt)
@@ -696,6 +732,23 @@ class ExperimentState:
     def _update_internal_trial_state(
         self, config_uid: str, metrics: dict[str, float] | None, state: TrialState
     ):
+        """
+        Update the state of a trial in the Experiment state database.
+
+        Parameters
+        ----------
+        config_uid : str
+            The uid of the trial to update.
+        metrics : dict[str, float] | None
+            The metrics of the trial.
+        state : TrialState
+            The state of the trial.
+
+        Returns
+        -------
+        bool
+            True if the update was successful.
+        """
         if metrics is not None:
             internal_metrics = parse_metrics(self.config.optim_metrics, metrics)
         else:
@@ -762,6 +815,20 @@ class ExperimentState:
         optuna_trial_num: int,
         trial_state: TrialState,
     ):
+        """
+        Append a trial to the Experiment state database.
+
+        Parameters
+        ----------
+        config_uid : str
+            The uid of the trial to update.
+        trial_kwargs : dict[str, ty.Any]
+            config dict with new sampled hyperparameters.
+        optuna_trial_num : int
+            The optuna trial number.
+        trial_state : TrialState
+            The state of the trial.
+        """
         with Session(self.engine) as session:
             trial = Trial(
                 config_uid=config_uid,
