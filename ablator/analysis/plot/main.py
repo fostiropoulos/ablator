@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 class PlotAnalysis(Analysis):
+    """
+    class for analyzing plotting
+    """
     @classmethod
     def _write_images(
         cls,
@@ -25,6 +28,22 @@ class PlotAnalysis(Analysis):
         path: Path,
         file_format: ty.Literal["png", "pdf", "jpg"] = "png",
     ):
+        """
+        Write images to a directory based on fig types,
+
+        Parameters:
+        fig_map: dict[str, ty.Union[Axes, Figure, Image.Image]]
+            A dictionary mapping names to matplotlib objects.
+        path: Path
+            Path to save the images to.
+        file_format: ty.Literal["png", "pdf", "jpg"] 
+            the file format to save the images as.
+
+        Examples:
+        >>> fig_map = {"figure1": plt.subplots()[0]}
+        >>> path = Path("output_dir")
+        >>> PlotAnalysis._write_images(fig_map, path, "png")
+        """
         path.mkdir(exist_ok=True, parents=True)
         for name, fig in fig_map.items():
             img_path = path.joinpath(f"{name}.{file_format}")
@@ -49,6 +68,36 @@ class PlotAnalysis(Analysis):
         attribute_name_remap=None,
         **kwargs,
     ):
+        """
+        Method level docstring goes here.
+
+        Parameters:
+        path: Path | None 
+            A pathlib.Path object representing the directory to write images to.
+        plot_cls: type[Plot]
+            A subclass of Plot representing the type of plot to make.
+        metrics: pd.DataFrame 
+            A pandas DataFrame containing metric values.
+        results: pd.DataFrame 
+            A pandas DataFrame containing attribute values.
+        metric_map: dict[str, Optim] 
+            A dictionary mapping metric names to optimization functions.
+        append: bool
+            A boolean indicating whether to append plots to an existing axes object.
+        ax: Axes | None
+            A matplotlib.axes.Axes object representing the axis to plot on.
+        metric_name_remap: 
+            A dictionary mapping metric names to new metric names.
+        attribute_name_remap: 
+            A dictionary mapping attribute names to new attribute names.
+        kwargs: Additional keyword arguments to pass to the plot method.
+
+        Examples:
+        >>> metrics = pd.DataFrame({"metric1": [1, 2, 3], "metric2": [4, 5, 6]})
+        >>> results = pd.DataFrame({"attr1": [7, 8, 9], "attr2": [10, 11, 12]})
+        >>> metric_map = {"metric1": Optim.max, "metric2": Optim.min}
+        >>> PlotAnalysis._make_metric_plots(None, LinearPlot, metrics, results, metric_map, False, None, None, None)
+        """
         axes = {}
 
         (results, metrics, metric_map) = cls._remap_results(
