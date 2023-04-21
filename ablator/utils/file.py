@@ -141,6 +141,13 @@ def nested_set(_dict, keys: list[str], value: ty.Any):
     value : ty.Any
         The value need to set at the specified path.
 
+    Examples
+    --------
+    >>> _dict = {'a': {'b': {'c': 1}}}
+    >>> nested_set(_dict, ['a', 'b', 'c'], 2)
+    >>> _dict
+    {'a': {'b': {'c': 2}}}
+
     Returns
     -------
     dict

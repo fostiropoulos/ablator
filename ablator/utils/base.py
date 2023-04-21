@@ -123,7 +123,7 @@ def set_seed(seed: int):
 
 def get_lr(optimizer):
     """
-    Get the learning rate.
+    Get the learning rate from a optimizer.
 
     Parameters
     ----------
@@ -172,7 +172,7 @@ def get_latest_chkpts(checkpoint_dir: Path) -> list[Path]:
     Returns
     -------
     list[Path]
-        A list of the latest checkpoint files sorted by their creation time.
+        A list of the latest checkpoint files sorted by filename.
     """
     return sorted(list(checkpoint_dir.glob("*.pt")))[::-1]
 
@@ -190,6 +190,19 @@ def parse_device(device: ty.Union[str, list[str]]):
     -------
     any
         The parsed device string, integer, or list of device strings or integers.
+
+    Examples
+    --------
+    >>> parse_device("cpu")
+    'cpu'
+    >>> parse_device("cuda")
+    'cuda'
+    >>> parse_device("cuda:0")
+    'cuda:0'
+    >>> parse_device(["cpu", "cuda"])
+    ['cpu', 'cuda']
+    >>> parse_device(["cpu", "cuda:0", "cuda:1", "cuda:2"])
+    ['cpu', 'cuda:0', 'cuda:1', 'cuda:2']
     """
     if isinstance(device, str):
         if device in {"cpu", "cuda"}:
