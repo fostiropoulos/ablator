@@ -1,5 +1,4 @@
 # TODO fix mypy that does not recognize correctly the types i.e. Stateless
-# type: ignore
 from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import (
     Optional,
