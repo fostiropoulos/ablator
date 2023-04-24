@@ -113,7 +113,9 @@ class PredictionStore:
 
     def evaluate(self) -> dict[str, float]:
         if self._keys is None:
-            raise RuntimeError("PredictionStore has no predictions to evaluate.")
+            return {}
+            # No predictions is a valid use-case TODO test-case
+            # raise RuntimeError("PredictionStore has no predictions to evaluate.")
         batches = {k: self._get_arr(k).get() for k in self._keys}
 
         if self.__evaluation_functions__ is None or len(batches) == 0:
@@ -138,6 +140,9 @@ class PredictionStore:
         return metrics
 
     def reset(self):
+        # Missing keys TODO test-case
+        if self._keys is None:
+            return
         for k in self._keys:
             self._get_arr(k).reset()
 
