@@ -1,6 +1,6 @@
 from ablator.analysis.plot.cat_plot import ViolinPlot
 from ablator.analysis.plot.main import PlotAnalysis
-from ablator.analysis.main import Results
+from ablator.analysis.results import Results
 from ablator.analysis.plot.num_plot import LinearPlot
 from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import (Annotation, Derived, Dict, Enum, List,
