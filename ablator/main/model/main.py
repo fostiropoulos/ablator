@@ -347,7 +347,7 @@ class ModelBase(ABC):
             ):
                 if getattr(self, k, None) != metrics[k]:
                     self.logger.warn(
-                        f"Immutable class attribute {k} value {getattr(self, k)}"
+                        f"Immutable class attribute {k} value {getattr(self, k)} "
                         f"different than loaded value {metrics[k]}"
                     )
                 del metrics[k]
