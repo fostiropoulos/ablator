@@ -116,7 +116,7 @@ class GcpConfig(ConfigBase):
             logger.info(f"Rsync {cmd[-2]} to {hostname}:{cmd[-1]}")
         p.wait()
 
-    def rsync_down_nodes(
+    def rsync_down_node(
         self,
         node_hostname,
         remote_path: str,
