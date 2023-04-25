@@ -31,6 +31,22 @@ def parse_rsync_paths(
     rsynced_folder: Path | str,
     root_folder: Path | str | None = None,
 ) -> dict[str, Path | str]:
+    """
+    Parse the experiment directory that's being in sync with remote servers (Google cloud storage, other
+    remote nodes) and the root folder.
+    
+    Parameters
+    ----------
+    rsynced_folder : Path, str
+        The experiment directory that's being in sync with remote servers.
+    root_folder : Path, str, None, default=None
+        The root folder that contains all experiment directories.
+    Returns
+    -------
+    dict[str, Path]
+        A dictionary with 2 keys: `local_path` and `remote_path`, which specifies the local directory
+        and the remote path that will be in sync.
+    """
     rsync_path = Path(rsynced_folder)
     root_path = rsync_path if root_folder is None else Path(root_folder)
 
@@ -41,6 +57,21 @@ def parse_rsync_paths(
 
 
 def parse_metrics(optim_direction: list[str], metrics: dict[str, float] | None):
+    """
+    Resolve metrics to be optimized.
+    
+    Parameters
+    ----------
+    optim_direction: list[str]
+        The metrics to be optimized, defined in the ParallelConfig.
+    metrics: dict[str, float]
+        The metrics returned after a ray job finishes.
+    
+    Returns
+    -------
+    dict[str, float]
+        A dictionary of metric names and their corresponding metric values.
+    """
     return (
         {k: v for k, v in metrics.items() if k in optim_direction}
         if metrics is not None
@@ -56,6 +87,35 @@ def train_main_remote(
     fault_tollerant: bool = True,
     crash_exceptions_types: list[type] | None = None,
 ) -> tuple[ParallelConfig, dict[str, float] | None, TrialState]:
+    """
+    The trial job that will be executed remotely at a ray node. This is where model training happens.
+    In addition, experiment directory will be synchronized to the GCP and remote nodes.
+    
+    Parameters
+    ----------
+    model : ModelWrapper
+        The ModelWrapper that is used to train a model.
+    run_config : ParallelConfig
+        Runtime configuration for this trial.
+    mp_logger : FileLogger
+        The file logger that's used to log training progress.
+    root_dir : Path
+        The root directory that stores experiment states (experiment directory).
+    fault_tollerant : bool, optional, default=True
+        Whether to tollerate crashes, aka to cease execution when the ray job crashes.
+    crash_exceptions_types : list[type], None, optional, default=None
+        Types of exceptions that are considered as crashes.
+
+    Returns
+    -------
+    run_config : ParallelConfig
+        Running configuration of the trial.
+    dict[str, float], None
+        If exception raised (Except for LossDivergedError and TrainPlateauError),
+        this will be None object. Otherwise, this will be a dictionary of metrics.
+    TrialState
+        A TrialState object indicating the state of the trial job.
+    """
     if crash_exceptions_types is None:
         crash_exceptions_types = []
 
@@ -108,7 +168,47 @@ def train_main_remote(
 
 
 class ParallelTrainer(ProtoTrainer):
+    """
+    A class for parallelizing training of models of different configurations with ray.
+    Performance of these models (metrics) are also logged in order for optuna to tune hyperparameters.
+
+    Attributes
+    ----------
+    run_config : ParallelConfig
+        Running configuration for parallel training.
+    device : str
+        The device to use for training.
+    experiment_dir : Path
+        The directory that stores experiment information (optuna storage, experiment state database).
+    logger : FileLogger
+        The logger that writes messages to a file and prints them to the console.
+    experiment_state : ExperimentState
+        This attribute manages optuna trials.
+    total_trials : int
+        Number of trials to run.
+    gpu_mem_bottleneck : int
+        The minimum memory capacity of all available gpus.
+    cpu : float
+        The number of cpu used per trial.
+    gpu : float
+        The number of gpu used per trial.
+    total_mem_usage : int
+        Total amount of memory usage.
+    
+    """
     def __init__(self, *args, run_config: ParallelConfig, **kwargs):
+        """
+        Initialize ParallelTrainer using config from `run_config`.
+        
+        Parameters
+        ----------
+        run_config : ParallelConfig
+            The runtime configuration for this trainer.
+        *args : tuple
+            Extra arguments used for ProtoTrainer
+        **kwargs : dict, optional
+            Extra arguments to  ProtoTrainer, this can be {'wrapper': ModelWrapper}.
+        """
         # Distributed config parser
         run_config = copy.deepcopy(run_config)
         run_config.experiment_dir = os.path.join(
@@ -177,6 +277,9 @@ class ParallelTrainer(ProtoTrainer):
         return cpu
 
     def kill_idle(self):
+        """
+        Kill any ray processes that are idle.
+        """
         p = subprocess.Popen(
             [
                 "ps aux | grep ray::IDLE | grep -v grep | awk '{print $2}' | xargs kill -9"
@@ -290,16 +393,36 @@ class ParallelTrainer(ProtoTrainer):
         return futures
 
     def sync_down(self):
+        """
+        Synchronize content of Google cloud storage and all GCP nodes to current working directory.
+
+        Notes
+        -----
+        GCP nodes names should be equal to ray node names.
+        Can be previously run trials if we are resuming the state.
+        First sync down from the remote
+
+        """
         # Can be previously run trials if we are resuming the state.
         # First sync down from the remote
         self._rsync_gcp_down()
         self._rsync_nodes()
 
     def sync_up(self):
+        """
+        Synchronize content of current experiment directory to Google cloud storage and
+        other remote servers.
+        """
         self._rsync_gcp_up()
         self._rsync_remote_up()
 
     def evaluate(self):
+        """
+        Evaluate model performance in trials that are completed, using evaluation functions defined
+        in the model wrapper. Evaluation results will be logged to the console and log files in the
+        experiment directory. This method also synchronizes the experiment directory to Google cloud
+        storage and remote servers.
+        """
         eval_configs = []
         trial_uids = self.experiment_state.complete_trials
         for config in trial_uids:
@@ -319,6 +442,26 @@ class ParallelTrainer(ProtoTrainer):
         auxilary_modules: list[tys.ModuleType] | None = None,
         ray_head_address: str | None = "auto",
     ):
+        """
+        Set up and launch the parallel training and tuning process. This includes:
+        prepare ray cluster for running optuna trials to tune hyperparameters; if available,
+        synchronize GCP buckets to working directory defined in runtime configuration;
+        initialize optuna trials and add them to optuna storage and experiment state
+        database for tracking training progress (or retrieve existing trials from optuna
+        storage). Trials initialized (or retrieved) will be pushed to ray nodes so they
+        can be executed in parallel.
+        After all trials have finished and progress is recorded in sqlite databases in
+        the working directory, these changes will be synchronized back to the GCP nodes.
+        
+        Parameters
+        ----------
+        working_directory : str
+            The working directory that stores codes, modules that will be used by ray. 
+        auxilary_modules : list[tys.ModuleType], None
+            A list of modules to be used as ray clusters' working environment.
+        ray_head_address : str, default='auto'
+            Ray cluster address.
+        """
         try:
             torch.multiprocessing.set_start_method("spawn")
             mp.set_start_method("spawn", force=True)
