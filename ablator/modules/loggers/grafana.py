@@ -166,27 +166,22 @@ class GrafanaLogger():
         self.prometheus_client.push_to_prometheus(k, v, itr)
 
     def add_time_series_panel(self, k, v, itr) -> TimeSeries:
-        query_expr: str = f"{k}{{}}"
+        query_expr: str = f"{k}"
         self.add_scalar(k, v, itr)
 
         return TimeSeries(title=str(k),
                           description=f"iteration_{itr}",
                           gridPos=GridPos(h=10, w=10, x=0, y=0),
                           dataSource='Prometheus',
-                          targets=[Target(
-                              expr=query_expr,
-                              legendFormat="{{ handler }}",
-                              refId='A',
-                          ),
-        ]
-        )
+                          targets=[Target(expr=query_expr),]
+                          )
 
     def add_multiline_time_series_panel(self, k, v: dict[str, float | int], itr) -> None:
         targets = []
+        self.prometheus_client.push_metrics(v, itr)
         for _k, _v in v.items():
-            self.add_scalar(_k, _v, itr)
-            query_expr: str = f"{_k}{{}}"
-            targets.append(Target(expr=query_expr, legendFormat="{{ handler }}", refId='A'))
+            query_expr: str = f"{_k}"
+            targets.append(Target(expr=query_expr))
 
         return TimeSeries(title=str(k),
                           description=f"iteration_{itr}",
