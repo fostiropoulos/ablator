@@ -183,8 +183,10 @@ def sample_trial_params(
 
     Examples
     --------
-    >>> optuna_trial = optuna.create_trial('test', {'x': 0.5, 'y': 'a', 'z': True})
-    >>> search_space = {'x': SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0)), 'y': SearchSpace(categorical_values=['a', 'b']), 'z': SearchSpace(value_type=SearchType.integer, value_range=(1, 10))}
+    >>> optuna_trial = self.optuna_study.ask()
+    >>> search_space = {'x': SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0)), 
+    'y': SearchSpace(categorical_values=['a', 'b']), 
+    'z': SearchSpace(value_type=SearchType.integer, value_range=(1, 10))}
     >>> sample_trial_params(optuna_trial, search_space)
     {'x': 0.030961748695615783, 'y': 'a', 'z': 9}
     """
@@ -340,7 +342,7 @@ class OptunaState:
         state: TrialState,
     ):
         """
-        Update the state of a trial.
+        Update the state of a trial when it is completed with metrics.
 
         Parameters
         ----------
@@ -392,6 +394,7 @@ class ExperimentState:
     ) -> None:
         """
         Initializes the ExperimentState.
+        Initialize databases for storing training states and optuna states,create trials based on total num of trials specified in config 
 
         Parameters
         ----------
@@ -499,7 +502,7 @@ class ExperimentState:
     def _init_trials(self, resume: bool = False) -> list[ParallelConfig]:
         """
         Initialize trials for the experiment.
-
+        If resume is True, then load the trials from the database and create new trials for the remaining trials.
         Parameters
         ----------
         resume : bool, optional, default=False
@@ -514,6 +517,8 @@ class ExperimentState:
         ------
         RuntimeError
             If an experiment exists and `resume` is False.
+        AssertionError
+            If no trials can be scheduled.
         """
         max_trials_conc = min(self.config.concurrent_trials, self.config.total_trials)
 
@@ -550,6 +555,8 @@ class ExperimentState:
     def sample_trials(self, n_trials_to_sample: int) -> list[ParallelConfig] | None:
         """
         Sample n trials from the search space and update database.
+        Number n is the miniumn value of n_trials_to_sample and n_trials_remaining.
+        n_trials_remaining is the number of total_trials(defined in config) minus the number of trials that have been sampled.
 
         Parameters
         ----------
@@ -586,7 +593,7 @@ class ExperimentState:
         trial_state: TrialState,
     ) -> bool:
         """
-        Append a trial to the database.
+        Append a trial to the experiment state database.
 
         Parameters
         ----------
@@ -621,7 +628,8 @@ class ExperimentState:
         ignore_errors=False,
     ) -> list[ParallelConfig]:
         """
-        Samples a specified number of trials from the search space and persists them to the
+        Samples a specified number of trials from the search space and persists states to experiment database.
+        Previous trials can be reused to avoid sampling the same trials again.
 
         Parameters
         ----------
@@ -686,7 +694,7 @@ class ExperimentState:
         state: TrialState = TrialState.RUNNING,
     ) -> None:
         """
-        Update the state of a trial in both the Experiment and Optuna state.
+        Update the state of a trial in both the Experiment database and tell Optuna.
 
         Parameters
         ----------

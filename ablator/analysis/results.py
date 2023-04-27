@@ -17,7 +17,7 @@ from ablator.main.configs import Optim, ParallelConfig, SearchSpace
 
 def process_row(row: str, **aux_info) -> dict[str, ty.Any] | None:
     """
-    Process a given row by adding surrounding curly braces if not present, loading it as a JSON object,
+    Process a given row to make it conform to the JSON format, loading it as a JSON object,
     and updating it with auxiliary information.
 
     Parameters
@@ -224,6 +224,9 @@ class Results:
     def _assert_cat_attributes(self, categorical_attributes: list[str]):
         """
         check if the categorical attributes are imbalanced
+        default ratio is 0.8, which means if the most frequent value
+        is more than 80% every other kind of values, then it is imbalanced
+
 
         Parameters
         ----------
@@ -256,7 +259,7 @@ class Results:
     @property
     def metric_names(self) -> list[str]:
         """
-        get the list of all optimize metric names
+        get the list of all optimize directions
 
         Returns
         -------
