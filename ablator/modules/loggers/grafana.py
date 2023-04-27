@@ -134,7 +134,7 @@ class GrafanaLogger():
 
         # read the html file
         data: str = ""
-        with open("image-slider.html", encoding="utf-8") as f:
+        with open("assets/image-slider.html", encoding="utf-8") as f:
             data: str = f.read()
         # update the total number of files inside the html files using beautiful soup
         soup = BeautifulSoup(data, 'html.parser')
