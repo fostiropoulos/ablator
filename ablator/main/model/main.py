@@ -34,6 +34,10 @@ class LogStepError(Exception):
     pass
 
 
+class CheckpointNotFoundError(FileNotFoundError):
+    pass
+
+
 class ModelBase(ABC):
     """
     A base class that removes training boiler-plate code with extensible support
@@ -305,7 +309,7 @@ class ModelBase(ABC):
                         f"Error loading checkpoint {_checkpoint}. Trying another....\n{traceback.format_exc()}"
                     )
         if current_checkpoint is None:
-            raise FileNotFoundError(f"Could not find a valid checkpoint in {chkpt_dir}")
+            raise CheckpointNotFoundError(f"Could not find a valid checkpoint in {chkpt_dir}")
         self.current_checkpoint = current_checkpoint
 
     def _load_model(self, checkpoint_path: Path, model_only: bool = False) -> None:
