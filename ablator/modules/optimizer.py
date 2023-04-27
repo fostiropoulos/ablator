@@ -174,7 +174,7 @@ class OptimizerConfig(ConfigBase):
 
     def __init__(self, name, arguments: dict[str, ty.Any]):
         """
-        Initializes the optimizer configuration. Add anny provided settings to the optimizer.
+        Initializes the optimizer configuration. Add any provided settings to the optimizer.
 
         Parameters
         ----------
