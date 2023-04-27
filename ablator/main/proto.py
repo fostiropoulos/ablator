@@ -69,7 +69,7 @@ class ProtoTrainer:
 
         Parameter
         ---------
-        debug : bool, default=True
+        debug : bool, default=False
             Whether to train model in debug mode.
         
         Returns
