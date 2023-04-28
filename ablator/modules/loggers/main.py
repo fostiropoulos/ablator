@@ -47,7 +47,8 @@ class SummaryLogger:
     log_iteration : int
         Current log iteration.
     checkpoint_iteration : dict[str, dict[str, int]]
-        Dictionary containing checkpoint iterations.
+        checkpoint_iteration is a dictionary that keeps track of the checkpoint iterations for each directory. 
+        It is used in the checkpoint() method to determine the appropriate iteration number for the saved checkpoint.
     log_file_path : Path | None
         Path to the log file.
     dashboard : LoggerBase | None
@@ -271,7 +272,17 @@ class SummaryLogger:
             The metrics to update.
         itr : Optional[int], optional  
             The iteration, by default None.
+        
+        Raises
+        ------
+        AssertionError
+            If the iteration is not greater than the current iteration.
+        
+        Notes
+        -----
+        self.log_iteration is increased by 1 every time update() is called while training models.
         """
+        
         if itr is None:
             itr = self.log_iteration
             self.log_iteration += 1
@@ -298,23 +309,38 @@ class SummaryLogger:
         is_best: bool = False,
     ):
         """Save a checkpoint and update the checkpoint iteration
-        
+
+        Saves the model checkpoint in the appropriate directory based on the `is_best` parameter.
+        If `is_best` is True, the checkpoint is saved in the "best" directory, indicating the best
+        performing model so far. Otherwise, the checkpoint is saved in the "recent" directory,
+        representing the most recent checkpoint.
+
+        The file path for the checkpoint is constructed using the selected directory name ("best" or
+        "recent"), and the file name with the format "{file_name}_{itr:010}.pt", where `itr` is the
+        iteration number.
+
+        The `checkpoint_iteration` dictionary is updated with the current iteration number for each
+        directory. If `itr` is not provided, the iteration number is increased by 1 each time a
+        checkpoint is saved. Otherwise, the iteration number is set to the provided `itr`.
+
         Parameters
         ----------
         save_dict : object
             The object to save.
-    
+
         file_name : str
             The file name.
+
         itr : int | None, optional
-            The iteration, by default None.
+            The iteration, by default None. If not provided, the current iteration is incremented by 1.
+
         is_best : bool, optional
             Whether this is the best checkpoint, by default False.
-        
+
         Raises
         ------
         AssertionError
-            If the iteration is not larger than the current iteration.
+            If the provided `itr` is not larger than the current iteration associated with the checkpoint.
         """
         if self.model_dir is None:
             return
@@ -360,7 +386,7 @@ class SummaryLogger:
 
     def info(self, *args, **kwargs):
         """
-        Log an info message using the logger.
+        Log an info to files and to console message using the logger.
 
         Parameters
         ----------
@@ -373,7 +399,7 @@ class SummaryLogger:
 
     def warn(self, *args, **kwargs):
         """
-        Log a warning message using the logger.
+        Log a warning message to files and to console using the logger.
 
         Parameters
         ----------
@@ -386,7 +412,7 @@ class SummaryLogger:
 
     def error(self, *args, **kwargs):
         """
-        Log an error message using the logger.
+        Log an error message to files and to console using the logger.
 
         Parameters
         ----------
