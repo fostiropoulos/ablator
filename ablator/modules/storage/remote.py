@@ -75,7 +75,7 @@ class RemoteConfig(ConfigBase):
 
     def _make_cmd_up(self, local_path: Path, destination: str):
         """
-        Make the rsync command to upload a file to the remote storage.
+        Make the rsync command to upload files to the remote storage.
 
         Parameters
         ----------
@@ -106,7 +106,7 @@ class RemoteConfig(ConfigBase):
 
     def _make_cmd_down(self, local_path: Path, destination: str, verbose=True):
         """
-        Make the rsync command to download a file from the remote storage.
+        Make the rsync command to download files from the remote storage.
 
         Parameters
         ----------
@@ -143,7 +143,7 @@ class RemoteConfig(ConfigBase):
         run_async=False,
     ):
         """
-        Upload a file to the remote storage.
+        start a new process and upload files to the remote storage.
 
         Parameters
         ----------
@@ -170,7 +170,7 @@ class RemoteConfig(ConfigBase):
         run_async=False,
     ):
         """
-        Download a file from the remote storage.
+        start a new process and download files from the remote storage.
 
         Parameters
         ----------
