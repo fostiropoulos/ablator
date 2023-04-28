@@ -69,7 +69,7 @@ class GcpConfig(ConfigBase):
 
     def _make_cmd_up(self, local_path: Path, destination: str):
         """
-        Make the command to upload a file to the bucket.
+        Make the command to upload files to the bucket.
 
         Parameters
         ----------
@@ -96,7 +96,7 @@ class GcpConfig(ConfigBase):
 
     def _make_cmd_down(self, src_path: str, local_path: Path):
         """
-        Make the command to download a file from the bucket.
+        Make the command to download files from the bucket.
 
         Parameters
         ----------
@@ -153,7 +153,7 @@ class GcpConfig(ConfigBase):
         logger: FileLogger | None = None,
     ):
         """
-        Rsync a file to the bucket.
+        Rsync files to the bucket.
 
         Parameters
         ----------
@@ -238,7 +238,7 @@ class GcpConfig(ConfigBase):
         verbose=True,
     ):
         """
-        Rsync a file from the bucket.
+        Rsync files from the bucket.
 
         Parameters
         ----------
@@ -267,7 +267,7 @@ class GcpConfig(ConfigBase):
         verbose=True,
     ):
         """ 
-        Rsync a file from the bucket to all nodes with the given hostname.
+        Rsync files from the bucket to all nodes with the given hostname.
 
         Parameters
         ----------
