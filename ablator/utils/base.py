@@ -26,7 +26,7 @@ class Dummy:
 
 def iter_to_numpy(iterable):
     """
-    Convert torch.Tensor elements to NumPy arrays.
+    Convert elements of the input iterable to NumPy arrays if they are torch.Tensor objects.
 
     Parameters
     ----------
@@ -54,7 +54,7 @@ def iter_to_device(
     ----------
     data_dict : dict or list
         The input dictionary or list containing torch.Tensor elements.
-    device : torch.device
+    device : torch.device | str
         The target device for the tensors.
 
     Returns
@@ -123,7 +123,7 @@ def set_seed(seed: int):
 
 def get_lr(optimizer):
     """
-    Get the learning rate from a optimizer.
+    Get the learning rate from an optimizer.
 
     Parameters
     ----------
@@ -162,7 +162,7 @@ def debugger_is_active() -> bool:
 
 def get_latest_chkpts(checkpoint_dir: Path) -> list[Path]:
     """
-    Get a list of the latest checkpoint files in a directory.
+    Get a list of all checkpoint files in a directory, sorted from the latest to the earliest.
 
     Parameters
     ----------
@@ -172,24 +172,29 @@ def get_latest_chkpts(checkpoint_dir: Path) -> list[Path]:
     Returns
     -------
     list[Path]
-        A list of the latest checkpoint files sorted by filename.
+        A list of the checkpoint files sorted by filename.
     """
     return sorted(list(checkpoint_dir.glob("*.pt")))[::-1]
 
 
 def parse_device(device: ty.Union[str, list[str]]):
     """
-    Parse a device string or a list of device strings.
+    Parse a device string, an integer, or a list of device strings or integers.
 
     Parameters
     ----------
-    device : ty.Union[str, list[str]]
+    device : ty.Union[str, list[str], int]
         The target device for the tensors.
 
     Returns
     -------
     any
         The parsed device string, integer, or list of device strings or integers.
+
+    Raises
+    ------
+    ValueError
+        If the device string is not one of {'cpu', 'cuda'} or doesn't start with 'cuda:'.
 
     Examples
     --------
@@ -226,6 +231,12 @@ def init_weights(module: nn.Module):
     ----------
     module : nn.Module
         The input module to initialize.
+    
+    Notes
+    -----
+    - If the module is a Linear layer, initialize weight values from a normal distribution N(mu=0, std=1.0). If biases are available, initialize them to zeros.
+    - If the module is an Embedding layer, initialize embeddings with values from N(mu=0, std=1.0). If padding is enabled, set the padding embedding to a zero vector.
+    - If the module is a LayerNorm layer, set all biases to zeros and all weights to 1.
     """
     if isinstance(module, nn.Linear):
         module.weight.data.normal_(mean=0.0, std=1.0)
