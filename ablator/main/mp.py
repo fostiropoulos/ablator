@@ -89,7 +89,9 @@ def train_main_remote(
 ) -> tuple[ParallelConfig, dict[str, float] | None, TrialState]:
     """
     The trial job that will be executed remotely at a ray node. This is where model training happens.
-    In addition, experiment directory will be synchronized to the GCP and remote nodes.
+    In addition, experiment directory will be synchronized to the Google Cloud storage and remote nodes.
+    Synchronization is done via GcpConfig and RemoteConfig `rsync_up()` methods. Refer to documentation of
+    these 2 classes for more details.
     
     Parameters
     ----------
@@ -170,7 +172,7 @@ def train_main_remote(
 class ParallelTrainer(ProtoTrainer):
     """
     A class for parallelizing training of models of different configurations with ray.
-    Performance of these models (metrics) are also logged in order for optuna to tune hyperparameters.
+    Performance of these models (metrics) are for optuna to tune hyperparameters. They are also logged to optuna storage.
 
     Attributes
     ----------
@@ -394,7 +396,7 @@ class ParallelTrainer(ProtoTrainer):
 
     def sync_down(self):
         """
-        Synchronize content of Google cloud storage and all GCP nodes to current working directory.
+        Synchronize content of Google cloud storage to current working directory and to all GCP nodes.
 
         Notes
         -----
@@ -445,13 +447,13 @@ class ParallelTrainer(ProtoTrainer):
         """
         Set up and launch the parallel training and tuning process. This includes:
         prepare ray cluster for running optuna trials to tune hyperparameters; if available,
-        synchronize GCP buckets to working directory defined in runtime configuration;
+        synchronize Google Cloud storage buckets to working directory defined in runtime configuration;
         initialize optuna trials and add them to optuna storage and experiment state
         database for tracking training progress (or retrieve existing trials from optuna
-        storage). Trials initialized (or retrieved) will be pushed to ray nodes so they
-        can be executed in parallel.
+        storage). Trials initialized (or retrieved), `self.experiment_state.running_trials`,
+        will be pushed to ray nodes so they can be executed in parallel.
         After all trials have finished and progress is recorded in sqlite databases in
-        the working directory, these changes will be synchronized back to the GCP nodes.
+        the working directory, these changes will be synchronized back to the GCP nodes via `rsync_up()` method.
         
         Parameters
         ----------
