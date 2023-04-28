@@ -39,7 +39,7 @@ def save_checkpoint(state, filename="checkpoint.pt"):
     Parameters
     ----------
     state : dict
-        State dictionary to save.
+        Model State dictionary to save.
     filename : str, optional
         The name of the checkpoint file, by default "checkpoint.pt".
     """
