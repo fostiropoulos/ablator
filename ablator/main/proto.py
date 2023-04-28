@@ -9,7 +9,19 @@ from ablator.main.model.wrapper import ModelWrapper
 
 class ProtoTrainer:
     """
-    Manages resources for Prototyping
+    Manages resources for Prototyping.
+
+    Attributes
+    ----------
+    wrapper : ModelWrapper
+        The main model wrapper.
+    run_config : RunConfig
+        Running configuration for the model.
+    
+    Raises
+    ------
+    RuntimeError
+        If experiment directory is not defined in the running configuration.
     """
 
     def __init__(
@@ -17,6 +29,16 @@ class ProtoTrainer:
         wrapper: ModelWrapper,
         run_config: RunConfig,
     ):
+        """
+        Initialize model wrapper and running configuration for the model.
+
+        Parameters
+        ----------
+        wrapper : ModelWrapper
+            The main model wrapper.
+        run_config : RunConfig
+            Running configuration for the model.
+        """
         super().__init__()
 
         self.wrapper = copy.deepcopy(wrapper)
@@ -32,7 +54,7 @@ class ProtoTrainer:
 
     def _init_state(self):
         """
-        initialize the data state of the wrapper to force downloading and processing any data artifacts
+        Initialize the data state of the wrapper to force downloading and processing any data artifacts
         in the main train process as opposed to inside the wrapper.
         """
         self.pre_train_setup()
@@ -40,6 +62,21 @@ class ProtoTrainer:
         mock_wrapper._init_state(run_config=copy.deepcopy(self.run_config), debug=True)
 
     def launch(self, debug: bool = False):
+        """
+        Initialize the data state of the wrapper and train the model inside the wrapper, then sync training
+        results (logged to experiment directory while training) with external logging services (e.g Google
+        cloud storage, other remote servers).
+
+        Parameter
+        ---------
+        debug : bool, default=False
+            Whether to train model in debug mode.
+        
+        Returns
+        -------
+        metrics : TrainMetrics
+            Metrics returned after training.
+        """
         self._init_state()
         metrics = self.wrapper.train(run_config=self.run_config, debug=debug)
         self.sync()
@@ -52,11 +89,28 @@ class ProtoTrainer:
 
 
     def evaluate(self):
+        """
+        Run model evaluation on the training results, sync evaluation results to external logging services
+        (e.g Google cloud storage, other remote servers).
+
+        Returns
+        -------
+        metrics : TrainMetrics
+            Metrics returned after evaluation.
+        """
         metrics = self.wrapper.evaluate(self.run_config)
         self.sync()
         return metrics
 
     def smoke_test(self, config=None):
+        """
+        Run a smoke test training process on the model.
+
+        Parameters
+        ----------
+        config : RunConfig
+            Running configuration for the model.
+        """
         if config is None:
             config = self.run_config
         run_config = deepcopy(config)
