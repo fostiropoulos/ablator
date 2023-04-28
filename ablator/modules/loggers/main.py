@@ -21,6 +21,43 @@ class DuplicateRunError(Exception):
 
 
 class SummaryLogger:
+    """
+    A logger for training and evaluation summary.
+
+    Attributes
+    ----------
+    SUMMARY_DIR_NAME : str
+        Name of the summary directory.
+    RESULTS_JSON_NAME : str
+        Name of the results JSON file.
+    LOG_FILE_NAME : str
+        Name of the log file.
+    CONFIG_FILE_NAME : str
+        Name of the configuration file.
+    METADATA_JSON : str
+        Name of the metadata JSON file.
+    CHKPT_DIR_NAMES : list[str]
+        List of checkpoint directory names.
+    CHKPT_DIR_VALUES : list[str]
+        List of checkpoint directory values.
+    CHKPT_DIRS : dict[str, Path]
+        Dictionary containing checkpoint directories.
+    keep_n_checkpoints : int
+        Number of checkpoints to keep.
+    log_iteration : int
+        Current log iteration.
+    checkpoint_iteration : dict[str, dict[str, int]]
+        checkpoint_iteration is a dictionary that keeps track of the checkpoint iterations for each directory. 
+        It is used in the checkpoint() method to determine the appropriate iteration number for the saved checkpoint.
+    log_file_path : Path | None
+        Path to the log file.
+    dashboard : LoggerBase | None
+        Dashboard logger.
+    model_dir : Path | None
+        the model directory.
+    result_json_path : Path | None
+        Path to the results JSON file.
+    """
     SUMMARY_DIR_NAME = "dashboard"
     RESULTS_JSON_NAME = "results.json"
     LOG_FILE_NAME = "train.log"
@@ -38,6 +75,23 @@ class SummaryLogger:
         keep_n_checkpoints: int | None = None,
         verbose: bool = True,
     ):
+        """
+        Initialize a SummaryLogger.
+
+        Parameters
+        ----------
+        run_config : RunConfig
+            The run configuration.
+        model_dir : str | None | Path, optional
+            Path to the model directory, by default None.
+        resume : bool, optional
+            Whether to resume from an existing model directory, by default False.
+        keep_n_checkpoints : int | None, optional
+            Number of checkpoints to keep, by default None.
+        verbose : bool, optional
+            Whether to print messages to the console, by default True.
+        """
+
         run_config = copy.deepcopy(run_config)
         self.uid = run_config.uid
         self.keep_n_checkpoints: int = (
@@ -90,6 +144,9 @@ class SummaryLogger:
         self.logger = FileLogger(path=self.log_file_path, verbose=verbose)
 
     def _update_metadata(self):
+        """
+        Update the metadata file.
+        """
         if self.model_dir is None:
             return
         metadata_path = self.model_dir.joinpath(self.METADATA_JSON)
@@ -106,11 +163,34 @@ class SummaryLogger:
     def _make_dashboard(
         self, summary_dir: Path, run_config: RunConfig | None = None
     ) -> LoggerBase | None:
+        """
+        Make a dashboard logger.
+        
+        Parameters
+        ----------
+        summary_dir : Path
+            Path to the summary directory.
+        run_config : RunConfig | None, optional
+            The run configuration, by default None.
+        
+        Returns
+        -------
+        LoggerBase | None
+            A TensorboardLogger.
+        """
         if run_config is None or not run_config.tensorboard:
             return None
         return TensorboardLogger(summary_dir.joinpath("tensorboard"))
 
     def _write_config(self, run_config: RunConfig):
+        """
+        Write the run configuration to the model directory and to the dashboard.
+
+        Parameters
+        ----------
+        run_config : RunConfig
+            The run configuration.
+        """
         if self.model_dir is None:
             return
         self.model_dir.joinpath(self.CONFIG_FILE_NAME).write_text(
@@ -121,6 +201,18 @@ class SummaryLogger:
             self.dashboard.write_config(run_config)
 
     def _add_metric(self, k, v, itr):
+        """
+        Add a metric to the dashboard.
+
+        Parameters
+        ----------
+        k : str
+            The metric name.
+        v : Any
+            The metric value.
+        itr : int
+            The iteration.
+        """
         if self.dashboard is None:
             return
         if isinstance(v, (list, np.ndarray)):
@@ -155,6 +247,13 @@ class SummaryLogger:
             )
 
     def _append_metrics(self, metrics: dict[str, float]):
+        """ Append metrics to the result json file.
+        
+        Parameters
+        ----------
+        metrics : dict[str, float]
+            The metrics to append.
+        """
         if self.result_json_path is not None:
             with open(self.result_json_path, "a", encoding="utf-8") as fp:
                 fp.write(futils.dict_to_json(metrics) + "\n")
@@ -164,6 +263,26 @@ class SummaryLogger:
         metrics: Union[TrainMetrics, dict],
         itr: Optional[int] = None,
     ):
+        """ Update the dashboard with the given metrics.
+        write some metrics to json files and update the current metadata(log_iteration)
+
+        Parameters
+        ----------
+        metrics : Union[TrainMetrics, dict]
+            The metrics to update.
+        itr : Optional[int], optional  
+            The iteration, by default None.
+        
+        Raises
+        ------
+        AssertionError
+            If the iteration is not greater than the current iteration.
+        
+        Notes
+        -----
+        self.log_iteration is increased by 1 every time update() is called while training models.
+        """
+        
         if itr is None:
             itr = self.log_iteration
             self.log_iteration += 1
@@ -189,6 +308,40 @@ class SummaryLogger:
         itr: int | None = None,
         is_best: bool = False,
     ):
+        """Save a checkpoint and update the checkpoint iteration
+
+        Saves the model checkpoint in the appropriate directory based on the `is_best` parameter.
+        If `is_best` is True, the checkpoint is saved in the "best" directory, indicating the best
+        performing model so far. Otherwise, the checkpoint is saved in the "recent" directory,
+        representing the most recent checkpoint.
+
+        The file path for the checkpoint is constructed using the selected directory name ("best" or
+        "recent"), and the file name with the format "{file_name}_{itr:010}.pt", where `itr` is the
+        iteration number.
+
+        The `checkpoint_iteration` dictionary is updated with the current iteration number for each
+        directory. If `itr` is not provided, the iteration number is increased by 1 each time a
+        checkpoint is saved. Otherwise, the iteration number is set to the provided `itr`.
+
+        Parameters
+        ----------
+        save_dict : object
+            The object to save.
+
+        file_name : str
+            The file name.
+
+        itr : int | None, optional
+            The iteration, by default None. If not provided, the current iteration is incremented by 1.
+
+        is_best : bool, optional
+            Whether this is the best checkpoint, by default False.
+
+        Raises
+        ------
+        AssertionError
+            If the provided `itr` is not larger than the current iteration associated with the checkpoint.
+        """
         if self.model_dir is None:
             return
         dir_name = "best" if is_best else "recent"
@@ -217,6 +370,14 @@ class SummaryLogger:
             self._update_metadata()
 
     def clean_checkpoints(self, keep_n_checkpoints: int):
+        """
+        Clean up checkpoints and keep only the specified number of checkpoints.
+
+        Parameters
+        ----------
+        keep_n_checkpoints : int
+            Number of checkpoints to keep.
+        """
         if self.model_dir is None:
             return
         for chkpt_dir in self.CHKPT_DIR_VALUES:
@@ -224,10 +385,40 @@ class SummaryLogger:
             futils.clean_checkpoints(dir_path, keep_n_checkpoints)
 
     def info(self, *args, **kwargs):
+        """
+        Log an info to files and to console message using the logger.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to the logger's info method.
+        **kwargs
+            Keyword arguments passed to the logger's info method.
+        """
         self.logger.info(*args, **kwargs)
 
     def warn(self, *args, **kwargs):
+        """
+        Log a warning message to files and to console using the logger.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to the logger's warn method.
+        **kwargs
+            Keyword arguments passed to the logger's warn method.
+        """
         self.logger.warn(*args, **kwargs)
 
     def error(self, *args, **kwargs):
+        """
+        Log an error message to files and to console using the logger.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to the logger's error method.
+        **kwargs
+            Keyword arguments passed to the logger's error method.
+        """
         self.logger.error(*args, **kwargs)
