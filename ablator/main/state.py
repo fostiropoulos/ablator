@@ -185,8 +185,8 @@ def sample_trial_params(
     --------
     >>> optuna_trial = self.optuna_study.ask()
     >>> search_space = {'x': SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0)), 
-    'y': SearchSpace(categorical_values=['a', 'b']), 
-    'z': SearchSpace(value_type=SearchType.integer, value_range=(1, 10))}
+    ... 'y': SearchSpace(categorical_values=['a', 'b']), 
+    ... 'z': SearchSpace(value_type=SearchType.integer, value_range=(1, 10))}
     >>> sample_trial_params(optuna_trial, search_space)
     {'x': 0.030961748695615783, 'y': 'a', 'z': 9}
     """
