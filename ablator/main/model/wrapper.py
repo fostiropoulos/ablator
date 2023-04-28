@@ -24,12 +24,33 @@ class ModelWrapper(ModelBase):
     """
     A wrapper around model_class that removes training boiler-plate code, with over-writable functions
     with support for custom use-cases.
+
+    Attributes:
+    -----------
+    model_class: torch.nn.Module
+        The model class to wrap.
+    model: torch.nn.Module
+        The model created from the model class or checkpoint
+    optimizer: Optimizer
+        The optimizer created from the optimizer config or checkpoint
+    scaler: GradScaler
+        The scaler created from the scaler config or checkpoint
+    scheduler: Scheduler
+        The scheduler created from the scheduler config or checkpoint
     """
 
     def __init__(
         self,
         model_class: type[nn.Module],
     ):
+        """
+        Initializes the model wrapper.
+
+        Parameters:
+        -----------
+        model_class: torch.nn.Module
+            The model class to wrap.
+        """
         super().__init__(
             model_class=model_class,
         )
@@ -52,6 +73,16 @@ class ModelWrapper(ModelBase):
         save_dict: dict[str, ty.Any] | None = None,
         strict_load: bool = True,
     ) -> None:
+        """
+        Creates the model, optimizer, scheduler and scaler from the save dict or from config.
+
+        Parameters:
+        -----------
+        save_dict: dict[str, ty.Any]
+            The save dict to load from.
+        strict_load: bool
+            Whether to load the model strictly or not.
+        """
         save_dict = {} if save_dict is None else save_dict
         scheduler_state = save_dict["scheduler"] if "scheduler" in save_dict else None
         optimizer_state = save_dict["optimizer"] if "optimizer" in save_dict else None
@@ -95,6 +126,25 @@ class ModelWrapper(ModelBase):
         scheduler_config: SchedulerConfig | None = None,
         scheduler_state: dict | None = None,
     ) -> Scheduler | None:
+        """
+        Creates the scheduler from the saved state or from config.
+
+        Parameters:
+        -----------
+        model: nn.Module
+            The model to create the scheduler for.
+        optimizer: Optimizer
+            The optimizer to create the scheduler for.
+        scheduler_config: SchedulerConfig
+            The scheduler config to create the scheduler from.
+        scheduler_state: dict[str, ty.Any]
+            The scheduler state to load the scheduler from.
+
+        Returns:
+        --------
+        scheduler: Scheduler
+            The scheduler.
+        """
         scheduler: ty.Optional[Scheduler] = None
         if scheduler_config is not None:
             scheduler = scheduler_config.make_scheduler(model, optimizer)
@@ -114,6 +164,23 @@ class ModelWrapper(ModelBase):
         optimizer_config: OptimizerConfig | None = None,
         optimizer_state: dict[str, ty.Any] | None = None,
     ) -> Optimizer:
+        """
+        Creates the optimizer from the saved state or from config.
+
+        Parameters:
+        -----------
+        model: nn.Module
+            The model to create the optimizer for.
+        optimizer_config: OptimizerConfig
+            The optimizer config to create the optimizer from.
+        optimizer_state: dict[str, ty.Any]
+            The optimizer state to load the optimizer from.
+        
+        Returns:
+        --------
+        optimizer: Optimizer
+            The optimizer.
+        """
         optimizer: Optimizer
 
         if optimizer_config is not None:
@@ -139,12 +206,29 @@ class ModelWrapper(ModelBase):
         return optimizer
 
     def create_scaler(self, scaler_state: ty.Optional[dict] = None) -> GradScaler:
+        """
+        Creates the scaler from the saved state or from config.
+
+        Parameters:
+        -----------
+        scaler_state: dict[str, ty.Any]
+            The scaler state to load the scaler from.
+
+        Returns:
+        --------
+        scaler: GradScaler
+            The scaler.
+        """
         scaler = GradScaler(enabled=self.run_config.amp)
         if scaler_state:
             scaler.load_state_dict(scaler_state)
         return scaler
 
     def reset_optimizer_scheduler(self):
+        """
+        Resets the optimizer and scheduler by recreating them.
+
+        """
         optimizer_config = self.train_config.optimizer_config
         scheduler_config = self.train_config.scheduler_config
         optimizer = self.create_optimizer(
@@ -162,6 +246,21 @@ class ModelWrapper(ModelBase):
     def load_checkpoint(
         self, save_dict: dict[str, ty.Any], model_only: bool = False
     ) -> None:
+        """
+        Loads the checkpoint from the save dict.
+
+        Parameters:
+        -----------
+        save_dict: dict[str, ty.Any]
+            The save dict to load the checkpoint from.
+        model_only: bool
+            Whether to load only the model or include scheduler, optimizer and scaler.
+
+        
+        Notes:
+        ------
+        This method is the implementation of the abstract method in the base class.
+        """
         if model_only:
             del save_dict["scheduler"]
             del save_dict["optimizer"]
@@ -173,6 +272,21 @@ class ModelWrapper(ModelBase):
         )
 
     def to_device(self, data: Iterable, device=None) -> Iterable:
+        """
+        Moves the data to the specified device.
+
+        Parameters:
+        -----------
+        data: Iterable
+            The data to move to the device.
+        device: ty.Optional[ty.Union[torch.device, str]]
+            The device to move the data to. If None, the device specified in the config is used.
+        Returns:
+        --------
+        data: Iterable
+            The data on the device.
+        
+        """
         if device is None:
             device = self.device
         return butils.iter_to_device(data, device)
@@ -180,6 +294,21 @@ class ModelWrapper(ModelBase):
     def model_step(
         self, model: nn.Module, batch: Iterable
     ) -> tuple[dict[str, torch.Tensor] | None, torch.Tensor | None]:
+        """
+        A single inference step for the model.
+
+        Parameters:
+        -----------
+        model: nn.Module
+            The model to train.
+        batch: Iterable
+            The batch of input data to pass through the model,it could be a list, dict or a single tensor.
+
+        Returns:
+        --------
+        out: dict[str, torch.Tensor] | None
+            The output of the model,contains current predictions and loss of the model
+        """
         batch = self.to_device(batch)
         with self.autocast:
             if isinstance(batch, list):
@@ -290,6 +419,22 @@ class ModelWrapper(ModelBase):
     def train_step(
         self, batch: Iterable
     ) -> tuple[dict[str, torch.Tensor] | None, dict[str, ty.Any]]:
+        """
+        A single step for training.
+        It also updates learning rate with scheduler.
+
+        Parameters:
+        -----------
+        batch: Iterable
+            The batch of input data to pass through the model,it could be a list, dict or a single tensor.
+
+        Returns:
+        --------
+        outputs: dict[str, torch.Tensor] | None
+            The output of the model.
+        train_metrics: dict[str, ty.Any]
+            The training metrics.
+        """
         model = self.model
         optimizer = self.optimizer
         scaler = self.scaler
@@ -322,6 +467,13 @@ class ModelWrapper(ModelBase):
         return outputs, train_metrics
 
     def log_step(self):
+        """
+        A single step for logging.
+
+        Notes:
+        ------
+        This method is update the logger with the current metrics and log a status message.
+        """
         self.logger.update(self.metrics)
         msg = self.status_message()
         verbose = self.verbose == "console"
@@ -334,6 +486,25 @@ class ModelWrapper(ModelBase):
         run_async=True,
         block: bool = True,
     ) -> mp.Process | TrainMetrics:
+        """
+        Mock train the model as a smoke test
+
+        Parameters:
+        -----------
+        run_config: RunConfig
+            The run config to use for the mock train.
+        run_async: bool
+            Whether to run the mock train in a separate process.
+        block: bool
+            Whether to block the current process until the mock train is finished.
+
+        Returns:
+        --------
+        p: mp.Process
+            The process running the mock train.
+        metrics: TrainMetrics
+            The metrics from the mock train.
+        """
         mock_model = copy.deepcopy(self)
 
         if run_config is None:
@@ -347,6 +518,9 @@ class ModelWrapper(ModelBase):
         return mock_model.train(run_config=run_config, smoke_test=True)
 
     def update_status(self):
+        """
+        Update the metrics with current training stats, and then all metrics (static and moving average) will be set as description for the tqdm progress.
+        """
         self.metrics.update_static_metrics(self.train_stats)
         if self.verbose != "tqdm":
             return
@@ -362,10 +536,21 @@ class ModelWrapper(ModelBase):
         self.train_tqdm.update(1)
 
     def status_message(self) -> str:
+        """
+        Return a string generated from dictinoary of current metrics,including all the static metrics and moving average metrics.
+
+        Returns:
+        --------
+        str
+            The status message.
+        """
         # must return current epoch, iter, losses and metrics
         return " ".join([f"{k}: {v}" for k, v in self.metrics.to_dict().items()])
 
     def log(self):
+        """
+        Log if the current iteration is a logging step. It also evaluate training metrics for logging.
+        """
         # Log step
         if self._is_step(self.log_itr):
             self.metrics.evaluate("train", reset=False)
@@ -373,6 +558,10 @@ class ModelWrapper(ModelBase):
 
     @ty.final
     def eval(self, smoke_test=False):
+        """
+        Evaluate the model then update scheduler and save checkpoint if the current iteration is an evaluation step.
+        It also check if it is early stopping.(check configs for more details)
+        """
         # Evaluation step
         if self._is_step(self.eval_itr):
             try:
@@ -392,9 +581,21 @@ class ModelWrapper(ModelBase):
 
     @property
     def total_steps(self):
+        """
+        The total number of steps for training.
+        """
         return self.epoch_len * self.epochs
 
     def train_loop(self, smoke_test=False):
+        """
+        Train the model in many steps, evaluate the model and log the metrics for each iteration.
+        metrics including static metrics like learning rate, along with validation and training metrics like loss and mean.
+
+        Parameters:
+        -----------
+        smoke_test: bool
+            Whether to run a smoke test.
+        """
         train_dataloader = self.train_dataloader
         generator = iter(train_dataloader)
 
@@ -431,6 +632,24 @@ class ModelWrapper(ModelBase):
     def train(
         self, run_config: RunConfig, smoke_test: bool = False, debug: bool = False
     ) -> TrainMetrics:
+        """
+        Initialize states and train the model.
+        When keyboard interrupts, saves a checkpoint
+
+        Parameters:
+        -----------
+        run_config: RunConfig
+            The run config to use for training.
+        smoke_test: bool
+            Whether to run a smoke test.
+        debug: bool
+            Whether to run in debug mode.
+        
+        Returns:
+        --------
+        TrainMetrics
+            The metrics from the training.
+        """
         self._init_state(run_config=run_config, smoke_test=smoke_test, debug=debug)
 
         try:
@@ -445,6 +664,14 @@ class ModelWrapper(ModelBase):
         self,
         run_config: RunConfig,
     ):
+        """
+        Evaluate the model after training on the test and validation sets.
+
+        Parameters:
+        -----------
+        run_config: RunConfig  
+            The run config to use for evaluation.
+        """
         self._init_state(run_config, resume=True)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
 
@@ -486,6 +713,27 @@ class ModelWrapper(ModelBase):
         scaler: torch.cuda.amp.GradScaler,
         scheduler: ty.Optional[Scheduler],
     ) -> float | None:
+        """
+        Calculate the loss and apply the gradients, call optimizer.step() and scheduler.step().
+
+        Parameters:
+        -----------
+        model: nn.Module
+            The model to apply the loss to.
+        loss: torch.Tensor | None
+            The loss to apply.
+        optimizer: Optimizer
+            The optimizer to step.
+        scaler: torch.cuda.amp.GradScaler
+            The scaler to use for mixed precision training.
+        scheduler: ty.Optional[Scheduler]
+            The scheduler to step.
+
+        Returns:
+        --------
+        float | None
+            The loss value.
+        """
         if loss is not None:
             loss = torch.mean(loss)
             if self.amp:
@@ -542,6 +790,29 @@ class ModelWrapper(ModelBase):
         subsample: float = 1.0,
         smoke_test: bool = False,
     ) -> dict[str, float]:
+        """
+        Validate the model on data in dataloader (which can either be val dataloader - so tag is val, or test dataloader - so tag is test)
+
+        Parameters:
+        -----------
+        model: nn.Module
+            The model to validate.
+        dataloader: DataLoader
+            The dataloader to use for validation.
+        metrics: TrainMetrics
+            The metrics to use for validation.
+        tag: ty.Literal["train", "test", "val"]
+            The tag to use for validation. Also see `TrainMetrics` for details.
+        subsample: float
+            The fraction of the dataloader to use for validation.
+        smoke_test: bool
+            Whether to execute this function as a smoke test. If True, only one iteration will be performed, which is useful for quickly checking if the code runs without errors. Default is False.
+        
+        Returns:
+        --------
+        dict[str, float]
+            The metrics from the validation.
+        """
         cutoff_itr = len(dataloader) * subsample
         for i, batch in enumerate(dataloader):
             with torch.no_grad():
@@ -569,16 +840,62 @@ class ModelWrapper(ModelBase):
 
     @abstractmethod
     def make_dataloader_train(self, run_config: RunConfig) -> DataLoader:
+        """
+        Function to make the training dataloader.
+
+        Parameters:
+        -----------
+        run_config: RunConfig
+            The run configuration.
+        
+        Returns:
+        --------
+        DataLoader
+            The training dataloader.
+        """
         pass
 
     def evaluation_functions(self) -> dict[str, Callable] | None:
+        """
+        Returns:
+        --------
+        dict[str, Callable]
+            The evaluation functions to use.Also see `TrainMetrics` for details.
+        """
+        
         return None
 
     # Functions that can be optionally over-written.
     def make_dataloader_test(self, run_config: RunConfig) -> DataLoader | None:
+        """
+        Function to make the test dataloader.
+        
+        Parameters:
+        -----------
+        run_config: RunConfig
+            The run configuration.
+        
+        Returns:
+        --------
+        DataLoader | None
+            The test dataloader.
+        """
         pass
 
     def make_dataloader_val(self, run_config: RunConfig) -> DataLoader | None:
+        """
+        Function to make the validation dataloader.
+        
+        Parameters:
+        -----------
+        run_config: RunConfig
+            The run configuration.
+
+        Returns:
+        --------
+        DataLoader | None
+            The validation dataloader.
+        """
         pass
 
     def custom_evaluation(
@@ -589,6 +906,24 @@ class ModelWrapper(ModelBase):
     def aux_metrics(
         self, output_dict: dict[str, torch.Tensor] | None
     ) -> ty.Optional[dict[str, ty.Any]]:
+        """
+        Auxiliary metrics to be computed during training.
+
+        Parameters:
+        -----------
+        output_dict: dict[str, torch.Tensor] | None
+            The output dictionary from the model.
+        
+        Returns:   
+        --------
+        ty.Optional[dict[str, ty.Any]]
+            The auxiliary metrics.
+
+        Notes:
+        ------
+        Auxiliary metrics are computed during training and are used for moving_aux_metrics in `TrainMetrics`.
+        Check `TrainMetrics` for more details.
+        """
         pass
 
     def config_parser(self, run_config: RunConfig):
@@ -607,6 +942,15 @@ class ModelWrapper(ModelBase):
         self.test_dataloader = self.make_dataloader_test(run_config)
 
     def checkpoint(self, is_best=False):
+        """
+        Save a checkpoint of the model.It will use the class name of the model as the filename.
+
+        
+        Parameters:
+        -----------
+        is_best: bool
+            Whether this is the best model so far.
+        """
         self.logger.checkpoint(
             self.current_state,
             self.model.__class__.__name__,
@@ -615,6 +959,14 @@ class ModelWrapper(ModelBase):
         )
 
     def save_dict(self) -> dict[str, ty.Any]:
+        """
+        Save the current state of the trainer, including  model parameters, and current states of the optimizer, the scaler, and the scheduler
+
+        Returns:
+        --------
+        dict[str, ty.Any]
+            The current state of the trainer.
+        """
         model_state_dict = self.model.state_dict()
 
         optimizer_state_dict = None
