@@ -16,6 +16,41 @@ from ablator.main.configs import Optim, ParallelConfig, SearchSpace
 
 
 def process_row(row: str, **aux_info) -> dict[str, ty.Any] | None:
+    """
+    Process a given row to make it conform to the JSON format, loading it as a JSON object,
+    and updating it with auxiliary information.
+
+    Parameters
+    ----------
+    row : str
+        The input row to be processed, expected to be a JSON-like string.
+    **aux_info : dict
+        Additional key-value pairs to be added to the resulting dictionary.
+
+    Returns
+    -------
+    dict[str, ty.Any] | None
+        A dictionary resulting from the combination of the processed row and auxiliary information,
+        or None if the input row cannot be parsed as a JSON object.
+
+    Raises
+    ------
+    AssertionError
+        If there are overlapping column names between the auxiliary information and the input row.
+
+    Examples
+    --------
+    >>> row = '"name": "John Doe", "age": 30'
+    >>> aux_info = {"city": "San Francisco"}
+    >>> process_row(row, **aux_info)
+    {'name': 'John Doe', 'age': 30, 'city': 'San Francisco'}
+
+    >>> row = '{"name": "John Doe", "age": 30}'
+    >>> aux_info = {"age": 25, "city": "San Francisco"}
+    >>> process_row(row, **aux_info)
+    AssertionError: Overlapping column names between auxiliary dictionary and run results. aux_info: {'age': 25, 'city': 'San Francisco'}
+    row: {"name": "John Doe", "age": 30}
+    """
     if not row.startswith("{"):
         row = "{" + row
     if not row.endswith("}") and not row.endswith("}\n"):
@@ -33,6 +68,55 @@ def process_row(row: str, **aux_info) -> dict[str, ty.Any] | None:
 
 
 def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
+    """
+    Read the results of an experiment and return them as a pandas DataFrame.
+
+    The function reads the data from a JSON file, processes each row, and appends
+    experiment attributes from a YAML configuration file. The resulting DataFrame
+    is indexed and returned.
+
+    Parameters
+    ----------
+    config_type : type[ConfigBase]
+        The type of the configuration class that is used to load the experiment
+        configuration from a YAML file.
+    json_path : Path
+        The path to the JSON file containing the results of the experiment.
+
+    Returns
+    -------
+    pd.DataFrame
+        A pandas DataFrame containing the processed experiment results.
+
+    Raises
+    ------
+    Exception
+        If there is an error in processing the JSON file or loading the
+        experiment configuration, the exception will be caught and the
+        traceback will be printed.
+
+    Examples
+    --------
+    >>> result json file:
+    {
+    "run_id": "run_1",
+    "accuracy": 0.85,
+    "loss": 0.35
+    }
+    {
+    "run_id": "run_2",
+    "accuracy": 0.87,
+    "loss": 0.32
+    }
+    >>> config file
+    experiment_name: "My Experiment"
+    batch_size: 64
+    >>> return value
+           run_id  accuracy loss experiment_name batch_size     path
+    0       run_1      0.85  0.35    My Experiment    64  path/to/experiment
+    1        run_2      0.87  0.32    My Experiment    64  path/to/experiment
+    """
+
     try:
         experiment_config = config_type.load(json_path.parent.joinpath("config.yaml"))
         experiment_attributes = experiment_config.make_dict(
@@ -63,6 +147,39 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
 
 
 class Results:
+    """
+    class for processing experiment results.
+
+    Parameters
+    ----------
+    config : type[ParallelConfig]
+        The configuration class used
+    experiment_dir : str | Path
+        The path to the experiment directory.
+    cache : bool, optional
+        Whether to cache the results, by default False
+    use_ray : bool, optional
+        Whether to use ray for parallel processing, by default False
+    
+    Attributes
+    ----------
+    experiment_dir : Path
+        The path to the experiment directory.
+    config : type[ParallelConfig]
+        The configuration class used
+    metric_map : dict[str, Optim]
+        A dictionary mapping optimize metric names to their optimization direction.
+    data: pd.DataFrame
+        The processed results of the experiment. refer read_results for more details.
+    config_attrs: list[str]
+        The list of all the optimizable hyperparameter names
+    search_space: dict[str, ty.Any]
+        All the search space of the experiment.
+    numerical_attributes: list[str]
+        The list of all the numerical hyperparameter names
+    categorical_attributes: list[str]
+        The list of all the categorical hyperparameter names  
+    """
     def __init__(
         self,
         config: type[ParallelConfig],
@@ -105,6 +222,28 @@ class Results:
             self._parse_results.clear()
 
     def _assert_cat_attributes(self, categorical_attributes: list[str]):
+        """
+        check if the categorical attributes are imbalanced
+        default ratio is 0.8, which means if the most frequent value
+        is more than 80% every other kind of values, then it is imbalanced
+
+
+        Parameters
+        ----------
+        categorical_attributes : list[str]
+            list of categorical attributes
+        
+        Raises
+        ------
+        AssertionError
+            if the categorical attributes are imbalanced
+
+        Examples
+        --------
+        >>> [X,X,Y,Z]imbalanced
+        >>> [X,Y,Z]balanced
+        >>> [X,X Y,Y,Z]balanced
+        """
         for attr in categorical_attributes:
             value_counts = self.data[attr].value_counts()
             unique_values, counts = np.array(value_counts.index), value_counts.values
@@ -119,6 +258,14 @@ class Results:
 
     @property
     def metric_names(self) -> list[str]:
+        """
+        get the list of all optimize directions
+
+        Returns
+        -------
+        list[str]   
+            list of optimize metric names
+        """
         return list(self.metric_map.values())
 
     def _parse_results(
@@ -126,6 +273,16 @@ class Results:
         experiment_dir: Path,
         init_ray: bool,
     ):
+        """
+        Read multiple results from experiment directory with ray to enable parallel processing.
+
+        Parameters
+        ----------
+        experiment_dir : Path
+            The experiment directory
+        init_ray : bool
+            Whether to use ray for parallel processing
+        """
         assert (
             experiment_dir.exists()
         ), f"Experiment directory {experiment_dir} does not exist. You can provide one as an argument `experiment_dir`"
@@ -140,6 +297,25 @@ class Results:
         experiment_dir: Path,
         num_cpus=None,
     ) -> pd.DataFrame:
+        """
+        Read multiple results from experiment directory with ray to enable parallel processing.
+
+        This function calls read_result many times, refer to read_result for more details.
+
+        Parameters
+        ----------
+        config_type : type[ConfigBase]
+            The configuration class
+        experiment_dir : Path
+            The experiment directory
+        num_cpus : int, optional
+            Number of CPUs to use for ray processing, by default None
+        
+        Returns
+        -------
+        pd.DataFrame    
+            A dataframe of all the results
+        """
         results = []
         json_paths = list(experiment_dir.rglob("results.json"))
         if len(json_paths) == 0:
