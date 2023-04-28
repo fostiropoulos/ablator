@@ -227,13 +227,7 @@ class ModelWrapper(ModelBase):
     def reset_optimizer_scheduler(self):
         """
         Resets the optimizer and scheduler by recreating them.
-        
-        Returns:
-        --------
-        optimizer: Optimizer
-            The optimizer.
-        scheduler: Scheduler    
-            The scheduler.
+
         """
         optimizer_config = self.train_config.optimizer_config
         scheduler_config = self.train_config.scheduler_config
@@ -260,7 +254,7 @@ class ModelWrapper(ModelBase):
         save_dict: dict[str, ty.Any]
             The save dict to load the checkpoint from.
         model_only: bool
-            Whether to load only the model or include schedular, optimizer and scaler.
+            Whether to load only the model or include scheduler, optimizer and scaler.
 
         
         Notes:
@@ -301,7 +295,7 @@ class ModelWrapper(ModelBase):
         self, model: nn.Module, batch: Iterable
     ) -> tuple[dict[str, torch.Tensor] | None, torch.Tensor | None]:
         """
-        A single train step for the model.
+        A single inference step for the model.
 
         Parameters:
         -----------
@@ -313,9 +307,7 @@ class ModelWrapper(ModelBase):
         Returns:
         --------
         out: dict[str, torch.Tensor] | None
-            The output of the model.
-        loss: torch.Tensor | None
-            The loss of the model.
+            The output of the model,contains current predictions and loss of the model
         """
         batch = self.to_device(batch)
         with self.autocast:
@@ -429,6 +421,7 @@ class ModelWrapper(ModelBase):
     ) -> tuple[dict[str, torch.Tensor] | None, dict[str, ty.Any]]:
         """
         A single step for training.
+        It also updates learning rate with scheduler.
 
         Parameters:
         -----------
@@ -494,7 +487,7 @@ class ModelWrapper(ModelBase):
         block: bool = True,
     ) -> mp.Process | TrainMetrics:
         """
-        Mock train the model
+        Mock train the model as a smoke test
 
         Parameters:
         -----------
@@ -526,7 +519,7 @@ class ModelWrapper(ModelBase):
 
     def update_status(self):
         """
-        Update the metrics with current training stats.
+        Update the metrics with current training stats, and then all metrics (static and moving average) will be set as description for the tqdm progress.
         """
         self.metrics.update_static_metrics(self.train_stats)
         if self.verbose != "tqdm":
@@ -544,7 +537,7 @@ class ModelWrapper(ModelBase):
 
     def status_message(self) -> str:
         """
-        Assemble the status message from the current metrics.
+        Return a string generated from dictinoary of current metrics,including all the static metrics and moving average metrics.
 
         Returns:
         --------
@@ -556,7 +549,7 @@ class ModelWrapper(ModelBase):
 
     def log(self):
         """
-        Log if the current iteration is a logging step.
+        Log if the current iteration is a logging step. It also evaluate training metrics for logging.
         """
         # Log step
         if self._is_step(self.log_itr):
@@ -566,7 +559,7 @@ class ModelWrapper(ModelBase):
     @ty.final
     def eval(self, smoke_test=False):
         """
-        Evaluate the model then update schedular and save checkpoint if the current iteration is an evaluation step.
+        Evaluate the model then update scheduler and save checkpoint if the current iteration is an evaluation step.
         """
         # Evaluation step
         if self._is_step(self.eval_itr):
@@ -594,7 +587,8 @@ class ModelWrapper(ModelBase):
 
     def train_loop(self, smoke_test=False):
         """
-        Train the model in many steps, evaluate the model and log the metrics in between.
+        Train the model in many steps, evaluate the model and log the metrics for each iteration.
+        metrics including static metrics like learning rate, along with validation and training metrics like loss and mean.
 
         Parameters:
         -----------
@@ -639,6 +633,7 @@ class ModelWrapper(ModelBase):
     ) -> TrainMetrics:
         """
         Initialize states and train the model.
+        When keyboard interrupts, saves a checkpoint
 
         Parameters:
         -----------
@@ -718,7 +713,7 @@ class ModelWrapper(ModelBase):
         scheduler: ty.Optional[Scheduler],
     ) -> float | None:
         """
-        Calculate the loss and apply the gradients, step the optimizer and scheduler.
+        Calculate the loss and apply the gradients, call optimizer.step() and scheduler.step().
 
         Parameters:
         -----------
@@ -795,7 +790,7 @@ class ModelWrapper(ModelBase):
         smoke_test: bool = False,
     ) -> dict[str, float]:
         """
-        Validate the model with the given tag and dataloader.
+        Validate the model on data in dataloader (which can either be val dataloader - so tag is val, or test dataloader - so tag is test)
 
         Parameters:
         -----------
@@ -963,7 +958,7 @@ class ModelWrapper(ModelBase):
 
     def save_dict(self) -> dict[str, ty.Any]:
         """
-        Save the current state of the trainer.
+        Save the current state of the trainer, including  model parameters, and current states of the optimizer, the scaler, and the scheduler
 
         Returns:
         --------
