@@ -560,6 +560,7 @@ class ModelWrapper(ModelBase):
     def eval(self, smoke_test=False):
         """
         Evaluate the model then update scheduler and save checkpoint if the current iteration is an evaluation step.
+        It also check if it is early stopping.(check configs for more details)
         """
         # Evaluation step
         if self._is_step(self.eval_itr):
@@ -942,8 +943,9 @@ class ModelWrapper(ModelBase):
 
     def checkpoint(self, is_best=False):
         """
-        Save a checkpoint of the model.
+        Save a checkpoint of the model.It will use the class name of the model as the filename.
 
+        
         Parameters:
         -----------
         is_best: bool
