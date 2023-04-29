@@ -6,7 +6,6 @@ import pandas as pd
 from PIL import Image
 from io import BytesIO
 from typing import Any
-from dotenv import load_dotenv
 import plotly.graph_objs as go
 
 from grafanalib.core import *
@@ -20,18 +19,11 @@ from ablator.config.utils import flatten_nested_dict
 
 
 class GrafanaLogger():
-    def __init__(self) -> None:
-        load_dotenv()
+    def __init__(self, grafana_token, influxdb_token, influxdb_bucket, influxdb_org) -> None:
         self.grafana_server: str = "localhost:3000"
-        self.grafana_api_key: str = os.getenv('GRAFANA_TOKEN')
-        self.influxdb_bucket: str = os.getenv('BUCKET')
-        self.influxdb_client: InfluxDatabaseClient = self._get_influx_db_client()
-
-    def _get_influx_db_client(self) -> InfluxDatabaseClient:
-        token: str | None = os.getenv('INFLUXDB_TOKEN')
-        org: str | None = os.getenv('ORG')
-        bucket: str | None = os.getenv('BUCKET')
-        return InfluxDatabaseClient(token, org, bucket)
+        self.grafana_api_key: str = grafana_token
+        self.influxdb_bucket: str = influxdb_bucket
+        self.influxdb_client: InfluxDatabaseClient = InfluxDatabaseClient(influxdb_token, influxdb_org, influxdb_bucket)
 
     def _get_dashboard_json(self, dashboard, overwrite=False, message="Updated by grafanlib") -> str:
         return json.dumps(
