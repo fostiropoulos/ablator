@@ -4,6 +4,7 @@ import base64
 import requests
 import pandas as pd
 from PIL import Image
+from io import BytesIO
 from typing import Any
 from dotenv import load_dotenv
 import plotly.graph_objs as go
@@ -75,11 +76,10 @@ class GrafanaLogger():
                     mode='html')
 
     def add_image(self, k, v, itr) -> Text:
-        v.save("img.jpg")
-        with open("img.jpg", "rb") as image_file:
-            buffer = image_file.read()
+        buffered = BytesIO()
+        v.save(buffered, format="JPEG")
+        data = base64.b64encode(buffered.getvalue())
 
-        data: bytes = base64.b64encode(buffer)
         encoded_img = str(data, "utf-8")
         imageData: str = "data:image/jpeg;base64, " + encoded_img
 
