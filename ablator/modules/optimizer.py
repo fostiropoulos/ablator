@@ -11,7 +11,8 @@ from ablator.config.types import Tuple
 
 def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type]):
     """
-    Returns the names of the model parameters that are not inside a forbidden layer.
+    Recurse into the module and return parameter names of all submodules, excluding
+    modules that are of any type defined in `forbidden_layer_types`.
     
     Parameters
     ----------
@@ -23,7 +24,7 @@ def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type
     Returns
     -------
     list[str]
-        The names of the model parameters that are not inside a forbidden layer.
+        The names of the parameters with the following format: `<submodule-name>.<parameter-name>`.
     
     Examples
     --------
