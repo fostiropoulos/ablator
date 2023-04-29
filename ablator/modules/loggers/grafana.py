@@ -81,7 +81,7 @@ class GrafanaLogger():
 
     def add_image_panel(self, k, v: Image, itr):
         self.add_image(k, v, itr)
-        query_expr = f'from(bucket: "{self.influxdb_bucket}") |> range(start: -1)|> filter(fn: (r) => r.ablator == "Images")|> filter(fn: (r) => r._field == "image")'
+        query_expr = f'from(bucket: "{self.influxdb_bucket}") |> range(start: 0)|> filter(fn: (r) => r.ablator == "Images")|> filter(fn: (r) => r._field == "image")'
         return Table(title='My Panel',
                      description=f"iteration_{itr}",
                      gridPos=GridPos(h=10, w=10, x=0, y=0),
@@ -112,7 +112,7 @@ class GrafanaLogger():
 
     def add_time_series_panel(self, k, v, itr) -> TimeSeries:
         self.add_scalar(k, v, itr)
-        query_expr = f'from(bucket: "{self.influxdb_bucket}")|> range(start: -1)|> filter(fn: (r) => r.ablator == "{k}")|> filter(fn: (r) => r._field == "{k}")'
+        query_expr = f'from(bucket: "{self.influxdb_bucket}")|> range(start: 0)|> filter(fn: (r) => r.ablator == "{k}")|> filter(fn: (r) => r._field == "{k}")'
 
         return TimeSeries(title=str(k),
                           description=f"iteration_{itr}",
@@ -125,7 +125,7 @@ class GrafanaLogger():
         targets = []
         self.add_scalars(k, v, itr)
         for _k, _v in v.items():
-            query_expr = f'from(bucket: "{self.influxdb_bucket}")|> range(start: -1)|> filter(fn: (r) => r.ablator == "{_k}")|> filter(fn: (r) => r._field == "{_k}")'
+            query_expr = f'from(bucket: "{self.influxdb_bucket}")|> range(start: 0)|> filter(fn: (r) => r.ablator == "{_k}")|> filter(fn: (r) => r._field == "{_k}")'
             targets.append(Target(expr=query_expr))
 
         return TimeSeries(title=str(k),
