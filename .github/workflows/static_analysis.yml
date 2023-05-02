@@ -30,4 +30,31 @@ jobs:
         pip install .
         pip install .[dev]
     - name: Run pylint
-      run: pylint ablator
+      run: pylint --fail-under=9 ablator
+      
+  mypy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10']
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Cache Python dependencies
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    - name: Install dependencies
+      run: |
+        python -m pip install pip==23.0.1
+        pip install .
+        pip install .[dev]
+    - name: Run mypy
+      run: mypy ablator
