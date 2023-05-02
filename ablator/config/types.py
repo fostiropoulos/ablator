@@ -398,7 +398,7 @@ def get_annotation_state(annotation):
 
     Parameters
     ----------
-    annotation:
+    annotation :
         type annotation
 
     Returns

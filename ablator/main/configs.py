@@ -20,7 +20,7 @@ class TrainConfig(ConfigBase):
     """
     Training configuration.
 
-    Attributes:
+    Attributes
     ----------
     dataset: str
         dataset name. maybe used in custom dataset loader functions.
@@ -56,6 +56,9 @@ class ModelConfig(ConfigBase):
 class RunConfig(ConfigBase):
     """
     base configuration for running an experiment.
+    
+    Attributes
+    ----------
     experiment_dir: Optional[str] = None
         location to store experiment artifacts.
     random_seed: Optional[int] = None
@@ -169,7 +172,7 @@ class ParallelConfig(RunConfig):
     """
     parallel training configuration.
 
-    Attributes:
+    Attributes
     ----------
     total_trials: int
         total number of trials.

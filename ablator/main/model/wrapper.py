@@ -25,8 +25,8 @@ class ModelWrapper(ModelBase):
     A wrapper around model_class that removes training boiler-plate code, with over-writable functions
     with support for custom use-cases.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     model_class: torch.nn.Module
         The model class to wrap.
     model: torch.nn.Module
@@ -46,8 +46,8 @@ class ModelWrapper(ModelBase):
         """
         Initializes the model wrapper.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         model_class: torch.nn.Module
             The model class to wrap.
         """
@@ -76,8 +76,8 @@ class ModelWrapper(ModelBase):
         """
         Creates the model, optimizer, scheduler and scaler from the save dict or from config.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         save_dict: dict[str, ty.Any]
             The save dict to load from.
         strict_load: bool
@@ -129,8 +129,8 @@ class ModelWrapper(ModelBase):
         """
         Creates the scheduler from the saved state or from config.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         model: nn.Module
             The model to create the scheduler for.
         optimizer: Optimizer
@@ -140,8 +140,8 @@ class ModelWrapper(ModelBase):
         scheduler_state: dict[str, ty.Any]
             The scheduler state to load the scheduler from.
 
-        Returns:
-        --------
+        Returns
+        -------
         scheduler: Scheduler
             The scheduler.
         """
@@ -167,8 +167,8 @@ class ModelWrapper(ModelBase):
         """
         Creates the optimizer from the saved state or from config.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         model: nn.Module
             The model to create the optimizer for.
         optimizer_config: OptimizerConfig
@@ -176,8 +176,8 @@ class ModelWrapper(ModelBase):
         optimizer_state: dict[str, ty.Any]
             The optimizer state to load the optimizer from.
         
-        Returns:
-        --------
+        Returns
+        -------
         optimizer: Optimizer
             The optimizer.
         """
@@ -209,13 +209,13 @@ class ModelWrapper(ModelBase):
         """
         Creates the scaler from the saved state or from config.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         scaler_state: dict[str, ty.Any]
             The scaler state to load the scaler from.
 
-        Returns:
-        --------
+        Returns
+        -------
         scaler: GradScaler
             The scaler.
         """
@@ -249,16 +249,16 @@ class ModelWrapper(ModelBase):
         """
         Loads the checkpoint from the save dict.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         save_dict: dict[str, ty.Any]
             The save dict to load the checkpoint from.
         model_only: bool
             Whether to load only the model or include scheduler, optimizer and scaler.
 
         
-        Notes:
-        ------
+        Notes
+        -----
         This method is the implementation of the abstract method in the base class.
         """
         if model_only:
@@ -275,14 +275,14 @@ class ModelWrapper(ModelBase):
         """
         Moves the data to the specified device.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data: Iterable
             The data to move to the device.
         device: ty.Optional[ty.Union[torch.device, str]]
             The device to move the data to. If None, the device specified in the config is used.
-        Returns:
-        --------
+        Returns
+        -------
         data: Iterable
             The data on the device.
         
@@ -297,15 +297,15 @@ class ModelWrapper(ModelBase):
         """
         A single inference step for the model.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         model: nn.Module
             The model to train.
         batch: Iterable
             The batch of input data to pass through the model,it could be a list, dict or a single tensor.
 
-        Returns:
-        --------
+        Returns
+        -------
         out: dict[str, torch.Tensor] | None
             The output of the model,contains current predictions and loss of the model
         """
@@ -423,13 +423,13 @@ class ModelWrapper(ModelBase):
         A single step for training.
         It also updates learning rate with scheduler.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         batch: Iterable
             The batch of input data to pass through the model,it could be a list, dict or a single tensor.
 
-        Returns:
-        --------
+        Returns
+        -------
         outputs: dict[str, torch.Tensor] | None
             The output of the model.
         train_metrics: dict[str, ty.Any]
@@ -470,8 +470,8 @@ class ModelWrapper(ModelBase):
         """
         A single step for logging.
 
-        Notes:
-        ------
+        Notes
+        -----
         This method is update the logger with the current metrics and log a status message.
         """
         self.logger.update(self.metrics)
@@ -489,8 +489,8 @@ class ModelWrapper(ModelBase):
         """
         Mock train the model as a smoke test
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         run_config: RunConfig
             The run config to use for the mock train.
         run_async: bool
@@ -498,8 +498,8 @@ class ModelWrapper(ModelBase):
         block: bool
             Whether to block the current process until the mock train is finished.
 
-        Returns:
-        --------
+        Returns
+        -------
         p: mp.Process
             The process running the mock train.
         metrics: TrainMetrics
@@ -539,8 +539,8 @@ class ModelWrapper(ModelBase):
         """
         Return a string generated from dictinoary of current metrics,including all the static metrics and moving average metrics.
 
-        Returns:
-        --------
+        Returns
+        -------
         str
             The status message.
         """
@@ -591,8 +591,8 @@ class ModelWrapper(ModelBase):
         Train the model in many steps, evaluate the model and log the metrics for each iteration.
         metrics including static metrics like learning rate, along with validation and training metrics like loss and mean.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         smoke_test: bool
             Whether to run a smoke test.
         """
@@ -636,8 +636,8 @@ class ModelWrapper(ModelBase):
         Initialize states and train the model.
         When keyboard interrupts, saves a checkpoint
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         run_config: RunConfig
             The run config to use for training.
         smoke_test: bool
@@ -645,8 +645,8 @@ class ModelWrapper(ModelBase):
         debug: bool
             Whether to run in debug mode.
         
-        Returns:
-        --------
+        Returns
+        -------
         TrainMetrics
             The metrics from the training.
         """
@@ -667,8 +667,8 @@ class ModelWrapper(ModelBase):
         """
         Evaluate the model after training on the test and validation sets.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         run_config: RunConfig  
             The run config to use for evaluation.
         """
@@ -716,8 +716,8 @@ class ModelWrapper(ModelBase):
         """
         Calculate the loss and apply the gradients, call optimizer.step() and scheduler.step().
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         model: nn.Module
             The model to apply the loss to.
         loss: torch.Tensor | None
@@ -729,8 +729,8 @@ class ModelWrapper(ModelBase):
         scheduler: ty.Optional[Scheduler]
             The scheduler to step.
 
-        Returns:
-        --------
+        Returns
+        -------
         float | None
             The loss value.
         """
@@ -793,8 +793,8 @@ class ModelWrapper(ModelBase):
         """
         Validate the model on data in dataloader (which can either be val dataloader - so tag is val, or test dataloader - so tag is test)
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         model: nn.Module
             The model to validate.
         dataloader: DataLoader
@@ -808,8 +808,8 @@ class ModelWrapper(ModelBase):
         smoke_test: bool
             Whether to execute this function as a smoke test. If True, only one iteration will be performed, which is useful for quickly checking if the code runs without errors. Default is False.
         
-        Returns:
-        --------
+        Returns
+        -------
         dict[str, float]
             The metrics from the validation.
         """
@@ -843,13 +843,13 @@ class ModelWrapper(ModelBase):
         """
         Function to make the training dataloader.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         run_config: RunConfig
             The run configuration.
         
-        Returns:
-        --------
+        Returns
+        -------
         DataLoader
             The training dataloader.
         """
@@ -857,8 +857,8 @@ class ModelWrapper(ModelBase):
 
     def evaluation_functions(self) -> dict[str, Callable] | None:
         """
-        Returns:
-        --------
+        Returns
+        -------
         dict[str, Callable]
             The evaluation functions to use.Also see `TrainMetrics` for details.
         """
@@ -870,13 +870,13 @@ class ModelWrapper(ModelBase):
         """
         Function to make the test dataloader.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         run_config: RunConfig
             The run configuration.
         
-        Returns:
-        --------
+        Returns
+        -------
         DataLoader | None
             The test dataloader.
         """
@@ -886,13 +886,13 @@ class ModelWrapper(ModelBase):
         """
         Function to make the validation dataloader.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         run_config: RunConfig
             The run configuration.
 
-        Returns:
-        --------
+        Returns
+        -------
         DataLoader | None
             The validation dataloader.
         """
@@ -909,8 +909,8 @@ class ModelWrapper(ModelBase):
         """
         Auxiliary metrics to be computed during training.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         output_dict: dict[str, torch.Tensor] | None
             The output dictionary from the model.
         
@@ -919,8 +919,8 @@ class ModelWrapper(ModelBase):
         ty.Optional[dict[str, ty.Any]]
             The auxiliary metrics.
 
-        Notes:
-        ------
+        Notes
+        -----
         Auxiliary metrics are computed during training and are used for moving_aux_metrics in `TrainMetrics`.
         Check `TrainMetrics` for more details.
         """
@@ -946,8 +946,8 @@ class ModelWrapper(ModelBase):
         Save a checkpoint of the model.It will use the class name of the model as the filename.
 
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         is_best: bool
             Whether this is the best model so far.
         """
@@ -962,8 +962,8 @@ class ModelWrapper(ModelBase):
         """
         Save the current state of the trainer, including  model parameters, and current states of the optimizer, the scaler, and the scheduler
 
-        Returns:
-        --------
+        Returns
+        -------
         dict[str, ty.Any]
             The current state of the trainer.
         """

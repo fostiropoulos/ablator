@@ -50,7 +50,7 @@ class FileLogger:
         """
         Write a message to the log file.
 
-        Parameters:
+        Parameters
         ----------
         msg : str
             The message to write.

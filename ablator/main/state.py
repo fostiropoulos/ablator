@@ -31,7 +31,8 @@ class TrialState(enum.IntEnum):
     """
     An enumeration of possible states for a trial with more pruned states.
 
-    Attributes:
+    Attributes
+    ----------
         RUNNING (int): A trial that has been succesfully scheduled to run
         COMPLETE (int): Succesfully completed trial
         PRUNED (int): Trial pruned because of various reasons
@@ -42,7 +43,8 @@ class TrialState(enum.IntEnum):
         PRUNED_POOR_PERFORMANCE (int): Trial that was pruned during execution for poor performance
         RECOVERABLE_ERROR (int): Trial that was pruned during execution for poor performance
 
-    Methods:
+    Methods
+    -------
         to_optuna_state: Convert this TrialState to an OptunaTrialState.
 
     """
@@ -63,7 +65,8 @@ class TrialState(enum.IntEnum):
         """
         Convert this TrialState to an OptunaTrialState.
 
-        Returns:
+        Returns
+        -------
             OptunaTrialState | None: 
                 Corresponding OptunaTrialState or None if the state is not applicable.
         """
@@ -236,7 +239,7 @@ class OptunaState:
     """
     A class to store the state of the Optuna study.
 
-    Attributes:
+    Attributes
     ----------
     optim_metrics: OrderedDict
         The ordered dictionary containing the names of the metrics to optimize and their direction (minimize or maximize).

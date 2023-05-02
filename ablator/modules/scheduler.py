@@ -17,8 +17,8 @@ class SchedulerArgs(ConfigBase):
     """
     Abstract base class for defining arguments to initialize a learning rate scheduler.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     step_when : StepType
         The step type at which the scheduler.step() should be invoked: 'train', 'val', or 'epoch'.
 
@@ -39,8 +39,8 @@ class SchedulerConfig(ConfigBase):
     """
     Class that defines a configuration for a learning rate scheduler.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     name : str
         The name of the scheduler.
     arguments : SchedulerArgs
@@ -155,7 +155,8 @@ class OneCycleConfig(SchedulerArgs):
 class PlateuaConfig(SchedulerArgs):
     """Configuration class for ReduceLROnPlateau scheduler.
 
-    Attributes:
+    Attributes
+    ----------
         patience : int
             Number of epochs with no improvement after which learning rate will be reduced.
         min_lr : float
