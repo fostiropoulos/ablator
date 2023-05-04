@@ -35,16 +35,6 @@ numpydoc_show_class_members = False
 numpydoc_class_members_toctree = False
 numpydoc_show_inherited_class_membersbool=False
 
-# def maybe_skip_member(app, what, name, obj, skip, options):
-#     print("app is ", app, "\n")
-#     print("what is ", what, "\n")
-#     print("name is ", name, "\n")
-#     print("obj is ", obj, "\n")
-#     print("skip is ", skip, "\n")
-#     print("options is ", options, "\n\n\n")
-#     if isinstance(obj, )
-
-#     return None
-
-# def setup(app):
-#     app.connect('autodoc-skip-member', maybe_skip_member)
+autodoc_default_options = {
+    'special-members': '__init__'
+}

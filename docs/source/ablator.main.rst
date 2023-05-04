@@ -20,7 +20,7 @@ Model Configuration module
    :show-inheritance:
 
 Multi-process Trainer module
-----------------------
+----------------------------
 
 .. automodule:: ablator.main.mp
    :members:
@@ -34,10 +34,11 @@ Prototype Trainer module
    :show-inheritance:
 
 Experiment and Optuna state module
--------------------------
+----------------------------------
 
 .. autoclass:: ablator.main.state.Base
    :show-inheritance:
+   :exclude-members: __init__
 
 .. autoclass:: ablator.main.state.OptunaState
    :members:
@@ -46,6 +47,7 @@ Experiment and Optuna state module
 .. autoclass:: ablator.main.state.Trial
    :members:
    :show-inheritance:
+   :exclude-members: __init__
 
 .. autoclass:: ablator.main.state.TrialState
    :members:
