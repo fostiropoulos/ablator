@@ -9,16 +9,16 @@ def parse_name_remap(
 ) -> dict[str, str]:
     """
     Returns a dictionary mapping input attribute names to output attribute names,
-    with optional remapping based on `name_map`.
+    with optional remapping based on ``name_map``.
 
     Parameters
     ----------
     defaults : list of str or None, optional
         The default attribute names to use as keys in the output dictionary.
-        If None, the output dictionary will be based on `name_map` only.
+        If None, the output dictionary will be based on ``name_map`` only.
     name_map : dict of str to str or None, optional
         A dictionary mapping input attribute names to output attribute names.
-        If None, the output dictionary will be based on `defaults` only.
+        If None, the output dictionary will be based on ``defaults`` only.
 
     Returns
     -------
@@ -28,7 +28,7 @@ def parse_name_remap(
     Raises
     ------
     NotImplementedError
-        If `defaults` and `name_map` are both None.
+        If ``defaults`` and ``name_map`` are both None.
 
     Examples
     --------

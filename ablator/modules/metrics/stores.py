@@ -27,7 +27,7 @@ class ArrayStore(Sequence):
         Initialize the storage settings.
 
         Parameters
-        -----------
+        ----------
         batch_limit : int, optional
             The maximum number of batches of values to store for this single store. Default is 30.
         memory_limit : int or None, optional
@@ -49,23 +49,25 @@ class ArrayStore(Sequence):
     def append(self, val: np.ndarray | float | int):
         """
         Appends a batch of values, or a single value, constrained on the limits.
-        If after appending a new batch, `batch_limit` is exceeded, only `batch_limit` number
-        of latest batches is kept. If memory limit is exceeded, `batch_limit` will be reduced.
+        If after appending a new batch, ``batch_limit`` is exceeded, only ``batch_limit`` number
+        of latest batches is kept. If memory limit is exceeded, ``batch_limit`` will be reduced.
 
         Parameters
-        -----------
+        ----------
         val : np.ndarray or float or int
             The data, can be a batch of data, or a scalar.
             
         Raises
-        -------
+        ------
         AssertionError:
             If appended value is not numpy array, an integer, or a float number.
 
         Examples
         --------
+
         The following example shows a case where batch limit is exceeded
         (100 values/batches to be appended while only 10 is allowed)
+
         >>> from ablator.modules.metrics.stores import ArrayStore
         >>> array_store = ArrayStore(
         ...     batch_limit=10,
@@ -79,9 +81,10 @@ class ArrayStore(Sequence):
         10
 
         This example shows a case where memory limit is exceeded. As soon as the 5th
-        value is appended, memory of the list is 104 > 100), so `batch_limit` is set
+        value is appended, memory of the list is 104 > 100), so ``batch_limit`` is set
         to the length of the store so far (which is 5) reduced by 1, which equals to 4.
         Therefore, from then on, only 4 values/batches is allowed.
+
         >>> array_store = ArrayStore(
         ...     batch_limit=10,
         ...     memory_limit=100
@@ -172,10 +175,10 @@ class PredictionStore:
         Initialize the storage settings.
 
         Parameters
-        -----------
+        ----------
         batch_limit : int, optional
             Maximum number of batches to keep for each array store corresponding to each category of prediction
-            outputs (e.g preds, labels), so only `batch_limit` number of latest batches is stored per set of
+            outputs (e.g preds, labels), so only ``batch_limit`` number of latest batches is stored per set of
             array store. Default is 30.
         memory_limit : int or None, optional
             Maximum memory (in bytes) of batches to keep for each array store corresponding to each category of
@@ -186,9 +189,9 @@ class PredictionStore:
             A dictionary of key-value pairs, keys are evaluation function names, values are 
             callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
             must match with names of prediction batches that the model returns. So if model prediction over
-            a batch looks like this: {"preds": <batch of predictions>, "labels": <batch of predicted labels>}, 
-            then callable's arguments should be `preds` and `labels`, e.g `evaluation_functions=
-            {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}`. Default is None.
+            a batch looks like this: ``{"preds": <batch of predictions>, "labels": <batch of predicted labels>}``, 
+            then callable's arguments should be ``preds`` and ``labels``, e.g ``evaluation_functions=
+            {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
 
         Examples
         --------
@@ -234,8 +237,8 @@ class PredictionStore:
             A tag that specifies which set of predictions to evaluate.
         **batches : dict[str, np.ndarray]
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
-            and value is a batch of prediction values. Note that the passed keys in **batches must match arguments in 
-            evaluation functions arguments in the Callable in evaluation_functions when we initialize PredictionStore object
+            and value is a batch of prediction values. Note that the passed keys in ``**batches`` must match arguments in 
+            evaluation functions arguments in the Callable in `evaluation_functions` when we initialize `PredictionStore` object.
 
         Raises
         ------
@@ -281,7 +284,7 @@ class PredictionStore:
         Apply evaluation_functions to predictions sets, e.g preds, labels.
 
         Returns
-        --------
+        -------
         metrics : dict
             A dictionary of metric values calculated from different sets of predictions.
 
@@ -387,12 +390,12 @@ class MovingAverage(ArrayStore):
         Appends a batch of values, or a single value, constrained on the limits.
 
         Parameters
-        -----------
+        ----------
         val : ty.Union[np.ndarray, torch.Tensor, float, int]
             The data to be appended
             
         Raises
-        -------
+        ------
         ValueError:
             If appended value is of required type, or if val is not a scalar.
 

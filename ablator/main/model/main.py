@@ -71,7 +71,7 @@ class ModelBase(ABC):
     random_seed : Optional[int]
         Sets the seed for generating random numbers.
     train_tqdm : tqdm, optional
-        An optional instance of `tqdm` that creates progress bars and displays real-time information during training. 
+        An optional instance of ``tqdm`` that creates progress bars and displays real-time information during training. 
         i.e. time remaining. Only applied for the master proces
     current_checkpoint : Optional[Path]
         Directory for the current checkpoint file, by default None.
@@ -95,11 +95,14 @@ class ModelBase(ABC):
     Notes
     -----
     1. Class properties are simply listed by name. Please check out property docstring for more information.
+    
     2. Users must implement the abstract methods to customize the model's behavior.
+    
     3. Mixed precision training enables some operations to use the torch.float32 datatype and other operations use lower 
     precision floating point datatype torch.float16. This is for saving time and reducing memory usage. Ordinarily, 
     "automatic mixed precision training" means training with torch.autocast and torch.cuda.amp.GradScaler together.
     More information: https://pytorch.org/docs/stable/amp.html
+
     """
     def __init__(
         self,
@@ -263,7 +266,7 @@ class ModelBase(ABC):
     ) -> None:
         """
         Abstract method to create and initialize the model. Must be implemented by subclasses.
-        Example implementation: Please see the `create_model` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``create_model`` method in the `ModelWrapper` class.
 
         Parameters
         ----------
@@ -283,7 +286,7 @@ class ModelBase(ABC):
     def checkpoint(self, is_best=False):
         """
         Abstract method to save a checkpoint of the model. Must be implemented by subclasses.
-        Example implementation: Please see the `checkpoint` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``checkpoint`` method in the ``ModelWrapper`` class.
 
 
         Parameters
@@ -301,7 +304,7 @@ class ModelBase(ABC):
     ):
         """
         Abstract method to train the model. Must be implemented by subclasses.
-        Example implementation: Please see the `train` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``train`` method in the ``ModelWrapper`` class.
 
         Parameters
         ----------
@@ -319,7 +322,7 @@ class ModelBase(ABC):
     ):
         """
         Abstract method to evaluate the model. Must be implemented by subclasses.
-        Example implementation: Please see the `evaluate` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``evaluate`` method in the ``ModelWrapper`` class.
 
         Parameters
         ----------
@@ -337,7 +340,7 @@ class ModelBase(ABC):
         for the training, validation, and testing datasets based on the provided run_config.
 
         Must be implemented by subclasses.
-        Example implementation: Please see the `make_dataloaders` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``make_dataloaders`` method in the ``ModelWrapper`` class.
 
         Parameters
         ----------
@@ -352,7 +355,7 @@ class ModelBase(ABC):
         Abstract method to parse the provided configuration. 
 
         Must be implemented by subclasses.
-        Example implementation: Please see the `make_dataloaders` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``make_dataloaders`` method in the ``ModelWrapper`` class.
 
         Parameters
         ----------
@@ -621,7 +624,7 @@ class ModelBase(ABC):
         Abstract method to load the model and its state from a given save dictionary.
         
         Must be implemented by subclasses.
-        Example implementation: Please see the `load_checkpoint` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``load_checkpoint`` method in the ``ModelWrapper`` class.
 
         Parameters
         ----------
@@ -639,7 +642,7 @@ class ModelBase(ABC):
         and other necessary information.
 
         Must be implemented by subclasses.
-        Example implementation: Please see the `save_dict` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``save_dict`` method in the ``ModelWrapper`` class.
 
         Returns
         -------
@@ -655,7 +658,7 @@ class ModelBase(ABC):
         training and validation.
 
         Must be implemented by subclasses.
-        Example implementation: Please see the `evaluation_functions` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``evaluation_functions`` method in the ``ModelWrapper`` class.
 
         Returns
         -------

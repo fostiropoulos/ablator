@@ -44,7 +44,7 @@ def parse_rsync_paths(
     Returns
     -------
     dict[str, Path]
-        A dictionary with 2 keys: `local_path` and `remote_path`, which specifies the local directory
+        A dictionary with 2 keys: ``local_path`` and ``remote_path``, which specifies the local directory
         and the remote path that will be in sync.
     """
     rsync_path = Path(rsynced_folder)
@@ -90,7 +90,7 @@ def train_main_remote(
     """
     The trial job that will be executed remotely at a ray node. This is where model training happens.
     In addition, experiment directory will be synchronized to the Google Cloud storage and remote nodes.
-    Synchronization is done via GcpConfig and RemoteConfig `rsync_up()` methods. Refer to documentation of
+    Synchronization is done via GcpConfig and RemoteConfig ``rsync_up()`` methods. Refer to documentation of
     these 2 classes for more details.
     
     Parameters
@@ -200,7 +200,7 @@ class ParallelTrainer(ProtoTrainer):
     """
     def __init__(self, *args, run_config: ParallelConfig, **kwargs):
         """
-        Initialize ParallelTrainer using config from `run_config`.
+        Initialize ParallelTrainer using config from ``run_config``.
         
         Parameters
         ----------
@@ -450,10 +450,10 @@ class ParallelTrainer(ProtoTrainer):
         synchronize Google Cloud storage buckets to working directory defined in runtime configuration;
         initialize optuna trials and add them to optuna storage and experiment state
         database for tracking training progress (or retrieve existing trials from optuna
-        storage). Trials initialized (or retrieved), `self.experiment_state.running_trials`,
+        storage). Trials initialized (or retrieved), ``self.experiment_state.running_trials``,
         will be pushed to ray nodes so they can be executed in parallel.
         After all trials have finished and progress is recorded in sqlite databases in
-        the working directory, these changes will be synchronized back to the GCP nodes via `rsync_up()` method.
+        the working directory, these changes will be synchronized back to the GCP nodes via ``rsync_up()`` method.
         
         Parameters
         ----------

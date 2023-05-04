@@ -123,8 +123,8 @@ class Analysis:
         attribute_name_remap: dict[str, str] | None = None,
     ):
         """
-        Remaps attribute and metric names in `attributes` and `metrics` DataFrames
-        based on `attribute_name_remap` and `metric_name_remap`, and updates `metric_map`
+        Remaps attribute and metric names in ``attributes`` and ``metrics`` DataFrames
+        based on ``attribute_name_remap`` and ``metric_name_remap``, and updates ``metric_map``
         accordingly.
 
         Parameters
@@ -145,8 +145,8 @@ class Analysis:
         Returns
         -------
         pandas.DataFrame, pandas.DataFrame, dict of str to Optim
-            The remapped `attributes` DataFrame, the remapped `metrics` DataFrame,
-            and the updated `metric_map` dictionary.
+            The remapped ``attributes`` DataFrame, the remapped ``metrics`` DataFrame,
+            and the updated ``metric_map`` dictionary.
 
         Examples
         --------

@@ -69,9 +69,9 @@ def iter_to_device(
 
 def apply_lambda_to_iter(iterable, fn: Callable):
     """
-    Applies a given function `fn` to each element of an iterable data structure.
+    Applies a given function ``fn`` to each element of an iterable data structure.
 
-    This function recursively applies `fn` to elements within nested dictionaries or lists.
+    This function recursively applies ``fn`` to elements within nested dictionaries or lists.
     It can be used for converting torch.Tensor elements to NumPy arrays or moving tensors
     to a specified device.
 
@@ -85,8 +85,8 @@ def apply_lambda_to_iter(iterable, fn: Callable):
     Returns
     -------
     any
-        The resulting data structure after applying `fn` to each element of the input `iterable`.
-        The type of the returned object matches the type of the input `iterable`.
+        The resulting data structure after applying ``fn`` to each element of the input ``iterable``.
+        The type of the returned object matches the type of the input ``iterable``.
     """
     if isinstance(iterable, dict):
         return {

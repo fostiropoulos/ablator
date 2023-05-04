@@ -179,7 +179,7 @@ class ParallelConfig(RunConfig):
     concurrent_trials: int
         number of trials to run concurrently.
     search_space: Dict[SearchSpace]
-        search space for hyperparameter search,eg.{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}\
+        search space for hyperparameter search,eg.{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}
     optim_metrics: Dict[Optim]
         metrics to optimize, eg.{"val_loss": "min"}
     search_algo: SearchAlgo = SearchAlgo.tpe

@@ -67,8 +67,8 @@ class ProtoTrainer:
         results (logged to experiment directory while training) with external logging services (e.g Google
         cloud storage, other remote servers).
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         debug : bool, default=False
             Whether to train model in debug mode.
         

@@ -13,8 +13,8 @@ from ablator.config.types import Optional
 def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> None | str:
     """
     Run a command and wait for it to finish.
-    If the command takes longer than `timeout` seconds, kill it.
-    If `raise_errors` is True, raise a TimeoutExpired exception.
+    If the command takes longer than ``timeout`` seconds, kill it.
+    If ``raise_errors`` is True, raise a ``TimeoutExpired`` exception.
 
     Parameters
     ----------

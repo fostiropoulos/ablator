@@ -802,7 +802,7 @@ class ModelWrapper(ModelBase):
         metrics: TrainMetrics
             The metrics to use for validation.
         tag: ty.Literal["train", "test", "val"]
-            The tag to use for validation. Also see `TrainMetrics` for details.
+            The tag to use for validation. Also see ``TrainMetrics`` for details.
         subsample: float
             The fraction of the dataloader to use for validation.
         smoke_test: bool
@@ -860,7 +860,7 @@ class ModelWrapper(ModelBase):
         Returns
         -------
         dict[str, Callable]
-            The evaluation functions to use.Also see `TrainMetrics` for details.
+            The evaluation functions to use.Also see ``TrainMetrics`` for details.
         """
         
         return None
@@ -914,15 +914,15 @@ class ModelWrapper(ModelBase):
         output_dict: dict[str, torch.Tensor] | None
             The output dictionary from the model.
         
-        Returns:   
-        --------
+        Returns   
+        -------
         ty.Optional[dict[str, ty.Any]]
             The auxiliary metrics.
 
         Notes
         -----
-        Auxiliary metrics are computed during training and are used for moving_aux_metrics in `TrainMetrics`.
-        Check `TrainMetrics` for more details.
+        Auxiliary metrics are computed during training and are used for moving_aux_metrics in ``TrainMetrics``.
+        Check ``TrainMetrics`` for more details.
         """
         pass
 

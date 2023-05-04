@@ -23,8 +23,8 @@ def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.
     dict[str, ty.Any]
         The flattened dictionary.
 
-    Example
-    -------
+    Examples
+    --------
     >>> nested_dict = {"a": {"b": 1, "c": {"d": 2}}, "e": [3, 4]}
     >>> flatten_nested_dict(nested_dict)
     {'a.b': 1, 'a.c.d': 2, 'e.0': 3, 'e.1': 4}
@@ -65,8 +65,8 @@ def dict_hash(*dictionaries: list[dict[str, ty.Any]], hash_len=4):
     str
         The MD5 hash of the dictionaries.
 
-    Example
-    -------
+    Examples
+    --------
     >>> dict1 = {"a": 1, "b": 2}
     >>> dict2 = {"c": 3, "d": 4}
     >>> dict_hash(dict1, dict2)

@@ -310,18 +310,18 @@ class SummaryLogger:
     ):
         """Save a checkpoint and update the checkpoint iteration
 
-        Saves the model checkpoint in the appropriate directory based on the `is_best` parameter.
-        If `is_best` is True, the checkpoint is saved in the "best" directory, indicating the best
+        Saves the model checkpoint in the appropriate directory based on the ``is_best`` parameter.
+        If ``is_best`` is True, the checkpoint is saved in the ``"best"`` directory, indicating the best
         performing model so far. Otherwise, the checkpoint is saved in the "recent" directory,
         representing the most recent checkpoint.
 
-        The file path for the checkpoint is constructed using the selected directory name ("best" or
-        "recent"), and the file name with the format "{file_name}_{itr:010}.pt", where `itr` is the
+        The file path for the checkpoint is constructed using the selected directory name (``"best"`` or
+       ``"recent"``), and the file name with the format "{file_name}_{itr:010}.pt", where ``itr`` is the
         iteration number.
 
-        The `checkpoint_iteration` dictionary is updated with the current iteration number for each
-        directory. If `itr` is not provided, the iteration number is increased by 1 each time a
-        checkpoint is saved. Otherwise, the iteration number is set to the provided `itr`.
+        The ``checkpoint_iteration`` dictionary is updated with the current iteration number for each
+        directory. If ``itr`` is not provided, the iteration number is increased by 1 each time a
+        checkpoint is saved. Otherwise, the iteration number is set to the provided ``itr``.
 
         Parameters
         ----------
@@ -340,7 +340,7 @@ class SummaryLogger:
         Raises
         ------
         AssertionError
-            If the provided `itr` is not larger than the current iteration associated with the checkpoint.
+            If the provided ``itr`` is not larger than the current iteration associated with the checkpoint.
         """
         if self.model_dir is None:
             return
