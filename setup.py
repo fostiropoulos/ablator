@@ -28,6 +28,7 @@ setup(
         "optuna==3.1.1",
         "tabulate==0.9.0",
         "seaborn==0.12.2",
+        "numpydoc==1.5.0"
     ],
     extras_require={
         "dev": [
