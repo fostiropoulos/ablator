@@ -31,7 +31,8 @@ class PlotAnalysis(Analysis):
         """
         Write images to a directory based on fig types,
 
-        Parameters:
+        Parameters
+        ----------
         fig_map: dict[str, ty.Union[Axes, Figure, Image.Image]]
             A dictionary mapping names to matplotlib objects.
         path: Path
@@ -39,7 +40,8 @@ class PlotAnalysis(Analysis):
         file_format: ty.Literal["png", "pdf", "jpg"] 
             the file format to save the images as.
 
-        Examples:
+        Examples
+        --------
         >>> fig_map = {"figure1": plt.subplots()[0]}
         >>> path = Path("output_dir")
         >>> PlotAnalysis._write_images(fig_map, path, "png")
@@ -71,7 +73,8 @@ class PlotAnalysis(Analysis):
         """
         Method level docstring goes here.
 
-        Parameters:
+        Parameters
+        ----------
         path: Path | None 
             A pathlib.Path object representing the directory to write images to.
         plot_cls: type[Plot]
@@ -92,7 +95,8 @@ class PlotAnalysis(Analysis):
             A dictionary mapping attribute names to new attribute names.
         kwargs: Additional keyword arguments to pass to the plot method.
 
-        Examples:
+        Examples
+        --------
         >>> metrics = pd.DataFrame({"metric1": [1, 2, 3], "metric2": [4, 5, 6]})
         >>> results = pd.DataFrame({"attr1": [7, 8, 9], "attr2": [10, 11, 12]})
         >>> metric_map = {"metric1": Optim.max, "metric2": Optim.min}

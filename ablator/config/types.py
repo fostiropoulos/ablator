@@ -154,8 +154,8 @@ def _strip_hint_state(type_hint):
     tuple
         A tuple containing the state and the remaining type hint.
 
-    Example
-    -------
+    Examples
+    --------
     >>> _strip_hint_state(Stateful[int])
     (Stateful, int)
     """
@@ -183,8 +183,8 @@ def _strip_hint_optional(type_hint):
     tuple
         A tuple containing a boolean indicating if the type hint is optional and the remaining type hint.
 
-    Example
-    -------
+    Examples
+    --------
     >>> _strip_hint_optional(Optional[int])
     (True, int)
     """
@@ -214,8 +214,8 @@ def _strip_hint_collection(type_hint):
     NotImplementedError
         If the type hint is not valid or custom classes don't implement __dict__.
 
-    Example
-    -------
+    Examples
+    --------
     >>> _strip_hint_collection(List[int])
     (List, int)
     """
@@ -266,8 +266,8 @@ def parse_type_hint(type_hint):
     Annotation
         A namedtuple containing state, optional, collection, and variable_type information.
 
-    Example
-    -------
+    Examples
+    --------
     >>> parse_type_hint(Optional[List[int]])
     Annotation(state=Stateful, optional=True, collection=List, variable_type=int)
     """
@@ -343,8 +343,8 @@ def parse_value(val, annot: Annotation, name=None):
     RuntimeError
         If the required value is missing and it is not optional or derived or stateless.
 
-    Example
-    -------
+    Examples
+    --------
     >>> annotation = parse_type_hint(Optional[List[int]])
     >>> parse_value([1, 2, 3], annotation)
     [1, 2, 3]
@@ -398,7 +398,7 @@ def get_annotation_state(annotation):
 
     Parameters
     ----------
-    annotation:
+    annotation :
         type annotation
 
     Returns

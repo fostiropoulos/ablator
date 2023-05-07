@@ -31,18 +31,29 @@ class TrialState(enum.IntEnum):
     """
     An enumeration of possible states for a trial with more pruned states.
 
-    Attributes:
-        RUNNING (int): A trial that has been succesfully scheduled to run
-        COMPLETE (int): Succesfully completed trial
-        PRUNED (int): Trial pruned because of various reasons
-        FAIL (int): Trial that produced an error during execution
-        WAITING (int): Trial that has been sampled but is not scheduled to run yet
-        PRUNED_INVALID (int): Trial that was pruned during sampling as it was invalid
-        PRUNED_DUPLICATE (int): Trial that was sampled but was already present
-        PRUNED_POOR_PERFORMANCE (int): Trial that was pruned during execution for poor performance
-        RECOVERABLE_ERROR (int): Trial that was pruned during execution for poor performance
+    Attributes
+    ----------
+        RUNNING : int
+            A trial that has been succesfully scheduled to run
+        COMPLETE : int
+            Succesfully completed trial
+        PRUNED : int
+            Trial pruned because of various reasons
+        FAIL : int
+            Trial that produced an error during execution
+        WAITING : int
+            Trial that has been sampled but is not scheduled to run yet
+        PRUNED_INVALID : int
+            Trial that was pruned during sampling as it was invalid
+        PRUNED_DUPLICATE : int
+            Trial that was sampled but was already present
+        PRUNED_POOR_PERFORMANCE : int
+            Trial that was pruned during execution for poor performance
+        RECOVERABLE_ERROR : int
+            Trial that was pruned during execution for poor performance
 
-    Methods:
+    Methods
+    -------
         to_optuna_state: Convert this TrialState to an OptunaTrialState.
 
     """
@@ -63,7 +74,8 @@ class TrialState(enum.IntEnum):
         """
         Convert this TrialState to an OptunaTrialState.
 
-        Returns:
+        Returns
+        -------
             OptunaTrialState | None: 
                 Corresponding OptunaTrialState or None if the state is not applicable.
         """
@@ -179,7 +191,7 @@ def sample_trial_params(
     Raises
     ------
     ValueError
-        If the search space contains an invalid `SearchSpace` object.
+        If the search space contains an invalid ``SearchSpace`` object.
 
     Examples
     --------
@@ -236,13 +248,13 @@ class OptunaState:
     """
     A class to store the state of the Optuna study.
 
-    Attributes:
+    Attributes
     ----------
-    optim_metrics: OrderedDict
+    optim_metrics : OrderedDict
         The ordered dictionary containing the names of the metrics to optimize and their direction (minimize or maximize).
-    search_space: dict of str to SearchSpace
+    search_space : dict of str to SearchSpace
         The search space containing the parameters to sample from.
-    optuna_study: optuna.study.Study
+    optuna_study : optuna.study.Study
         The Optuna study object.
     """
     def __init__(
@@ -274,12 +286,12 @@ class OptunaState:
         NotImplementedError
             If the specified search algorithm is not implemented.
         ValueError
-            If `optim_metrics` is None.
+            If ``optim_metrics`` is ``None``.
 
         Notes
         -----
         For tuning, add an attribute to the searchspace whose name is the name of the hyperparameter and whose value is the search space
-        eg. search_space = {"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 0.1], value_type="float")}
+        eg. ``search_space = {"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 0.1], value_type="float")}``
         """
         sampler: optuna.samplers.BaseSampler
 
@@ -356,7 +368,7 @@ class OptunaState:
         Raises
         ------
         RuntimeError
-            If `metrics` is None and `state` is COMPLETE.
+            If ``metrics`` is None and ``state`` is COMPLETE.
         """
         if metrics is None and state == TrialState.COMPLETE:
             raise RuntimeError(f"Missing metrics for complete trial {trial_num}.")
@@ -410,11 +422,11 @@ class ExperimentState:
         Raises
         ------
         RuntimeError
-            If the specified `search_space` parameter is not found in the configuration.
+            If the specified ``search_space`` parameter is not found in the configuration.
         AssertionError
-            If `config.search_space` is empty.
+            If ``config.search_space`` is empty.
         RuntimeError
-            if the optuna database already exists and `resume` is False.        
+            if the optuna database already exists and ``resume`` is False.        
         """
         self.optuna_trial_map: dict[str, optuna.Trial] = {}
         self.config = config
@@ -516,7 +528,7 @@ class ExperimentState:
         Raises
         ------
         RuntimeError
-            If an experiment exists and `resume` is False.
+            If an experiment exists and ``resume`` is False.
         AssertionError
             If no trials can be scheduled.
         """

@@ -17,8 +17,8 @@ class SchedulerArgs(ConfigBase):
     """
     Abstract base class for defining arguments to initialize a learning rate scheduler.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     step_when : StepType
         The step type at which the scheduler.step() should be invoked: 'train', 'val', or 'epoch'.
 
@@ -39,8 +39,8 @@ class SchedulerConfig(ConfigBase):
     """
     Class that defines a configuration for a learning rate scheduler.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     name : str
         The name of the scheduler.
     arguments : SchedulerArgs
@@ -61,11 +61,12 @@ class SchedulerConfig(ConfigBase):
         arguments : dict[str, ty.Any]
             The arguments for the scheduler, specific to a certain type of scheduler.
 
-        Example
-        -------
-        In the following example, `scheduler_config` will initialize property `arguments` of type StepLRConfig,
-        setting `step_size=1`, `gamma=0.99` as its properties. We also have access to `init_scheduler()` method
-        of the property, which initalizes an StepLR scheduler. This method is actually called in make_scheduler()
+        Examples
+        --------
+        In the following example, ``scheduler_config`` will initialize property ``arguments`` of type ``StepLRConfig``,
+        setting ``step_size=1``, ``gamma=0.99`` as its properties. We also have access to ``init_scheduler()`` method
+        of the property, which initalizes an StepLR scheduler. This method is actually called in ``make_scheduler()``
+        
         >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
         """
         _arguments: None | StepLRConfig | OneCycleConfig | PlateuaConfig
@@ -91,8 +92,8 @@ class SchedulerConfig(ConfigBase):
         Scheduler
             The scheduler.
 
-        Example
-        -------
+        Examples
+        --------
         >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
         >>> optimizer = torch.optim.SGD(model.parameters(), lr=0.7, momentum=0.9)
         >>> scheduler_config.make_scheduler(model, optimizer)
@@ -155,7 +156,8 @@ class OneCycleConfig(SchedulerArgs):
 class PlateuaConfig(SchedulerArgs):
     """Configuration class for ReduceLROnPlateau scheduler.
 
-    Attributes:
+    Attributes
+    ----------
         patience : int
             Number of epochs with no improvement after which learning rate will be reduced.
         min_lr : float
@@ -195,7 +197,8 @@ class PlateuaConfig(SchedulerArgs):
             The optimizer used to update the model parameters, whose learning
             rate we want to monitor.
 
-        Returns:
+        Returns
+        -------
         ReduceLROnPlateau
             The ReduceLROnPlateau scheduler, initialized with arguments defined as
             attributes of this class.

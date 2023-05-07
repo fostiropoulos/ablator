@@ -24,7 +24,7 @@ from ablator.config.utils import dict_hash, flatten_nested_dict
 
 def configclass(cls):
     """
-    Decorator for ConfigBase subclasses, adds the config_class attribute to the class.
+    Decorator for ConfigBase subclasses, adds the ``config_class`` attribute to the class.
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ def configclass(cls):
     Returns
     -------
     Type[ConfigBase]
-        The decorated class with the config_class attribute.
+        The decorated class with the ``config_class`` attribute.
     """
 
     assert issubclass(cls, ConfigBase), f"{cls.__name__} must inherit from ConfigBase"
@@ -55,11 +55,26 @@ class ConfigBase:
 
     First, it checks if there are any unannotated variables inside the child config class. If there are, it will raise an assert error.
 
+    Parameters
+    ----------
+    *args : Any
+        Positional arguments.
+    add_attributes : bool, optional
+        Whether to add attributes, by default ``False``.
+    **kwargs : Any
+        Keyword arguments.
 
     Attributes
     ----------
     config_class : Type
         The class of the configuration object.
+
+    Raises
+    ------
+    ValueError
+        If positional arguments are provided.
+    KeyError
+        If unexpected arguments are provided.
 
     Notes
     -----
@@ -68,25 +83,6 @@ class ConfigBase:
     config_class = type(None)
 
     def __init__(self, *args, add_attributes=False, **kwargs):
-        """
-        Initialize the ConfigBase object.
-
-        Parameters
-        ----------
-        *args : Any
-            Positional arguments.
-        add_attributes : bool, optional
-            Whether to add attributes, by default False.
-        **kwargs : Any
-            Keyword arguments.
-
-        Raises
-        ------
-        ValueError
-            If positional arguments are provided.
-        KeyError
-            If unexpected arguments are provided.
-        """
         class_name = type(self).__name__
         added_variables = {
             item[0]
@@ -434,14 +430,14 @@ class ConfigBase:
 
         Examples
         --------
-        Let's say we have two configuration objects `config1` and `config2` with the following attributes:
+        Let's say we have two configuration objects ``config1`` and ``config2`` with the following attributes:
 
-        config1:
+        >>> config1:
             learning_rate: 0.01
             optimizer: 'Adam'
             num_layers: 3
 
-        config2:
+        >>> config2:
             learning_rate: 0.02
             optimizer: 'SGD'
             num_layers: 3

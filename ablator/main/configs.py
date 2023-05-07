@@ -20,7 +20,7 @@ class TrainConfig(ConfigBase):
     """
     Training configuration.
 
-    Attributes:
+    Attributes
     ----------
     dataset: str
         dataset name. maybe used in custom dataset loader functions.
@@ -56,6 +56,9 @@ class ModelConfig(ConfigBase):
 class RunConfig(ConfigBase):
     """
     base configuration for running an experiment.
+    
+    Attributes
+    ----------
     experiment_dir: Optional[str] = None
         location to store experiment artifacts.
     random_seed: Optional[int] = None
@@ -169,14 +172,14 @@ class ParallelConfig(RunConfig):
     """
     parallel training configuration.
 
-    Attributes:
+    Attributes
     ----------
     total_trials: int
         total number of trials.
     concurrent_trials: int
         number of trials to run concurrently.
     search_space: Dict[SearchSpace]
-        search space for hyperparameter search,eg.{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}\
+        search space for hyperparameter search,eg.{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}
     optim_metrics: Dict[Optim]
         metrics to optimize, eg.{"val_loss": "min"}
     search_algo: SearchAlgo = SearchAlgo.tpe
