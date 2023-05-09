@@ -43,7 +43,7 @@ def get_optim_parameters(
             if param.requires_grad:
                 params_to_update[name] = param
     else:
-        params_to_update = model.named_parameters()
+        params_to_update = dict(model.named_parameters())
     if weight_decay is not None:
         decay_parameters = get_parameter_names(model, [torch.nn.LayerNorm])
         decay_parameters = [

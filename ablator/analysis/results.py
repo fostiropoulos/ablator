@@ -119,7 +119,8 @@ class Results:
 
     @property
     def metric_names(self) -> list[str]:
-        return list(self.metric_map.values())
+        # return list(self.metric_map.values()) # Never call by reference, So I think the type of return should be list[str].
+        return list(map(str, self.metric_map.values()))
 
     def _parse_results(
         self,

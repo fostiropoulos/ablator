@@ -2,7 +2,7 @@ import json
 import os
 import socket
 import subprocess
-import typing as ty
+from typing import List, Dict, Any
 from pathlib import Path
 
 from ablator.config.main import ConfigBase, configclass
@@ -35,7 +35,8 @@ class GcpConfig(ConfigBase):
         ), "Can only use GcpConfig from Google Cloud Server. Consider switching to RemoteConfig."
 
     def _make_cmd_up(self, local_path: Path, destination: str):
-        destination = Path(self.bucket) / destination / local_path.name
+        # destination = Path(self.bucket) / destination / local_path.name
+        destination = str(Path(self.bucket) / destination / local_path.name)
         src = local_path
         cmd = ["gsutil", "-m", "rsync", "-r"]
         if self.exclude_glob is not None:
@@ -53,7 +54,7 @@ class GcpConfig(ConfigBase):
         return cmd
 
     def list_bucket(self, destination: str | None = None):
-        destination = (
+        destination = str(
             Path(self.bucket) / destination
             if destination is not None
             else Path(self.bucket)
@@ -92,7 +93,8 @@ class GcpConfig(ConfigBase):
         p = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
         return p
 
-    def _find_gcp_nodes(self, node_hostname: None | str = None) -> dict[str, ty.Any]:
+
+    def _find_gcp_nodes(self, node_hostname: None | str = None) -> List[Dict[str, Any]]:
         cmd = ["gcloud", "compute", "instances", "list"]
         if node_hostname is not None:
             cmd += ["--filter", f'"{node_hostname}"']

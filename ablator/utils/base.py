@@ -3,6 +3,7 @@ import sys
 import typing as ty
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
+from ablator.modules.loggers.file import FileLogger
 
 import numpy as np
 import torch
@@ -10,7 +11,7 @@ from torch import nn
 from pynvml.smi import nvidia_smi as smi
 
 
-class Dummy:
+class Dummy(FileLogger):
     def __init__(self, *args, **kwargs):
         pass
 

@@ -10,17 +10,17 @@ from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Optional
 
 
-def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> None | str:
+def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> Optional[str]:
     # timeout is in seconds
     output = None
     with subprocess.Popen(
         cmd, shell=True, stdout=subprocess.PIPE, preexec_fn=os.setsid
     ) as process:
         try:
-            output = process.communicate(timeout=timeout)[0]
+            output = process.communicate(timeout=timeout)[0].decode("utf-8",errors="ignore")
         except subprocess.TimeoutExpired as e:
             os.killpg(process.pid, signal.SIGINT)  # send signal to the process group
-            output = process.communicate()[0]
+            output = process.communicate()[0].decode("utf-8",errors="ignore")
             traceback.print_exc()
             if raise_errors:
                 raise e

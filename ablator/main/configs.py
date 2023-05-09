@@ -1,5 +1,4 @@
 # TODO fix mypy that does not recognize correctly the types i.e. Stateless
-# type: ignore
 from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import (
     Optional,
@@ -70,7 +69,7 @@ class SearchType(Enum):
 class SearchSpace(ConfigBase):
     value_range: Optional[Tuple[str, str]]
     categorical_values: Optional[List[str]]
-    value_type: SearchType = "float"
+    value_type: SearchType = SearchType.numerical
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

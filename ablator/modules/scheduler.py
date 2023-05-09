@@ -2,6 +2,7 @@ import typing as ty
 from abc import abstractmethod
 
 from torch import nn
+from torch.optim import Optimizer
 from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau, StepLR, _LRScheduler
 
 from ablator.config.main import ConfigBase, Derived, configclass
@@ -9,7 +10,7 @@ from ablator.config.types import Literal
 
 Scheduler = ty.Union[_LRScheduler, ReduceLROnPlateau, ty.Any]
 
-StepType = Literal["train", "val", "epoch"]
+StepType = ty.Literal["train", "val", "epoch"]
 
 
 @configclass
@@ -47,7 +48,7 @@ class OneCycleConfig(SchedulerArgs):
     # type: ignore
     step_when: StepType = "train"
 
-    def init_scheduler(self, model: nn.Module, optimizer: nn.Module):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
         kwargs = self.to_dict()
         del kwargs["step_when"]
 
@@ -66,7 +67,7 @@ class PlateuaConfig(SchedulerArgs):
     # type: ignore
     step_when: StepType = "val"
 
-    def init_scheduler(self, model: nn.Module, optimizer: nn.Module):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
         kwargs = self.to_dict()
         del kwargs["step_when"]
 
@@ -81,7 +82,7 @@ class StepLRConfig(SchedulerArgs):
     # type: ignore
     step_when: StepType = "epoch"
 
-    def init_scheduler(self, model: nn.Module, optimizer: nn.Module):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
         kwargs = self.to_dict()
         del kwargs["step_when"]
         return StepLR(optimizer, **kwargs)

@@ -60,7 +60,7 @@ class ModelWrapper(ModelBase):
         model_class = self.model_class
         model: nn.Module
         if (model_config := self.model_config) is not None:
-            model = model_class(model_config)
+            model = model_class(model_config) # type: ignore 
         else:
             # Support of decleartive paradigm without model over-writing
             model = model_class()
