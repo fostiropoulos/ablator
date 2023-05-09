@@ -474,11 +474,8 @@ class ExperimentState:
             session.commit()
 
     def _get_trials_by_stmt(self, stmt) -> list[Trial]:
-        # with self.engine.connect() as conn:
-        #     trials: list[Trial] = conn.execute(stmt).fetchall()
         with self.engine.connect() as conn:
-            rows = conn.execute(stmt).fetchall()
-        trials: list[Trial] = [Trial(*row) for row in rows]
+            trials: list[Trial] = conn.execute(stmt).fetchall() # type: ignore
         return trials
 
     def _get_trial_configs_by_stmt(self, stmt) -> list[ParallelConfig]:
