@@ -167,7 +167,6 @@ def test_resume(tmp_path: Path):
 
     # Assuming some trial was completed, interrupt the execution
     assert initial_trials > 0
-    print("\n\n\nPASSED initial_trials > 0")
 
     # Re-setup and launch with resume=True
     ablator = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
@@ -180,7 +179,6 @@ def test_resume(tmp_path: Path):
 
     # Check if resumed trials are no less than initial trials
     assert resumed_trials >= initial_trials
-    print("\n\n\nPASSED resumed_trials >= initial_trials")
 
 
 if __name__ == "__main__":
