@@ -68,7 +68,7 @@ def get_optim_parameters(
         return optimization_params
     return list(params_to_update.values())
 
-
+#Base class for optimizer arguments
 @configclass
 class OptimizerArgs(ConfigBase):
     lr: float
@@ -77,7 +77,7 @@ class OptimizerArgs(ConfigBase):
     def init_optimizer(self, model: nn.Module):
         pass
 
-
+# Defines configurations
 @configclass
 class OptimizerConfig(ConfigBase):
     name: str
@@ -88,6 +88,7 @@ class OptimizerConfig(ConfigBase):
         _arguments = argument_cls(**arguments)
         super().__init__(name=name, arguments=_arguments)
 
+    # Creates an optimizer object given a model
     def make_optimizer(self, model: nn.Module) -> Optimizer:
         return self.arguments.init_optimizer(model)
 

@@ -132,6 +132,8 @@ class TrainMetrics:
             preds.reset()
         return metrics
 
+    #Stores predictions and labels in Metrics object for each tag. These are generated using training and evaluation
+    # Validation:Checks if the given is defined in the Metrics
     def append_batch(self, *args, tag, **kwargs):
         # NOTE this is because it is easy to mix up the order of pred, labels and tags
         assert len(args) == 0, "Metrics.append_batch takes no positional arguments."
@@ -140,6 +142,7 @@ class TrainMetrics:
         ), f"Undefined tag '{tag}'. Metric tags {self.__tags__}"
         self._get_preds(tag).append(**kwargs)
 
+    # For predictions
     def _init_preds(self, tag) -> PredictionStore:
         attr_name = f"__{tag}_preds__"
         _preds = PredictionStore(
@@ -155,6 +158,7 @@ class TrainMetrics:
         preds = getattr(self, attr_name)
         return preds
 
+    # For moving average
     def _init_ma(self, tag) -> MovingAverage:
         attr_name = f"__{tag}_ma__"
         _ma = MovingAverage(

@@ -2,6 +2,7 @@ from contextlib import redirect_stderr, redirect_stdout
 import io
 from pathlib import Path
 import tempfile
+import pandas as pd
 
 import ray
 import torch
@@ -12,11 +13,12 @@ from ablator import (
     ModelWrapper,
     OptimizerConfig,
     RunConfig,
-    TrainConfig,
+    TrainConfig, Enum,
 )
 from ablator.analysis.results import Results
+from ablator.analysis.main import Analysis
 from ablator.config.main import configclass
-from ablator.main.configs import ParallelConfig, SearchSpace
+from ablator.main.configs import ParallelConfig, SearchSpace, Optim
 from ablator.main.mp import ParallelTrainer
 from ablator import Derived
 
@@ -139,7 +141,6 @@ def test_mp(tmp_path: Path):
     ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
     res = Results(MyParallelConfig, ablator.experiment_dir)
     assert res.data.shape[0] // 2 == len(ablator.experiment_state.complete_trials)
-
 
 if __name__ == "__main__":
     import shutil

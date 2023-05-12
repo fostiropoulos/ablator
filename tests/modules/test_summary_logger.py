@@ -34,6 +34,7 @@ def assert_error_msg_fn(fn, error_msg_fn):
 
 
 def assert_error_msg(fn, error_msg):
+    # Checks the error message is same
     try:
         fn()
         assert False
@@ -44,6 +45,7 @@ def assert_error_msg(fn, error_msg):
 
 
 def assert_iter_equals(l1, l2):
+    # asserts that both list are equal
     assert sorted(list(l1)) == sorted(list(l2))
 
 

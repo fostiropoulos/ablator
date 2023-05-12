@@ -56,7 +56,11 @@ class SummaryLogger:
                 raise DuplicateRunError(
                     f"SummaryLogger: Resume is set to {resume} but {self.model_dir} exists."
                 )
+            # When resume is set to false and we try to run a new model(new because resume is false) with
+            # the same directory name
             if resume and self.model_dir.exists():
+                # If the resume is set to True and the model exists in the directory
+                # we check if the run config and train config are same, if not an error is raised
                 _run_config = type(run_config).load(
                     self.model_dir.joinpath(self.CONFIG_FILE_NAME)
                 )
@@ -84,6 +88,7 @@ class SummaryLogger:
 
             self.result_json_path = self.model_dir / self.RESULTS_JSON_NAME
             self.log_file_path = self.model_dir.joinpath(self.LOG_FILE_NAME)
+            # If run config has tensorflow logger enabled we use TensorboardLogger
             self.dashboard = self._make_dashboard(self.summary_dir, run_config)
             self._write_config(run_config)
             self._update_metadata()

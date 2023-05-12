@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from ablator import Optim, PlotAnalysis
+from ablator.analysis.main import Analysis
 
 
 def get_best(x: pd.DataFrame, task_type: str):
@@ -62,8 +63,30 @@ def test_analysis(tmp_path: Path):
     pass
 
 
+def test_get_best_results_by_metric():
+
+    data = {'path': ['path1', 'path1', 'path2', 'path2', 'path3'],
+            'metric1': [0.1, 0.2, 0.3, None, 0.5],
+            'metric2': [None, 0.6, 0.7, 0.8, 0.9]}
+    input = pd.DataFrame(data)
+
+    result = pd.DataFrame({
+        'path': ['path1', 'path2', 'path3', 'path1', 'path2', 'path3'],
+        'metric1': [0.1, 0.3, 0.5, 0.2, None, 0.5],
+        'metric2': [None, 0.7, 0.9, 0.6, 0.8, 0.9],
+        'best': ['metric1', 'metric1', 'metric1', 'metric2', 'metric2', 'metric2']
+    })
+
+    metricMap = {'metric1': Optim.min, 'metric2': Optim.max}
+    # call the function to be tested
+    actual_output = Analysis._get_best_results_by_metric(input, metricMap)
+
+    assert actual_output.equals(result)
+
+
 if __name__ == "__main__":
     import shutil
+
     tmp_path = Path("/tmp/save_dir")
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir(exist_ok=True)

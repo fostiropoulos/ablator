@@ -11,7 +11,7 @@ Scheduler = ty.Union[_LRScheduler, ReduceLROnPlateau, ty.Any]
 
 StepType = Literal["train", "val", "epoch"]
 
-
+# Class initializes pytorch learning rate scheduler
 @configclass
 class SchedulerArgs(ConfigBase):
     # step every train step or every validation step

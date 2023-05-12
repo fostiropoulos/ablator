@@ -12,3 +12,5 @@ def assert_error_msg():
                 raise excp
 
     return eval_fn
+
+# Common function written for tests to compare the error messages

@@ -12,6 +12,7 @@ import torch
 import ablator.utils.base as butils
 
 
+# Container array that stores sequence of numpy arrays
 class ArrayStore(Sequence):
     def __init__(
         self,
@@ -55,6 +56,7 @@ class ArrayStore(Sequence):
         self.arr = []
 
 
+# Uses arrayStore internally
 class PredictionStore:
     def __init__(
         self,
@@ -88,6 +90,7 @@ class PredictionStore:
         arr = getattr(self, attr_name)
         return arr
 
+    # Dictionary as i/p; keys --> names of i/p features
     def append(self, **batches: dict[str, np.ndarray]):
         if self._keys is None:
             for k in batches:
@@ -111,6 +114,7 @@ class PredictionStore:
         for k in self._keys:
             self._get_arr(k).limit = new_limit
 
+    # Computes evaluation metrics specified in evaluation functions using stored predictions
     def evaluate(self) -> dict[str, float]:
         if self._keys is None:
             raise RuntimeError("PredictionStore has no predictions to evaluate.")

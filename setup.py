@@ -24,7 +24,7 @@ setup(
         "omegaconf==2.2.3",
         "scipy==1.10.1",
         "setproctitle==1.3.2",
-        "ray==2.1.0",
+        "ray==2.4.0",
         "pynvml==11.5.0",
         "optuna==3.1.1",
         "tabulate==0.9.0",
