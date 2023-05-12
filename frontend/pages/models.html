@@ -1,0 +1,759 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Ablator: A distributed experiments execution framework
+    </title>
+    <!-- CSS files -->
+    <link href="/dist/css/tabler.min.css?1674944402" rel="stylesheet" />
+    <link href="/dist/css/tabler-flags.min.css?1674944402" rel="stylesheet" />
+    <link href="/dist/css/tabler-payments.min.css?1674944402" rel="stylesheet" />
+    <link href="/dist/css/tabler-vendors.min.css?1674944402" rel="stylesheet" />
+    <link href="/dist/css/demo.min.css?1674944402" rel="stylesheet" />
+    <link href="/css/customized.css" rel="stylesheet" />
+    <style>
+        @import url('https://rsms.me/inter/inter.css');
+
+        :root {
+            --tblr-font-sans-serif: 'Inter Var', -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif;
+        }
+
+        body {
+            font-feature-settings: "cv03", "cv04", "cv11";
+        }
+    </style>
+</head>
+
+<body>
+    <script src="/dist/js/demo-theme.min.js?1674944402"></script>
+    <div class="page">
+        <!-- Sidebar -->
+        <aside class="navbar navbar-vertical navbar-expand-sm navbar-dark my-navbar">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <h1 class="navbar-brand navbar-brand-autodark">
+                    <a href="/">
+                        <img src="/img/logo.png" width="150" height="32" alt="Tabler" class="navbar-brand-image">
+                    </a>
+                </h1>
+                <div class="collapse navbar-collapse" id="sidebar-menu">
+                    <ul class="navbar-nav pt-lg-3">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path d="M5 12l-2 0l9 -9l9 9l-2 0" />
+                                        <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+                                        <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+                                    </svg>
+                                </span>
+
+                                <span class="nav-link-title">
+                                    Home
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/models">
+                                <span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-3d"
+                                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                                        stroke="currentColor" fill="none" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                                        <path
+                                            d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z">
+                                        </path>
+                                        <path d="M12 13.5l4 -1.5"></path>
+                                        <path d="M8 11.846l4 1.654v4.5l4 -1.846v-4.308l-4 -1.846z"></path>
+                                        <path d="M8 12v4.2l4 1.8"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    My Models
+                                </span>
+                            </a>
+
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/experiments">
+                                <span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-flask"
+                                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                                        stroke="currentColor" fill="none" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M9 3l6 0"></path>
+                                        <path d="M10 9l4 0"></path>
+                                        <path d="M10 3v6l-4 11a.7 .7 0 0 0 .5 1h11a.7 .7 0 0 0 .5 -1l-4 -11v-6"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    Expreriments
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/datasets">
+                                <span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-database-cog" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M4 6c0 1.657 3.582 3 8 3s8 -1.343 8 -3s-3.582 -3 -8 -3s-8 1.343 -8 3">
+                                        </path>
+                                        <path d="M4 6v6c0 1.657 3.582 3 8 3c.21 0 .42 -.003 .626 -.01"></path>
+                                        <path d="M20 11.5v-5.5"></path>
+                                        <path d="M4 12v6c0 1.657 3.582 3 8 3"></path>
+                                        <path d="M19.001 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                                        <path d="M19.001 15.5v1.5"></path>
+                                        <path d="M19.001 21v1.5"></path>
+                                        <path d="M22.032 17.25l-1.299 .75"></path>
+                                        <path d="M17.27 20l-1.3 .75"></path>
+                                        <path d="M15.97 17.25l1.3 .75"></path>
+                                        <path d="M20.733 20l1.3 .75"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    Manage Datasets
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/marketplace"><span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-world-share" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M20.94 13.045a9 9 0 1 0 -8.953 7.955"></path>
+                                        <path d="M3.6 9h16.8"></path>
+                                        <path d="M3.6 15h9.4"></path>
+                                        <path d="M11.5 3a17 17 0 0 0 0 18"></path>
+                                        <path d="M12.5 3a16.991 16.991 0 0 1 2.529 10.294"></path>
+                                        <path d="M16 22l5 -5"></path>
+                                        <path d="M21 21.5v-4.5h-4.5"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    Public models
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/profile"><span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-user-circle" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
+                                        <path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path>
+                                        <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    My profiles
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#anchor-footer"><span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-brand-messenger" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M3 20l1.3 -3.9a9 8 0 1 1 3.4 2.9l-4.7 1"></path>
+                                        <path d="M8 13l3 -2l2 2l3 -2"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    About
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+        <div class="page-wrapper">
+            <div class="page-header d-print-none">
+                <div class="container-xl">
+                    <div class="row g-2 align-items-center">
+                        <div class="col">
+                            <div class="page-pretitle">
+                                Manage
+                            </div>
+                            <h2 class="page-title">
+                                My models
+                            </h2>
+                        </div>
+                        <div class="col-auto ms-auto d-print-none">
+                            <div class="btn-list">
+                                <span class="d-none d-sm-inline">
+                                    <a href="/expriments" class="btn">
+                                        Train model
+                                    </a>
+                                </span>
+
+
+                                <a href="/models" class="btn btn-primary d-none d-sm-inline-block">
+                                    <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-apps-filled" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path
+                                            d="M9 3h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z"
+                                            stroke-width="0" fill="currentColor"></path>
+                                        <path
+                                            d="M9 13h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z"
+                                            stroke-width="0" fill="currentColor"></path>
+                                        <path
+                                            d="M19 13h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z"
+                                            stroke-width="0" fill="currentColor"></path>
+                                        <path
+                                            d="M17 3a1 1 0 0 1 .993 .883l.007 .117v2h2a1 1 0 0 1 .117 1.993l-.117 .007h-2v2a1 1 0 0 1 -1.993 .117l-.007 -.117v-2h-2a1 1 0 0 1 -.117 -1.993l.117 -.007h2v-2a1 1 0 0 1 1 -1z"
+                                            stroke-width="0" fill="currentColor"></path>
+                                    </svg>
+                                    Create new model
+                                </a>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="page-body">
+                <div class="container-xl">
+                    <div class="row row-cards">
+                        <div class="col-lg-8">
+                            <div class="card">
+
+                                <div class="card-body border-bottom py-3">
+                                    <div class="d-flex">
+                                        <div class="text-muted">
+                                            Show
+                                            <div class="mx-2 d-inline-block">
+                                                <input type="text" class="form-control form-control-sm" value="16"
+                                                    size="3" aria-label="Invoices count">
+                                            </div>
+                                            entries
+                                        </div>
+                                        <div class="ms-auto text-muted">
+                                            Search:
+                                            <div class="ms-2 d-inline-block">
+                                                <input type="text" class="form-control form-control-sm"
+                                                    aria-label="Search invoice">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table card-table table-vcenter text-nowrap datatable">
+                                        <thead>
+                                            <tr>
+                                                <th class="w-1"><input class="form-check-input m-0 align-middle"
+                                                        type="checkbox" aria-label="Select all invoices"></th>
+                                                <th class="w-1">No.
+                                                    <!-- Download SVG icon from http://tabler-icons.io/i/chevron-up -->
+                                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                                        class="icon icon-sm icon-thick" width="24" height="24"
+                                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                                        fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                        <path d="M6 15l6 -6l6 6" />
+                                                    </svg>
+                                                </th>
+                                                <th>Model name</th>
+                                                <th>Created at</th>
+                                                <th>Last updated</th>
+                                                <th>Last trained</th>
+                                                <th>Status</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001400</span></td>
+                                                <td><a href="invoice.html" class="text-reset" tabindex="-1">CNN for
+                                                        CV</a></td>
+                                                <td>
+                                                    Dec 1, 2023
+                                                </td>
+                                                <td>
+                                                    May 12, 2023
+                                                </td>
+                                                <td>
+                                                    Jul 5, 2023
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001401</span></td>
+                                                <td><a href="invoice.html" class="text-reset" tabindex="-1">Green
+                                                        Learning Test</a></td>
+                                                <td>May 12, 2023</td>
+                                                <td>Jul 5, 2023</td>
+                                                <td>Sep 18, 2023</td>
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001402</span></td>
+                                                <td><a href="invoice.html" class="text-reset" tabindex="-1">Information
+                                                        Bottleneck model</a></td>
+                                                <td>Dec 1, 2023</td>
+                                                <td>Feb 28, 2024M</td>
+                                                <td>Apr 10, 2024</td>
+                                                <td>
+                                                    <span class="badge bg-warning me-1"></span> Error
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001403</span></td>
+                                                <td><a href="invoice.html" class="text-reset"
+                                                        tabindex="-1">Test_Net_1</a></td>
+                                                <td>Jun 20, 2024</td>
+                                                <td>Aug 8, 2024</td>
+                                                <td>Oct 17, 2024</td>
+                                                <td>
+                                                    <span class="badge bg-secondary me-1"></span> Incomplete
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001404</span></td>
+                                                <td><a href="invoice.html" class="text-reset"
+                                                        tabindex="-1">Test_Net_2</a></td>
+                                                <td>Jun 20, 2024</td>
+                                                <td>Aug 8, 2024</td>
+                                                <td>Oct 17, 2024</td>
+
+                                                <td>
+                                                    <span class="badge bg-warning me-1"></span> Error
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001405</span></td>
+                                                <td><a href="invoice.html" class="text-reset"
+                                                        tabindex="-1">Demo_Model_1</a></td>
+                                                <td>Dec 1, 2023</td>
+                                                <td>Feb 28, 2024M</td>
+                                                <td>Apr 10, 2024</td>
+
+                                                <td>
+                                                    <span class="badge bg-secondary me-1"></span> Incomplete
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001406</span></td>
+                                                <td><a href="invoice.html" class="text-reset"
+                                                        tabindex="-1">Demo_Model_2</a></td>
+                                                <td>Jan 3, 2025</td>
+                                                <td>Mar 15, 2025</td>
+                                                <td>May 28, 2025</td>
+
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001407</span></td>
+                                                <td><a href="invoice.html" class="text-reset"
+                                                        tabindex="-1">Playground_1</a></td>
+                                                <td>Jul 9, 2025</td>
+                                                <td>Sep 22, 2025</td>
+                                                <td>Nov 5, 2025</td>
+
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001408</span></td>
+                                                <td><a href="invoice.html" class="text-reset" tabindex="-1">CNN for
+                                                        CV</a></td>
+                                                <td>May 12, 2023</td>
+                                                <td>Jul 5, 2023</td>
+                                                <td>Sep 18, 2023</td>
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001409</span></td>
+                                                <td><a href="invoice.html" class="text-reset" tabindex="-1">CNN for
+                                                        CV</a></td>
+                                                <td>
+                                                    Dec 1, 2023
+                                                </td>
+                                                <td>
+                                                    May 12, 2023
+                                                </td>
+                                                <td>
+                                                    Jul 5, 2023
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001410</span></td>
+                                                <td><a href="invoice.html" class="text-reset" tabindex="-1">Green
+                                                        Learning Test</a></td>
+                                                <td>May 12, 2023</td>
+                                                <td>Jul 5, 2023</td>
+                                                <td>Sep 18, 2023</td>
+                                                <td>
+                                                    <span class="badge bg-secondary me-1"></span> Incomplete
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001411</span></td>
+                                                <td><a href="invoice.html" class="text-reset" tabindex="-1">Information
+                                                        Bottleneck model</a></td>
+                                                <td>Dec 1, 2023</td>
+                                                <td>Feb 28, 2024M</td>
+                                                <td>Apr 10, 2024</td>
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001412</span></td>
+                                                <td><a href="invoice.html" class="text-reset"
+                                                        tabindex="-1">Test_Net_1</a></td>
+                                                <td>Jun 20, 2024</td>
+                                                <td>Aug 8, 2024</td>
+                                                <td>Oct 17, 2024</td>
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001413</span></td>
+                                                <td><a href="invoice.html" class="text-reset"
+                                                        tabindex="-1">Test_Net_2</a></td>
+                                                <td>Jun 20, 2024</td>
+                                                <td>Aug 8, 2024</td>
+                                                <td>Oct 17, 2024</td>
+
+                                                <td>
+                                                    <span class="badge bg-secondary me-1"></span> Incomplete
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001414</span></td>
+                                                <td><a href="invoice.html" class="text-reset"
+                                                        tabindex="-1">Demo_Model_1</a></td>
+                                                <td>Dec 1, 2023</td>
+                                                <td>Feb 28, 2024M</td>
+                                                <td>Apr 10, 2024</td>
+
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><input class="form-check-input m-0 align-middle" type="checkbox"
+                                                        aria-label="Select invoice"></td>
+                                                <td><span class="text-muted">001415</span></td>
+                                                <td><a href="invoice.html" class="text-reset"
+                                                        tabindex="-1">Demo_Model_2</a></td>
+                                                <td>Jan 3, 2025</td>
+                                                <td>Mar 15, 2025</td>
+                                                <td>May 28, 2025</td>
+
+                                                <td>
+                                                    <span class="badge bg-success me-1"></span> Trained
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="card-footer d-flex align-items-center">
+                                    <p class="m-0 text-muted">Showing <span>1</span> to <span>16</span> of
+                                        <span>24</span> entries
+                                    </p>
+                                    <ul class="pagination m-0 ms-auto">
+                                        <li class="page-item disabled">
+                                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">
+                                                <!-- Download SVG icon from http://tabler-icons.io/i/chevron-left -->
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                                    height="24" viewBox="0 0 24 24" stroke-width="2"
+                                                    stroke="currentColor" fill="none" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                    <path d="M15 6l-6 6l6 6" />
+                                                </svg>
+                                                prev
+                                            </a>
+                                        </li>
+                                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                        <li class="page-item "><a class="page-link" href="#">2</a></li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="#">
+                                                next
+                                                <!-- Download SVG icon from http://tabler-icons.io/i/chevron-right -->
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                                    height="24" viewBox="0 0 24 24" stroke-width="2"
+                                                    stroke="currentColor" fill="none" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                    <path d="M9 6l6 6l-6 6" />
+                                                </svg>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h3 class="card-title">Top Models used</h3>
+                                    <table class="table table-sm table-borderless">
+                                        <thead>
+                                            <tr>
+                                                <th>Model</th>
+                                                <th class="text-end">Used</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <div class="progressbg">
+                                                        <div class="progress progressbg-progress">
+                                                            <div class="progress-bar bg-primary-lt"
+                                                                style="width: 82.54%" role="progressbar"
+                                                                aria-valuenow="82.54" aria-valuemin="0"
+                                                                aria-valuemax="100" aria-label="82.54% Complete">
+                                                                <span class="visually-hidden">82.54% Complete</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="progressbg-text">Linear Regression</div>
+                                                    </div>
+                                                </td>
+                                                <td class="w-1 fw-bold text-end">22</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <div class="progressbg">
+                                                        <div class="progress progressbg-progress">
+                                                            <div class="progress-bar bg-primary-lt"
+                                                                style="width: 76.29%" role="progressbar"
+                                                                aria-valuenow="76.29" aria-valuemin="0"
+                                                                aria-valuemax="100" aria-label="76.29% Complete">
+                                                                <span class="visually-hidden">76.29% Complete</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="progressbg-text">Logistic Regression</div>
+                                                    </div>
+                                                </td>
+                                                <td class="w-1 fw-bold text-end">20</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <div class="progressbg">
+                                                        <div class="progress progressbg-progress">
+                                                            <div class="progress-bar bg-primary-lt"
+                                                                style="width: 72.65%" role="progressbar"
+                                                                aria-valuenow="72.65" aria-valuemin="0"
+                                                                aria-valuemax="100" aria-label="72.65% Complete">
+                                                                <span class="visually-hidden">72.65% Complete</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="progressbg-text">Decision Tree</div>
+                                                    </div>
+                                                </td>
+                                                <td class="w-1 fw-bold text-end">19</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <div class="progressbg">
+                                                        <div class="progress progressbg-progress">
+                                                            <div class="progress-bar bg-primary-lt"
+                                                                style="width: 44.89%" role="progressbar"
+                                                                aria-valuenow="44.89" aria-valuemin="0"
+                                                                aria-valuemax="100" aria-label="44.89% Complete">
+                                                                <span class="visually-hidden">44.89% Complete</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="progressbg-text">Random Forest</div>
+                                                    </div>
+                                                </td>
+                                                <td class="w-1 fw-bold text-end">12</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <div class="progressbg">
+                                                        <div class="progress progressbg-progress">
+                                                            <div class="progress-bar bg-primary-lt"
+                                                                style="width: 41.12%" role="progressbar"
+                                                                aria-valuenow="41.12" aria-valuemin="0"
+                                                                aria-valuemax="100" aria-label="41.12% Complete">
+                                                                <span class="visually-hidden">41.12% Complete</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="progressbg-text">SVM</div>
+                                                    </div>
+                                                </td>
+                                                <td class="w-1 fw-bold text-end">11</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <div class="progressbg">
+                                                        <div class="progress progressbg-progress">
+                                                            <div class="progress-bar bg-primary-lt"
+                                                                style="width: 32.65%" role="progressbar"
+                                                                aria-valuenow="32.65" aria-valuemin="0"
+                                                                aria-valuemax="100" aria-label="32.65% Complete">
+                                                                <span class="visually-hidden">32.65% Complete</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="progressbg-text">Naive Bayes</div>
+                                                    </div>
+                                                </td>
+                                                <td class="w-1 fw-bold text-end">9</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <div class="progressbg">
+                                                        <div class="progress progressbg-progress">
+                                                            <div class="progress-bar bg-primary-lt"
+                                                                style="width: 16.22%" role="progressbar"
+                                                                aria-valuenow="16.22" aria-valuemin="0"
+                                                                aria-valuemax="100" aria-label="16.22% Complete">
+                                                                <span class="visually-hidden">16.22% Complete</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="progressbg-text">KNN</div>
+                                                    </div>
+                                                </td>
+                                                <td class="w-1 fw-bold text-end">4</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <div class="progressbg">
+                                                        <div class="progress progressbg-progress">
+                                                            <div class="progress-bar bg-primary-lt" style="width: 8.69%"
+                                                                role="progressbar" aria-valuenow="8.69"
+                                                                aria-valuemin="0" aria-valuemax="100"
+                                                                aria-label="8.69% Complete">
+                                                                <span class="visually-hidden">8.69% Complete</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="progressbg-text">Deep Learning</div>
+                                                    </div>
+                                                </td>
+                                                <td class="w-1 fw-bold text-end">2</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+                    </div>
+                </div>
+
+            </div>
+            <footer class="footer footer-transparent d-print-none" id="anchor-footer">
+                <div class="container-xl">
+                    <div class="row text-center align-items-center flex-row-reverse">
+                        <div class="col-lg-auto ms-lg-auto">
+                            <ul class="list-inline list-inline-dots mb-0">
+                                <li class="list-inline-item"><a href="./docs/" class="link-secondary">Documentation</a>
+                                </li>
+                                <li class="list-inline-item"><a href="./license.html" class="link-secondary">License</a>
+                                </li>
+                                <li class="list-inline-item"><a href="https://github.com/tabler/tabler" target="_blank"
+                                        class="link-secondary" rel="noopener">Source
+                                        code</a></li>
+
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+                            <ul class="list-inline list-inline-dots mb-0">
+                                <li class="list-inline-item">
+                                    Copyright &copy; 2023
+                                    <a href="." class="link-secondary">Boyang Xiao</a>.
+                                    All rights reserved.
+                                </li>
+
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+    <!-- Libs JS -->
+    <script src="/dist/libs/apexcharts/dist/apexcharts.min.js?1674944402" defer></script>
+    <script src="/dist/libs/jsvectormap/dist/js/jsvectormap.min.js?1674944402" defer></script>
+    <script src="/dist/libs/jsvectormap/dist/maps/world.js?1674944402" defer></script>
+    <script src="/dist/libs/jsvectormap/dist/maps/world-merc.js?1674944402" defer></script>
+    <!-- Tabler Core -->
+    <script src="/dist/js/tabler.min.js?1674944402" defer></script>
+    <script src="/dist/js/demo.min.js?1674944402" defer></script>
+</body>
+
+</html>

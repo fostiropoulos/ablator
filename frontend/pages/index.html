@@ -1,0 +1,1201 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Ablator: A distributed experiments execution framework
+    </title>
+    <!-- CSS files -->
+    <link href="/dist/css/tabler.min.css?1674944402" rel="stylesheet" />
+    <link href="/dist/css/tabler-flags.min.css?1674944402" rel="stylesheet" />
+    <link href="/dist/css/tabler-payments.min.css?1674944402" rel="stylesheet" />
+    <link href="/dist/css/tabler-vendors.min.css?1674944402" rel="stylesheet" />
+    <link href="/dist/css/demo.min.css?1674944402" rel="stylesheet" />
+    <link href="/css/customized.css" rel="stylesheet" />
+    <style>
+        @import url('https://rsms.me/inter/inter.css');
+
+        :root {
+            --tblr-font-sans-serif: 'Inter Var', -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif;
+        }
+
+        body {
+            font-feature-settings: "cv03", "cv04", "cv11";
+        }
+    </style>
+</head>
+
+<body>
+    <script src="/dist/js/demo-theme.min.js?1674944402"></script>
+    <div class="page">
+        <!-- Sidebar -->
+        <aside class="navbar navbar-vertical navbar-expand-sm navbar-dark my-navbar">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <h1 class="navbar-brand navbar-brand-autodark">
+                    <a href="/">
+                        <img src="/img/logo.png" width="150" height="32" alt="Tabler" class="navbar-brand-image">
+                    </a>
+                </h1>
+                <div class="collapse navbar-collapse" id="sidebar-menu">
+                    <ul class="navbar-nav pt-lg-3">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path d="M5 12l-2 0l9 -9l9 9l-2 0" />
+                                        <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+                                        <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+                                    </svg>
+                                </span>
+
+                                <span class="nav-link-title">
+                                    Home
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/models">
+                                <span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-3d"
+                                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                                        stroke="currentColor" fill="none" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                                        <path
+                                            d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z">
+                                        </path>
+                                        <path d="M12 13.5l4 -1.5"></path>
+                                        <path d="M8 11.846l4 1.654v4.5l4 -1.846v-4.308l-4 -1.846z"></path>
+                                        <path d="M8 12v4.2l4 1.8"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    My Models
+                                </span>
+                            </a>
+
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/experiments">
+                                <span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-flask"
+                                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                                        stroke="currentColor" fill="none" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M9 3l6 0"></path>
+                                        <path d="M10 9l4 0"></path>
+                                        <path d="M10 3v6l-4 11a.7 .7 0 0 0 .5 1h11a.7 .7 0 0 0 .5 -1l-4 -11v-6"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    Expreriments
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/datasets">
+                                <span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-database-cog" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M4 6c0 1.657 3.582 3 8 3s8 -1.343 8 -3s-3.582 -3 -8 -3s-8 1.343 -8 3">
+                                        </path>
+                                        <path d="M4 6v6c0 1.657 3.582 3 8 3c.21 0 .42 -.003 .626 -.01"></path>
+                                        <path d="M20 11.5v-5.5"></path>
+                                        <path d="M4 12v6c0 1.657 3.582 3 8 3"></path>
+                                        <path d="M19.001 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                                        <path d="M19.001 15.5v1.5"></path>
+                                        <path d="M19.001 21v1.5"></path>
+                                        <path d="M22.032 17.25l-1.299 .75"></path>
+                                        <path d="M17.27 20l-1.3 .75"></path>
+                                        <path d="M15.97 17.25l1.3 .75"></path>
+                                        <path d="M20.733 20l1.3 .75"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    Manage Datasets
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/marketplace"><span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-world-share" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M20.94 13.045a9 9 0 1 0 -8.953 7.955"></path>
+                                        <path d="M3.6 9h16.8"></path>
+                                        <path d="M3.6 15h9.4"></path>
+                                        <path d="M11.5 3a17 17 0 0 0 0 18"></path>
+                                        <path d="M12.5 3a16.991 16.991 0 0 1 2.529 10.294"></path>
+                                        <path d="M16 22l5 -5"></path>
+                                        <path d="M21 21.5v-4.5h-4.5"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    Public models
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/profile"><span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-user-circle" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
+                                        <path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path>
+                                        <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    My profiles
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#anchor-footer"><span
+                                    class="nav-link-icon"><!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-brand-messenger" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M3 20l1.3 -3.9a9 8 0 1 1 3.4 2.9l-4.7 1"></path>
+                                        <path d="M8 13l3 -2l2 2l3 -2"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    About
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+        <div class="page-wrapper">
+            <div class="page-header d-print-none">
+                <div class="container-xl">
+                    <div class="row g-2 align-items-center">
+                        <div class="col">
+                            <div class="page-pretitle">
+                                Overview
+                            </div>
+                            <h2 class="page-title">
+                                My Ablator Portal
+                            </h2>
+                        </div>
+                        <div class="col-auto ms-auto d-print-none">
+                            <div class="btn-list">
+                                <span class="d-none d-sm-inline">
+                                    <a href="/experiments" class="btn">
+                                        Train model
+                                    </a>
+                                </span>
+                                <span class="d-none d-sm-inline">
+                                    <a href="/models" class="btn">
+                                        Edit model
+                                    </a>
+                                </span>
+
+                                <a href="/models" class="btn btn-primary d-none d-sm-inline-block">
+                                    <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-apps-filled" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path
+                                            d="M9 3h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z"
+                                            stroke-width="0" fill="currentColor"></path>
+                                        <path
+                                            d="M9 13h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z"
+                                            stroke-width="0" fill="currentColor"></path>
+                                        <path
+                                            d="M19 13h-4a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2z"
+                                            stroke-width="0" fill="currentColor"></path>
+                                        <path
+                                            d="M17 3a1 1 0 0 1 .993 .883l.007 .117v2h2a1 1 0 0 1 .117 1.993l-.117 .007h-2v2a1 1 0 0 1 -1.993 .117l-.007 -.117v-2h-2a1 1 0 0 1 -.117 -1.993l.117 -.007h2v-2a1 1 0 0 1 1 -1z"
+                                            stroke-width="0" fill="currentColor"></path>
+                                    </svg>
+                                    Create new model
+                                </a>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="page-body">
+                <div class="container-xl">
+                    <div class="row row-deck row-cards">
+                        <div class="col-sm-6 col-lg-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="subheader">Models created</div>
+                                        <div class="ms-auto lh-1">
+                                            <div class="dropdown">
+                                                <a class="dropdown-toggle text-muted" href="#" data-bs-toggle="dropdown"
+                                                    aria-haspopup="true" aria-expanded="false">Last 7 days</a>
+                                                <div class="dropdown-menu dropdown-menu-end">
+                                                    <a class="dropdown-item active" href="#">Last 7 days</a>
+                                                    <a class="dropdown-item" href="#">Last 30 days</a>
+                                                    <a class="dropdown-item" href="#">Last 3 months</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-baseline">
+                                        <div class="h1 mb-3 me-2">24</div>
+                                        <div class="me-auto">
+
+                                        </div>
+                                    </div>
+                                    <div id="chart-models" class="chart-sm"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="subheader">Training sessions</div>
+                                        <div class="ms-auto lh-1">
+                                            <div class="dropdown">
+                                                <a class="dropdown-toggle text-muted" href="#" data-bs-toggle="dropdown"
+                                                    aria-haspopup="true" aria-expanded="false">Last 7 days</a>
+                                                <div class="dropdown-menu dropdown-menu-end">
+                                                    <a class="dropdown-item active" href="#">Last 7 days</a>
+                                                    <a class="dropdown-item" href="#">Last 30 days</a>
+                                                    <a class="dropdown-item" href="#">Last 3 months</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-baseline">
+                                        <div class="h1 mb-3 me-2">231</div>
+
+                                    </div>
+                                    <div id="chart-training" class="chart-sm"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="row row-cards">
+                                <div class="col-sm-6 col-lg-3">
+                                    <div class="card card-sm">
+                                        <div class="card-body">
+                                            <div class="row align-items-center">
+                                                <div class="col-auto">
+                                                    <span
+                                                        class="bg-primary text-white avatar"><!-- Download SVG icon from http://tabler-icons.io/i/currency-dollar -->
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                                            height="24" viewBox="0 0 24 24" stroke-width="2"
+                                                            stroke="currentColor" fill="none" stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                            <path
+                                                                d="M16.7 8a3 3 0 0 0 -2.7 -2h-4a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6h-4a3 3 0 0 1 -2.7 -2" />
+                                                            <path d="M12 3v3m0 12v3" />
+                                                        </svg>
+                                                    </span>
+                                                </div>
+                                                <div class="col">
+                                                    <div class="font-weight-medium">
+                                                        24 Models created
+                                                    </div>
+                                                    <div class="text-muted">
+                                                        17 finished
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-lg-3">
+                                    <div class="card card-sm">
+                                        <div class="card-body">
+                                            <div class="row align-items-center">
+                                                <div class="col-auto">
+                                                    <span
+                                                        class="bg-green text-white avatar"><!-- Download SVG icon from http://tabler-icons.io/i/shopping-cart -->
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                                            height="24" viewBox="0 0 24 24" stroke-width="2"
+                                                            stroke="currentColor" fill="none" stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                            <path d="M6 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                                                            <path d="M17 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                                                            <path d="M17 17h-11v-14h-2" />
+                                                            <path d="M6 5l14 1l-1 7h-13" />
+                                                        </svg>
+                                                    </span>
+                                                </div>
+                                                <div class="col">
+                                                    <div class="font-weight-medium">
+                                                        15 Models Trained
+                                                    </div>
+                                                    <div class="text-muted">
+                                                        11 Published
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-lg-3">
+                                    <div class="card card-sm">
+                                        <div class="card-body">
+                                            <div class="row align-items-center">
+                                                <div class="col-auto">
+                                                    <span
+                                                        class="bg-twitter text-white avatar"><!-- Download SVG icon from http://tabler-icons.io/i/brand-twitter -->
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                                            height="24" viewBox="0 0 24 24" stroke-width="2"
+                                                            stroke="currentColor" fill="none" stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                            <path
+                                                                d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c0 -.249 1.51 -2.772 1.818 -4.013z" />
+                                                        </svg>
+                                                    </span>
+                                                </div>
+                                                <div class="col">
+                                                    <div class="font-weight-medium">
+                                                        231 Training sessions
+                                                    </div>
+                                                    <div class="text-muted">
+                                                        59 Ongoing
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-lg-3">
+                                    <div class="card card-sm">
+                                        <div class="card-body">
+                                            <div class="row align-items-center">
+                                                <div class="col-auto">
+                                                    <span
+                                                        class="bg-facebook text-white avatar"><!-- Download SVG icon from http://tabler-icons.io/i/brand-facebook -->
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                                            height="24" viewBox="0 0 24 24" stroke-width="2"
+                                                            stroke="currentColor" fill="none" stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                            <path
+                                                                d="M7 10v4h3v7h4v-7h3l1 -4h-4v-2a1 1 0 0 1 1 -1h3v-4h-3a5 5 0 0 0 -5 5v2h-3" />
+                                                        </svg>
+                                                    </span>
+                                                </div>
+                                                <div class="col">
+                                                    <div class="font-weight-medium">
+                                                        101 Training finished
+                                                    </div>
+                                                    <div class="text-muted">
+                                                        21 Incomplete
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="col-lg-6">
+                            <div class="row row-cards">
+                                <div class="col-12">
+                                    <div class="card" style="height: 100%;">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <div class="subheader" id="anchor-training">Average Traning accuracy
+                                                </div>
+                                                <div class="ms-auto lh-1">
+                                                    <div class="dropdown">
+                                                        <a class="dropdown-toggle text-muted" href="#"
+                                                            data-bs-toggle="dropdown" aria-haspopup="true"
+                                                            aria-expanded="false">Last 20 Training
+                                                            sessions</a>
+                                                        <div class="dropdown-menu dropdown-menu-end">
+                                                            <a class="dropdown-item active" href="#">Last 20 Training
+                                                                sessions</a>
+                                                            <a class="dropdown-item" href="#">Last 50 Training
+                                                                sessions</a>
+                                                            <a class="dropdown-item" href="#">Last 100 Training
+                                                                sessions</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-baseline">
+                                                <div class="h1 mb-0 me-2">95.29%</div>
+                                                <div class="me-auto">
+                                                    <span class="text-green d-inline-flex align-items-center lh-1">
+                                                        15%
+                                                        <!-- Download SVG icon from http://tabler-icons.io/i/trending-up -->
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon ms-1"
+                                                            width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                                                            stroke="currentColor" fill="none" stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                            <path d="M3 17l6 -6l4 4l8 -8" />
+                                                            <path d="M14 7l7 0l0 7" />
+                                                        </svg>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="chart-training-accuracy" class="chart-sm"></div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="card" style="height: 100%;">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <div class="subheader">Average Testing Accuracy</div>
+                                                <div class="ms-auto lh-1">
+                                                    <div class="dropdown">
+                                                        <a class="dropdown-toggle text-muted" href="#"
+                                                            data-bs-toggle="dropdown" aria-haspopup="true"
+                                                            aria-expanded="false">Last
+                                                            20 Training
+                                                            sessions</a>
+                                                        <div class="dropdown-menu dropdown-menu-end">
+                                                            <a class="dropdown-item active" href="#">Last 20 Training
+                                                                sessions</a>
+                                                            <a class="dropdown-item" href="#">Last 50 Training
+                                                                sessions</a>
+                                                            <a class="dropdown-item" href="#">Last 100 Training
+                                                                sessions</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-baseline">
+                                                <div class="h1 mb-0 me-2">87.69%</div>
+                                                <div class="me-auto">
+                                                    <span class="text-green d-inline-flex align-items-center lh-1">
+                                                        8%
+                                                        <!-- Download SVG icon from http://tabler-icons.io/i/trending-up -->
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon ms-1"
+                                                            width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                                                            stroke="currentColor" fill="none" stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                            <path d="M3 17l6 -6l4 4l8 -8" />
+                                                            <path d="M14 7l7 0l0 7" />
+                                                        </svg>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="chart-testing-accuracy" class="chart-sm"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+
+                            <div class="card">
+                                <div class="card-body">
+                                    <h3 class="card-title">Hardware usage</h3>
+                                    <div id="chart-power-usage" class="chart-lg"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card" id="anchor-datasets">
+                                <div class="card-header border-0">
+                                    <div class="card-title">Datasets usage</div>
+                                </div>
+                                <div class="card-table table-responsive">
+                                    <table class="table table-vcenter">
+                                        <thead>
+                                            <tr>
+                                                <th>Datasets</th>
+                                                <th>Usage</th>
+                                                <th>Last used</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        MNIST
+                                                    </div>
+                                                <td>21</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">28 Apr 2023</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        Fashion-MNIST
+                                                    </div>
+                                                <td>19</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">29 Mar 2023</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        CIFAR-10
+                                                    </div>
+                                                <td>9</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">22 Dec 2022</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        Boston Housing
+                                                    </div>
+                                                <td>27</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">14 Dec 2022</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        California Housing
+                                                    </div>
+                                                <td>15</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">29 Nov 2022</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        Air Quality Index
+                                                    </div>
+                                                <td>33</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">28 Nov 2019</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        Breast Cancer Wisconsin
+                                                    </div>
+                                                <td>45</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">28 Nov 2019</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        MNIST
+                                                    </div>
+                                                <td>21</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">28 Apr 2023</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        Fashion-MNIST
+                                                    </div>
+                                                <td>19</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">29 Mar 2023</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        CIFAR-10
+                                                    </div>
+                                                <td>9</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">22 Dec 2022</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="td-truncate">
+                                                    <div class="text-truncate">
+                                                        Boston Housing
+                                                    </div>
+                                                <td>27</td>
+                                                </td>
+                                                <td class="text-nowrap text-muted">14 Dec 2022</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div class="row row-cards">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header border-0">
+                                            <div class="card-title">Datasets usage</div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="chart-dataset" class="chart-lg"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header border-0">
+                                            <div class="card-title">Datasets Accuracy</div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="chart-optimizer" class="chart-lg"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="card" id="anchor-marketplace">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-10">
+                                            <h3 class="h1">Public Models Marketplace</h3>
+                                            <div class="markdown text-muted">
+                                                Please visit Public Models Marketplace to download and use models, where
+                                                the other users share and/or sell their well trained models as well as
+                                                their datasets.
+                                            </div>
+                                            <div class="mt-3">
+                                                <a href="/marketplace" class="btn btn-primary" target="_blank"
+                                                    rel="noopener">Visit Marketplace</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="footer footer-transparent d-print-none" id="anchor-footer">
+                            <div class="container-xl">
+                                <div class="row text-center align-items-center flex-row-reverse">
+                                    <div class="col-lg-auto ms-lg-auto">
+                                        <ul class="list-inline list-inline-dots mb-0">
+                                            <li class="list-inline-item"><a href="./docs/"
+                                                    class="link-secondary">Documentation</a></li>
+                                            <li class="list-inline-item"><a href="./license.html"
+                                                    class="link-secondary">License</a></li>
+                                            <li class="list-inline-item"><a href="https://github.com/tabler/tabler"
+                                                    target="_blank" class="link-secondary" rel="noopener">Source
+                                                    code</a></li>
+
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+                                        <ul class="list-inline list-inline-dots mb-0">
+                                            <li class="list-inline-item">
+                                                Copyright &copy; 2023
+                                                <a href="." class="link-secondary">Boyang Xiao</a>.
+                                                All rights reserved.
+                                            </li>
+
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </footer>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Libs JS -->
+    <script src="/dist/libs/apexcharts/dist/apexcharts.min.js?1674944402" defer></script>
+    <script src="/dist/libs/jsvectormap/dist/js/jsvectormap.min.js?1674944402" defer></script>
+    <script src="/dist/libs/jsvectormap/dist/maps/world.js?1674944402" defer></script>
+    <script src="/dist/libs/jsvectormap/dist/maps/world-merc.js?1674944402" defer></script>
+    <!-- Tabler Core -->
+    <script src="/dist/js/tabler.min.js?1674944402" defer></script>
+    <script src="/dist/js/demo.min.js?1674944402" defer></script>
+
+
+    <script>
+        // @formatter:off
+        document.addEventListener("DOMContentLoaded", function () {
+            window.ApexCharts && (new ApexCharts(document.getElementById('chart-models'), {
+                chart: {
+                    type: "line",
+                    fontFamily: 'inherit',
+                    height: 40.0,
+                    sparkline: {
+                        enabled: true
+                    },
+                    animations: {
+                        enabled: true
+                    },
+                },
+                fill: {
+                    opacity: 1,
+                },
+                stroke: {
+                    width: [2, 1],
+                    dashArray: [0, 3],
+                    lineCap: "round",
+                    curve: "smooth",
+                },
+                series: [{
+                    name: "Created",
+                    data: [6, 7, 2, 5, 7, 1, 5, 6, 3]
+                }, {
+                    name: "Finished",
+                    data: [2, 4, 5, 1, 2, 7, 2, 2, 4]
+
+                }],
+                tooltip: {
+                    theme: 'dark'
+                },
+                grid: {
+                    strokeDashArray: 4,
+                },
+                xaxis: {
+                    labels: {
+                        padding: 0,
+                    },
+                    tooltip: {
+                        enabled: false
+                    },
+                    type: 'datetime',
+                },
+                yaxis: {
+                    labels: {
+                        padding: 4
+                    },
+                },
+                labels: [
+                    '2020-06-20', '2020-06-21', '2020-06-22', '2020-06-23', '2020-06-24', '2020-06-25', '2020-06-26', '2020-06-27', '2020-06-28'
+                ],
+                colors: [tabler.getColor("primary"), tabler.getColor("gray-600")],
+                legend: {
+                    show: false,
+                },
+            })).render();
+        });
+          // @formatter:on
+    </script>
+    <script>
+        // @formatter:off
+        document.addEventListener("DOMContentLoaded", function () {
+            window.ApexCharts && (new ApexCharts(document.getElementById('chart-training'), {
+                chart: {
+                    type: "bar",
+                    fontFamily: 'inherit',
+                    height: 40.0,
+                    sparkline: {
+                        enabled: true
+                    },
+                    animations: {
+                        enabled: true
+                    },
+                },
+                plotOptions: {
+                    bar: {
+                        columnWidth: '50%',
+                    }
+                },
+                dataLabels: {
+                    enabled: false,
+                },
+                fill: {
+                    opacity: 1,
+                },
+                series: [{
+                    name: "Sessions",
+                    data: [37, 35, 44, 28, 36, 24, 65, 31, 37, 39, 62, 51, 35, 41, 35, 27, 93, 53, 61, 27, 54, 43, 19, 46, 39, 62, 51, 35, 41, 67]
+                }],
+                tooltip: {
+                    theme: 'dark'
+                },
+                grid: {
+                    strokeDashArray: 4,
+                },
+                xaxis: {
+                    labels: {
+                        padding: 0,
+                    },
+                    tooltip: {
+                        enabled: false
+                    },
+                    axisBorder: {
+                        show: false,
+                    },
+                    type: 'datetime',
+                },
+                yaxis: {
+                    labels: {
+                        padding: 4
+                    },
+                },
+                labels: [
+                    '2020-06-20', '2020-06-21', '2020-06-22', '2020-06-23', '2020-06-24', '2020-06-25', '2020-06-26', '2020-06-27', '2020-06-28', '2020-06-29', '2020-06-30', '2020-07-01', '2020-07-02', '2020-07-03', '2020-07-04', '2020-07-05', '2020-07-06', '2020-07-07', '2020-07-08', '2020-07-09', '2020-07-10', '2020-07-11', '2020-07-12', '2020-07-13', '2020-07-14', '2020-07-15', '2020-07-16', '2020-07-17', '2020-07-18', '2020-07-19'
+                ],
+                colors: [tabler.getColor("primary")],
+                legend: {
+                    show: false,
+                },
+            })).render();
+        });
+          // @formatter:on
+    </script>
+    <script>
+        // @formatter:off
+        document.addEventListener("DOMContentLoaded", function () {
+            window.ApexCharts && (new ApexCharts(document.getElementById('chart-training-accuracy'), {
+                chart: {
+                    type: "area",
+                    fontFamily: 'inherit',
+                    height: 40.0,
+                    sparkline: {
+                        enabled: true
+                    },
+                    animations: {
+                        enabled: true
+                    },
+                },
+                dataLabels: {
+                    enabled: false,
+                },
+                fill: {
+                    opacity: .16,
+                    type: 'solid'
+                },
+                stroke: {
+                    width: 2,
+                    lineCap: "round",
+                    curve: "smooth",
+                },
+                series: [{
+                    name: "Accuracy",
+                    data: [0.963, 0.948, 0.941, 0.972, 0.928, 0.955, 0.971, 0.934, 0.937, 0.939, 0.968, 0.957, 0.985, 0.925, 0.988, 0.972, 0.967, 0.997, 0.977, 0.974]
+                }],
+                tooltip: {
+                    theme: 'dark'
+                },
+                grid: {
+                    strokeDashArray: 4,
+                },
+                xaxis: {
+                    labels: {
+                        padding: 0,
+                    },
+                    tooltip: {
+                        enabled: false
+                    },
+                    axisBorder: {
+                        show: false,
+                    },
+                    type: 'integer',
+                },
+                yaxis: {
+                    labels: {
+                        padding: 4
+                    },
+                },
+                labels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                colors: [tabler.getColor("primary")],
+                legend: {
+                    show: false,
+                },
+            })).render();
+        });
+          // @formatter:on
+    </script>
+    <script>
+        // @formatter:off
+        document.addEventListener("DOMContentLoaded", function () {
+            window.ApexCharts && (new ApexCharts(document.getElementById('chart-testing-accuracy'), {
+                chart: {
+                    type: "area",
+                    fontFamily: 'inherit',
+                    height: 40.0,
+                    sparkline: {
+                        enabled: true
+                    },
+                    animations: {
+                        enabled: true
+                    },
+                },
+                dataLabels: {
+                    enabled: false,
+                },
+                fill: {
+                    opacity: .16,
+                    type: 'solid'
+                },
+                stroke: {
+                    width: 2,
+                    lineCap: "round",
+                    curve: "smooth",
+                },
+                series: [{
+                    name: "Profits",
+                    data: [0.918, 0.926, 0.890, 0.981, 0.894, 0.859, 0.922, 0.911, 0.823, 0.892, 0.880, 0.877, 0.987, 0.898, 0.938, 0.892, 0.803, 0.874, 0.916, 0.942]
+                }],
+                tooltip: {
+                    theme: 'dark'
+                },
+                grid: {
+                    strokeDashArray: 4,
+                },
+                xaxis: {
+                    labels: {
+                        padding: 0,
+                    },
+                    tooltip: {
+                        enabled: false
+                    },
+                    axisBorder: {
+                        show: false,
+                    },
+                    type: 'integer',
+                },
+                yaxis: {
+                    labels: {
+                        padding: 4
+                    },
+                },
+                labels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+
+                colors: [tabler.getColor("primary")],
+                legend: {
+                    show: false,
+                },
+            })).render();
+        });
+          // @formatter:on
+    </script>
+    <script>
+        // @formatter:off
+        document.addEventListener("DOMContentLoaded", function () {
+            window.ApexCharts && (new ApexCharts(document.getElementById('chart-power-usage'), {
+                chart: {
+                    type: "bar",
+                    fontFamily: 'inherit',
+                    height: 240,
+                    parentHeightOffset: 0,
+                    toolbar: {
+                        show: false,
+                    },
+                    animations: {
+                        enabled: true
+                    },
+                    stacked: true,
+                },
+                plotOptions: {
+                    bar: {
+                        columnWidth: '50%',
+                    }
+                },
+                dataLabels: {
+                    enabled: false,
+                },
+                fill: {
+                    opacity: 1,
+                },
+                series: [{
+                    name: "GPU",
+                    data: [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 2, 12, 5, 8, 22, 6, 8, 6, 4, 1, 8, 24, 29, 51, 40, 47, 23, 26, 50, 26, 41, 22, 46, 47, 81, 46, 6]
+                }, {
+                    name: "CPU",
+                    data: [2, 5, 4, 3, 3, 1, 4, 7, 5, 1, 2, 5, 3, 2, 6, 7, 7, 1, 5, 5, 2, 12, 4, 6, 18, 3, 5, 2, 13, 15, 20, 47, 18, 15, 11, 10, 0]
+                }, {
+                    name: "Other",
+                    data: [2, 9, 1, 7, 8, 3, 6, 5, 5, 4, 6, 4, 1, 9, 3, 6, 7, 5, 2, 8, 4, 9, 1, 2, 6, 7, 5, 1, 8, 3, 2, 3, 4, 9, 7, 1, 6]
+                }],
+                tooltip: {
+                    theme: 'dark'
+                },
+                grid: {
+                    padding: {
+                        top: -20,
+                        right: 0,
+                        left: -4,
+                        bottom: -4
+                    },
+                    strokeDashArray: 4,
+                    xaxis: {
+                        lines: {
+                            show: true
+                        }
+                    },
+                },
+                xaxis: {
+                    labels: {
+                        padding: 0,
+                    },
+                    tooltip: {
+                        enabled: false
+                    },
+                    axisBorder: {
+                        show: false,
+                    },
+                    type: 'datetime',
+                },
+                yaxis: {
+                    labels: {
+                        padding: 4
+                    },
+                },
+                labels: [
+                    '2020-06-20', '2020-06-21', '2020-06-22', '2020-06-23', '2020-06-24', '2020-06-25', '2020-06-26', '2020-06-27', '2020-06-28', '2020-06-29', '2020-06-30', '2020-07-01', '2020-07-02', '2020-07-03', '2020-07-04', '2020-07-05', '2020-07-06', '2020-07-07', '2020-07-08', '2020-07-09', '2020-07-10', '2020-07-11', '2020-07-12', '2020-07-13', '2020-07-14', '2020-07-15', '2020-07-16', '2020-07-17', '2020-07-18', '2020-07-19', '2020-07-20', '2020-07-21', '2020-07-22', '2020-07-23', '2020-07-24', '2020-07-25', '2020-07-26'
+                ],
+                colors: [tabler.getColor("primary"), tabler.getColor("primary", 0.8), tabler.getColor("green", 0.8)],
+                legend: {
+                    show: false,
+                },
+            })).render();
+        });
+              // @formatter:on
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            window.ApexCharts && (new ApexCharts(document.getElementById('chart-dataset'), {
+                chart: {
+                    type: "donut",
+                    fontFamily: 'inherit',
+                    height: 240,
+                    sparkline: {
+                        enabled: true
+                    },
+                    animations: {
+                        enabled: true
+                    },
+                },
+                fill: {
+                    opacity: 1,
+                },
+                series: [44, 55, 12, 26, 12, 11, 22],
+                labels: ["MN", "Fa", "CI", "BH", "CH", "AQ", "BC"],
+                tooltip: {
+                    theme: 'dark'
+                },
+                grid: {
+                    strokeDashArray: 4,
+                },
+                colors: [tabler.getColor("primary"), tabler.getColor("primary", 0.8), tabler.getColor("primary", 0.6), tabler.getColor("gray-300")],
+                legend: {
+                    show: true,
+                    position: 'bottom',
+                    offsetY: 12,
+                    markers: {
+                        width: 10,
+                        height: 10,
+                        radius: 100,
+                    },
+                    itemMargin: {
+                        horizontal: 8,
+                        vertical: 8
+                    },
+                },
+                tooltip: {
+                    fillSeriesColor: false
+                },
+            })).render();
+        });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            window.ApexCharts && (new ApexCharts(document.getElementById('chart-optimizer'), {
+                chart: {
+                    type: "line",
+                    fontFamily: 'inherit',
+                    height: 240,
+                    parentHeightOffset: 0,
+                    toolbar: {
+                        show: false,
+                    },
+                    animations: {
+                        enabled: true
+                    },
+                },
+                fill: {
+                    opacity: 1,
+                },
+                stroke: {
+                    width: 2,
+                    lineCap: "round",
+                    curve: "straight",
+                },
+                series: [{
+                    name: "Dataset Accuracy",
+                    data: [0.918, 0.926, 0.890, 0.981, 0.894, 0.859, 0.922]
+                }],
+                tooltip: {
+                    theme: 'dark'
+                },
+                grid: {
+                    padding: {
+                        top: -20,
+                        right: 0,
+                        left: -4,
+                        bottom: -4
+                    },
+                    strokeDashArray: 4,
+                },
+                xaxis: {
+                    labels: {
+                        padding: 0,
+                    },
+                    tooltip: {
+                        enabled: false
+                    },
+                    type: 'string',
+                },
+                yaxis: {
+                    labels: {
+                        padding: 4
+                    },
+                },
+                labels: [
+                    "MN", "Fa", "CI", "BH", "CH", "AQ", "BC"
+                ],
+                colors: [tabler.getColor("primary")],
+                legend: {
+                    show: true,
+                    position: 'bottom',
+                    offsetY: 12,
+                    markers: {
+                        width: 10,
+                        height: 10,
+                        radius: 100,
+                    },
+                    itemMargin: {
+                        horizontal: 8,
+                        vertical: 8
+                    },
+                },
+            })).render();
+        });
+    </script>
+</body>
+
+</html>
