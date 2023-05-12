@@ -130,3 +130,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# cancle ignore frontend/dist
+!/frontend/public/dist/
