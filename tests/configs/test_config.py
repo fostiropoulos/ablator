@@ -1,6 +1,9 @@
 # from tests.configs.test_types import test_error_configs, test_hierarchical, test_types
 import copy
 from pathlib import Path
+from collections import namedtuple
+
+import pytest
 
 from ablator import (
     Annotation,
@@ -68,8 +71,60 @@ annotations = {
 }
 
 
+@configclass
+class ParentLeftTestConfig(ConfigBase):
+    a13: int = 10
+    a14: str = 10
+
+
+@configclass
+class ParentRightTestConfig(ConfigBase):
+    a13: int = 10
+    a14: str = 10
+
+
+@configclass
+class ParentRightTestConfigDiff(ConfigBase):
+    a13: int = 15
+    a14: str = 16
+
+
+
+#
+# @configclass
+# class MergedTestConfig(ConfigBase):
+
+
 def test_merge():
-    pass
+    """
+        Testing merge function when all the keys and values match in both configs
+
+        *** I have few doubts in the implementation, i have implemented the
+        test based on the actual implementation. ***
+    """
+    left_config = ParentLeftTestConfig()
+    right_config = ParentRightTestConfig()
+    assert left_config == left_config.merge(right_config), 'Merged configs are not equal'
+
+
+def test_merge_diff_keys_values():
+    """
+        Testing merge function with different keys or values but of same configbase class.
+    """
+    left_config = ParentLeftTestConfig()
+    right_config = ParentRightTestConfigDiff()
+    with pytest.raises(AssertionError):
+        assert left_config == left_config.merge(right_config)
+
+
+def test_merge_diff_class():
+    """
+            Testing merge function when the right config of a different config class.
+    """
+    left_config = ParentLeftTestConfig()
+    right_config = namedtuple('TestConfig', 'annotations')
+    with pytest.raises(AssertionError):
+        assert left_config == left_config.merge(right_config)
 
 
 @configclass
@@ -104,11 +159,11 @@ def test_attrs(tmp_path: Path):
     diffs = sorted(loaded_p.diff(p))
     var_name, (left_type, left_val), (right_type, right_val) = diffs[1]
     assert (
-        var_name == "a2"
-        and left_val == 0
-        and left_type == int
-        and right_type == str
-        and right_val == "10"
+            var_name == "a2"
+            and left_val == 0
+            and left_type == int
+            and right_type == str
+            and right_val == "10"
     )
     loaded_p.c2.a1 = "a"
     diff_str = loaded_p.diff_str(p)
@@ -119,8 +174,8 @@ def test_attrs(tmp_path: Path):
     ] == sorted(diff_str)
 
     assert (
-        loaded_p.to_dot_path()
-        == "a1: 10\na2: 0\na8: '10'\na9: null\na10: a\na6: a\na5.a: 10\nc2.a1: a\n"
+            loaded_p.to_dot_path()
+            == "a1: 10\na2: 0\na8: '10'\na9: null\na10: a\na6: a\na5.a: 10\nc2.a1: a\n"
     )
     # TODO do we want them immutable?
     assert loaded_p.get_val_with_dot_path("c2.a1") == "a"
@@ -134,8 +189,8 @@ def test_attrs(tmp_path: Path):
         assert False
     except Exception as e:
         assert (
-            str(e)
-            == "Differences between configurations:\n\ta2:(int)0->(str)10\n\tc2.a1:(str)a->(int)10"
+                str(e)
+                == "Differences between configurations:\n\ta2:(int)0->(str)10\n\tc2.a1:(str)a->(int)10"
         )
     p_prime = copy.deepcopy(loaded_p)
     p_prime.a10 = 1000

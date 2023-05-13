@@ -376,11 +376,13 @@ class ConfigBase:
 
         left_config = self_config
         right_config = copy.deepcopy(config)
+        # updated right_config check instance at the beginning.
+        assert isinstance(right_config, ConfigBase)
         right_annotations = right_config.annotations
-        left_annotations = right_config.annotations
+        # I believe there was a typo here, changed right_config to left_config.
+        left_annotations = left_config.annotations
         left_config.assert_state(right_config)
         right_config.assert_state(left_config)
-        assert isinstance(left_config, type(right_config))
 
         for k in right_annotations:
             assert left_annotations[k] == right_annotations[k]
