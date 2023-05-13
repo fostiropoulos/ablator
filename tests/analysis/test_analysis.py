@@ -1,8 +1,11 @@
+import os
 from pathlib import Path
 
 import pandas as pd
 
 from ablator import Optim, PlotAnalysis
+from ablator.analysis.main import Analysis
+import pytest
 
 
 def get_best(x: pd.DataFrame, task_type: str):
@@ -62,8 +65,81 @@ def test_analysis(tmp_path: Path):
     pass
 
 
+def test_file_not_found():
+    with pytest.raises(FileNotFoundError):
+        Analysis(
+            results=pd.DataFrame(),
+            categorical_attributes=[],
+            numerical_attributes=[],
+            optim_metrics={},
+            save_dir=os.path.join(os.getcwd(), 'some', 'dir', 'that', 'is', 'not', 'present'),
+            cache=True
+        )
+
+
+def test_cache_clear_when_false():
+    raw_results = pd.DataFrame({
+        "index": [0, 1, 2],
+        "path": ["a", "b", "c"],
+        "accuracy": [0.9, 0.8, 0.95],
+        "loss": [1.0, 0.9, 0.85],
+    })
+
+    analysis = Analysis(
+        results=raw_results,
+        categorical_attributes=[],
+        numerical_attributes=[],
+        optim_metrics={},
+        save_dir=os.getcwd(),
+        cache=False
+    )
+
+    assert analysis.cache is None
+
+
+def test_get_best_results_by_metric():
+    raw_results = pd.DataFrame({
+        "path": ["a", "b", "c"],
+        "accuracy": [0.9, 0.8, 0.95],
+        "loss": [1.0, 0.9, 0.85],
+    })
+
+    metric_map = {
+        "accuracy": Optim.max,
+        "loss": Optim.min,
+    }
+
+    expected_results = pd.DataFrame({
+        "path": ["a", "b", "c", "a", "b", "c"],
+        "accuracy": [0.9, 0.8, 0.95, 0.9, 0.8, 0.95],
+        "loss": [1.0, 0.9, 0.85, 1.0, 0.9, 0.85],
+        "best": ["accuracy", "accuracy", "accuracy", "loss", "loss", "loss"],
+    })
+
+    actual_results = Analysis._get_best_results_by_metric(raw_results, metric_map)
+
+    assert actual_results.equals(expected_results)
+
+
+def test_get_best_results_by_metric_with_empty_raw_results():
+    with pytest.raises(KeyError):
+        raw_results = pd.DataFrame()
+
+        metric_map = {
+            "accuracy": Optim.max,
+            "loss": Optim.min,
+        }
+
+        expected_results = pd.DataFrame()
+
+        actual_results = Analysis._get_best_results_by_metric(raw_results, metric_map)
+
+        assert actual_results.equals(expected_results)
+
+
 if __name__ == "__main__":
     import shutil
+
     tmp_path = Path("/tmp/save_dir")
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir(exist_ok=True)
