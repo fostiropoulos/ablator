@@ -1,5 +1,6 @@
 from pathlib import Path
 from ablator.modules.metrics.main import TrainMetrics
+from ablator.modules.metrics.stores import PredictionStore
 import numpy as np
 
 import sys
@@ -166,12 +167,7 @@ def test_metrics(assert_error_msg):
         moving_average_limit=100,
         tags=["my_tag"],
     )
-    assert_error_msg(
-        lambda: [
-            m3.evaluate("my_tag"),
-        ],
-        "PredictionStore has no predictions to evaluate.",
-    )
+    assert m3.evaluate("my_tag") is None, "Expected None when there are no predictions to evaluate."
     m3.append_batch(somex=np.array([100]), tag="my_tag")
     m3.evaluate("my_tag", reset=False, update_ma=True)
     m3.append_batch(somex=np.array([0] * 3), tag="my_tag")
@@ -186,6 +182,28 @@ def test_metrics(assert_error_msg):
     assert np.isclose(m3.to_dict()["my_tag_mean"], 46.42857142857142)
 
 
+def test_prediction_store_reset(assert_error_msg):
+    ps = PredictionStore(batch_limit=30, memory_limit=100, moving_average_limit=3000,
+                         evaluation_functions={"mean": lambda x: np.mean(x)})
+
+    # Test evaluate when no predictions have been appended.
+    ps.evaluate()
+
+    # Test the reset function when no predictions have been appended.
+    try:
+        ps.reset()
+    except Exception:
+        assert False, "Reset should not raise an exception when no predictions have been appended."
+
+    #Add some predictions.
+    ps.append(preds=np.array([1, 2, 3]), labels=np.array([1, 0, 1]))
+    
+    #Test that the reset function clears the appended predictions.
+    ps.reset()
+    assert len(ps._get_arr('preds')) == 0, "Reset did not clear the appended predictions."
+    assert len(ps._get_arr('labels')) == 0, "Reset did not clear the appended predictions."
+
+
 if __name__ == "__main__":
 
     def assert_error_msg(fn, error_msg):
@@ -197,3 +215,4 @@ if __name__ == "__main__":
                 raise excp
 
     test_metrics(assert_error_msg)
+    test_prediction_store_reset(assert_error_msg)

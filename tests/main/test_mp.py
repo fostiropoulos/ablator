@@ -44,7 +44,6 @@ search_space = {
     ),
 }
 
-
 config = MyParallelConfig(
     train_config=train_config,
     model_config=CustomModelConfig(),
@@ -126,8 +125,8 @@ def test_mp(tmp_path: Path):
             lambda: ParallelTrainer(wrapper=wrapper, run_config=config)
         )
         assert (
-            "Expected GPU memory utilization" in out
-            and "Expected CPU core util. exceed system capacity" in out
+                "Expected GPU memory utilization" in out
+                and "Expected CPU core util. exceed system capacity" in out
         )
 
     config.experiment_dir = tmp_path
@@ -141,6 +140,47 @@ def test_mp(tmp_path: Path):
     assert res.data.shape[0] // 2 == len(ablator.experiment_state.complete_trials)
 
 
+def test_resume(tmp_path: Path):
+    # Initial setup and launch
+    wrapper = TestWrapper(MyCustomModel)
+    resume_config = MyParallelConfig(
+        train_config=train_config,
+        model_config=CustomModelConfig(),
+        verbose="silent",
+        device="cuda",
+        amp=False,
+        search_space=search_space,
+        optim_metrics={"val_loss": "min"},
+        total_trials=5,
+        concurrent_trials=5,
+        gpu_mb_per_experiment=0.001,
+        cpus_per_experiment=0.001,
+    )
+    resume_config.experiment_dir = tmp_path
+    ablator = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
+    ablator.gpu = 1 / config.concurrent_trials
+    ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
+
+    # Check the initial state and save some metrics
+    res = Results(MyParallelConfig, ablator.experiment_dir)
+    initial_trials = len(ablator.experiment_state.complete_trials)
+
+    # Assuming some trial was completed, interrupt the execution
+    assert initial_trials > 0
+
+    # Re-setup and launch with resume=True
+    ablator = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
+    ablator.gpu = 1 / config.concurrent_trials
+    ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None, resume=True)
+
+    # Check the state after resuming
+    res = Results(MyParallelConfig, ablator.experiment_dir)
+    resumed_trials = len(ablator.experiment_state.complete_trials)
+
+    # Check if resumed trials are no less than initial trials
+    assert resumed_trials >= initial_trials
+
+
 if __name__ == "__main__":
     import shutil
 
@@ -148,5 +188,4 @@ if __name__ == "__main__":
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
     test_mp(tmp_path)
-
-    pass
+    test_resume(tmp_path)
