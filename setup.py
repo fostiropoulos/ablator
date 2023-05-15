@@ -11,6 +11,7 @@ setup(
     description="Model Ablation Tool-Kit",
     python_requires=">3.10",
     long_description=Path(package_path).parent.joinpath("README.md").read_text(),
+    long_description_content_type="text/markdown",
     install_requires=[
         "numpy==1.24.1",
         "pandas==2.0.0",
