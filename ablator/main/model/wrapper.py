@@ -410,7 +410,6 @@ class ModelWrapper(ModelBase):
                 self.train_tqdm.reset()
             outputs, train_metrics = self.train_step(batch)
             if outputs is not None:
-                # TODO test-me None outputs
                 self.metrics.append_batch(**outputs, tag="train")
             self.metrics.update_ma_metrics(train_metrics, tag="train")
 
@@ -435,7 +434,6 @@ class ModelWrapper(ModelBase):
         run_config: RunConfig,
         smoke_test: bool = False,
         debug: bool = False,
-        # TODO test-me resume flag
         resume: bool = False,
     ) -> TrainMetrics:
         self._init_state(
@@ -555,12 +553,10 @@ class ModelWrapper(ModelBase):
         for i, batch in enumerate(dataloader):
             with torch.no_grad():
                 outputs, loss = self._model_step(model=model, batch=batch)
-                # TODO test-me: The model can return no aux metrics or outputs
                 val_metrics = {}
                 if outputs is not None:
                     aux_metrics = self.aux_metrics(outputs)
                     metrics.append_batch(tag=tag, **outputs)
-                    # TODO test-me no aux metrics
                     if aux_metrics is not None:
                         assert (
                             "loss" not in aux_metrics
