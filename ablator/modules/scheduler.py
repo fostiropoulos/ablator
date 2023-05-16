@@ -20,7 +20,7 @@ class SchedulerArgs(ConfigBase):
     Attributes
     ----------
     step_when : StepType
-        The step type at which the scheduler.step() should be invoked: 'train', 'val', or 'epoch'.
+        The step type at which the scheduler.step() should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
     """
     # step every train step or every validation step
@@ -57,7 +57,7 @@ class SchedulerConfig(ConfigBase):
         Parameters
         ----------
         name : str
-            The name of the scheduler, this can be any in ['None', 'step', 'cycle', 'plateau'].
+            The name of the scheduler, this can be any in ``['None', 'step', 'cycle', 'plateau']``.
         arguments : dict[str, ty.Any]
             The arguments for the scheduler, specific to a certain type of scheduler.
 
@@ -113,7 +113,7 @@ class OneCycleConfig(SchedulerArgs):
     total_steps : Derived[int]
         The total number of steps to run the scheduler in a cycle.
     step_when : StepType
-        The step type at which the scheduler.step() should be invoked: 'train', 'val', or 'epoch'.
+        The step type at which the scheduler.step() should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
     """
     max_lr: float
@@ -163,16 +163,16 @@ class PlateuaConfig(SchedulerArgs):
         min_lr : float
             A lower bound on the learning rate.
         mode : str
-            One of 'min', 'max', or 'auto', which defines the direction of optimization, so as
+            One of ``'min'``, ``'max'``, or ``'auto'``, which defines the direction of optimization, so as
             to adjust the learning rate accordingly, i.e when a certain metric ceases improving.
         factor : float
-            Factor by which the learning rate will be reduced. new_lr = lr * factor.
+            Factor by which the learning rate will be reduced. ``new_lr = lr * factor``.
         threshold : float
             Threshold for measuring the new optimum, to only focus on significant changes.
         verbose : bool
-            If True, prints a message to stdout for each update.
+            If ``True``, prints a message to ``stdout`` for each update.
         step_when : StepType
-            The step type at which the scheduler should be invoked: 'train', 'val', or 'epoch'.
+            The step type at which the scheduler should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
     """
     patience: int = 10
@@ -228,7 +228,7 @@ class StepLRConfig(SchedulerArgs):
     gamma : float
         Multiplicative factor of learning rate decay, by default 0.99.
     step_when : StepType
-        The step type at which the scheduler should be invoked: 'train', 'val', or 'epoch'.
+        The step type at which the scheduler should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
     """
     step_size: int = 1

@@ -47,7 +47,7 @@ class TensorboardLogger(LoggerBase):
         itr : int
             The iteration number.
         dataformats : str, optional
-            The format of the image data, by default "CHW".
+            The format of the image data, by default ``"CHW"``.
         """
         self.backend_logger.add_image(k, v, itr, dataformats=dataformats)
 

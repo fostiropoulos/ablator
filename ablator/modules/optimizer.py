@@ -12,7 +12,7 @@ from ablator.config.types import Tuple
 def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type]):
     """
     Recurse into the module and return parameter names of all submodules, excluding
-    modules that are of any type defined in `forbidden_layer_types`.
+    modules that are of any type defined in ``forbidden_layer_types``.
     
     Parameters
     ----------
@@ -24,7 +24,7 @@ def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type
     Returns
     -------
     list[str]
-        The names of the parameters with the following format: `<submodule-name>.<parameter-name>`.
+        The names of the parameters with the following format: ``<submodule-name>.<parameter-name>``.
     
     Examples
     --------
@@ -62,27 +62,25 @@ def get_optim_parameters(
     only_requires_grad: bool = True,
 ):
     """
-    Setup the optimizer. Get model parameters to be optimized. If weight_decay is a float,
+    Setup the optimizer. Get model parameters to be optimized. If ``weight_decay`` is a ``float``,
     apply weight decaying to the parameters too (except for bias and parameters from layer
     normalization module).
-    
     
     Parameters
     ----------
     model : torch.nn.Module
         The model for which to get parameters that will be optimized.
     weight_decay : float | None
-        The amount of weight decay to use, by default None.
+        The amount of weight decay to use, by default ``None``.
     only_requires_grad : bool
-        Whether to only use parameters that require gradient or all parameters, by default True.
+        Whether to only use parameters that require gradient or all parameters, by default ``True``.
 
     Returns
     -------
     dict | list
-        If weight_decay is None, return all model parameters.
-        If weight_decay is not None, return a dictionary of parameter groups of different weight decay.
-        In specific, bias parameters and parameters from layer normalization module will
-        have weight decay of 0.0, while any other parameters will have weight decay of weight_decay.
+        - If weight_decay is ``None``, return all model parameters.
+        
+        - If weight_decay is not ``None``, return a dictionary of parameter groups of different weight decay. In specific, bias parameters and parameters from layer normalization module will have weight decay of ``0.0``, while any other parameters will have weight decay of ``weight_decay``.
     
     Notes
     -----
@@ -146,6 +144,11 @@ def get_optim_parameters(
 class OptimizerArgs(ConfigBase):
     """
     A base class for optimizer arguments, here we define learning rate lr.
+
+    Attributes
+    ----------
+    lr : float
+        Learning rate of the optimizer
     """
     lr: float
 
@@ -180,17 +183,19 @@ class OptimizerConfig(ConfigBase):
         Parameters
         ----------
         name : str
-            Name of the optimizer, this can be any in ['adamw', 'adam', 'sgd'].
+            Name of the optimizer, this can be any in ``['adamw', 'adam', 'sgd']``.
         arguments : dict[str, ty.Any]
             Arguments for the optimizer, specific to a certain type of optimizer. A common argument
-            can be learning rate, e.g `{'lr': 0.5}`. If `name` is "adamw", can add eps to `arguments`,
-            e.g `{'lr': 0.5, 'eps': 0.001}`.
+            can be learning rate, e.g ``{'lr': 0.5}``. If ``name`` is ``"adamw"``, can add ``eps`` to ``arguments``,
+            e.g ``{'lr': 0.5, 'eps': 0.001}``.
         
-        Example
-        -------
-        In the following example, `optim_config` will initialize property `arguments` of type SGDConfig,
-        setting lr=0.5 as its property. We also have access to `init_optimizer()` method of the property,
-        which initalizes an SGD optimizer. This method is actually called in make_optimizer()
+        Examples
+        --------
+        
+        In the following example, ``optim_config`` will initialize property ``arguments`` of type ``SGDConfig``,
+        setting ``lr=0.5`` as its property. We also have access to ``init_optimizer()`` method of the property,
+        which initalizes an SGD optimizer. This method is actually called in ``make_optimizer()``
+
         >>> optim_config = OptimizerConfig("sgd", {"lr": 0.5})
         """
         argument_cls = OPTIMIZER_CONFIG_MAP[name]
@@ -211,8 +216,8 @@ class OptimizerConfig(ConfigBase):
         optimizer : torch.optim.Optimizer
             The created optimizer.
 
-        Example
-        -------
+        Examples
+        --------
         >>> optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
         >>> optim_config.make_optimizer(my_module)
         SGD (
@@ -225,7 +230,6 @@ class OptimizerConfig(ConfigBase):
             momentum: 0.0
             nesterov: False
             weight_decay: 0.5
-
         Parameter Group 1
             dampening: 0
             differentiable: False
@@ -243,8 +247,8 @@ class OptimizerConfig(ConfigBase):
 @configclass
 class SGDConfig(OptimizerArgs):
     """
-    Configuration for an SGD optimizer. This class has `init_optimizer()` method,
-     which is used to initialize and return an SGD optimizer.
+    Configuration for an SGD optimizer. This class has ``init_optimizer()`` method,
+    which is used to initialize and return an SGD optimizer.
 
     Attributes
     ----------
@@ -263,7 +267,7 @@ class SGDConfig(OptimizerArgs):
     def init_optimizer(self, model: nn.Module):
         """
         Creates and returns an SGD optimizer that optimizes the model's parameters. These parameters
-        will be processed via `get_optim_parameters` before used to initalized the optimizer.
+        will be processed via ``get_optim_parameters`` before used to initalized the optimizer.
 
         Parameters
         ----------
@@ -289,7 +293,6 @@ class SGDConfig(OptimizerArgs):
             momentum: 0.9
             nesterov: False
             weight_decay: 0.5
-
         Parameter Group 1
             dampening: 0
             differentiable: False
@@ -311,17 +314,17 @@ class SGDConfig(OptimizerArgs):
 @configclass
 class AdamWConfig(OptimizerArgs):
     """
-    Configuration for an AdamW optimizer. This class has `init_optimizer()` method
-    used to initialize and return an AdamW optimizer.
+    Configuration for an AdamW optimizer. This class has ``init_optimizer()`` method
+    used to initialize and return an ``AdamW`` optimizer.
 
     Attributes
     ----------
     betas : Tuple[float, float]
-        Coefficients for computing running averages of gradient and its square (default is (0.9, 0.999)).
+        Coefficients for computing running averages of gradient and its square (default is ``(0.9, 0.999)``).
     eps : float
-        Term added to the denominator to improve numerical stability (default is 1e-8).
+        Term added to the denominator to improve numerical stability (default is ``1e-8``).
     weight_decay : float
-        Weight decay rate (default is 0.0).
+        Weight decay rate (default is ``0.0``).
 
     Examples
     --------
@@ -333,8 +336,8 @@ class AdamWConfig(OptimizerArgs):
 
     def init_optimizer(self, model: nn.Module):
         """
-        Creates and returns an AdamW optimizer that optimizes the model's parameters. These parameters
-        will be processed via `get_optim_parameters` before used to initalized the optimizer.
+        Creates and returns an ``AdamW`` optimizer that optimizes the model's parameters. These parameters
+        will be processed via ``get_optim_parameters`` before used to initalized the optimizer.
 
         Parameters
         ----------
@@ -344,7 +347,7 @@ class AdamWConfig(OptimizerArgs):
         Returns
         -------
         Optimizer
-            An instance of the AdamW optimizer.
+            An instance of the ``AdamW`` optimizer.
 
         Examples
         --------
@@ -360,7 +363,6 @@ class AdamWConfig(OptimizerArgs):
             lr: 0.1
             maximize: False
             weight_decay: 0.5
-
         Parameter Group 1
             amsgrad: False
             betas: (0.9, 0.99)
@@ -382,15 +384,15 @@ class AdamWConfig(OptimizerArgs):
 @configclass
 class AdamConfig(OptimizerArgs):
     """
-    Configuration for an AdamW optimizer. This class has `init_optimizer()` method
-    used to initialize and return an Adam optimizer.
+    Configuration for an ``Adam`` optimizer. This class has ``init_optimizer()`` method
+    used to initialize and return an ``Adam`` optimizer.
 
     Attributes
     ----------
     betas : Tuple[float, float]
-        Coefficients for computing running averages of gradient and its square (default is (0.5, 0.9)).
+        Coefficients for computing running averages of gradient and its square (default is ``(0.5, 0.9)``).
     weight_decay : float
-        Weight decay rate (default is 0.0).
+        Weight decay rate (default is ``0.0``).
 
     """
     betas: Tuple[float, float] = (0.5, 0.9)
@@ -398,16 +400,18 @@ class AdamConfig(OptimizerArgs):
 
     def init_optimizer(self, model: nn.Module):
         """
-        Creates and returns an Adam optimizer that optimizes the model's parameters. These parameters
-        will be processed via `get_optim_parameters` before used to initalized the optimizer.
+        Creates and returns an ``Adam`` optimizer that optimizes the model's parameters. These parameters
+        will be processed via ``get_optim_parameters`` before used to initalized the optimizer.
 
         Parameters
         ----------
         model : torch.nn.Module
             The model that has parameters that the optimizer will optimize.
 
-        Returns:
-            Optimizer: An instance of the Adam optimizer.
+        Returns
+        -------
+        Optimizer
+            An instance of the ``Adam`` optimizer.
 
         Examples
         --------
@@ -425,7 +429,6 @@ class AdamConfig(OptimizerArgs):
             lr: 0.1
             maximize: False
             weight_decay: 0.5
-
         Parameter Group 1
             amsgrad: False
             betas: (0.6, 0.9)

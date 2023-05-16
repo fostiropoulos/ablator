@@ -34,11 +34,11 @@ class FileLogger:
         Parameters
         ----------
         path : str | Path | None, optional
-            Path to the log file, by default None.
+            Path to the log file, by default ``None``.
         verbose : bool, optional
-            Whether to print messages to the console, by default True.
+            Whether to print messages to the console, by default ``True``.
         prefix : str | None, optional
-            A prefix to add to each logged message, by default None.
+            A prefix to add to each logged message, by default ``None``.
         """
         self.path = path
         if path is not None:
@@ -82,7 +82,7 @@ class FileLogger:
         msg : str
             The message to log.
         verbose : bool, optional
-            Whether to print messages to the console, by default False.
+            Whether to print messages to the console, by default ``False``.
         """
         self(msg, verbose)
 
@@ -94,7 +94,7 @@ class FileLogger:
         msg : str
             The message to log.
         verbose : bool, optional
-            Whether to print messages to the console, by default True.
+            Whether to print messages to the console, by default ``True``.
         """
         msg = f"{FileLogger.WARNING}{msg}{FileLogger.ENDC}"
         self(msg, verbose)
@@ -131,7 +131,7 @@ class FileLogger:
         Parameters  
         ----------
         prefix : str | None, optional
-            The prefix to add to each logged message, by default None.
+            The prefix to add to each logged message, by default ``None``.
         """
         if prefix is not None:
             self.prefix = f"{prefix} - "

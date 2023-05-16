@@ -41,6 +41,7 @@ def parse_rsync_paths(
         The experiment directory that's being in sync with remote servers.
     root_folder : Path, str, None, default=None
         The root folder that contains all experiment directories.
+        
     Returns
     -------
     dict[str, Path]
@@ -58,12 +59,12 @@ def parse_rsync_paths(
 
 def parse_metrics(optim_direction: list[str], metrics: dict[str, float] | None):
     """
-    Resolve metrics to be optimized.
+    Parse metrics to be optimized.
     
     Parameters
     ----------
     optim_direction: list[str]
-        The metrics to be optimized, defined in the ParallelConfig.
+        The metrics to be optimized, defined in the ``ParallelConfig``.
     metrics: dict[str, float]
         The metrics returned after a ray job finishes.
     
@@ -114,7 +115,7 @@ def train_main_remote(
         Running configuration of the trial.
     dict[str, float], None
         If exception raised (Except for LossDivergedError and TrainPlateauError),
-        this will be None object. Otherwise, this will be a dictionary of metrics.
+        this will be ``None`` object. Otherwise, this will be a dictionary of metrics.
     TrialState
         A TrialState object indicating the state of the trial job.
     """
@@ -200,16 +201,16 @@ class ParallelTrainer(ProtoTrainer):
     """
     def __init__(self, *args, run_config: ParallelConfig, **kwargs):
         """
-        Initialize ParallelTrainer using config from ``run_config``.
+        Initialize ``ParallelTrainer`` using config from ``run_config``.
         
         Parameters
         ----------
         run_config : ParallelConfig
             The runtime configuration for this trainer.
         *args : tuple
-            Extra arguments used for ProtoTrainer
+            Extra arguments used for ``ProtoTrainer``
         **kwargs : dict, optional
-            Extra arguments to  ProtoTrainer, this can be {'wrapper': ModelWrapper}.
+            Extra arguments to  ``ProtoTrainer``, this can be ``{'wrapper': ModelWrapper}``.
         """
         # Distributed config parser
         run_config = copy.deepcopy(run_config)
@@ -446,14 +447,17 @@ class ParallelTrainer(ProtoTrainer):
     ):
         """
         Set up and launch the parallel training and tuning process. This includes:
-        prepare ray cluster for running optuna trials to tune hyperparameters; if available,
-        synchronize Google Cloud storage buckets to working directory defined in runtime configuration;
-        initialize optuna trials and add them to optuna storage and experiment state
-        database for tracking training progress (or retrieve existing trials from optuna
-        storage). Trials initialized (or retrieved), ``self.experiment_state.running_trials``,
-        will be pushed to ray nodes so they can be executed in parallel.
-        After all trials have finished and progress is recorded in sqlite databases in
-        the working directory, these changes will be synchronized back to the GCP nodes via ``rsync_up()`` method.
+
+        - prepare ray cluster for running optuna trials to tune hyperparameters.
+        
+        - if available, synchronize Google Cloud storage buckets to working directory defined in runtime configuration.
+        
+        - initialize optuna trials and add them to optuna storage and experiment state database for tracking training progress (or retrieve existing trials from optuna storage).
+        
+        Trials initialized (or retrieved), ``self.experiment_state.running_trials``,
+        will be pushed to ray nodes so they can be executed in parallel. After all trials
+        have finished and progress is recorded in sqlite databases in the working directory,
+        these changes will be synchronized back to the GCP nodes via ``rsync_up()`` method.
         
         Parameters
         ----------

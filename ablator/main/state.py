@@ -72,12 +72,12 @@ class TrialState(enum.IntEnum):
 
     def to_optuna_state(self) -> OptunaTrialState | None:
         """
-        Convert this TrialState to an OptunaTrialState.
+        Convert this ``TrialState`` to an ``OptunaTrialState``.
 
         Returns
         -------
             OptunaTrialState | None: 
-                Corresponding OptunaTrialState or None if the state is not applicable.
+                Corresponding ``OptunaTrialState`` or ``None`` if the state is not applicable.
         """
         if self in [
             TrialState.PRUNED,
@@ -96,7 +96,7 @@ def augment_trial_kwargs(
     trial_kwargs: dict[str, ty.Any], augmentation: dict[str, ty.Any]
 ) -> dict[str, ty.Any]:
     """
-    Augment the trial_kwargs with additional key-value pairs specified in the augmentation dictionary.
+    Augment the ``trial_kwargs`` with additional key-value pairs specified in the augmentation dictionary.
 
     Parameters
     ----------
@@ -275,9 +275,9 @@ class OptunaState:
         study_name : str
             The name of the study.
         optim_metrics : dict[str, Optim]
-            A dictionary of metric names and their optimization directions (either 'max' or 'min').
+            A dictionary of metric names and their optimization directions (either ``'max'`` or ``'min'``).
         search_algo : SearchAlgo
-            The search algorithm to use ('random' or 'tpe').
+            The search algorithm to use (``'random'`` or ``'tpe'``).
         search_space : dict[str, SearchSpace]
             A dictionary of parameter names and their corresponding SearchSpace instances.
 
@@ -361,14 +361,14 @@ class OptunaState:
         trial_num : int
             The trial number.
         metrics : dict[str, float] or None
-            A dictionary of metric names and their corresponding values, or None if the trial is not complete.
+            A dictionary of metric names and their corresponding values, or ``None`` if the trial is not complete.
         state : TrialState
             The state of the trial.
 
         Raises
         ------
         RuntimeError
-            If ``metrics`` is None and ``state`` is COMPLETE.
+            If ``metrics`` is ``None`` and ``state`` is ``COMPLETE``.
         """
         if metrics is None and state == TrialState.COMPLETE:
             raise RuntimeError(f"Missing metrics for complete trial {trial_num}.")

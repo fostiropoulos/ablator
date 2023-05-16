@@ -14,9 +14,9 @@ def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.
     _dict : dict
         The input dictionary to be flattened.
     expand_list : bool, optional
-        Whether to expand lists and tuples in the dictionary, by default True.
+        Whether to expand lists and tuples in the dictionary, by default ``True``.
     seperator : str, optional
-        The separator used for joining the keys, by default ".".
+        The separator used for joining the keys, by default ``"."``.
 
     Returns
     -------

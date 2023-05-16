@@ -78,7 +78,7 @@ class ConfigBase:
 
     Notes
     -----
-    all config class must be decorated with @configclass
+    All config class must be decorated with ``@configclass``
     """
     config_class = type(None)
 
@@ -342,7 +342,7 @@ class ConfigBase:
         Returns
         -------
         bool
-            True if the configuration object has a valid state, False otherwise.
+            ``True`` if the configuration object has a valid state, ``False`` otherwise.
 
         """
         diffs = sorted(self.diff_str(config, ignore_stateless=True))

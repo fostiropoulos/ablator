@@ -280,7 +280,8 @@ class ModelWrapper(ModelBase):
         data: Iterable
             The data to move to the device.
         device: ty.Optional[ty.Union[torch.device, str]]
-            The device to move the data to. If None, the device specified in the config is used.
+            The device to move the data to. If ``None``, the device specified in the config is used.
+        
         Returns
         -------
         data: Iterable
@@ -519,7 +520,7 @@ class ModelWrapper(ModelBase):
 
     def update_status(self):
         """
-        Update the metrics with current training stats, and then all metrics (static and moving average) will be set as description for the tqdm progress.
+        Update the metrics with current training stats, and then all metrics (static and moving average) will be set as description for the ``tqdm`` progress.
         """
         self.metrics.update_static_metrics(self.train_stats)
         if self.verbose != "tqdm":
@@ -560,7 +561,7 @@ class ModelWrapper(ModelBase):
     def eval(self, smoke_test=False):
         """
         Evaluate the model then update scheduler and save checkpoint if the current iteration is an evaluation step.
-        It also check if it is early stopping.(check configs for more details)
+        It also check if it is early stopping (check Model Configuration module for more details).
         """
         # Evaluation step
         if self._is_step(self.eval_itr):
@@ -714,7 +715,7 @@ class ModelWrapper(ModelBase):
         scheduler: ty.Optional[Scheduler],
     ) -> float | None:
         """
-        Calculate the loss and apply the gradients, call optimizer.step() and scheduler.step().
+        Calculate the loss and apply the gradients, call ``optimizer.step()`` and ``scheduler.step()``.
 
         Parameters
         ----------
@@ -791,7 +792,7 @@ class ModelWrapper(ModelBase):
         smoke_test: bool = False,
     ) -> dict[str, float]:
         """
-        Validate the model on data in dataloader (which can either be val dataloader - so tag is val, or test dataloader - so tag is test)
+        Validate the model on data in dataloader (which can either be val dataloader - so tag is ``val``, or test dataloader - so tag is ``test``)
 
         Parameters
         ----------
@@ -806,7 +807,7 @@ class ModelWrapper(ModelBase):
         subsample: float
             The fraction of the dataloader to use for validation.
         smoke_test: bool
-            Whether to execute this function as a smoke test. If True, only one iteration will be performed, which is useful for quickly checking if the code runs without errors. Default is False.
+            Whether to execute this function as a smoke test. If ``True``, only one iteration will be performed, which is useful for quickly checking if the code runs without errors. Default is ``False``.
         
         Returns
         -------
@@ -921,7 +922,7 @@ class ModelWrapper(ModelBase):
 
         Notes
         -----
-        Auxiliary metrics are computed during training and are used for moving_aux_metrics in ``TrainMetrics``.
+        Auxiliary metrics are computed during training and are used for ``moving_aux_metrics`` in ``TrainMetrics``.
         Check ``TrainMetrics`` for more details.
         """
         pass
