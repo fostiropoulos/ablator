@@ -264,7 +264,7 @@ def parse_type_hint(type_hint):
     Returns
     -------
     Annotation
-        A namedtuple containing state, optional, collection, and variable_type information.
+        A namedtuple containing ``state``, ``optional``, ``collection``, and ``variable_type`` information.
 
     Examples
     --------
@@ -331,7 +331,7 @@ def parse_value(val, annot: Annotation, name=None):
     annot : Annotation
         The annotation namedtuple to guide the parsing.
     name : str, optional
-        The name of the value, by default None.
+        The name of the value, by default ``None``.
 
     Returns
     -------
@@ -418,7 +418,7 @@ def get_annotation_state(annotation):
 class Stateful(ty.Generic[T]):
     """
     This is for attributes that are fixed between experiments. By default
-    all type_hints are stateful. Do not need to use.
+    all ``type_hints`` are stateful. Do not need to use.
     """
 
 

@@ -47,8 +47,8 @@ class SummaryLogger:
     log_iteration : int
         Current log iteration.
     checkpoint_iteration : dict[str, dict[str, int]]
-        checkpoint_iteration is a dictionary that keeps track of the checkpoint iterations for each directory. 
-        It is used in the checkpoint() method to determine the appropriate iteration number for the saved checkpoint.
+        ``checkpoint_iteration`` is a dictionary that keeps track of the checkpoint iterations for each directory. 
+        It is used in the ``checkpoint()`` method to determine the appropriate iteration number for the saved checkpoint.
     log_file_path : Path | None
         Path to the log file.
     dashboard : LoggerBase | None
@@ -83,13 +83,13 @@ class SummaryLogger:
         run_config : RunConfig
             The run configuration.
         model_dir : str | None | Path, optional
-            Path to the model directory, by default None.
+            Path to the model directory, by default ``None``.
         resume : bool, optional
-            Whether to resume from an existing model directory, by default False.
+            Whether to resume from an existing model directory, by default ``False``.
         keep_n_checkpoints : int | None, optional
-            Number of checkpoints to keep, by default None.
+            Number of checkpoints to keep, by default ``None``.
         verbose : bool, optional
-            Whether to print messages to the console, by default True.
+            Whether to print messages to the console, by default ``True``.
         """
 
         run_config = copy.deepcopy(run_config)
@@ -264,14 +264,14 @@ class SummaryLogger:
         itr: Optional[int] = None,
     ):
         """ Update the dashboard with the given metrics.
-        write some metrics to json files and update the current metadata(log_iteration)
+        write some metrics to json files and update the current metadata (``log_iteration``)
 
         Parameters
         ----------
         metrics : Union[TrainMetrics, dict]
             The metrics to update.
         itr : Optional[int], optional  
-            The iteration, by default None.
+            The iteration, by default ``None``.
         
         Raises
         ------
@@ -280,7 +280,7 @@ class SummaryLogger:
         
         Notes
         -----
-        self.log_iteration is increased by 1 every time update() is called while training models.
+        Attribute ``log_iteration`` is increased by 1 every time ``update()`` is called while training models.
         """
         
         if itr is None:
@@ -311,12 +311,12 @@ class SummaryLogger:
         """Save a checkpoint and update the checkpoint iteration
 
         Saves the model checkpoint in the appropriate directory based on the ``is_best`` parameter.
-        If ``is_best`` is True, the checkpoint is saved in the ``"best"`` directory, indicating the best
-        performing model so far. Otherwise, the checkpoint is saved in the "recent" directory,
+        If ``is_best==True``, the checkpoint is saved in the ``"best"`` directory, indicating the best
+        performing model so far. Otherwise, the checkpoint is saved in the ``"recent"`` directory,
         representing the most recent checkpoint.
 
         The file path for the checkpoint is constructed using the selected directory name (``"best"`` or
-       ``"recent"``), and the file name with the format "{file_name}_{itr:010}.pt", where ``itr`` is the
+        ``"recent"``), and the file name with the format ``"{file_name}_{itr:010}.pt"``, where ``itr`` is the
         iteration number.
 
         The ``checkpoint_iteration`` dictionary is updated with the current iteration number for each

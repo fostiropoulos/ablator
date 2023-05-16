@@ -66,8 +66,8 @@ class TrainMetrics:
         
         Examples
         --------
-
         Initialize an object of TrainMetrics:
+        
         >>> from ablator.modules.metrics.main import TrainMetrics
         >>> train_metrics = TrainMetrics(
         ...     batch_limit=30,

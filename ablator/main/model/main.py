@@ -44,9 +44,9 @@ class ModelBase(ABC):
     Attributes
     ----------
     model_class : Type[nn.Module]
-        The class definition of the model's structure, which is a subclass of nn.Module.
+        The class definition of the model's structure, which is a subclass of ``nn.Module``.
     run_config : RunConfig
-        An instance of RunConfig containing configuration details.
+        An instance of ``RunConfig`` containing configuration details.
     train_dataloader : DataLoader
         A DataLoader object responsible for model training.
     val_dataloader : Optional[DataLoader]
@@ -56,7 +56,7 @@ class ModelBase(ABC):
     logger : Union[SummaryLogger, tutils.Dummy]
         Records information on the program's operation and model training, such as progress and performance metrics.
     device : str
-        The type of device used for running the experiment. i.e. "cuda", "cpu", "cuda:0".
+        The type of device used for running the experiment. i.e. ``"cuda"``, ``"cpu"``, ``"cuda:0"``.
     model_dir : Path
         The model directory.
     experiment_dir : Path
@@ -65,14 +65,14 @@ class ModelBase(ABC):
         Enables autocasting for chosen regions. Autocasting automatically chooses the precision for GPU operations 
         to improve performance while maintaining accuracy.
     verbose : bool
-        If True, prints additional information while training. Only applied for the master process.
+        If ``True``, prints additional information while training. Only applied for the master process.
     amp : bool
-        If True, apply automatic mixed precision training, otherwise default precision.
+        If ``True``, apply automatic mixed precision training, otherwise default precision.
     random_seed : Optional[int]
         Sets the seed for generating random numbers.
     train_tqdm : tqdm, optional
         An optional instance of ``tqdm`` that creates progress bars and displays real-time information during training. 
-        i.e. time remaining. Only applied for the master proces
+        i.e. time remaining. Only applied for the master process.
     current_checkpoint : Optional[Path]
         Directory for the current checkpoint file, by default None.
     metrics : Metrics
@@ -98,9 +98,9 @@ class ModelBase(ABC):
     
     2. Users must implement the abstract methods to customize the model's behavior.
     
-    3. Mixed precision training enables some operations to use the torch.float32 datatype and other operations use lower 
-    precision floating point datatype torch.float16. This is for saving time and reducing memory usage. Ordinarily, 
-    "automatic mixed precision training" means training with torch.autocast and torch.cuda.amp.GradScaler together.
+    3. Mixed precision training enables some operations to use the ``torch.float32`` datatype and other operations use lower 
+    precision floating point datatype ``torch.float16``. This is for saving time and reducing memory usage. Ordinarily, 
+    "automatic mixed precision training" means training with ``torch.autocast`` and ``torch.cuda.amp.GradScaler`` together.
     More information: https://pytorch.org/docs/stable/amp.html
 
     """
@@ -108,7 +108,7 @@ class ModelBase(ABC):
         self,
         model_class: type[nn.Module],
     ):
-        """Initializes the ModelBase class with the required model_class and optional configurations.
+        """Initializes the ModelBase class with the required ``model_class`` and optional configurations.
 
         Parameters
         ----------
@@ -153,13 +153,21 @@ class ModelBase(ABC):
         -------
         OrderedDict
             An ordered dictionary with the following keys and values:
+            
             - learning_rate: The current learning rate.
+
             - total_steps: The total steps for the training process.
+
             - epochs: The number of epochs for training.
+
             - current_epoch: The current epoch during training.
+
             - current_iteration: The current iteration during training.
+
             - best_iteration: The iteration with the best loss value so far.
+
             - best_loss: The best (lowest) loss value achieved during training.
+
         """
         return OrderedDict(
             learning_rate=self.learning_rate,
@@ -188,17 +196,17 @@ class ModelBase(ABC):
     @cached_property
     def epoch_len(self):
         """
-        Returns the length of an epoch, which is the number of batches in the train_dataloader.
+        Returns the length of an epoch, which is the number of batches in the ``train_dataloader``.
 
         Returns
         -------
         int
-            The length of an epoch, represented as the number of batches in the train_dataloader.
+            The length of an epoch, represented as the number of batches in the ``train_dataloader``.
         
         Raises
         ------
         AssertionError
-            If the train_dataloader is not defined or its length is 0.
+            If the ``train_dataloader`` is not defined or its length is 0.
         """
         assert (
             hasattr(self, "train_dataloader") and len(self.train_dataloader) > 0
@@ -208,7 +216,7 @@ class ModelBase(ABC):
     @cached_property
     def eval_itr(self):
         """
-        calculate the interval between evaluations.
+        Calculate the interval between evaluations.
 
         Returns
         -------
@@ -266,17 +274,17 @@ class ModelBase(ABC):
     ) -> None:
         """
         Abstract method to create and initialize the model. Must be implemented by subclasses.
-        Example implementation: Please see the ``create_model`` method in the `ModelWrapper` class.
+        Example implementation: Please see the ``create_model`` method in the ``ModelWrapper`` class.
 
         Parameters
         ----------
         save_dict : dict[str, ty.Any] | None, optional
             A dictionary containing saved model data, such as weights, optimizer state, etc.,
-            to be loaded into the model, by default None.
+            to be loaded into the model, by default ``None``.
         strict_load : bool, optional
             If True, the model will be loaded strictly, ensuring that the saved state
             matches the model's structure exactly. If False, the model can be loaded
-            with a partially matching state, by default True.
+            with a partially matching state, by default ``True``.
 
     
         """
@@ -292,7 +300,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         is_best : bool, optional
-            Indicates if the current checkpoint is the best model so far, by default False.
+            Indicates if the current checkpoint is the best model so far, by default ``False``.
         """
         raise NotImplementedError
 
@@ -309,9 +317,9 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details.
+            An instance of ``RunConfig`` containing configuration details.
         smoke_test : bool, optional
-            Whether to run as a smoke test, by default False.
+            Whether to run as a smoke test, by default ``False``.
         """
         raise NotImplementedError
 
@@ -327,7 +335,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details.
+            An instance of ``RunConfig`` containing configuration details.
         """
         raise NotImplementedError
 
@@ -337,7 +345,7 @@ class ModelBase(ABC):
         Abstract method to create dataloaders for the training, validation, and testing datasets. 
 
         This method should define the process of loading the data and creating dataloaders
-        for the training, validation, and testing datasets based on the provided run_config.
+        for the training, validation, and testing datasets based on the provided ``run_config``.
 
         Must be implemented by subclasses.
         Example implementation: Please see the ``make_dataloaders`` method in the ``ModelWrapper`` class.
@@ -345,7 +353,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details.
+            An instance of ``RunConfig`` containing configuration details.
         """
         raise NotImplementedError
 
@@ -360,7 +368,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details.
+            An instance of ``RunConfig`` containing configuration details.
         """
         raise NotImplementedError
 
@@ -394,7 +402,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details.
+            An instance of ``RunConfig`` containing configuration details.
         """
         self.make_dataloaders(run_config)
         assert (
@@ -509,7 +517,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         run_config : RunConfig
-            An instance of RunConfig containing configuration details.
+            An instance of ``RunConfig`` containing configuration details.
         smoke_test : bool, optional
             Whether to run as a smoke test, by default False.
         debug : bool, optional
@@ -631,7 +639,7 @@ class ModelBase(ABC):
         save_dict : dict[str, ty.Any]
             A dictionary containing the saved model state and other necessary information.
         model_only : bool, optional, default=False
-            If True, only the model's weights will be loaded, ignoring other state information.
+            If ``True``, only the model's weights will be loaded, ignoring other state information.
         """
         raise NotImplementedError
 

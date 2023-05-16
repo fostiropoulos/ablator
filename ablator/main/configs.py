@@ -29,9 +29,9 @@ class TrainConfig(ConfigBase):
     epochs: int
         number of epochs to train.
     optimizer_config: OptimizerConfig
-        optimizer configuration.(check OptimizerConfig for more details)
+        optimizer configuration. (check ``OptimizerConfig`` for more details)
     scheduler_config: Optional[SchedulerConfig]
-        scheduler configuration.(check SchedulerConfig for more details)    
+        scheduler configuration. (check ``SchedulerConfig`` for more details)    
     rand_weights_init: bool = True
         whether to initialize model weights randomly. 
     """
@@ -55,7 +55,7 @@ class ModelConfig(ConfigBase):
 @configclass
 class RunConfig(ConfigBase):
     """
-    base configuration for running an experiment.
+    Base configuration for running an experiment.
     
     Attributes
     ----------
@@ -64,9 +64,9 @@ class RunConfig(ConfigBase):
     random_seed: Optional[int] = None
         random seed.
     train_config: TrainConfig
-        training configuration.(check TrainConfig for more details)
+        training configuration. (check ``TrainConfig`` for more details)
     model_config: ModelConfig
-        model configuration.(check ModelConfig for more details)
+        model configuration. (check ``ModelConfig`` for more details)
     keep_n_checkpoints: int = 3
         number of latest checkpoints to keep.
     tensorboard: bool = True
@@ -85,8 +85,8 @@ class RunConfig(ConfigBase):
         max number of megabytes stored in every tag(train, eval, test) for evaluation.
     early_stopping_iter: Optional[int] = None
         The maximum allowed difference between the current iteration and the last iteration with the best metric before applying early stopping. 
-        Early stopping will be triggered if the difference (current_itr - best_itr) exceeds 'early_stopping_iter'. 
-        If set to None, early stopping will not be applied.
+        Early stopping will be triggered if the difference ``(current_itr - best_itr)`` exceeds ``early_stopping_iter``. 
+        If set to ``None``, early stopping will not be applied.
     eval_epoch: float = 1
         The epoch interval between two evaluations.
     log_epoch: float = 1
@@ -96,7 +96,7 @@ class RunConfig(ConfigBase):
     warm_up_epochs: float = 0
         number of epochs marked as warm up epochs.
     divergence_factor: float = 100
-        if cur_loss > best_loss > divergence_factor, the model is considered to have diverged.
+        if ``cur_loss > best_loss > divergence_factor``, the model is considered to have diverged.
 
     """
     # location to store experiment artifacts
@@ -129,7 +129,7 @@ class RunConfig(ConfigBase):
 
 class SearchType(Enum):
     """
-    type of search space.
+    Type of search space.
     """
     integer = "int"
     numerical = "float"
@@ -138,7 +138,7 @@ class SearchType(Enum):
 @configclass
 class SearchSpace(ConfigBase):
     """
-    search space configuration.
+    Search space configuration.
     """
     value_range: Optional[Tuple[str, str]]
     categorical_values: Optional[List[str]]
@@ -153,7 +153,7 @@ class SearchSpace(ConfigBase):
 
 class SearchAlgo(Enum):
     """
-    type of search algorithm.
+    Type of search algorithm.
     """
     random = "random"
     tpe = "tpe"
@@ -161,7 +161,7 @@ class SearchAlgo(Enum):
 
 class Optim(Enum):
     """
-    type of optimization direction.
+    Type of optimization direction.
     """
     min = "min"
     max = "max"
@@ -170,7 +170,7 @@ class Optim(Enum):
 @configclass
 class ParallelConfig(RunConfig):
     """
-    parallel training configuration.
+    Parallel training configuration. ``{"val_loss": "min"}``
 
     Attributes
     ----------
@@ -179,9 +179,9 @@ class ParallelConfig(RunConfig):
     concurrent_trials: int
         number of trials to run concurrently.
     search_space: Dict[SearchSpace]
-        search space for hyperparameter search,eg.{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}
+        search space for hyperparameter search,eg. ``{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}``
     optim_metrics: Dict[Optim]
-        metrics to optimize, eg.{"val_loss": "min"}
+        metrics to optimize, eg. ``{"val_loss": "min"}``
     search_algo: SearchAlgo = SearchAlgo.tpe
         type of search algorithm.
     ignore_invalid_params: bool = False

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class PlotAnalysis(Analysis):
     """
-    class for analyzing plotting
+    Class for analyzing plotting
     """
     @classmethod
     def _write_images(

@@ -31,7 +31,7 @@ def process_row(row: str, **aux_info) -> dict[str, ty.Any] | None:
     -------
     dict[str, ty.Any] | None
         A dictionary resulting from the combination of the processed row and auxiliary information,
-        or None if the input row cannot be parsed as a JSON object.
+        or ``None`` if the input row cannot be parsed as a JSON object.
 
     Raises
     ------
@@ -148,7 +148,7 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
 
 class Results:
     """
-    class for processing experiment results.
+    Class for processing experiment results.
 
     Parameters
     ----------
@@ -157,9 +157,9 @@ class Results:
     experiment_dir : str | Path
         The path to the experiment directory.
     cache : bool, optional
-        Whether to cache the results, by default False
+        Whether to cache the results, by default ``False``
     use_ray : bool, optional
-        Whether to use ray for parallel processing, by default False
+        Whether to use ray for parallel processing, by default ``False``
     
     Attributes
     ----------
@@ -170,7 +170,7 @@ class Results:
     metric_map : dict[str, Optim]
         A dictionary mapping optimize metric names to their optimization direction.
     data: pd.DataFrame
-        The processed results of the experiment. refer read_results for more details.
+        The processed results of the experiment. Refer ``read_results`` for more details.
     config_attrs: list[str]
         The list of all the optimizable hyperparameter names
     search_space: dict[str, ty.Any]
@@ -223,7 +223,7 @@ class Results:
 
     def _assert_cat_attributes(self, categorical_attributes: list[str]):
         """
-        check if the categorical attributes are imbalanced
+        Check if the categorical attributes are imbalanced
         default ratio is 0.8, which means if the most frequent value
         is more than 80% every other kind of values, then it is imbalanced
 
@@ -259,7 +259,7 @@ class Results:
     @property
     def metric_names(self) -> list[str]:
         """
-        get the list of all optimize directions
+        Get the list of all optimize directions
 
         Returns
         -------
@@ -300,7 +300,7 @@ class Results:
         """
         Read multiple results from experiment directory with ray to enable parallel processing.
 
-        This function calls read_result many times, refer to read_result for more details.
+        This function calls ``read_result`` many times, refer to ``read_result`` for more details.
 
         Parameters
         ----------
@@ -309,7 +309,7 @@ class Results:
         experiment_dir : Path
             The experiment directory
         num_cpus : int, optional
-            Number of CPUs to use for ray processing, by default None
+            Number of CPUs to use for ray processing, by default ``None``
         
         Returns
         -------
