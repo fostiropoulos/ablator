@@ -131,7 +131,7 @@ def augment_trial_kwargs(
 
 
 def parse_metrics(
-    metric_directions: OrderedDict, metrics: dict[str, float]
+    metric_directions: dict[str, Optim], metrics: dict[str, float]
 ) -> dict[str, float]:
     """
     Convert metrics to ordered dictionary of float values using their direction (minimize or maximize).
@@ -207,21 +207,21 @@ def sample_trial_params(
     for k, v in search_space.items():
         # TODO conditional sampling
         if v.value_range is not None and v.value_type == SearchType.integer:
-            low, high = v.value_range
-            low = int(low)
-            high = int(high)
+            low_str, high_str = v.value_range
+            low_int = int(low_str)
+            high_int = int(high_str)
             assert (
-                min(low, high) == low
+                min(low_int, high_int) == low_int
             ), "`value_range` must be in the format of (min,max)"
-            parameter[k] = optuna_trial.suggest_int(k, low, high)
+            parameter[k] = optuna_trial.suggest_int(k, low_int, high_int)
         elif v.value_range is not None and v.value_type == SearchType.numerical:
-            low, high = v.value_range
-            low = float(low)
-            high = float(high)
+            low_str, high_str = v.value_range
+            low_float = float(low_str)
+            high_float = float(high_str)
             assert (
-                min(low, high) == low
+                min(low_float, high_float) == low_float
             ), "`value_range` must be in the format of (min,max)"
-            parameter[k] = optuna_trial.suggest_float(k, low, high)
+            parameter[k] = optuna_trial.suggest_float(k, low_float, high_float)
         elif v.categorical_values is not None:
             parameter[k] = optuna_trial.suggest_categorical(k, v.categorical_values)
         else:
@@ -747,7 +747,10 @@ class ExperimentState:
         with Session(self.engine) as session:
             stmt = select(Trial).where(Trial.config_uid == config_uid)
             res = session.scalar(stmt)
-        return res.optuna_trial_num
+        if res is not None:
+            return int(res.optuna_trial_num)
+        else:
+            raise ValueError(f"No trial found with config_uid: {config_uid}")
 
     def _update_internal_trial_state(
         self, config_uid: str, metrics: dict[str, float] | None, state: TrialState
@@ -778,7 +781,7 @@ class ExperimentState:
             stmt = select(Trial).where(Trial.config_uid == config_uid)
             res = session.execute(stmt).scalar_one()
             res.metrics.append(internal_metrics)
-            res.state = state
+            res.state = state # type: ignore # TODO fix this
             session.commit()
             session.flush()
 
@@ -862,14 +865,14 @@ class ExperimentState:
 
     def _get_trials_by_stmt(self, stmt) -> list[Trial]:
         with self.engine.connect() as conn:
-            trials: list[Trial] = conn.execute(stmt).fetchall()
+            trials: list[Trial] = conn.execute(stmt).fetchall() # type: ignore
         return trials
 
     def _get_trial_configs_by_stmt(self, stmt) -> list[ParallelConfig]:
         trials = self._get_trials_by_stmt(stmt)
         configs = []
         for trial in trials:
-            trial_config = type(self.config)(**trial.config_param)
+            trial_config = type(self.config)(**dict(trial.config_param))
             configs.append(trial_config)
             assert trial_config.uid == trial.config_uid
         return configs

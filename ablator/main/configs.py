@@ -142,7 +142,7 @@ class SearchSpace(ConfigBase):
     """
     value_range: Optional[Tuple[str, str]]
     categorical_values: Optional[List[str]]
-    value_type: SearchType = "float"
+    value_type: SearchType = SearchType.numerical
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
