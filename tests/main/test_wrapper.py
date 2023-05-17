@@ -223,6 +223,8 @@ def test_verbosity():
         model_config=ModelConfig(),
         verbose="tqdm",
         metrics_n_batches=100,
+        device="cpu",
+        amp=False,
     )
     out, err = capture_output(
         lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
@@ -234,6 +236,8 @@ def test_verbosity():
         model_config=ModelConfig(),
         verbose="tqdm",
         metrics_n_batches=32,
+        device="cpu",
+        amp=False,
     )
     out, err = capture_output(
         lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
@@ -243,7 +247,11 @@ def test_verbosity():
         in out
     )
     console_config = RunConfig(
-        train_config=train_config, model_config=ModelConfig(), verbose="console"
+        train_config=train_config,
+        model_config=ModelConfig(), 
+        verbose="console",
+        device="cpu",
+        amp=False,
     )
     out, err = capture_output(
         lambda: TestWrapper(MyCustomModel).train(console_config, debug=True)
