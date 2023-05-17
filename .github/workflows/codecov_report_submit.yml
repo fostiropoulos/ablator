@@ -1,6 +1,8 @@
 name:  Codecov CI
 
 on:
+  push:
+    branches: [ trainers, abcd, ]
   pull_request:
     branches: [ trainers, abcd, ]
 
