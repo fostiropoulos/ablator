@@ -165,9 +165,9 @@ def train_main_remote(
         if model.model_dir is not None:
             kwargs = parse_rsync_paths(model.model_dir, root_dir)
             if run_config.gcp_config is not None:
-                run_config.gcp_config.rsync_up(**kwargs, logger=mp_logger)
+                run_config.gcp_config.rsync_up(Path(kwargs["local_path"]), str(kwargs["remote_path"]), logger=mp_logger)
             elif run_config.remote_config is not None:
-                run_config.remote_config.rsync_up(**kwargs, logger=mp_logger)
+                run_config.remote_config.rsync_up(Path(kwargs["local_path"]), str(kwargs["remote_path"]))
 
 
 class ParallelTrainer(ProtoTrainer):
@@ -214,9 +214,11 @@ class ParallelTrainer(ProtoTrainer):
         """
         # Distributed config parser
         run_config = copy.deepcopy(run_config)
+        experiment_dir = run_config.experiment_dir or ""
         run_config.experiment_dir = os.path.join(
-            run_config.experiment_dir, f"experiment_{run_config.uid}"
+            experiment_dir, f"experiment_{run_config.uid}"
         )
+
         super().__init__(*args, run_config=run_config, **kwargs)  # type: ignore
 
         assert issubclass(
@@ -277,7 +279,7 @@ class ParallelTrainer(ProtoTrainer):
                 "Consider adjusting `concurrent_trials` or `cpus_per_experiment`."
             )
 
-        return cpu
+        return int(cpu)
 
     def kill_idle(self):
         """
@@ -328,7 +330,7 @@ class ParallelTrainer(ProtoTrainer):
 
     def _init_state(
         self,
-        working_dir: str,
+        working_dir: str = "",
         address: str | None = "auto",
         modules: list[tys.ModuleType] | None = None,
     ):
@@ -439,7 +441,7 @@ class ParallelTrainer(ProtoTrainer):
             self.wrapper.evaluate(model_config)
         self.sync_up()
 
-    def launch(
+    def launch( #type: ignore
         self,
         working_directory: str,
         auxilary_modules: list[tys.ModuleType] | None = None,

@@ -19,6 +19,7 @@ class LinearPlot(Numerical):
         self,
         scatter_plot: bool = True,
         polynomial_fit: int | None = None,
+        **kwargs,
     ) -> tuple[Figure, Axes]:
         if not scatter_plot and polynomial_fit is None:
             raise ValueError(
