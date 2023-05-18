@@ -175,7 +175,7 @@ class ModelWrapper(ModelBase):
             The optimizer config to create the optimizer from.
         optimizer_state: dict[str, ty.Any]
             The optimizer state to load the optimizer from.
-        
+
         Returns
         -------
         optimizer: Optimizer
@@ -256,7 +256,7 @@ class ModelWrapper(ModelBase):
         model_only: bool
             Whether to load only the model or include scheduler, optimizer and scaler.
 
-        
+
         Notes
         -----
         This method is the implementation of the abstract method in the base class.
@@ -281,12 +281,12 @@ class ModelWrapper(ModelBase):
             The data to move to the device.
         device: ty.Optional[ty.Union[torch.device, str]]
             The device to move the data to. If ``None``, the device specified in the config is used.
-        
+
         Returns
         -------
         data: Iterable
             The data on the device.
-        
+
         """
         if device is None:
             device = self.device
@@ -645,7 +645,7 @@ class ModelWrapper(ModelBase):
             Whether to run a smoke test.
         debug: bool
             Whether to run in debug mode.
-        
+
         Returns
         -------
         TrainMetrics
@@ -670,7 +670,7 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        run_config: RunConfig  
+        run_config: RunConfig
             The run config to use for evaluation.
         """
         self._init_state(run_config, resume=True)
@@ -774,6 +774,7 @@ class ModelWrapper(ModelBase):
             self.logger.warn(
                 f"Metrics batch-limit {batch_lim} is smaller than "
                 f"the validation dataloader length {len(dataloader)}. "
+                "Consider increasing `metrics_n_batches`."
             )
         metrics_dict = self.validation_loop(
             model, dataloader, metrics, tag, subsample, smoke_test
@@ -808,7 +809,7 @@ class ModelWrapper(ModelBase):
             The fraction of the dataloader to use for validation.
         smoke_test: bool
             Whether to execute this function as a smoke test. If ``True``, only one iteration will be performed, which is useful for quickly checking if the code runs without errors. Default is ``False``.
-        
+
         Returns
         -------
         dict[str, float]
@@ -848,7 +849,7 @@ class ModelWrapper(ModelBase):
         ----------
         run_config: RunConfig
             The run configuration.
-        
+
         Returns
         -------
         DataLoader
@@ -863,19 +864,19 @@ class ModelWrapper(ModelBase):
         dict[str, Callable]
             The evaluation functions to use.Also see ``TrainMetrics`` for details.
         """
-        
+
         return None
 
     # Functions that can be optionally over-written.
     def make_dataloader_test(self, run_config: RunConfig) -> DataLoader | None:
         """
         Function to make the test dataloader.
-        
+
         Parameters
         ----------
         run_config: RunConfig
             The run configuration.
-        
+
         Returns
         -------
         DataLoader | None
@@ -886,7 +887,7 @@ class ModelWrapper(ModelBase):
     def make_dataloader_val(self, run_config: RunConfig) -> DataLoader | None:
         """
         Function to make the validation dataloader.
-        
+
         Parameters
         ----------
         run_config: RunConfig
@@ -914,8 +915,8 @@ class ModelWrapper(ModelBase):
         ----------
         output_dict: dict[str, torch.Tensor] | None
             The output dictionary from the model.
-        
-        Returns   
+
+        Returns
         -------
         ty.Optional[dict[str, ty.Any]]
             The auxiliary metrics.
@@ -946,7 +947,7 @@ class ModelWrapper(ModelBase):
         """
         Save a checkpoint of the model.It will use the class name of the model as the filename.
 
-        
+
         Parameters
         ----------
         is_best: bool
