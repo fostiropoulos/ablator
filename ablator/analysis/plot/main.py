@@ -37,7 +37,7 @@ class PlotAnalysis(Analysis):
             A dictionary mapping names to matplotlib objects.
         path: Path
             Path to save the images to.
-        file_format: ty.Literal["png", "pdf", "jpg"] 
+        file_format: ty.Literal["png", "pdf", "jpg"]
             the file format to save the images as.
 
         Examples
@@ -75,23 +75,23 @@ class PlotAnalysis(Analysis):
 
         Parameters
         ----------
-        path: Path | None 
+        path: Path | None
             A pathlib.Path object representing the directory to write images to.
         plot_cls: type[Plot]
             A subclass of Plot representing the type of plot to make.
-        metrics: pd.DataFrame 
+        metrics: pd.DataFrame
             A pandas DataFrame containing metric values.
-        results: pd.DataFrame 
+        results: pd.DataFrame
             A pandas DataFrame containing attribute values.
-        metric_map: dict[str, Optim] 
+        metric_map: dict[str, Optim]
             A dictionary mapping metric names to optimization functions.
         append: bool
             A boolean indicating whether to append plots to an existing axes object.
         ax: Axes | None
             A matplotlib.axes.Axes object representing the axis to plot on.
-        metric_name_remap: 
+        metric_name_remap:
             A dictionary mapping metric names to new metric names.
-        attribute_name_remap: 
+        attribute_name_remap:
             A dictionary mapping attribute names to new attribute names.
         kwargs: Additional keyword arguments to pass to the plot method.
 
@@ -226,7 +226,7 @@ class PlotAnalysis(Analysis):
             num_attrs = list(set(attribute_name_remap.keys()).intersection(num_attrs))
 
         if len(cat_attrs) > 0:
-            for plot_fn in ("make_violinplot"):
+            for plot_fn in ("make_violinplot",):
                 getattr(self, plot_fn)(
                     cat_attrs,
                     self.metric_names,
@@ -236,7 +236,7 @@ class PlotAnalysis(Analysis):
                     **plt_kwargs,
                 )
         if len(num_attrs) > 0:
-            for plot_fn in ("make_linearplot"):
+            for plot_fn in ("make_linearplot",):
                 getattr(self, plot_fn)(
                     num_attrs,
                     self.metric_names,
