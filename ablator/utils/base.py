@@ -8,9 +8,9 @@ import numpy as np
 import torch
 from torch import nn
 from pynvml.smi import nvidia_smi as smi
+from ablator.modules.loggers.file import FileLogger
 
-
-class Dummy:
+class Dummy(FileLogger):
     def __init__(self, *args, **kwargs):
         pass
 

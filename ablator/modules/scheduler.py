@@ -6,10 +6,11 @@ from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau, StepLR, _LRS
 
 from ablator.config.main import ConfigBase, Derived, configclass
 from ablator.config.types import Literal
+from torch.optim import Optimizer
 
 Scheduler = ty.Union[_LRScheduler, ReduceLROnPlateau, ty.Any]
 
-StepType = Literal["train", "val", "epoch"]
+StepType = ty.Literal["train", "val", "epoch"]
 
 
 @configclass
@@ -122,7 +123,7 @@ class OneCycleConfig(SchedulerArgs):
     # type: ignore
     step_when: StepType = "train"
 
-    def init_scheduler(self, model: nn.Module, optimizer: nn.Module):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
         """
         Initializes the OneCycleLR scheduler.
         Creates and returns a OneCycleLR scheduler that monitors optimizer's learning rate.
@@ -131,7 +132,7 @@ class OneCycleConfig(SchedulerArgs):
         ----------
         model : nn.Module
             The model.
-        optimizer : nn.Module
+        optimizer : Optimizer
             The optimizer used to update the model parameters, whose learning rate we want to monitor.
 
         Returns
@@ -185,7 +186,7 @@ class PlateuaConfig(SchedulerArgs):
     # type: ignore
     step_when: StepType = "val"
 
-    def init_scheduler(self, model: nn.Module, optimizer: nn.Module):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
         """
         Initialize the ReduceLROnPlateau scheduler.
 
@@ -193,7 +194,7 @@ class PlateuaConfig(SchedulerArgs):
         ----------
         model : nn.Module
             The model being optimized.
-        optimizer : nn.Module
+        optimizer : Optimizer
             The optimizer used to update the model parameters, whose learning
             rate we want to monitor.
 
@@ -237,7 +238,7 @@ class StepLRConfig(SchedulerArgs):
     # type: ignore
     step_when: StepType = "epoch"
 
-    def init_scheduler(self, model: nn.Module, optimizer: nn.Module):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
         """
         Initialize the StepLR scheduler for a given model and optimizer.
 

@@ -4,7 +4,7 @@ import socket
 import subprocess
 import typing as ty
 from pathlib import Path
-
+from typing import List, Dict, Any
 from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Optional
 from ablator.modules.loggers.file import FileLogger
@@ -84,7 +84,7 @@ class GcpConfig(ConfigBase):
             The command to upload the file.
         """
         
-        destination = Path(self.bucket) / destination / local_path.name
+        destination = str(Path(self.bucket) / destination / local_path.name)
         src = local_path
         cmd = ["gsutil", "-m", "rsync", "-r"]
         if self.exclude_glob is not None:
@@ -130,7 +130,7 @@ class GcpConfig(ConfigBase):
         list[str]
             List of files in the bucket.
         """
-        destination = (
+        destination = str(
             Path(self.bucket) / destination
             if destination is not None
             else Path(self.bucket)
@@ -202,7 +202,7 @@ class GcpConfig(ConfigBase):
         p = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
         return p
 
-    def _find_gcp_nodes(self, node_hostname: None | str = None) -> dict[str, ty.Any]:
+    def _find_gcp_nodes(self, node_hostname: None | str = None) -> list[dict[str, ty.Any]]:
         """
         Find the GCP instances with the given hostname.
         

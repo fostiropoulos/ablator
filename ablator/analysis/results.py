@@ -266,7 +266,7 @@ class Results:
         list[str]   
             list of optimize metric names
         """
-        return list(self.metric_map.values())
+        return list(map(str, self.metric_map.values()))
 
     def _parse_results(
         self,
