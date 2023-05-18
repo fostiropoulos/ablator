@@ -73,6 +73,17 @@ def test_proto(tmp_path: Path):
         < 0.01
     )
 
+def test_parse_metrics():
+    optim_dir1 = ["m1","m2","m4"]
+    metrics1 = {"m1":1,"m2":2,"m3":3,"m4":4,"m5":5}
+    result_correct = {"m1":1,"m2":2,"m4":4}
+    result1 = parse_metrics(optim_dir1,metrics1)
+
+    assert result_correct.equals(result1)
+
+    result2 = parse_metrics(optim_dir1,None)
+    assert result2 == None
+
 
 if __name__ == "__main__":
     test_proto(Path("/tmp/"))
