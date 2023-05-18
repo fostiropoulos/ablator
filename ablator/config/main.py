@@ -109,7 +109,7 @@ class ConfigBase:
             )
         missing_vals = []
         for k, annotation in self.annotations.items():
-            if not annotation.optional and annotation.state not in [Derived, Stateless]:
+            if not annotation.optional and annotation.state not in [Derived]:
                 # make sure non-optional and derived values are not empty or
                 # without a default assignment
                 if not (
