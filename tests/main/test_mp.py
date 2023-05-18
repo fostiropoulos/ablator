@@ -16,6 +16,7 @@ from ablator import (
 )
 from ablator.analysis.results import Results
 from ablator.config.main import configclass
+from ablator.main.state import ExperimentState
 from ablator.main.configs import ParallelConfig, SearchSpace
 from ablator.main.mp import ParallelTrainer
 from ablator import Derived
@@ -141,6 +142,48 @@ def test_mp(tmp_path: Path):
     assert res.data.shape[0] // 2 == len(ablator.experiment_state.complete_trials)
 
 
+# my unit test
+def test_mp_status_resume(tmp_path: Path):
+    """
+    Test status management when performing distributed experiment and after resuming an experiment
+    new unit test by Shangzhou Shi
+    """
+    wrapper = TestWrapper(MyCustomModel)
+    config.experiment_dir = tmp_path
+    config.device = "cuda"
+    config.gpu_mb_per_experiment = 0.001
+    config.cpus_per_experiment = 0.001
+
+    ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
+    ablator.gpu = 1 / config.concurrent_trials
+    ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
+    res = Results(MyParallelConfig, ablator.experiment_dir)
+
+    # check if the status management of trials are working well
+    total_valid_trial_num=len(ablator.experiment_state.complete_trials)+len(ablator.experiment_state.running_trials)+ \
+        len(ablator.experiment_state.pending_trials)+len(ablator.experiment_state.failed_trials)
+    assert total_valid_trial_num<=ablator.experiment_state.config.total_trials
+
+    # initialize again
+    r_ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
+    # some errors may cause the experiment stop early
+    # re-initialize the status management to turn on resume mode since 'resume' is not an attribute
+    r_ablator.experiment_state=ExperimentState(
+            r_ablator.experiment_dir, r_ablator.run_config, r_ablator.logger, resume=True
+        )
+    r_ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
+    res = Results(MyParallelConfig, r_ablator.experiment_dir)
+    r_total_valid_trial_num=len(r_ablator.experiment_state.complete_trials)+len(r_ablator.experiment_state.running_trials)+ \
+        len(r_ablator.experiment_state.pending_trials)+len(r_ablator.experiment_state.failed_trials)
+    # check if the status management of trials are working well
+    assert r_total_valid_trial_num<=r_ablator.experiment_state.config.total_trials
+    # check the number of valid sampled/'finished' trials after resume, should be more or equal
+    assert total_valid_trial_num<=r_total_valid_trial_num
+    assert ablator.experiment_state.failed_trials<=r_ablator.experiment_state.failed_trials
+    assert ablator.experiment_state.complete_trials<=r_ablator.experiment_state.complete_trials
+
+
+
 if __name__ == "__main__":
     import shutil
 
@@ -148,5 +191,7 @@ if __name__ == "__main__":
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
     test_mp(tmp_path)
+    # new unit test by Shangzhou Shi
+    test_mp_status_resume(tmp_path)
 
     pass
