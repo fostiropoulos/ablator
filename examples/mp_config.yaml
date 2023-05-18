@@ -1,0 +1,30 @@
+experiment_dir: "/tmp/dir"
+train_config:
+  dataset: cifar10
+  optimizer_config:
+    name: adam
+    arguments:
+      lr: 0.01
+      weight_decay: 0.0
+  batch_size: 32
+  epochs: 10
+  scheduler_config: null
+  rand_weights_init: true
+model_config:
+  name: resnet18
+metrics_n_batches: 400
+total_trials: 10
+search_space:
+  train_config.optimizer_config.arguments.lr:
+    value_range: [0.0001,0.01]
+    value_type: float
+  train_config.batch_size:
+    value_range: [2,32]
+    value_type: int
+  model_config.name:
+    categorical_values: ['resnet18','resnet34']
+concurrent_trials: 10
+optim_metrics:
+  "val_loss": "min"
+gpu_mb_per_experiment: 100
+cpus_per_experiment: 1
