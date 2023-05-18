@@ -65,6 +65,8 @@ def test_state(tmp_path: Path):
         optim_metrics={"acc": "max"},
         total_trials=100,
         concurrent_trials=100,
+        gpu_mb_per_experiment=0,
+        cpus_per_experiment=0.1,
     )
     default_vals = config.make_dict(config.annotations, flatten=True)
     with tempfile.TemporaryDirectory() as fp:
@@ -89,6 +91,8 @@ def test_state(tmp_path: Path):
         total_trials=100,
         concurrent_trials=100,
         ignore_invalid_params=False,
+        gpu_mb_per_experiment=0,
+        cpus_per_experiment=0.1,
     )
     with tempfile.TemporaryDirectory() as fp:
         assert_error_msg(
@@ -107,6 +111,8 @@ def test_state(tmp_path: Path):
         total_trials=1,
         concurrent_trials=100,
         ignore_invalid_params=True,
+        gpu_mb_per_experiment=0,
+        cpus_per_experiment=0.1,
     )
     with tempfile.TemporaryDirectory() as fp:
         assert_error_msg(
@@ -216,6 +222,8 @@ def test_state(tmp_path: Path):
             total_trials=1,
             concurrent_trials=100,
             ignore_invalid_params=True,
+            gpu_mb_per_experiment=0,
+            cpus_per_experiment=0.1,
         )
         config.to_dict()
         config.total_trials = 10
