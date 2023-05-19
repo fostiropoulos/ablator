@@ -12,6 +12,7 @@ from torchvision import transforms
 
 from ablator import ModelConfig, ModelWrapper, RunConfig, configclass, Literal
 
+
 # Dataset wrapper for retrieving CIFAR-10 dataset and preprocessing data
 class CifarWrapper(torchvision.datasets.CIFAR10):
     def __getitem__(self, index: int) -> Dict[Any, Any]:
@@ -34,10 +35,12 @@ class ResConfig(ModelConfig):
     weights: str = "IMAGENET1K_V1"
     progress: bool = False
 
+
 # Model configuration class, defining hyperparameters of the model
 @configclass
 class ResRunConfig(RunConfig):
     model_config: ResConfig
+
 
 # Function to load CIFAR-10 dataset, returns a DataLoader instance
 def load_cifar10(config: ResRunConfig, flag: str = "train") -> DataLoader:
@@ -58,6 +61,7 @@ def load_cifar10(config: ResRunConfig, flag: str = "train") -> DataLoader:
         shuffle=True,
     )
     return dataloader
+
 
 # Custom Model class implementing the model architecture.
 class MyModel(nn.Module):
@@ -83,9 +87,11 @@ class MyModel(nn.Module):
         out = out.argmax(dim=-1)
         return {"y_pred": out, "y_true": labels}, loss
 
+
 # Custom accuracy function
 def my_accuracy(y_true, y_pred):
     return accuracy_score(y_true.flatten(), y_pred.flatten())
+
 
 # Custom Model Wrapper, extending ModelWrapper class from Ablator
 class MyModelWrapper(ModelWrapper):
