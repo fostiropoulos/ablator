@@ -173,12 +173,12 @@ def test_state(tmp_path: Path):
         some_uid = s.all_trials[0].uid
         for state, trial_attr_name in zip(
             [
-                # TrialState.RUNNING,
-                TrialState.WAITING,
+                TrialState.RUNNING,
+                #TrialState.WAITING,
                 TrialState.FAIL,
                 TrialState.COMPLETE,
             ],
-            ["pending_trials", "failed_trials", "complete_trials"],
+            ["running_trials", "failed_trials", "complete_trials"],
         ):
             val_before = len(getattr(s, trial_attr_name))
             s.update_trial_state(

@@ -24,6 +24,7 @@ from ablator.modules.loggers.file import FileLogger
 from ablator.modules.loggers.main import DuplicateRunError
 from ablator.modules.metrics.main import LossDivergedError
 from ablator.utils.base import get_gpu_max_mem
+import ablator.utils.base as butils
 
 # The exceptions that are unrecoverable i.e.  [DuplicateRunError]
 CRASH_EXCEPTION_TYPES: list[type] = []
@@ -147,19 +148,22 @@ class ParallelTrainer(ProtoTrainer):
 
         self.run_config: ParallelConfig
         self.run_config = run_config
-        self.device = self.run_config.device
+        self.device=butils.parse_device(self.run_config.device)
         self.experiment_dir: Path = Path(run_config.experiment_dir)
         self.logger = FileLogger(path=self.experiment_dir / "mp.log")
         self.experiment_state: ExperimentState
         self.total_trials = self.run_config.total_trials
-
-        self.gpu_mem_bottleneck = min(get_gpu_max_mem())
-        if min(get_gpu_max_mem()) != max(get_gpu_max_mem()):
-            self.logger.warn(
-                f"Bottlenecked memory utilization by {self.gpu_mem_bottleneck}."
-            )
-        self.cpu: float = self._make_cpu()
-        self.gpu: float = self._make_gpu()
+        if(self.device.startswith("cuda")):
+            self.gpu_mem_bottleneck = min(get_gpu_max_mem())
+            if min(get_gpu_max_mem()) != max(get_gpu_max_mem()):
+                self.logger.warn(
+                    f"Bottlenecked memory utilization by {self.gpu_mem_bottleneck}."
+                )
+            self.gpu: float = self._make_gpu()
+            self.cpu: float = self._make_cpu()
+        elif(self.device=="cpu"):
+            self.cpu: float = self._make_cpu()
+            self.gpu: float = 0.0
         self.experiment_dir.joinpath("default_config.yaml").write_text(
             str(self.run_config), encoding="utf-8"
         )
@@ -167,12 +171,12 @@ class ParallelTrainer(ProtoTrainer):
 
     def _make_gpu(self):
         if (gpu := self.run_config.gpu_mb_per_experiment / self.gpu_mem_bottleneck) > 0:
-            assert (
-                self.device == "cuda"
-            ), "Device must be set to 'cuda' if `gpu_mb_per_experiment` > 0"
-            assert (
-                torch.cuda.is_available()
-            ), "Could not find a torch.cuda installation on your system."
+            # assert (
+            #     self.device == "cuda"
+            # ), "Device must be set to 'cuda' if `gpu_mb_per_experiment` > 0"
+            # assert (
+            #     torch.cuda.is_available()
+            # ), "Could not find a torch.cuda installation on your system."
             mem_util = int(gpu * self.run_config.concurrent_trials)
             sys_mem = int(sum(get_gpu_max_mem()))
             if mem_util > sys_mem * 0.8:
