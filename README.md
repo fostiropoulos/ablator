@@ -57,9 +57,11 @@ The library is under active development and a lot of the API endpoints will be r
 
 Use a python virtual enviroment to avoid version conflicts.
 
-1. `git clone git@github.com:fostiropoulos/ablator.git`
-2. `cd ablator`
-3. `pip install .`
+`pip install git+https://github.com/fostiropoulos/ablator.git`
 
 For Development
-`pip install .[dev]`
+
+1. `git clone git@github.com:fostiropoulos/ablator.git`
+2. `cd ablator`
+3. `pip install -e .[dev]`
+

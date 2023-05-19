@@ -69,6 +69,7 @@ class TrialState(enum.IntEnum):
         7  # Trial that was pruned during execution for poor performance
     )
     RECOVERABLE_ERROR = 8  # Trial that was pruned during execution for poor performance
+    RESUME = 9  # A trial that needs to be resumed
 
     def to_optuna_state(self) -> OptunaTrialState | None:
         """
@@ -550,7 +551,7 @@ class ExperimentState:
             )
         running_trials = []
         for trial in self.running_trials:
-            self.update_trial_state(trial.uid, None, TrialState.WAITING)
+            self.update_trial_state(trial.uid, None, TrialState.RESUME)
             running_trials.append(trial)
 
         trials = self.__sample_trials(
@@ -559,9 +560,7 @@ class ExperimentState:
             ignore_errors=self.config.ignore_invalid_params,
         )[:max_trials_conc]
 
-        for trial in trials:
-            self.update_trial_state(trial.uid, None, TrialState.RUNNING)
-        assert len(self.running_trials) > 0, "No trials could be scheduled."
+        assert len(trials) > 0, "No trials could be scheduled."
         return trials
 
     def sample_trials(self, n_trials_to_sample: int) -> list[ParallelConfig] | None:
@@ -594,8 +593,6 @@ class ExperimentState:
             ignore_errors=self.config.ignore_invalid_params,
         )[:n_trials_to_sample]
 
-        for trial in trials:
-            self.update_trial_state(trial.uid, None, TrialState.RUNNING)
         return trials
 
     def __append_trial(
@@ -805,32 +802,6 @@ class ExperimentState:
             self.logger.error(f"{config_uid} failed {runtime_errors} times. Skipping.")
             self.update_trial_state(config_uid, None, TrialState.FAIL)
 
-    # def _reset_trial_state(self, config_uid: str):
-    #     with Session(self.engine) as session:
-    #         stmt = select(Trial).where(Trial.config_uid == config_uid)
-    #         res = session.execute(stmt).scalar_one()
-    #         assert res.state == TrialState.RUNNING
-    #         res.state = TrialState.WAITING
-    #         _config = copy.deepcopy(res.config_param)
-    #         existing_checkpoints = len(
-    #             list(
-    #                 self.experiment_dir.joinpath(config_uid, "checkpoints").glob("*.pt")
-    #             )
-    #         )
-    #         if existing_checkpoints > 0:
-    #             _config["train_config"]["resume"] = True
-    #         else:
-    #             self.logger.warn(
-    #                 f"{config_uid} was interupted but no checkpoint was found. Will re-start training."
-    #             )
-    #             _config["train_config"]["resume"] = False
-
-    #         res.config_param = _config
-    #         session.commit()
-    #         session.flush()
-
-    #     return True
-
     def __append_trial_internal(
         self,
         config_uid: str,
@@ -914,7 +885,14 @@ class ExperimentState:
 
     @property
     def pending_trials(self) -> list[ParallelConfig]:
-        stmt = select(Trial).where((Trial.state == TrialState.WAITING))
+        stmt = select(Trial).where(
+            (Trial.state == TrialState.WAITING) | (Trial.state == TrialState.RESUME)
+        )
+        return self._get_trial_configs_by_stmt(stmt)
+
+    @property
+    def resumed_trials(self) -> list[ParallelConfig]:
+        stmt = select(Trial).where((Trial.state == TrialState.RESUME))
         return self._get_trial_configs_by_stmt(stmt)
 
     @property

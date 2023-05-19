@@ -32,7 +32,7 @@ class ArrayStore(Sequence):
             The maximum number of batches of values to store for this single store. Default is 30.
         memory_limit : int or None, optional
             The maximum memory allowed for all values in bytes. Default is 1e8.
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.stores import ArrayStore
@@ -56,7 +56,7 @@ class ArrayStore(Sequence):
         ----------
         val : np.ndarray or float or int
             The data, can be a batch of data, or a scalar.
-            
+
         Raises
         ------
         AssertionError:
@@ -113,7 +113,7 @@ class ArrayStore(Sequence):
     def get(self) -> np.ndarray:
         """
         Returns a flatten array of values
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.stores import ArrayStore
@@ -186,10 +186,10 @@ class PredictionStore:
         moving_average_limit : int, optional
             The maximum number of values allowed to store moving average metrics. Default is 3000.
         evaluation_functions : dict[str, Callable], optional
-            A dictionary of key-value pairs, keys are evaluation function names, values are 
+            A dictionary of key-value pairs, keys are evaluation function names, values are
             callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
             must match with names of prediction batches that the model returns. So if model prediction over
-            a batch looks like this: ``{"preds": <batch of predictions>, "labels": <batch of predicted labels>}``, 
+            a batch looks like this: ``{"preds": <batch of predictions>, "labels": <batch of predicted labels>}``,
             then callable's arguments should be ``preds`` and ``labels``, e.g ``evaluation_functions=
             {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
 
@@ -230,21 +230,21 @@ class PredictionStore:
     def append(self, **batches: dict[str, np.ndarray]):
         """
         Appends batches of values, constrained on the limits.
-        
+
         Parameters
         ----------
         tag : str
             A tag that specifies which set of predictions to evaluate.
         **batches : dict[str, np.ndarray]
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
-            and value is a batch of prediction values. Note that the passed keys in ``**batches`` must match arguments in 
+            and value is a batch of prediction values. Note that the passed keys in ``**batches`` must match arguments in
             evaluation functions arguments in the Callable in `evaluation_functions` when we initialize `PredictionStore` object.
 
         Raises
         ------
         AssertionError
             If passed keys do not match arguments in evaluation functions, or when batches among the keys are different in size.
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.stores import PredictionStore
@@ -288,15 +288,15 @@ class PredictionStore:
         metrics : dict
             A dictionary of metric values calculated from different sets of predictions.
 
-        
+
         Raises
         ------
         AssertionError
             If passed keys do not match arguments in evaluation functions.
-        
+
         ValueError
             If evaluation result is not a numeric scalar.
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.main import PredictionStore
@@ -310,7 +310,7 @@ class PredictionStore:
         {'mean': 5.333333333333334}
         """
         if self._keys is None:
-            raise RuntimeError("PredictionStore has no predictions to evaluate.")
+            return {}
         batches = {k: self._get_arr(k).get() for k in self._keys}
 
         if self.__evaluation_functions__ is None or len(batches) == 0:
@@ -337,7 +337,7 @@ class PredictionStore:
     def reset(self):
         """
         Reset to empty all prediction sequences (e.g predictions, labels).
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.main import PredictionStore
@@ -350,13 +350,15 @@ class PredictionStore:
         >>> pred_store.append(preds=np.array([4,3,0]), labels=np.array([5,1,3]))
         >>> pred_store.reset()
         """
+        if self._keys is None:
+            return
         for k in self._keys:
             self._get_arr(k).reset()
 
 
 class MovingAverage(ArrayStore):
     """
-    This class is used to store moving average metrics 
+    This class is used to store moving average metrics
 
     """
 
@@ -393,7 +395,7 @@ class MovingAverage(ArrayStore):
         ----------
         val : ty.Union[np.ndarray, torch.Tensor, float, int]
             The data to be appended
-            
+
         Raises
         ------
         ValueError:

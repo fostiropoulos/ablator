@@ -1,6 +1,7 @@
 import copy
 import multiprocessing as mp
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -15,11 +16,12 @@ import torch
 
 import ablator as ablator_module
 from ablator.main.configs import ParallelConfig
-from ablator.main.model.main import TrainPlateauError
+from ablator.main.model.main import CheckpointNotFoundError, TrainPlateauError
 from ablator.main.model.wrapper import ModelWrapper
 from ablator.main.proto import ProtoTrainer
 from ablator.main.state import ExperimentState, TrialState
 from ablator.modules.loggers.file import FileLogger
+from ablator.modules.loggers.main import DuplicateRunError
 from ablator.modules.metrics.main import LossDivergedError
 from ablator.utils.base import get_gpu_max_mem
 
@@ -87,6 +89,8 @@ def train_main_remote(
     root_dir: Path,
     fault_tollerant: bool = True,
     crash_exceptions_types: list[type] | None = None,
+    resume: bool = False,
+    clean_reset: bool = False,
 ) -> tuple[ParallelConfig, dict[str, float] | None, TrialState]:
     """
     The trial job that will be executed remotely at a ray node. This is where model training happens.
@@ -139,7 +143,7 @@ def train_main_remote(
         return run_config, None, TrialState.FAIL
 
     try:
-        res = model.train(run_config)
+        res = model.train(run_config, resume=resume)
         mp_logger.info(f"Finished training - {run_config.uid}")
         return run_config, res.to_dict(), TrialState.COMPLETE
     except (LossDivergedError, TrainPlateauError):
@@ -148,6 +152,27 @@ def train_main_remote(
             model.metrics.to_dict(),
             TrialState.PRUNED_POOR_PERFORMANCE,
         )
+    except DuplicateRunError:
+        return (
+            run_config,
+            None,
+            TrialState.RECOVERABLE_ERROR,
+        )
+    except CheckpointNotFoundError:
+        if clean_reset:
+            if model.model_dir is not None:
+                shutil.rmtree(model.model_dir.as_posix())
+            return (
+                run_config,
+                None,
+                TrialState.RECOVERABLE_ERROR,
+            )
+        else:
+            return (
+                run_config,
+                None,
+                TrialState.FAIL,
+            )
     except RuntimeError as e:
         if str(e).startswith("CUDA out of memory."):
             mp_logger.warn(f"Cuda out of memory for {run_config.uid}. Restarting...")
@@ -312,17 +337,28 @@ class ParallelTrainer(ProtoTrainer):
         mp_logger = ray.put(copy.deepcopy(self.logger))
         remotes = []
         for run_config in trials:
-            diffs = self.run_config.diff_str(run_config)
-            diffs = "\n\t".join(diffs)
-            msg = f"Scheduling uid: {run_config.uid}\nParameters: \n\t{diffs}\n-----"
-            self.logger.info(msg)
             if (remote_fn := self._make_remote_fn()) is not None:
+                diffs = self.run_config.diff_str(run_config)
+                diffs = "\n\t".join(diffs)
+                resume = run_config.uid in [
+                    cfg.uid for cfg in self.experiment_state.resumed_trials
+                ]
+                action = "Scheduling" if resume is False else "Resuming"
+                msg = f"{action} uid: {run_config.uid}\nParameters: \n\t{diffs}\n-----"
+                self.logger.info(msg)
+                self.experiment_state.update_trial_state(
+                    run_config.uid, None, TrialState.RUNNING
+                )
                 remotes.append(
                     remote_fn.remote(
                         model_obj,
                         copy.deepcopy(run_config),
                         mp_logger,
                         self.experiment_dir,
+                        True,
+                        None,
+                        resume,
+                        True,
                     )
                 )
 
@@ -333,6 +369,7 @@ class ParallelTrainer(ProtoTrainer):
         working_dir: str = "",
         address: str | None = "auto",
         modules: list[tys.ModuleType] | None = None,
+        resume: bool = False,
     ):
         if not ray.is_initialized():
             if modules is None:
@@ -350,7 +387,7 @@ class ParallelTrainer(ProtoTrainer):
         super()._init_state()
         self.sync_down()
         self.experiment_state = ExperimentState(
-            self.experiment_dir, self.run_config, self.logger
+            self.experiment_dir, self.run_config, self.logger, resume=resume
         )
 
     def _rsync_nodes(self):
@@ -446,6 +483,7 @@ class ParallelTrainer(ProtoTrainer):
         working_directory: str,
         auxilary_modules: list[tys.ModuleType] | None = None,
         ray_head_address: str | None = "auto",
+        resume: bool = False,
     ):
         """
         Set up and launch the parallel training and tuning process. This includes:
@@ -479,10 +517,11 @@ class ParallelTrainer(ProtoTrainer):
             working_dir=working_directory,
             address=ray_head_address,
             modules=auxilary_modules,
+            resume=resume,
         )
 
         futures = []
-        trials: list[ParallelConfig] | None = self.experiment_state.running_trials
+        trials: list[ParallelConfig] | None = self.experiment_state.pending_trials
         futures = self.__make_remotes_from_trials(trials)
         config: ParallelConfig
         metrics: dict[str, float] | None

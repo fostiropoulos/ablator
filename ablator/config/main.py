@@ -177,7 +177,19 @@ class ConfigBase:
         if hasattr(self, "__annotations__"):
             annotation_types = dict(self.__annotations__)
             # pylint: disable=no-member
-            dataclass_types = {k: v.type for k, v in self.__dataclass_fields__.items()}
+            # Without the if statement it will over-write new configurations
+            # e.x.
+
+            # class ReConfig(RunConfig):
+            #     train_config: SomeTrainConfig = SomeTrainConfig()
+            #     model_config: SomeModelConfig = SomeModelConfig()
+            # TODO test-me
+
+            dataclass_types = {
+                k: v.type
+                for k, v in self.__dataclass_fields__.items()
+                if k not in annotation_types
+            }
             annotation_types.update(dataclass_types)
 
             annotations = {

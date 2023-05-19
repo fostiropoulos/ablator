@@ -75,7 +75,7 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
     # Update a mock node from gcp
     hostname = socket.gethostname()
     mock_node_path = tmp_path.joinpath(hostname).joinpath(tmp_path.name)
-    cfg.rsync_down_nodes(hostname, rand_folder, mock_node_path)
+    cfg.rsync_down_node(hostname, rand_folder, mock_node_path)
     node_tensors = load_rand_tensors(tmp_path=mock_node_path)
     assert_tensor_list_eq(node_tensors, original_tensors)
     # TODO teardown refactoring
