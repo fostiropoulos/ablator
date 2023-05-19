@@ -17,6 +17,7 @@ class ArrayStore(Sequence):
     Base class for manipulations (storing, getting, resetting) of batches of values.
 
     """
+
     def __init__(
         self,
         batch_limit: int = 30,
@@ -32,7 +33,7 @@ class ArrayStore(Sequence):
             The maximum number of batches of values to store for this single store. Default is 30.
         memory_limit : int or None, optional
             The maximum memory allowed for all values in bytes. Default is 1e8.
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.stores import ArrayStore
@@ -56,7 +57,7 @@ class ArrayStore(Sequence):
         ----------
         val : np.ndarray or float or int
             The data, can be a batch of data, or a scalar.
-            
+
         Raises
         ------
         AssertionError:
@@ -103,7 +104,7 @@ class ArrayStore(Sequence):
         ), f"Invalid ArrayStore value type {type(val)}"
         self.arr.append(val)
         if len(self.arr) > self.limit:
-            self.arr = self.arr[-self.limit :]
+            self.arr = self.arr[-self.limit:]
         elif (
             self.memory_limit is not None
             and sys.getsizeof(self.arr) > self.memory_limit
@@ -113,7 +114,7 @@ class ArrayStore(Sequence):
     def get(self) -> np.ndarray:
         """
         Returns a flatten array of values
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.stores import ArrayStore
@@ -163,6 +164,7 @@ class PredictionStore:
     A class for storing prediction scores. This allows for evaluating prediction results using evaluation functions
 
     """
+
     def __init__(
         self,
         batch_limit: int = 30,
@@ -186,10 +188,10 @@ class PredictionStore:
         moving_average_limit : int, optional
             The maximum number of values allowed to store moving average metrics. Default is 3000.
         evaluation_functions : dict[str, Callable], optional
-            A dictionary of key-value pairs, keys are evaluation function names, values are 
+            A dictionary of key-value pairs, keys are evaluation function names, values are
             callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
             must match with names of prediction batches that the model returns. So if model prediction over
-            a batch looks like this: ``{"preds": <batch of predictions>, "labels": <batch of predicted labels>}``, 
+            a batch looks like this: ``{"preds": <batch of predictions>, "labels": <batch of predicted labels>}``,
             then callable's arguments should be ``preds`` and ``labels``, e.g ``evaluation_functions=
             {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
 
@@ -230,21 +232,23 @@ class PredictionStore:
     def append(self, **batches: dict[str, np.ndarray]):
         """
         Appends batches of values, constrained on the limits.
-        
+
         Parameters
         ----------
         tag : str
             A tag that specifies which set of predictions to evaluate.
         **batches : dict[str, np.ndarray]
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
-            and value is a batch of prediction values. Note that the passed keys in ``**batches`` must match arguments in 
-            evaluation functions arguments in the Callable in `evaluation_functions` when we initialize `PredictionStore` object.
+            and value is a batch of prediction values. Note that the passed keys in ``**batches`` must match arguments
+            in evaluation functions arguments in the Callable in `evaluation_functions`
+            when we initialize `PredictionStore` object.
 
         Raises
         ------
         AssertionError
-            If passed keys do not match arguments in evaluation functions, or when batches among the keys are different in size.
-        
+            If passed keys do not match arguments in evaluation functions,
+            or when batches among the keys are different in size.
+
         Examples
         --------
         >>> from ablator.modules.metrics.stores import PredictionStore
@@ -288,15 +292,15 @@ class PredictionStore:
         metrics : dict
             A dictionary of metric values calculated from different sets of predictions.
 
-        
+
         Raises
         ------
         AssertionError
             If passed keys do not match arguments in evaluation functions.
-        
+
         ValueError
             If evaluation result is not a numeric scalar.
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.main import PredictionStore
@@ -337,7 +341,7 @@ class PredictionStore:
     def reset(self):
         """
         Reset to empty all prediction sequences (e.g predictions, labels).
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.main import PredictionStore
@@ -356,7 +360,7 @@ class PredictionStore:
 
 class MovingAverage(ArrayStore):
     """
-    This class is used to store moving average metrics 
+    This class is used to store moving average metrics
 
     """
 
@@ -393,7 +397,7 @@ class MovingAverage(ArrayStore):
         ----------
         val : ty.Union[np.ndarray, torch.Tensor, float, int]
             The data to be appended
-            
+
         Raises
         ------
         ValueError:
@@ -406,7 +410,8 @@ class MovingAverage(ArrayStore):
         >>> for i in range(100):
         >>>     ma_store.append(np.array([int(i)]))
         >>> ma_store.arr
-        [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
+        [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85,
+        86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
         """
         if not isinstance(val, (np.ndarray, torch.Tensor, int, float)):
             raise ValueError(f"Invalid MovingAverage value type {type(val)}")

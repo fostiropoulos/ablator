@@ -24,7 +24,7 @@ def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> Optional[str]:
         The timeout in seconds.
     raise_errors : bool
         Whether to raise errors.
-    
+
     Returns
     -------
     str
@@ -36,10 +36,10 @@ def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> Optional[str]:
         cmd, shell=True, stdout=subprocess.PIPE, preexec_fn=os.setsid
     ) as process:
         try:
-            output = process.communicate(timeout=timeout)[0].decode("utf-8",errors="ignore")
+            output = process.communicate(timeout=timeout)[0].decode("utf-8", errors="ignore")
         except subprocess.TimeoutExpired as e:
             os.killpg(process.pid, signal.SIGINT)  # send signal to the process group
-            output = process.communicate()[0].decode("utf-8",errors="ignore")
+            output = process.communicate()[0].decode("utf-8", errors="ignore")
             traceback.print_exc()
             if raise_errors:
                 raise e
@@ -48,7 +48,7 @@ def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> Optional[str]:
 
 @configclass
 class RemoteConfig(ConfigBase):
-    """ 
+    """
     Configuration for a remote storage.
 
     Attributes
@@ -61,7 +61,7 @@ class RemoteConfig(ConfigBase):
         The hostname of the remote storage.
     port : None | int
         The port to use for the remote storage.
-    exclude_glob : None | str  
+    exclude_glob : None | str
         A glob to exclude from the rsync.
     exclude_chkpts : bool
         Whether to exclude checkpoints from the rsync.
@@ -83,11 +83,11 @@ class RemoteConfig(ConfigBase):
             The local path to upload.
         destination : str
             The destination path in the remote storage.
-        
+
         Returns
         -------
         str
-            The rsync command.       
+            The rsync command.
         """
         username = self.username
         host = self.hostname
@@ -116,7 +116,7 @@ class RemoteConfig(ConfigBase):
             The destination path in the remote storage.
         verbose : bool
             Whether to print the output.
-        
+
         Returns
         -------
         str

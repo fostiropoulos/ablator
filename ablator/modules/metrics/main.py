@@ -43,10 +43,10 @@ class TrainMetrics:
             Maximum memory (in bytes) of batches to keep for every category of data (specified by ``tags``). Every time
             this limit is exceeded, ``batch_limit`` will be reduced by 1. Default is 1e8.
         evaluation_functions : dict[str, Callable], optional
-            A dictionary of key-value pairs, keys are evaluation function names, values are 
+            A dictionary of key-value pairs, keys are evaluation function names, values are
             callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
             must match with names of prediction batches that the model returns. So if model prediction over
-            a batch looks like this: {"preds": <batch of predictions>, "labels": <batch of predicted labels>}, 
+            a batch looks like this: {"preds": <batch of predictions>, "labels": <batch of predicted labels>},
             then callable's arguments should be ``preds`` and ``labels``, e.g ``evaluation_functions=
             {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
         moving_average_limit : int, optional
@@ -55,19 +55,20 @@ class TrainMetrics:
             A list of tags to specify predictions results from different categories, a sample use case is to
             categorize different sets of data (train, evaluation, test sets), e.g: ``tags=["train", "val"]``
             This will be combined with evaluation function names and moving auxiliary metrics names to create metrics.
-            For example, if ``evaluation_functions.keys() = ["mean"]``, ``moving_aux_metrics = ["loss"]``, then metrics that
-            will be tracked are: ``train_mean``, ``train_loss``, ``val_mean``, ``val_loss``. Default is ``["train"]``.
+            For example, if ``evaluation_functions.keys() = ["mean"]``, ``moving_aux_metrics = ["loss"]``, then metrics
+            that will be tracked are: ``train_mean``, ``train_loss``, ``val_mean``, ``val_loss``.
+            Default is ``["train"]``.
         static_aux_metrics : dict[str, ty.Any], optional
-            A dictionary of static metrics, those with their initial value that are updated manually, 
+            A dictionary of static metrics, those with their initial value that are updated manually,
             such as learning rate, best loss, total steps, etc. Keys of this dictionary are static metric names,
             while values is a proper initial value. Default is None.
         moving_aux_metrics : Iterable[str], optional
             A list of metrics, those we update with their moving average, such as loss. Default is None.
-        
+
         Examples
         --------
         Initialize an object of TrainMetrics:
-        
+
         >>> from ablator.modules.metrics.main import TrainMetrics
         >>> train_metrics = TrainMetrics(
         ...     batch_limit=30,
@@ -78,8 +79,8 @@ class TrainMetrics:
         ...     static_aux_metrics={"lr": 1.0},
         ...     moving_aux_metrics={"loss"},
         ... )
-        >>> train_metrics.to_dict() # metrics are set to np.nan if it's not updated yet 
-        {   
+        >>> train_metrics.to_dict() # metrics are set to np.nan if it's not updated yet
+        {
             "train_mean": np.nan, "train_loss": np.nan,
             "val_mean": np.nan, "val_loss": np.nan,
             "lr": 1.0
@@ -148,17 +149,17 @@ class TrainMetrics:
         ----------
         metric_dict : dict[str, ty.Any]
             A dictionary containing the static metrics values to update.
-        
+
         Raises
         ------
         AssertionError:
             If metric_dict has metrics that are not in static_aux_attributes.
-        
+
         Notes
         -----
         Not all metric_dict items must be preset from static_aux_attributes.
         i.e. metric_dict.items - static_aux_attributes =/= static_aux_attributes - metric_dict.items
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.main import TrainMetrics
@@ -172,17 +173,17 @@ class TrainMetrics:
         ...     moving_aux_metrics={"loss"},
         ... )
         >>> train_metrics.to_dict()
-        {   
+        {
             "train_mean": np.nan, "train_loss": np.nan,
             "lr": 1.0
         }
         >>> train_metrics.update_static_metrics({"lr": 0.3})
         >>> train_metrics.to_dict()
-        {   
+        {
             "train_mean": np.nan, "train_loss": np.nan,
             "lr": 0.3
         }
-        
+
         """
         diff_metrics = set(metric_dict.keys()).difference(
             self.__static_aux_attributes__
@@ -210,12 +211,12 @@ class TrainMetrics:
             A dictionary containing the moving average metric values to update.
         tag : str
             A tag that specifies which set of predictions to update metric values.
-        
+
         Raises
         ------
         AssertionError:
             If metric_dict has metrics that are not in moving_aux_metrics.
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.main import TrainMetrics
@@ -229,14 +230,14 @@ class TrainMetrics:
         ...     moving_aux_metrics={"loss"},
         ... )
         >>> train_metrics.to_dict()
-        {   
+        {
             "train_sum": np.nan, "train_loss": np.nan,
             "val_sum": np.nan, "val_loss": np.nan,
             "lr": 1.0
         }
         >>> train_metrics.update_ma_metrics({"loss": 0.35}, tag="val")
         >>> train_metrics.to_dict()
-        {   
+        {
             "train_sum": np.nan, "train_loss": np.nan,
             "val_sum": np.nan, "val_loss": 0.35,
             "lr": 1.0
@@ -259,8 +260,9 @@ class TrainMetrics:
 
     def reset(self, tag: str):
         """
-        Reset to empty all prediction sequences (e.g predictions, labels) in a set of predictions specified by ``tag`` argument.
-        
+        Reset to empty all prediction sequences (e.g predictions, labels)
+        in a set of predictions specified by ``tag`` argument.
+
         Parameters
         ----------
         tag : str
@@ -297,7 +299,7 @@ class TrainMetrics:
             A flag that indicates whether to reset the predictions to empty after evaluation. Default is True.
         update_ma : bool, optional
             A flag that indicates whether to update the moving averages after evaluation. Default is True.
-        
+
         Returns
         -------
         metrics : dict
@@ -316,13 +318,14 @@ class TrainMetrics:
         ...     moving_aux_metrics={"loss"},
         ... )
         >>> train_metrics.append_batch(pred=np.array([100]), tag="val")
-        >>> train_metrics.evaluate("val", reset=False, update=True) # val_mean is updated to mean among batch mean values: (100 / 1) / 1 = 100.0
+        >>> train_metrics.evaluate("val", reset=False, update=True) # val_mean is updated to
+            mean among batch mean values: (100 / 1) / 1 = 100.0
         >>> train_metrics.append_batch(pred=np.array([0] * 3), tag="val")
-        
+
         For the following examples, the current evaluation result is: ``(100 + 0 + 0 + 0) / 4 = 25`` (which is returned
         by evaluate() function), and since update=True, val_mean is updated to: ``(100.0 + 25) / 2 = 62.5`` (we can
         see this if we use .to_dict())
-        
+
         >>> train_metrics.evaluate("val", reset=True, update=True)
         {'mean': 25.0}
         >>> train_metrics.to_dict()
@@ -346,7 +349,7 @@ class TrainMetrics:
             A tag that specifies which set of predictions to evaluate.
         **kwargs : dict
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
-            and value is a batch of prediction values. Note that the passed keys in ``**kwrags`` must match arguments in 
+            and value is a batch of prediction values. Note that the passed keys in ``**kwrags`` must match arguments in
             evaluation functions arguments in Callable in evaluation_functions when we initialize TrainMetrics object.
 
         Raises
@@ -357,7 +360,7 @@ class TrainMetrics:
         Notes
         -----
         this is because it is easy to mix up the order of pred, labels and tags
-        
+
         Examples
         --------
         >>> from ablator.modules.metrics.main import TrainMetrics

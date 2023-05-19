@@ -79,7 +79,7 @@ def default_val_parser(val):
     ty.Any
         The converted value.
     """
-    
+
     if isinstance(val, np.ndarray):
         return val.tolist()
     if isinstance(val, torch.Tensor):
@@ -103,7 +103,7 @@ def json_to_dict(_json):
     dict
         A dictionary representation of the JSON string.
     """
-    
+
     _dict = json.loads(_json)
     return _dict
 

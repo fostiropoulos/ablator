@@ -5,7 +5,6 @@ from torch import nn
 from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau, StepLR, _LRScheduler
 
 from ablator.config.main import ConfigBase, Derived, configclass
-from ablator.config.types import Literal
 from torch.optim import Optimizer
 
 Scheduler = ty.Union[_LRScheduler, ReduceLROnPlateau, ty.Any]
@@ -67,7 +66,7 @@ class SchedulerConfig(ConfigBase):
         In the following example, ``scheduler_config`` will initialize property ``arguments`` of type ``StepLRConfig``,
         setting ``step_size=1``, ``gamma=0.99`` as its properties. We also have access to ``init_scheduler()`` method
         of the property, which initalizes an StepLR scheduler. This method is actually called in ``make_scheduler()``
-        
+
         >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
         """
         _arguments: None | StepLRConfig | OneCycleConfig | PlateuaConfig
@@ -139,13 +138,13 @@ class OneCycleConfig(SchedulerArgs):
         -------
         OneCycleLR
             The OneCycleLR scheduler, initialized with arguments defined as attributes of this class.
-        
+
         Examples
         --------
         >>> optimizer = torch.optim.SGD(model.parameters(), lr=0.7, momentum=0.9)
         >>> scheduler = OneCycleConfig(max_lr=0.5, total_steps=100)
         >>> scheduler.init_scheduler(model, optimizer)
-        
+
         """
         kwargs = self.to_dict()
         del kwargs["step_when"]
@@ -209,7 +208,7 @@ class PlateuaConfig(SchedulerArgs):
         >>> optimizer = torch.optim.SGD(model.parameters(), lr=0.7, momentum=0.9)
         >>> scheduler = PlateuaConfig(min_lr=1e-7, mode='min')
         >>> scheduler.init_scheduler(model, optimizer)
-        
+
         """
         kwargs = self.to_dict()
         del kwargs["step_when"]
@@ -255,13 +254,13 @@ class StepLRConfig(SchedulerArgs):
         StepLR
             The StepLR scheduler, initialized with arguments defined as
             attributes of this class.
-        
+
         Examples
         --------
         >>> optimizer = torch.optim.SGD(model.parameters(), lr=0.7, momentum=0.9)
         >>> scheduler = StepLRConfig(step_size=20, gamma=0.9)
         >>> scheduler.init_scheduler(model, optimizer)
-        
+
         """
         kwargs = self.to_dict()
         del kwargs["step_when"]

@@ -17,7 +17,7 @@ class FileLogger:
     ENDC : str
         ANSI escape code for resetting the text color.
     """
-    
+
     WARNING = "\033[93m"
     FAIL = "\033[91m"
     ENDC = "\033[0m"
@@ -30,7 +30,7 @@ class FileLogger:
     ):
         """
         Initialize a FileLogger.
-        
+
         Parameters
         ----------
         path : str | Path | None, optional
@@ -55,7 +55,7 @@ class FileLogger:
         msg : str
             The message to write.
         """
-        
+
         if self.path is not None:
             with open(self.path, "a", encoding="utf-8") as f:
                 f.write(f"{msg}\n")
@@ -70,7 +70,7 @@ class FileLogger:
         verbose : bool, optional
             Whether to print messages to the console, by default True.
         """
-        
+
         if self.verbose or verbose:
             print(msg)
 
@@ -101,7 +101,7 @@ class FileLogger:
 
     def error(self, msg: str):
         """Log an error message.
-        
+
         Parameters
         ----------
         msg : str
@@ -128,7 +128,7 @@ class FileLogger:
     def set_prefix(self, prefix: str | None = None):
         """ Set the prefix for the logger.
 
-        Parameters  
+        Parameters
         ----------
         prefix : str | None, optional
             The prefix to add to each logged message, by default ``None``.
@@ -140,7 +140,7 @@ class FileLogger:
 
     def set_path(self, path: str | Path):
         """ Set the path to the log file.
-        
+
         Parameters
         ----------
         path : str | Path
