@@ -148,22 +148,21 @@ class ParallelTrainer(ProtoTrainer):
 
         self.run_config: ParallelConfig
         self.run_config = run_config
-        self.device=butils.parse_device(self.run_config.device)
+        self.device = butils.parse_device(self.run_config.device)
         self.experiment_dir: Path = Path(run_config.experiment_dir)
         self.logger = FileLogger(path=self.experiment_dir / "mp.log")
         self.experiment_state: ExperimentState
         self.total_trials = self.run_config.total_trials
-        if(self.device.startswith("cuda")):
+        if self.device.startswith("cuda"):
             self.gpu_mem_bottleneck = min(get_gpu_max_mem())
             if min(get_gpu_max_mem()) != max(get_gpu_max_mem()):
                 self.logger.warn(
                     f"Bottlenecked memory utilization by {self.gpu_mem_bottleneck}."
                 )
             self.gpu: float = self._make_gpu()
-            self.cpu: float = self._make_cpu()
-        elif(self.device=="cpu"):
-            self.cpu: float = self._make_cpu()
+        elif self.device == "cpu":
             self.gpu: float = 0.0
+        self.cpu: float = self._make_cpu()
         self.experiment_dir.joinpath("default_config.yaml").write_text(
             str(self.run_config), encoding="utf-8"
         )
