@@ -31,9 +31,9 @@ class TrainConfig(ConfigBase):
     optimizer_config: OptimizerConfig
         optimizer configuration. (check ``OptimizerConfig`` for more details)
     scheduler_config: Optional[SchedulerConfig]
-        scheduler configuration. (check ``SchedulerConfig`` for more details)    
+        scheduler configuration. (check ``SchedulerConfig`` for more details)
     rand_weights_init: bool = True
-        whether to initialize model weights randomly. 
+        whether to initialize model weights randomly.
     """
     dataset: str
     batch_size: int
@@ -56,7 +56,7 @@ class ModelConfig(ConfigBase):
 class RunConfig(ConfigBase):
     """
     Base configuration for running an experiment.
-    
+
     Attributes
     ----------
     experiment_dir: Optional[str] = None
@@ -81,11 +81,12 @@ class RunConfig(ConfigBase):
         fraction of the dataset to use for evaluation.
     metrics_n_batches: int = 32
         max number of batches stored in every tag(train, eval, test) for evaluation.
-    metrics_mb_limit: int = 100 
+    metrics_mb_limit: int = 100
         max number of megabytes stored in every tag(train, eval, test) for evaluation.
     early_stopping_iter: Optional[int] = None
-        The maximum allowed difference between the current iteration and the last iteration with the best metric before applying early stopping. 
-        Early stopping will be triggered if the difference ``(current_itr - best_itr)`` exceeds ``early_stopping_iter``. 
+        The maximum allowed difference between the current iteration and the last iteration with the best metric
+        before applying early stopping.
+        Early stopping will be triggered if the difference ``(current_itr - best_itr)`` exceeds ``early_stopping_iter``.
         If set to ``None``, early stopping will not be applied.
     eval_epoch: float = 1
         The epoch interval between two evaluations.
@@ -179,7 +180,8 @@ class ParallelConfig(RunConfig):
     concurrent_trials: int
         number of trials to run concurrently.
     search_space: Dict[SearchSpace]
-        search space for hyperparameter search,eg. ``{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}``
+        search space for hyperparameter search,eg.
+        ``{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}``
     optim_metrics: Dict[Optim]
         metrics to optimize, eg. ``{"val_loss": "min"}``
     search_algo: SearchAlgo = SearchAlgo.tpe

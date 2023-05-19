@@ -10,6 +10,7 @@ from torch import nn
 from pynvml.smi import nvidia_smi as smi
 from ablator.modules.loggers.file import FileLogger
 
+
 class Dummy(FileLogger):
     def __init__(self, *args, **kwargs):
         pass
@@ -81,7 +82,7 @@ def apply_lambda_to_iter(iterable, fn: Callable):
         The input iterable.
     fn : Callable
         The function to apply to each element.
-        
+
     Returns
     -------
     any
@@ -97,7 +98,7 @@ def apply_lambda_to_iter(iterable, fn: Callable):
         return [apply_lambda_to_iter(v, fn) for v in iterable]
 
     return fn(iterable)
-    
+
 
 def set_seed(seed: int):
     """
@@ -151,7 +152,7 @@ def debugger_is_active() -> bool:
     -------
     bool
         True if the debugger is active, False otherwise.
-    
+
     Notes
     -----
     Return if the debugger is currently active
@@ -231,11 +232,13 @@ def init_weights(module: nn.Module):
     ----------
     module : nn.Module
         The input module to initialize.
-    
+
     Notes
     -----
-    - If the module is a Linear layer, initialize weight values from a normal distribution N(mu=0, std=1.0). If biases are available, initialize them to zeros.
-    - If the module is an Embedding layer, initialize embeddings with values from N(mu=0, std=1.0). If padding is enabled, set the padding embedding to a zero vector.
+    - If the module is a Linear layer, initialize weight values from a normal distribution N(mu=0, std=1.0).
+    If biases are available, initialize them to zeros.
+    - If the module is an Embedding layer, initialize embeddings with values from N(mu=0, std=1.0).
+    If padding is enabled, set the padding embedding to a zero vector.
     - If the module is a LayerNorm layer, set all biases to zeros and all weights to 1.
     """
     if isinstance(module, nn.Linear):

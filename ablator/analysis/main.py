@@ -30,8 +30,9 @@ class Analysis:
         The list of all the hyperparameter names
     results : pd.DataFrame
         The dataframe extracted from the results file based on given metrics names and hyperparameter names.
-    
+
     """
+
     def __init__(
         self,
         results: pd.DataFrame,
