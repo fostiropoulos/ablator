@@ -25,10 +25,10 @@ jobs:
     - name: Test with pytest
       run: |
         conda install pytest
-        apt-get update
-        apt-get install openssh-server
-        service ssh start
+        sudo apt-get update
+        sudo apt-get install openssh-server
+        sudo service ssh start
         ssh-keygen -t rsa
         cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-        apt install rsync
+        sudo apt install rsync
         pytest
