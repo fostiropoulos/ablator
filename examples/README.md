@@ -1,6 +1,12 @@
 # Examples of usage training on locally on a Machine
 
 The examples in [run.py](run.py) can be used to prototype, develop and train locally on a VM.
+## TL;DR
+To execute the example of a ResNet experiment you can run:
+
+1. Locally: `python run.py --config config.yaml`
+
+2. Distributed: `python run.py --config mp_config.yaml --mp`
 ## Run
 
 
