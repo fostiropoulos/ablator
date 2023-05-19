@@ -15,6 +15,7 @@ class MyParallelConfig(ParallelConfig):
     model_config: ResConfig
 
 
+# mp_train prepares and launches parallel training
 def mp_train(mp_config):
     wrapper = MyModelWrapper(
         model_class=MyModel,
@@ -34,6 +35,7 @@ def mp_train(mp_config):
     ablator.evaluate()
 
 
+# base_train prepares and launches single machine training
 def base_train(config):
     wrapper = MyModelWrapper(
         model_class=MyModel,
@@ -47,6 +49,7 @@ def base_train(config):
     ablator.launch()
 
 
+# Depending on the 'mp' flag, the function 'run' either launches single machine or parallel training
 def run(config: str, mp: bool):
     if mp:
         mp_train(config)
