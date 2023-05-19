@@ -22,13 +22,15 @@ jobs:
       run: |
         conda install pip
         pip install -e .
+    - name: Install SSH and generate keys
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openssh-server
+        sudo service ssh start
+        ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
+        cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+        sudo apt-get install -y rsync
     - name: Test with pytest
       run: |
         conda install pytest
-        sudo apt-get update
-        sudo apt-get install openssh-server
-        sudo service ssh start
-        ssh-keygen -t rsa
-        cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-        sudo apt install rsync
         pytest
