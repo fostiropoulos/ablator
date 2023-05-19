@@ -51,7 +51,8 @@ def mock_list_bucket_error_cmd(self, destination: str | None = None):
 def mock_list_bucket_empty(self, destination: str | None = None):
     return []
 
-
+def mock_list_bucket_non_empty(self, destination: str | None = None):
+    return ["gs://iordanis/bucket1","gs://iordanis/bucket2"]
 def mock_rsync_up(
         self,
         local_path: Path,
@@ -83,7 +84,7 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
     with mock.patch("socket.gethostname", return_value="gcp-machine1"):
         with mock.patch("socket.gethostbyname",return_value="111.111.111.111"):
             with mock.patch("ablator.modules.storage.cloud.GcpConfig._find_gcp_nodes",return_value=[{"networkInterfaces":[{"networkIP":"111.111.111.111"}]}]):
-                with mock.patch("ablator.modules.storage.cloud.GcpConfig.list_bucket",mock_list_bucket_empty):
+                with mock.patch("ablator.modules.storage.cloud.GcpConfig.list_bucket",mock_list_bucket_non_empty):
                     with mock.patch("ablator.modules.storage.cloud.GcpConfig.rsync_up",mock_rsync_up):
                         cfg = GcpConfig(bucket=bucket)
                         files = cfg.list_bucket()
@@ -91,12 +92,12 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
                         cfg.rsync_up(tmp_path, rand_folder)
 
     
-    with mock.patch("ablator.modules.storage.cloud.GcpConfig.list_bucket",return_value={f"gs://{Path(cfg.bucket) / rand_folder}/"}):
+    with mock.patch("ablator.modules.storage.cloud.GcpConfig.list_bucket",return_value={"gs://iordanis/bucket1","gs://iordanis/bucket2",f"gs://{Path(cfg.bucket) / rand_folder}/"}):
         new_files = cfg.list_bucket()
     rand_destination = f"gs://{Path(cfg.bucket) / rand_folder}/"
     assert set(new_files).difference(files) == {rand_destination}
     uploaded_files=None
-    with mock.patch("ablator.modules.storage.cloud.GcpConfig.list_bucket",return_value={f"{rand_destination}/tenosr1",f"{rand_destination}/tenosr2"}):
+    with mock.patch("ablator.modules.storage.cloud.GcpConfig.list_bucket",return_value={f"{rand_destination}/{tmp_path.name}/tenosr1",f"{rand_destination}/{tmp_path.name}//tenosr2"}):
         uploaded_files = cfg.list_bucket(rand_folder + "/" + tmp_path.name)
     assert len(uploaded_files) == 2
     # Replace original tensors
