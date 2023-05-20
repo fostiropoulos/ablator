@@ -36,14 +36,14 @@ def parse_rsync_paths(
     """
     Parse the experiment directory that's being in sync with remote servers (Google cloud storage, other
     remote nodes) and the root folder.
-    
+
     Parameters
     ----------
     rsynced_folder : Path, str
         The experiment directory that's being in sync with remote servers.
     root_folder : Path, str, None, default=None
         The root folder that contains all experiment directories.
-        
+
     Returns
     -------
     dict[str, Path]
@@ -62,14 +62,14 @@ def parse_rsync_paths(
 def parse_metrics(optim_direction: list[str], metrics: dict[str, float] | None):
     """
     Parse metrics to be optimized.
-    
+
     Parameters
     ----------
     optim_direction: list[str]
         The metrics to be optimized, defined in the ``ParallelConfig``.
     metrics: dict[str, float]
         The metrics returned after a ray job finishes.
-    
+
     Returns
     -------
     dict[str, float]
@@ -97,7 +97,7 @@ def train_main_remote(
     In addition, experiment directory will be synchronized to the Google Cloud storage and remote nodes.
     Synchronization is done via GcpConfig and RemoteConfig ``rsync_up()`` methods. Refer to documentation of
     these 2 classes for more details.
-    
+
     Parameters
     ----------
     model : ModelWrapper
@@ -222,12 +222,12 @@ class ParallelTrainer(ProtoTrainer):
         The number of gpu used per trial.
     total_mem_usage : int
         Total amount of memory usage.
-    
+
     """
     def __init__(self, *args, run_config: ParallelConfig, **kwargs):
         """
         Initialize ``ParallelTrainer`` using config from ``run_config``.
-        
+
         Parameters
         ----------
         run_config : ParallelConfig
@@ -240,8 +240,11 @@ class ParallelTrainer(ProtoTrainer):
         # Distributed config parser
         run_config = copy.deepcopy(run_config)
         experiment_dir = run_config.experiment_dir or ""
-        run_config.experiment_dir = os.path.join(
-            experiment_dir, f"experiment_{run_config.uid}"
+        # TODO {junzhu} write a test case for relative path. The trials have
+        # different relative path and fail to find the main directory.
+        experiment_path = Path(experiment_dir).absolute()
+        run_config.experiment_dir = experiment_path.joinpath(
+            f"experiment_{run_config.uid}"
         )
 
         super().__init__(*args, run_config=run_config, **kwargs)  # type: ignore
@@ -489,20 +492,20 @@ class ParallelTrainer(ProtoTrainer):
         Set up and launch the parallel training and tuning process. This includes:
 
         - prepare ray cluster for running optuna trials to tune hyperparameters.
-        
+
         - if available, synchronize Google Cloud storage buckets to working directory defined in runtime configuration.
-        
+
         - initialize optuna trials and add them to optuna storage and experiment state database for tracking training progress (or retrieve existing trials from optuna storage).
-        
+
         Trials initialized (or retrieved), ``self.experiment_state.running_trials``,
         will be pushed to ray nodes so they can be executed in parallel. After all trials
         have finished and progress is recorded in sqlite databases in the working directory,
         these changes will be synchronized back to the GCP nodes via ``rsync_up()`` method.
-        
+
         Parameters
         ----------
         working_directory : str
-            The working directory that stores codes, modules that will be used by ray. 
+            The working directory that stores codes, modules that will be used by ray.
         auxilary_modules : list[tys.ModuleType], None
             A list of modules to be used as ray clusters' working environment.
         ray_head_address : str, default='auto'
