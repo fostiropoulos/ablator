@@ -142,8 +142,8 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
     assert_tensor_list_eq(loaded_tensors, original_tensors)
 
     # Update a mock node from gcp
-    with mock.patch("socket.gethostname", return_value="localhost"):
-        hostname = socket.gethostname()
+    
+    hostname = "localhost"
     mock_node_path = tmp_path.joinpath(hostname).joinpath(tmp_path.name)
 
     def mock_rsync_down_node(
