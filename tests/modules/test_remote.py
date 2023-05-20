@@ -1,6 +1,8 @@
 from pathlib import Path
 from ablator.modules.storage.remote import RemoteConfig
 import os
+import getpass
+import time
 
 import torch
 
@@ -27,7 +29,7 @@ def assert_tensor_list_eq(a, b):
 
 
 def test_remote(tmp_path: Path):
-    username = os.getlogin()
+    username = getpass.getuser()
     hostname = "localhost"
     local_path = tmp_path.joinpath("local_path")
     local_path.mkdir()
@@ -36,6 +38,8 @@ def test_remote(tmp_path: Path):
     cfg.rsync_up(local_path, "remote_path", run_async=False)
     remote_tensors = load_rand_tensors(tmp_path.joinpath("remote_path", "local_path"))
     assert_tensor_list_eq(tensors, remote_tensors)
+    
+    time.sleep(0.5)
 
     new_remote_tensors = write_rand_tensors(
         tmp_path.joinpath("remote_path", "local_path")
@@ -48,7 +52,6 @@ def test_remote(tmp_path: Path):
 
 if __name__ == "__main__":
     import shutil
-
     tmp_path = Path("/tmp/remote_test")
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir(exist_ok=True)

@@ -167,7 +167,7 @@ def test_metrics(assert_error_msg):
         moving_average_limit=100,
         tags=["my_tag"],
     )
-    assert m3.evaluate("my_tag") is None, "Expected None when there are no predictions to evaluate."
+    assert m3.evaluate("my_tag") == {}, f"Expected None when there are no predictions to evaluate"
     m3.append_batch(somex=np.array([100]), tag="my_tag")
     m3.evaluate("my_tag", reset=False, update_ma=True)
     m3.append_batch(somex=np.array([0] * 3), tag="my_tag")
