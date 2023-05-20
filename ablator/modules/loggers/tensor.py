@@ -4,7 +4,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 from omegaconf import OmegaConf
-from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 
 from ablator.config.main import ConfigBase
 from ablator.config.utils import flatten_nested_dict
