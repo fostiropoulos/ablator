@@ -54,7 +54,8 @@ def mock_list_bucket_error_cmd(self, destination: str | None = None):
 def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
     
     mock_gs_path = f"{tmp_path}/gs"
-    os.makedirs(f"{mock_gs_path}/{bucket.lstrip('gs:').lstrip('/').rstrip('/')}")
+    bucket_name=bucket.lstrip('gs:').lstrip('/').rstrip('/')
+    os.makedirs(f"{mock_gs_path}/{bucket_name}")
     
     rand_folder = f"{torch.rand(1).item()}"
     
@@ -64,7 +65,7 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
     # GcpConfig(bucket=rand_destination)._make_process(["gsutil", "-m", "rm", "-rf", rand_destination], verbose=False)
     
     def mock_make_cmd_up(self, local_path: Path, destination: str):
-        os.mkdir(f"{mock_gs_path}/{bucket.lstrip('gs:').lstrip('/').rstrip('/')}/{rand_folder}")
+        os.mkdir(f"{mock_gs_path}/{bucket_name}/{rand_folder}")
         destination = Path(self.bucket) / destination / local_path.name
         src = local_path
         cmd = ["rsync", "-r"]
@@ -167,14 +168,13 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
     node_tensors = load_rand_tensors(tmp_path=mock_node_path)
     assert_tensor_list_eq(node_tensors, original_tensors)
     # TODO teardown refactoring
-    cmd = ["gsutil", "-m", "rm", "-rf", rand_destination]
+    cmd = ["rm", "-rf", f"{mock_gs_path}/{bucket_name}/{rand_destination}"]
     
-    with patch("subprocess.Popen") as mock_popen:
-        mock_instance = mock_popen.return_value
-        mock_instance.communicate.return_value = ("","error")
-        p = cfg._make_process(cmd, verbose=False)
-        out, err = p.communicate()
-        assert len(out) == 0 and len(err) > 0
+
+
+    p = cfg._make_process(cmd, verbose=False)
+    out, err = p.communicate()
+    assert len(out) == 0 
 
 
 if __name__ == "__main__":
