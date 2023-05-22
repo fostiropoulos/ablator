@@ -53,6 +53,10 @@ Experiment and Optuna state module
    :members:
    :show-inheritance:
 
+.. autoclass:: ablator.main.state.ExperimentState
+   :members:
+   :show-inheritance:
+
 .. autofunction:: ablator.main.state.augment_trial_kwargs
 
 .. autofunction:: ablator.main.state.parse_metrics
