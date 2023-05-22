@@ -21,6 +21,7 @@ setup(
         "torchvision==0.14.1",
         "tqdm==4.64.1",
         "tensorboardX==2.6",
+        "tensorboard==2.12.2",
         "matplotlib==3.7.1",
         "omegaconf==2.2.3",
         "scipy==1.10.1",

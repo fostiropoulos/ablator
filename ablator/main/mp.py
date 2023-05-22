@@ -245,9 +245,9 @@ class ParallelTrainer(ProtoTrainer):
         # TODO {junzhu} write a test case for relative path. The trials have
         # different relative path and fail to find the main directory.
         experiment_path = Path(experiment_dir).absolute()
-        run_config.experiment_dir = experiment_path.joinpath(
+        run_config.experiment_dir = str(experiment_path.joinpath(
             f"experiment_{run_config.uid}"
-        )
+        ))
 
         super().__init__(*args, run_config=run_config, **kwargs)  # type: ignore
 
