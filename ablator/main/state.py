@@ -418,7 +418,7 @@ class ExperimentState:
         logger : FileLogger, optional
             The logger to use for outputting experiment logs. If not specified, a dummy logger will be used.
         resume : bool, optional
-            Whether to resume a previously interrupted experiment. Default is False.
+            Whether to resume a previously interrupted experiment. Default is ``False``.
 
         Raises
         ------
@@ -427,7 +427,7 @@ class ExperimentState:
         AssertionError
             If ``config.search_space`` is empty.
         RuntimeError
-            if the optuna database already exists and ``resume`` is False.        
+            if the optuna database already exists and ``resume`` is ``False``.        
         """
         self.optuna_trial_map: dict[str, optuna.Trial] = {}
         self.config = config
@@ -565,9 +565,9 @@ class ExperimentState:
 
     def sample_trials(self, n_trials_to_sample: int) -> list[ParallelConfig] | None:
         """
-        Sample n trials from the search space and update database.
-        Number n is the miniumn value of n_trials_to_sample and n_trials_remaining.
-        n_trials_remaining is the number of total_trials(defined in config) minus the number of trials that have been sampled.
+        Sample ``n`` trials from the search space and update database.
+        Number ``n`` is the miniumn value of ``n_trials_to_sample`` and ``n_trials_remaining``.
+        ``n_trials_remaining`` is the number of ``total_trials`` (defined in config) minus the number of trials that have been sampled.
 
         Parameters
         ----------
@@ -710,9 +710,9 @@ class ExperimentState:
         config_uid : str
             The uid of the trial to update.
         metrics : dict[str, float] | None, optional
-            The metrics of the trial, by default None.
+            The metrics of the trial, by default ``None``.
         state : TrialState, optional
-            The state of the trial, by default TrialState.RUNNING
+            The state of the trial, by default ``TrialState.RUNNING``.
 
         Examples
         --------
@@ -864,7 +864,7 @@ class ExperimentState:
     @property
     def pruned_errored_trials(self) -> list[dict[str, ty.Any]]:
         """
-        error trials can not be initialized to a configuration
+        Error trials can not be initialized to a configuration
         and such as return the kwargs parameters.
         """
 
