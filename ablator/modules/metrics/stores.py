@@ -238,12 +238,14 @@ class PredictionStore:
         **batches : dict[str, np.ndarray]
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
             and value is a batch of prediction values. Note that the passed keys in ``**batches`` must match arguments in
-            evaluation functions arguments in the Callable in `evaluation_functions` when we initialize `PredictionStore` object.
+            evaluation functions arguments in the Callable in `evaluation_functions`
+            when we initialize `PredictionStore` object.
 
         Raises
         ------
         AssertionError
-            If passed keys do not match arguments in evaluation functions, or when batches among the keys are different in size.
+            If passed keys do not match arguments in evaluation functions,
+            or when batches among the keys are different in size.
 
         Examples
         --------

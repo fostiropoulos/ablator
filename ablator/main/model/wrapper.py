@@ -815,7 +815,8 @@ class ModelWrapper(ModelBase):
         subsample: float
             The fraction of the dataloader to use for validation.
         smoke_test: bool
-            Whether to execute this function as a smoke test. If ``True``, only one iteration will be performed, which is useful for quickly checking if the code runs without errors. Default is ``False``.
+            Whether to execute this function as a smoke test. If ``True``, only one iteration will be performed,
+            which is useful for quickly checking if the code runs without errors. Default is ``False``.
 
         Returns
         -------
