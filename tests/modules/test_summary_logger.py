@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from PIL import Image
-from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
 from ablator.modules.loggers.main import SummaryLogger
@@ -63,6 +62,7 @@ c = RunConfig(model_config=model_c, train_config=train_c)
     reason="There are write race conditions for which the test fails for Tensorboard "
 )
 def test_summary_logger(tmp_path: Path):
+    from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
     # logpath = tmp_path.joinpath("test.log")
     # logpath.unlink()
     tmp_path = tmp_path.joinpath(f"{random.random()}")
