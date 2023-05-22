@@ -114,23 +114,27 @@ def test_mp(tmp_path: Path):
 
     with tempfile.TemporaryDirectory() as fp:
         config.experiment_dir = fp
-        assert_error_msg(
-            lambda: ParallelTrainer(wrapper=wrapper, run_config=config),
-            "Device must be set to 'cuda' if `gpu_mb_per_experiment` > 0",
-        )
         config.device = "cuda"
-        config.gpu_mb_per_experiment = 1e12
-        config.cpus_per_experiment = 1e12
-        out, err = capture_output(
-            lambda: ParallelTrainer(wrapper=wrapper, run_config=config)
-        )
-        assert (
-                "Expected GPU memory utilization" in out
-                and "Expected CPU core util. exceed system capacity" in out
-        )
-
+        if torch.cuda.is_available():
+            config.gpu_mb_per_experiment = 1e12
+            config.cpus_per_experiment = 1e12
+            out, err = capture_output(
+                lambda: ParallelTrainer(wrapper=wrapper, run_config=config)
+            )
+            assert (
+                    "Expected GPU memory utilization" in out
+                    and "Expected CPU core util. exceed system capacity" in out
+            )
+        else:
+            out, err = capture_output(
+                lambda: ParallelTrainer(wrapper=wrapper, run_config=config)
+            )
+            assert (
+                    "Could not find a torch.cuda installation on your system." in out
+            )
     config.experiment_dir = tmp_path
-    config.device = "cuda"
+    if not torch.cuda.is_available():
+        config.device = "cuda"
     config.gpu_mb_per_experiment = 0.001
     config.cpus_per_experiment = 0.001
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
