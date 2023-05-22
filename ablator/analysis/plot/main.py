@@ -226,7 +226,7 @@ class PlotAnalysis(Analysis):
             num_attrs = list(set(attribute_name_remap.keys()).intersection(num_attrs))
 
         if len(cat_attrs) > 0:
-            for plot_fn in ("make_violinplot"):
+            for plot_fn in ["make_violinplot"]:
                 getattr(self, plot_fn)(
                     cat_attrs,
                     self.metric_names,
@@ -236,7 +236,7 @@ class PlotAnalysis(Analysis):
                     **plt_kwargs,
                 )
         if len(num_attrs) > 0:
-            for plot_fn in ("make_linearplot"):
+            for plot_fn in ["make_linearplot"]:
                 getattr(self, plot_fn)(
                     num_attrs,
                     self.metric_names,

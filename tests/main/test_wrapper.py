@@ -2,6 +2,7 @@ import copy
 import io
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+import typing
 
 import torch
 from torch import nn
@@ -15,6 +16,8 @@ from ablator import (
     TrainConfig,
     Derived,
 )
+from ablator.modules.metrics.main import TrainMetrics
+
 import numpy as np
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
@@ -109,6 +112,34 @@ class MyCustomModel(nn.Module):
 
         return {"preds": x}, x.sum().abs() * 1e-7
 
+class MyReturnNoneModel(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(100))
+        self.iteration = 0
+
+    def forward(self, x: torch.Tensor):
+        x = self.param + torch.rand_like(self.param) * 0.01
+        self.iteration += 1
+        if self.iteration > 10:
+            if self.training:
+                x.sum().abs().backward()
+            return {"preds": None}, None
+
+        return {"preds": None}, x.sum().abs() * 1e-7
+
+
+class MyBadModel(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(100))
+        self.iteration = 0
+
+    def forward(self, x: torch.Tensor):
+        x = self.param + torch.rand_like(self.param) * 0.01
+
+        return None, x.sum().abs() * 1e-7
+
 
 class TestWrapper(ModelWrapper):
     def make_dataloader_train(self, run_config: RunConfig):
@@ -133,6 +164,15 @@ class DisambigiousTestWrapper(ModelWrapper):
         run_config.model_config.ambigious_var = 10
         return run_config
 
+class AuxWrapper(ModelWrapper):
+    def make_dataloader_train(self, run_config: RunConfig):
+        dl = [torch.rand(100) for i in range(100)]
+        return dl
+    def make_dataloader_val(self, run_config: RunConfig):
+        dl = [torch.rand(100) for i in range(100)]
+        return dl
+    def aux_metrics(self, output_dict: dict[str, torch.Tensor] | None) -> dict[str, typing.Any] | None:
+        return {"learning_rate": 0.1}
 
 def assert_error_msg(fn, error_msg):
     try:
@@ -183,6 +223,8 @@ def test_verbosity():
         model_config=ModelConfig(),
         verbose="tqdm",
         metrics_n_batches=100,
+        device="cpu",
+        amp=False,
     )
     out, err = capture_output(
         lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
@@ -194,6 +236,8 @@ def test_verbosity():
         model_config=ModelConfig(),
         verbose="tqdm",
         metrics_n_batches=32,
+        device="cpu",
+        amp=False,
     )
     out, err = capture_output(
         lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
@@ -203,7 +247,11 @@ def test_verbosity():
         in out
     )
     console_config = RunConfig(
-        train_config=train_config, model_config=ModelConfig(), verbose="console"
+        train_config=train_config,
+        model_config=ModelConfig(), 
+        verbose="console",
+        device="cpu",
+        amp=False,
     )
     out, err = capture_output(
         lambda: TestWrapper(MyCustomModel).train(console_config, debug=True)
@@ -343,12 +391,48 @@ def test_load_save(tmp_path: Path):
     ).all()
 
 
+def test_train_loop():
+    _config = copy.deepcopy(config)
+
+    wrapper = TestWrapper(MyReturnNoneModel)
+    wrapper._init_state(run_config=_config)
+    assert_error_msg(
+        lambda: wrapper.train_loop(),
+        "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None."
+    )
+
+
+def test_validation_loop():
+    wrapper = AuxWrapper(MyBadModel)
+    _config = copy.deepcopy(config)
+    wrapper._init_state(_config)
+    val_dataloder = wrapper.make_dataloader_val(_config)
+    metrics_dict = wrapper.validation_loop(MyBadModel(_config), val_dataloder, wrapper.metrics, 'val')
+    assert len(metrics_dict) == 1 and "val_loss" in metrics_dict.keys()
+
+
+def test_train_resume(tmp_path: Path):
+    tmp_path = tmp_path.joinpath("test_exp")
+    _config = copy.deepcopy(config)
+    _config.verbose = "console"
+    _config.experiment_dir = tmp_path
+    wrapper = TestWrapper(MyCustomModel)
+
+    assert_error_msg(
+        lambda: [wrapper.train(_config, resume=True)],
+        f"Could not find a valid checkpoint in {tmp_path.joinpath(_config.uid,'checkpoints')}",
+    )
+
+
 if __name__ == "__main__":
     # import shutil
-    # tmp_path = Path("/tmp/")
+    tmp_path = Path("/tmp/")
     # shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)
     # test_load_save(tmp_path)
     test_error_models()
     # test_train_stats()
     # test_state()
     test_verbosity()
+    test_train_resume(tmp_path)
+    test_train_loop()
+    test_validation_loop()

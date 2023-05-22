@@ -211,9 +211,13 @@ def parse_device(device: ty.Union[str, list[str]]):
     ['cpu', 'cuda:0', 'cuda:1', 'cuda:2']
     """
     if isinstance(device, str):
-        if device in {"cpu", "cuda"}:
+        if device=="cpu":
             return device
-        if device.startswith("cuda:"):
+        if device == "cuda" or (device.startswith("cuda:") and device[5:].isdigit()):
+            assert torch.cuda.is_available(),"Could not find a torch.cuda installation on your system."
+            if device.startswith("cuda:"):
+                gpu_number = int(device[5:])
+                assert gpu_number<torch.cuda.device_count(),f"gpu {device} does not exist on this machine"
             return device
         raise ValueError
     if isinstance(device, int):
