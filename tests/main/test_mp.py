@@ -134,7 +134,7 @@ def test_mp(tmp_path: Path):
             )
     config.experiment_dir = tmp_path
     if not torch.cuda.is_available():
-        config.device = "cuda"
+        config.device = "cpu"
     config.gpu_mb_per_experiment = 0.001
     config.cpus_per_experiment = 0.001
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
@@ -160,6 +160,8 @@ def test_resume(tmp_path: Path):
         gpu_mb_per_experiment=0.001,
         cpus_per_experiment=0.001,
     )
+    if not torch.cuda.is_available():
+        resume_config.device = "cpu"
     resume_config.experiment_dir = tmp_path
     ablator = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
     ablator.gpu = 1 / config.concurrent_trials
