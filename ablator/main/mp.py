@@ -170,12 +170,6 @@ class ParallelTrainer(ProtoTrainer):
 
     def _make_gpu(self):
         if (gpu := self.run_config.gpu_mb_per_experiment / self.gpu_mem_bottleneck) > 0:
-            # assert (
-            #     self.device == "cuda"
-            # ), "Device must be set to 'cuda' if `gpu_mb_per_experiment` > 0"
-            # assert (
-            #     torch.cuda.is_available()
-            # ), "Could not find a torch.cuda installation on your system."
             mem_util = int(gpu * self.run_config.concurrent_trials)
             sys_mem = int(sum(get_gpu_max_mem()))
             if mem_util > sys_mem * 0.8:
