@@ -589,7 +589,7 @@ class ExperimentState:
             return None
         trials = self.__sample_trials(
             n_trials_to_sample,
-            prev_trials=self.pending_trials,
+            prev_trials=[],
             ignore_errors=self.config.ignore_invalid_params,
         )[:n_trials_to_sample]
 
