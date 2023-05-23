@@ -126,11 +126,10 @@ def test_mp(tmp_path: Path):
                     and "Expected CPU core util. exceed system capacity" in out
             )
         else:
-            out, err = capture_output(
-                lambda: ParallelTrainer(wrapper=wrapper, run_config=config)
-            )
-            assert (
-                    "Could not find a torch.cuda installation on your system." in out
+            assert_error_msg(
+                lambda: ParallelTrainer(wrapper=wrapper, run_config=config),
+                "Could not find a torch.cuda installation on your system."
+
             )
     config.experiment_dir = tmp_path
     if not torch.cuda.is_available():
@@ -138,7 +137,8 @@ def test_mp(tmp_path: Path):
     config.gpu_mb_per_experiment = 0.001
     config.cpus_per_experiment = 0.001
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
-    ablator.gpu = 1 / config.concurrent_trials
+    if torch.cuda.is_available():
+        ablator.gpu = 1 / config.concurrent_trials
     ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
     res = Results(MyParallelConfig, ablator.experiment_dir)
     assert res.data.shape[0] // 2 == len(ablator.experiment_state.complete_trials)
@@ -164,7 +164,8 @@ def test_resume(tmp_path: Path):
         resume_config.device = "cpu"
     resume_config.experiment_dir = tmp_path
     ablator = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
-    ablator.gpu = 1 / config.concurrent_trials
+    if torch.cuda.is_available():
+        ablator.gpu = 1 / config.concurrent_trials
     ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
 
     # Check the initial state and save some metrics
@@ -176,7 +177,8 @@ def test_resume(tmp_path: Path):
 
     # Re-setup and launch with resume=True
     ablator = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
-    ablator.gpu = 1 / config.concurrent_trials
+    if torch.cuda.is_available():
+        ablator.gpu = 1 / config.concurrent_trials
     ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None, resume=True)
 
     # Check the state after resuming
