@@ -168,6 +168,12 @@ def test_resume(tmp_path: Path):
         ablator.gpu = 1 / config.concurrent_trials
     ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
 
+    ablator_test = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
+    assert_error_msg(
+        lambda: ablator_test.launch(Path(__file__).parent.as_posix(), ray_head_address=None),
+        f"{ablator_test.experiment_dir.joinpath(f'{resume_config.uid}_optuna.db')} exists. Please remove before starting a study.",
+    )
+    
     # Check the initial state and save some metrics
     res = Results(MyParallelConfig, ablator.experiment_dir)
     initial_trials = len(ablator.experiment_state.complete_trials)
