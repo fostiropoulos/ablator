@@ -113,16 +113,27 @@ def train_main_remote(
         Whether to tollerate crashes, aka to cease execution when the ray job crashes.
     crash_exceptions_types : list[type], None, optional, default=None
         Types of exceptions that are considered as crashes.
+    resume : bool, default=False
+        Whether to resume training the model from existing checkpoints and existing experiment state.
+    clean_reset : bool, default=False
+        Whether to remove model directory when ``CheckpointNotFoundError`` is raised.
 
     Returns
     -------
-    run_config : ParallelConfig
+    ParallelConfig
         Running configuration of the trial.
     dict[str, float], None
         If exception raised (Except for LossDivergedError and TrainPlateauError),
         this will be ``None`` object. Otherwise, this will be a dictionary of metrics.
     TrialState
-        A TrialState object indicating the state of the trial job.
+        A TrialState object indicating the state of the trial job
+
+        - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training, returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
+
+        - If ``DuplicateRunError``, ``RuntimeError`` (with message ``'CUDA out of memory'``), or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training, returned state will be ``TrialState.RECOVERABLE_ERROR``
+
+        - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised, returned state will be ``TrialState.FAIL``
+
     """
     if crash_exceptions_types is None:
         crash_exceptions_types = []
@@ -495,7 +506,7 @@ class ParallelTrainer(ProtoTrainer):
         - initialize optuna trials and add them to optuna storage
         and experiment state database for tracking training progress (or retrieve existing trials from optuna storage).
 
-        Trials initialized (or retrieved), ``self.experiment_state.running_trials``,
+        Trials initialized (or retrieved), :obj:`experiment_state.pending_trials`,
         will be pushed to ray nodes so they can be executed in parallel. After all trials
         have finished and progress is recorded in sqlite databases in the working directory,
         these changes will be synchronized back to the GCP nodes via ``rsync_up()`` method.
@@ -508,6 +519,8 @@ class ParallelTrainer(ProtoTrainer):
             A list of modules to be used as ray clusters' working environment.
         ray_head_address : str, default='auto'
             Ray cluster address.
+        resume : bool, default=False
+            Whether to resume training the model from existing checkpoints and existing experiment state.
         """
         try:
             torch.multiprocessing.set_start_method("spawn")

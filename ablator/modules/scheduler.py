@@ -245,7 +245,7 @@ class StepLRConfig(SchedulerArgs):
         ----------
         model : nn.Module
             The model to apply the scheduler.
-        optimizer : nn.Module
+        optimizer : Optimizer
             The optimizer used to update the model parameters, whose learning
             rate we want to monitor.
 
