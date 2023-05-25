@@ -48,7 +48,8 @@ def process_row(row: str, **aux_info) -> dict[str, ty.Any] | None:
     >>> row = '{"name": "John Doe", "age": 30}'
     >>> aux_info = {"age": 25, "city": "San Francisco"}
     >>> process_row(row, **aux_info)
-    AssertionError: Overlapping column names between auxiliary dictionary and run results. aux_info: {'age': 25, 'city': 'San Francisco'}
+    AssertionError: Overlapping column names between auxiliary dictionary and run results.
+    aux_info: {'age': 25, 'city': 'San Francisco'}
     row: {"name": "John Doe", "age": 30}
     """
     if not row.startswith("{"):
@@ -133,7 +134,7 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
                 **{"path": json_path.parent.as_posix()},
             },
         )
-        processed_rows = [_process_row(l) for l in lines]
+        processed_rows = [_process_row(l) for l in lines]  # noqa
         processed_jsons = list(filter(lambda x: x is not None, processed_rows))
         df = pd.DataFrame(processed_jsons)
 
@@ -160,7 +161,7 @@ class Results:
         Whether to cache the results, by default ``False``
     use_ray : bool, optional
         Whether to use ray for parallel processing, by default ``False``
-    
+
     Attributes
     ----------
     experiment_dir : Path
@@ -178,8 +179,9 @@ class Results:
     numerical_attributes: list[str]
         The list of all the numerical hyperparameter names
     categorical_attributes: list[str]
-        The list of all the categorical hyperparameter names  
+        The list of all the categorical hyperparameter names
     """
+
     def __init__(
         self,
         config: type[ParallelConfig],
@@ -232,7 +234,7 @@ class Results:
         ----------
         categorical_attributes : list[str]
             list of categorical attributes
-        
+
         Raises
         ------
         AssertionError
@@ -263,7 +265,7 @@ class Results:
 
         Returns
         -------
-        list[str]   
+        list[str]
             list of optimize metric names
         """
         return list(map(str, self.metric_map.values()))
@@ -310,10 +312,10 @@ class Results:
             The experiment directory
         num_cpus : int, optional
             Number of CPUs to use for ray processing, by default ``None``
-        
+
         Returns
         -------
-        pd.DataFrame    
+        pd.DataFrame
             A dataframe of all the results
         """
         results = []

@@ -5,6 +5,7 @@ import json
 from functools import reduce
 import typing as ty
 
+
 def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.Any]:
     """
     Flattens a nested dictionary, expanding lists and tuples if specified.
@@ -46,7 +47,6 @@ def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.
     if len(flatten_dict) != len(_dict):
         return flatten_nested_dict(flatten_dict)
     return flatten_dict
-
 
 
 def dict_hash(*dictionaries: list[dict[str, ty.Any]], hash_len=4):

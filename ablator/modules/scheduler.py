@@ -5,7 +5,6 @@ from torch import nn
 from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau, StepLR, _LRScheduler
 
 from ablator.config.main import ConfigBase, Derived, configclass
-from ablator.config.types import Literal
 from torch.optim import Optimizer
 
 Scheduler = ty.Union[_LRScheduler, ReduceLROnPlateau, ty.Any]

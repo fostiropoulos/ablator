@@ -53,7 +53,8 @@ class ConfigBase:
     # NOTE: this allows for non-defined arguments to be created. It is very bug-prone and will be disabled.
     """Base class for configuration objects.
 
-    First, it checks if there are any unannotated variables inside the child config class. If there are, it will raise an assert error.
+    First, it checks if there are any unannotated variables inside the child config class. If there are,
+    it will raise an assert error.
 
     Parameters
     ----------

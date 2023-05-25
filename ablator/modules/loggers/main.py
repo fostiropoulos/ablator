@@ -47,8 +47,9 @@ class SummaryLogger:
     log_iteration : int
         Current log iteration.
     checkpoint_iteration : dict[str, dict[str, int]]
-        ``checkpoint_iteration`` is a dictionary that keeps track of the checkpoint iterations for each directory. 
-        It is used in the ``checkpoint()`` method to determine the appropriate iteration number for the saved checkpoint.
+        ``checkpoint_iteration`` is a dictionary that keeps track of the checkpoint iterations for each directory.
+        It is used in the ``checkpoint()`` method
+        to determine the appropriate iteration number for the saved checkpoint.
     log_file_path : Path | None
         Path to the log file.
     dashboard : LoggerBase | None
@@ -165,14 +166,14 @@ class SummaryLogger:
     ) -> LoggerBase | None:
         """
         Make a dashboard logger.
-        
+
         Parameters
         ----------
         summary_dir : Path
             Path to the summary directory.
         run_config : RunConfig | None, optional
             The run configuration, by default None.
-        
+
         Returns
         -------
         LoggerBase | None
@@ -248,7 +249,7 @@ class SummaryLogger:
 
     def _append_metrics(self, metrics: dict[str, float]):
         """ Append metrics to the result json file.
-        
+
         Parameters
         ----------
         metrics : dict[str, float]
@@ -270,19 +271,19 @@ class SummaryLogger:
         ----------
         metrics : Union[TrainMetrics, dict]
             The metrics to update.
-        itr : Optional[int], optional  
+        itr : Optional[int], optional
             The iteration, by default ``None``.
-        
+
         Raises
         ------
         AssertionError
             If the iteration is not greater than the current iteration.
-        
+
         Notes
         -----
         Attribute ``log_iteration`` is increased by 1 every time ``update()`` is called while training models.
         """
-        
+
         if itr is None:
             itr = self.log_iteration
             self.log_iteration += 1

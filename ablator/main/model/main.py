@@ -66,7 +66,7 @@ class ModelBase(ABC):
     experiment_dir : Path
         The experiment directory.
     autocast : torch.autocast
-        Enables autocasting for chosen regions. Autocasting automatically chooses the precision for GPU operations 
+        Enables autocasting for chosen regions. Autocasting automatically chooses the precision for GPU operations
         to improve performance while maintaining accuracy.
     verbose : bool
         If ``True``, prints additional information while training. Only applied for the master process.
@@ -75,7 +75,7 @@ class ModelBase(ABC):
     random_seed : Optional[int]
         Sets the seed for generating random numbers.
     train_tqdm : tqdm, optional
-        An optional instance of ``tqdm`` that creates progress bars and displays real-time information during training. 
+        An optional instance of ``tqdm`` that creates progress bars and displays real-time information during training.
         i.e. time remaining. Only applied for the master process.
     current_checkpoint : Optional[Path]
         Directory for the current checkpoint file, by default None.
@@ -99,15 +99,16 @@ class ModelBase(ABC):
     Notes
     -----
     1. Class properties are simply listed by name. Please check out property docstring for more information.
-    
+
     2. Users must implement the abstract methods to customize the model's behavior.
-    
-    3. Mixed precision training enables some operations to use the ``torch.float32`` datatype and other operations use lower 
-    precision floating point datatype ``torch.float16``. This is for saving time and reducing memory usage. Ordinarily, 
+
+    3. Mixed precision training enables some operations to use the ``torch.float32`` datatype and other operations use lower
+    precision floating point datatype ``torch.float16``. This is for saving time and reducing memory usage. Ordinarily,
     "automatic mixed precision training" means training with ``torch.autocast`` and ``torch.cuda.amp.GradScaler`` together.
     More information: https://pytorch.org/docs/stable/amp.html
 
     """
+
     def __init__(
         self,
         model_class: type[nn.Module],
@@ -157,7 +158,7 @@ class ModelBase(ABC):
         -------
         OrderedDict
             An ordered dictionary with the following keys and values:
-            
+
             - learning_rate: The current learning rate.
 
             - total_steps: The total steps for the training process.
@@ -191,7 +192,7 @@ class ModelBase(ABC):
         Returns
         -------
         int
-            The current epoch number. 
+            The current epoch number.
         """
         if self.current_iteration > 0:
             return math.floor(self.current_iteration / self.total_steps * self.epochs)
@@ -206,7 +207,7 @@ class ModelBase(ABC):
         -------
         int
             The length of an epoch, represented as the number of batches in the ``train_dataloader``.
-        
+
         Raises
         ------
         AssertionError
@@ -245,7 +246,7 @@ class ModelBase(ABC):
     def uid(self):
         """
         Returns a unique identifier (UID) for the current run configuration.
-        
+
         Returns
         -------
         str
@@ -290,7 +291,7 @@ class ModelBase(ABC):
             matches the model's structure exactly. If False, the model can be loaded
             with a partially matching state, by default ``True``.
 
-    
+
         """
         raise NotImplementedError
 
@@ -346,7 +347,7 @@ class ModelBase(ABC):
     @abstractmethod
     def make_dataloaders(self, run_config: RunConfig):
         """
-        Abstract method to create dataloaders for the training, validation, and testing datasets. 
+        Abstract method to create dataloaders for the training, validation, and testing datasets.
 
         This method should define the process of loading the data and creating dataloaders
         for the training, validation, and testing datasets based on the provided ``run_config``.
@@ -364,7 +365,7 @@ class ModelBase(ABC):
     @abstractmethod
     def config_parser(self, run_config: RunConfig):
         """
-        Abstract method to parse the provided configuration. 
+        Abstract method to parse the provided configuration.
 
         Must be implemented by subclasses.
         Example implementation: Please see the ``make_dataloaders`` method in the ``ModelWrapper`` class.
@@ -607,7 +608,7 @@ class ModelBase(ABC):
             The path to the checkpoint file containing the model and its state.
         model_only : bool, optional, default=False
             If True, only the model's weights will be loaded, ignoring other state information.
-        
+
         Raises
         ------
         NotImplementedError
@@ -634,7 +635,7 @@ class ModelBase(ABC):
     ) -> None:
         """
         Abstract method to load the model and its state from a given save dictionary.
-        
+
         Must be implemented by subclasses.
         Example implementation: Please see the ``load_checkpoint`` method in the ``ModelWrapper`` class.
 

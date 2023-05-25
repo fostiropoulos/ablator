@@ -39,6 +39,7 @@ setup(
             "black==23.3.0",
             "flake8==6.0.0",
             "pylint==2.17.2",
+            "tensorboard==2.12.2",
         ],
     },
 )

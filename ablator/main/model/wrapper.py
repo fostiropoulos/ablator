@@ -91,7 +91,7 @@ class ModelWrapper(ModelBase):
         model_class = self.model_class
         model: nn.Module
         if (model_config := self.model_config) is not None:
-            model = model_class(model_config) # type: ignore
+            model = model_class(model_config)  # type: ignore
         else:
             # Support of decleartive paradigm without model over-writing
             model = model_class()
@@ -520,7 +520,8 @@ class ModelWrapper(ModelBase):
 
     def update_status(self):
         """
-        Update the metrics with current training stats, and then all metrics (static and moving average) will be set as description for the ``tqdm`` progress.
+        Update the metrics with current training stats,
+        and then all metrics (static and moving average) will be set as description for the ``tqdm`` progress.
         """
         self.metrics.update_static_metrics(self.train_stats)
         if self.verbose != "tqdm":
@@ -800,7 +801,8 @@ class ModelWrapper(ModelBase):
         smoke_test: bool = False,
     ) -> dict[str, float]:
         """
-        Validate the model on data in dataloader (which can either be val dataloader - so tag is ``val``, or test dataloader - so tag is ``test``)
+        Validate the model on data in dataloader (which can either be val dataloader
+        - so tag is ``val``, or test dataloader - so tag is ``test``)
 
         Parameters
         ----------
@@ -970,7 +972,8 @@ class ModelWrapper(ModelBase):
 
     def save_dict(self) -> dict[str, ty.Any]:
         """
-        Save the current state of the trainer, including  model parameters, and current states of the optimizer, the scaler, and the scheduler
+        Save the current state of the trainer, including model parameters,
+        and current states of the optimizer, the scaler, and the scheduler.
 
         Returns
         -------

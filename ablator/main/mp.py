@@ -225,6 +225,7 @@ class ParallelTrainer(ProtoTrainer):
         Total amount of memory usage.
 
     """
+
     def __init__(self, *args, run_config: ParallelConfig, **kwargs):
         """
         Initialize ``ParallelTrainer`` using config from ``run_config``.
@@ -244,9 +245,9 @@ class ParallelTrainer(ProtoTrainer):
         # TODO {junzhu} write a test case for relative path. The trials have
         # different relative path and fail to find the main directory.
         experiment_path = Path(experiment_dir).absolute()
-        run_config.experiment_dir = experiment_path.joinpath(
+        run_config.experiment_dir = str(experiment_path.joinpath(
             f"experiment_{run_config.uid}"
-        )
+        ))
 
         super().__init__(*args, run_config=run_config, **kwargs)  # type: ignore
 
@@ -477,7 +478,7 @@ class ParallelTrainer(ProtoTrainer):
             self.wrapper.evaluate(model_config)
         self.sync_up()
 
-    def launch( #type: ignore
+    def launch(  # type: ignore
         self,
         working_directory: str,
         auxilary_modules: list[tys.ModuleType] | None = None,

@@ -17,7 +17,7 @@ class ProtoTrainer:
         The main model wrapper.
     run_config : RunConfig
         Running configuration for the model.
-    
+
     Raises
     ------
     RuntimeError
@@ -71,7 +71,7 @@ class ProtoTrainer:
         ----------
         debug : bool, default=False
             Whether to train model in debug mode.
-        
+
         Returns
         -------
         metrics : TrainMetrics
@@ -86,7 +86,6 @@ class ProtoTrainer:
         """
         Syncs training artifacts with external logging services.
         """
-
 
     def evaluate(self):
         """
