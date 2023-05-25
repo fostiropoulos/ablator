@@ -54,7 +54,6 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install pip==23.0.1
-        pip install .
         pip install .[dev]
     - name: Run mypy
       run: mypy ablator

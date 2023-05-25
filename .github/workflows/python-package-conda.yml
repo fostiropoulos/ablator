@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         conda install pip
-        pip install -e .
+        pip install -e .[dev]
     - name: Install SSH and generate keys
       run: |
         sudo apt-get update
