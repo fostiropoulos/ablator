@@ -503,8 +503,7 @@ class ParallelTrainer(ProtoTrainer):
 
         - if available, synchronize Google Cloud storage buckets to working directory defined in runtime configuration.
 
-        - initialize optuna trials and add them to optuna storage
-        and experiment state database for tracking training progress (or retrieve existing trials from optuna storage).
+        - initialize optuna trials and add them to optuna storage and experiment state database for tracking training progress (or retrieve existing trials from optuna storage).
 
         Trials initialized (or retrieved), :obj:`experiment_state.pending_trials`,
         will be pushed to ray nodes so they can be executed in parallel. After all trials

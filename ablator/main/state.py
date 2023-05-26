@@ -50,6 +50,8 @@ class TrialState(enum.IntEnum):
             Trial that was pruned during execution for poor performance
         RECOVERABLE_ERROR : int
             Trial that was pruned during execution for poor performance
+        RESUME : int
+            Trial that needs to be resumed
 
     Methods
     -------
@@ -138,7 +140,7 @@ def parse_metrics(
 
     Parameters
     ----------
-    metric_directions : OrderedDict
+    metric_directions : dict
         The ordered dictionary containing the directions of the metrics (minimize or maximize).
     metrics : dict
         The dictionary containing the metric values.

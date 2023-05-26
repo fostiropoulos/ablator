@@ -570,7 +570,7 @@ class ModelBase(ABC):
 
         Raises
         ------
-        FileNotFoundError
+        CheckpointNotFoundError
             If no valid checkpoint is found in the specified directory.
         RuntimeError
             If a checkpoint is not found.
