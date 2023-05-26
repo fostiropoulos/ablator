@@ -184,10 +184,11 @@ def test_metrics(assert_error_msg):
 
 def test_prediction_store_reset(assert_error_msg):
     ps = PredictionStore(batch_limit=30, memory_limit=100, moving_average_limit=3000,
-                         evaluation_functions={"mean": lambda x: np.mean(x)})
+                         evaluation_functions={"mean": lambda preds, labels: np.mean(preds) + np.mean(labels)})
 
     # Test evaluate when no predictions have been appended.
-    ps.evaluate()
+    res = ps.evaluate()
+    assert res == {}, "Evaluate should return an empty dict when no predictions have been appended."
 
     # Test the reset function when no predictions have been appended.
     try:
@@ -195,13 +196,18 @@ def test_prediction_store_reset(assert_error_msg):
     except Exception:
         assert False, "Reset should not raise an exception when no predictions have been appended."
 
-    #Add some predictions.
-    ps.append(preds=np.array([1, 2, 3]), labels=np.array([1, 0, 1]))
-    
-    #Test that the reset function clears the appended predictions.
+    # Add some predictions.
+    ps.append(preds=np.array([1, 2, 3]), labels=np.array([1, 1, 1]))
+
+    # Test evaluate when predictions have been appended.
+    res = ps.evaluate()
+    assert res == {"mean": 3.0}, "Evaluate should return the correct evaluation when predictions have been appended."
+
+    # Test that the reset function clears the appended predictions.
     ps.reset()
     assert len(ps._get_arr('preds')) == 0, "Reset did not clear the appended predictions."
     assert len(ps._get_arr('labels')) == 0, "Reset did not clear the appended predictions."
+
 
 
 if __name__ == "__main__":
