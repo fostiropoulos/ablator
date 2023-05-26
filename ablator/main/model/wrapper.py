@@ -645,12 +645,14 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        run_config: RunConfig
+        run_config : RunConfig
             The run config to use for training.
-        smoke_test: bool
+        smoke_test : bool, default=False
             Whether to run a smoke test.
-        debug: bool
+        debug : bool, default=False
             Whether to run in debug mode.
+        resume : bool, default=False
+            Whether to resume training the model from existing checkpoints and existing experiment state.
 
         Returns
         -------

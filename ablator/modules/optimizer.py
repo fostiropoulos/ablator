@@ -80,9 +80,7 @@ def get_optim_parameters(
     dict | list
         - If weight_decay is ``None``, return all model parameters.
 
-        - If weight_decay is not ``None``, return a dictionary of parameter groups of different weight decay.
-        In specific, bias parameters and parameters from layer normalization module will have weight decay of ``0.0``,
-        while any other parameters will have weight decay of ``weight_decay``.
+        - If weight_decay is not ``None``, return a dictionary of parameter groups of different weight decay. In specific, bias parameters and parameters from layer normalization module will have weight decay of ``0.0``, while any other parameters will have weight decay of ``weight_decay``.
 
     Notes
     -----
