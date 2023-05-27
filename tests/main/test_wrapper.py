@@ -111,6 +111,22 @@ class MyCustomModel(nn.Module):
             return {"preds": x}, None
 
         return {"preds": x}, x.sum().abs() * 1e-7
+    
+class MyCustomModelNoBackward(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(100))
+        self.iteration = 0
+
+    def forward(self, x: torch.Tensor):
+        x = self.param + torch.rand_like(self.param) * 0.01
+        self.iteration += 1
+        if self.iteration > 10:
+            # if self.training:
+            #     x.sum().abs().backward()
+            return {"preds": x}, None
+
+        return {"preds": x}, x.sum().abs() * 1e-7
 
 class MyReturnNoneModel(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
@@ -192,11 +208,11 @@ def test_error_models():
         lambda: TestWrapper(MyUnstableModel).train(config),
         "Loss Diverged. Terminating. loss: inf",
     )
-    # TODO find how to address the model not doing backward
-    # assert_error_msg(
-    #     lambda: TestWrapper(MyWrongCustomModel).train(amp_config),
-    #     "No inf checks were recorded for this optimizer.",
-    # )
+    
+    assert_error_msg(
+        lambda: TestWrapper(MyCustomModelNoBackward).train(amp_config),
+        "No inf checks were recorded for this optimizer.",
+    )
 
 
 def assert_console_output(fn, assert_fn):
@@ -432,7 +448,7 @@ if __name__ == "__main__":
     test_error_models()
     # test_train_stats()
     # test_state()
-    test_verbosity()
-    test_train_resume(tmp_path)
-    test_train_loop()
-    test_validation_loop()
+    # test_verbosity()
+    # test_train_resume(tmp_path)
+    # test_train_loop()
+    # test_validation_loop()
