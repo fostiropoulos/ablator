@@ -204,8 +204,6 @@ class PredictionStore:
         ... )
         """
         super().__init__()
-        # self.labels = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
-        # self.preds = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
         self.limit = batch_limit
         self.memory_limit = memory_limit
         self.metrics: dict[str, MovingAverage] = (
