@@ -60,8 +60,6 @@ class ConfigBase:
     ----------
     *args : Any
         Positional arguments.
-    add_attributes : bool, optional
-        Whether to add attributes, by default ``False``.
     **kwargs : Any
         Keyword arguments.
 
@@ -83,7 +81,7 @@ class ConfigBase:
     """
     config_class = type(None)
 
-    def __init__(self, *args, add_attributes=False, **kwargs):
+    def __init__(self, *args, **kwargs):
         class_name = type(self).__name__
         added_variables = {
             item[0]
@@ -129,9 +127,7 @@ class ConfigBase:
             v = parse_value(v, annotation, k)
             setattr(self, k, v)
 
-        if add_attributes and len(kwargs) > 0:
-            setattr(self, k, v)
-        elif len(kwargs) > 0:
+        if len(kwargs) > 0:
             unspected_args = ", ".join(kwargs.keys())
             raise KeyError(f"Unexpected arguments: `{unspected_args}`")
 

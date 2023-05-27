@@ -27,7 +27,7 @@ class GcpConfig(ConfigBase):
     exclude_glob: Optional[str] = None
     exclude_chkpts: bool = False
 
-    def __init__(self, *args, add_attributes=False, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initialize the GcpConfig class for managing Google Cloud Platform configurations.
 
@@ -35,8 +35,6 @@ class GcpConfig(ConfigBase):
         ----------
         *args
             Positional arguments.
-        add_attributes : bool
-            Whether to add attributes.
         **kwargs
             Keyword arguments.
 
@@ -49,7 +47,7 @@ class GcpConfig(ConfigBase):
         -----
         The IP address check avoids overly generic hostnames to match with existing instances.
         """
-        super().__init__(*args, add_attributes=add_attributes, **kwargs)
+        super().__init__(*args, **kwargs)
         self.bucket = self.bucket.lstrip("gs:").lstrip("/").rstrip("/")
         self.list_bucket()
 
