@@ -1,12 +1,13 @@
 from pathlib import Path
 import tempfile
+from collections import OrderedDict
 
 import numpy as np
 
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
 from ablator.main.configs import ParallelConfig, SearchSpace
-from ablator.main.state import ExperimentState, TrialState
+from ablator.main.state import ExperimentState, TrialState, parse_metrics
 import io
 from contextlib import redirect_stderr, redirect_stdout
 
@@ -244,6 +245,11 @@ def test_state(tmp_path: Path):
             "ufunc 'isfinite' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''",
         )
 
+def test_parse_metrics():
+    metric_directions = OrderedDict([('a', 'max'), ('b', 'max')])
+    metrics = {'a': 1, 'b': np.nan}
+    parsed = parse_metrics(metric_directions, metrics)
+    assert parsed == OrderedDict([('a', 1.0), ('b', -np.inf)])
 
 if __name__ == "__main__":
     import shutil
@@ -251,4 +257,5 @@ if __name__ == "__main__":
     tmp_path = Path("/tmp/state")
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
-    test_state(tmp_path)
+    # test_state(tmp_path)
+    test_parse_metrics()
