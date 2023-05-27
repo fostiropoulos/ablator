@@ -13,7 +13,7 @@ def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type
     """
     Recurse into the module and return parameter names of all submodules, excluding
     modules that are of any type defined in ``forbidden_layer_types``.
-    
+
     Parameters
     ----------
     model : torch.nn.Module
@@ -25,7 +25,7 @@ def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type
     -------
     list[str]
         The names of the parameters with the following format: ``<submodule-name>.<parameter-name>``.
-    
+
     Examples
     --------
     >>> class MyModel(nn.Module):
@@ -65,7 +65,7 @@ def get_optim_parameters(
     Setup the optimizer. Get model parameters to be optimized. If ``weight_decay`` is a ``float``,
     apply weight decaying to the parameters too (except for bias and parameters from layer
     normalization module).
-    
+
     Parameters
     ----------
     model : torch.nn.Module
@@ -79,14 +79,14 @@ def get_optim_parameters(
     -------
     dict | list
         - If weight_decay is ``None``, return all model parameters.
-        
+
         - If weight_decay is not ``None``, return a dictionary of parameter groups of different weight decay. In specific, bias parameters and parameters from layer normalization module will have weight decay of ``0.0``, while any other parameters will have weight decay of ``weight_decay``.
-    
+
     Notes
     -----
     We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
     Trainer's init through :obj:`optimizers`, or subclass and override this method in a subclass.
-    
+
     Examples
     --------
     >>> class MyModel(nn.Module):
@@ -188,10 +188,10 @@ class OptimizerConfig(ConfigBase):
             Arguments for the optimizer, specific to a certain type of optimizer. A common argument
             can be learning rate, e.g ``{'lr': 0.5}``. If ``name`` is ``"adamw"``, can add ``eps`` to ``arguments``,
             e.g ``{'lr': 0.5, 'eps': 0.001}``.
-        
+
         Examples
         --------
-        
+
         In the following example, ``optim_config`` will initialize property ``arguments`` of type ``SGDConfig``,
         setting ``lr=0.5`` as its property. We also have access to ``init_optimizer()`` method of the property,
         which initalizes an SGD optimizer. This method is actually called in ``make_optimizer()``
@@ -256,7 +256,7 @@ class SGDConfig(OptimizerArgs):
         Weight decay rate.
     momentum : float
         Momentum factor.
-    
+
     Examples
     --------
     >>> config = SGDConfig(lr=0.1, momentum=0.9)

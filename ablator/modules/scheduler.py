@@ -5,7 +5,6 @@ from torch import nn
 from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau, StepLR, _LRScheduler
 
 from ablator.config.main import ConfigBase, Derived, configclass
-from ablator.config.types import Literal
 from torch.optim import Optimizer
 
 Scheduler = ty.Union[_LRScheduler, ReduceLROnPlateau, ty.Any]
@@ -246,7 +245,7 @@ class StepLRConfig(SchedulerArgs):
         ----------
         model : nn.Module
             The model to apply the scheduler.
-        optimizer : nn.Module
+        optimizer : Optimizer
             The optimizer used to update the model parameters, whose learning
             rate we want to monitor.
 

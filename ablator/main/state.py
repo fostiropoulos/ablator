@@ -26,7 +26,6 @@ class Base(DeclarativeBase):
     pass
 
 
-
 class TrialState(enum.IntEnum):
     """
     An enumeration of possible states for a trial with more pruned states.
@@ -51,6 +50,8 @@ class TrialState(enum.IntEnum):
             Trial that was pruned during execution for poor performance
         RECOVERABLE_ERROR : int
             Trial that was pruned during execution for poor performance
+        RESUME : int
+            Trial that needs to be resumed
 
     Methods
     -------
@@ -77,7 +78,7 @@ class TrialState(enum.IntEnum):
 
         Returns
         -------
-            OptunaTrialState | None: 
+            OptunaTrialState | None:
                 Corresponding ``OptunaTrialState`` or ``None`` if the state is not applicable.
         """
         if self in [
@@ -139,7 +140,7 @@ def parse_metrics(
 
     Parameters
     ----------
-    metric_directions : OrderedDict
+    metric_directions : dict
         The ordered dictionary containing the directions of the metrics (minimize or maximize).
     metrics : dict
         The dictionary containing the metric values.
@@ -197,8 +198,8 @@ def sample_trial_params(
     Examples
     --------
     >>> optuna_trial = self.optuna_study.ask()
-    >>> search_space = {'x': SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0)), 
-    ... 'y': SearchSpace(categorical_values=['a', 'b']), 
+    >>> search_space = {'x': SearchSpace(value_type=SearchType.numerical, value_range=(0.0, 1.0)),
+    ... 'y': SearchSpace(categorical_values=['a', 'b']),
     ... 'z': SearchSpace(value_type=SearchType.integer, value_range=(1, 10))}
     >>> sample_trial_params(optuna_trial, search_space)
     {'x': 0.030961748695615783, 'y': 'a', 'z': 9}
@@ -258,6 +259,7 @@ class OptunaState:
     optuna_study : optuna.study.Study
         The Optuna study object.
     """
+
     def __init__(
         self,
         storage: str,
@@ -338,9 +340,11 @@ class OptunaState:
 
         Examples
         --------
-        >>> optuna_state = OptunaState(storage="sqlite:///example.db", study_name="test_study", 
-        ...                             optim_metrics={"accuracy": Optim.max}, search_algo=SearchAlgo.tpe, 
-        ...                             search_space = {"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 0.1], value_type="float")})
+        >>> optuna_state = OptunaState(
+        ...                   storage="sqlite:///example.db", study_name="test_study",
+        ...                   optim_metrics={"accuracy": Optim.max}, search_algo=SearchAlgo.tpe,
+        ...                   search_space = {"train_config.optimizer_config.arguments.lr":
+        ...                                    SearchSpace(value_range=[0, 0.1], value_type="float")})
         >>> metrics = {"accuracy": None}
         >>> optuna_optim_values = optuna_state._optuna_optim_values(metrics)
         >>> print(optuna_optim_values)
@@ -407,7 +411,7 @@ class ExperimentState:
     ) -> None:
         """
         Initializes the ExperimentState.
-        Initialize databases for storing training states and optuna states,create trials based on total num of trials specified in config 
+        Initialize databases for storing training states and optuna states,create trials based on total num of trials specified in config
 
         Parameters
         ----------
@@ -427,7 +431,7 @@ class ExperimentState:
         AssertionError
             If ``config.search_space`` is empty.
         RuntimeError
-            if the optuna database already exists and ``resume`` is ``False``.        
+            if the optuna database already exists and ``resume`` is ``False``.
         """
         self.optuna_trial_map: dict[str, optuna.Trial] = {}
         self.config = config
@@ -509,7 +513,7 @@ class ExperimentState:
         msg = "\n\t".join(
             [f"{dot_path} -> {val} " for dot_path, val in trial_map.items()]
         )
-        
+
         return msg
 
     def _init_trials(self, resume: bool = False) -> list[ParallelConfig]:
@@ -573,7 +577,7 @@ class ExperimentState:
         ----------
         n_trials_to_sample : int
             The number of trials to sample.
-        
+
         Returns
         -------
         list[ParallelConfig] | None
@@ -612,7 +616,7 @@ class ExperimentState:
             The optuna trial number.
         trial_state : TrialState
             The state of the trial.
-        
+
         Returns
         -------
         bool
@@ -734,8 +738,8 @@ class ExperimentState:
         Parameters
         ----------
         config_uid : str
-            The uid of the trial 
-        
+            The uid of the trial
+
         Returns
         -------
         int
@@ -778,7 +782,7 @@ class ExperimentState:
             stmt = select(Trial).where(Trial.config_uid == config_uid)
             res = session.execute(stmt).scalar_one()
             res.metrics.append(internal_metrics)
-            res.state = state # type: ignore # TODO fix this
+            res.state = state  # type: ignore # TODO fix this
             session.commit()
             session.flush()
 
@@ -836,7 +840,7 @@ class ExperimentState:
 
     def _get_trials_by_stmt(self, stmt) -> list[Trial]:
         with self.engine.connect() as conn:
-            trials: list[Trial] = conn.execute(stmt).fetchall() # type: ignore
+            trials: list[Trial] = conn.execute(stmt).fetchall()  # type: ignore
         return trials
 
     def _get_trial_configs_by_stmt(self, stmt) -> list[ParallelConfig]:

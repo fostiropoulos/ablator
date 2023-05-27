@@ -17,6 +17,7 @@ class ArrayStore(Sequence):
     Base class for manipulations (storing, getting, resetting) of batches of values.
 
     """
+
     def __init__(
         self,
         batch_limit: int = 30,
@@ -103,7 +104,7 @@ class ArrayStore(Sequence):
         ), f"Invalid ArrayStore value type {type(val)}"
         self.arr.append(val)
         if len(self.arr) > self.limit:
-            self.arr = self.arr[-self.limit :]
+            self.arr = self.arr[-self.limit:]
         elif (
             self.memory_limit is not None
             and sys.getsizeof(self.arr) > self.memory_limit
@@ -163,6 +164,7 @@ class PredictionStore:
     A class for storing prediction scores. This allows for evaluating prediction results using evaluation functions
 
     """
+
     def __init__(
         self,
         batch_limit: int = 30,
@@ -235,8 +237,8 @@ class PredictionStore:
             A tag that specifies which set of predictions to evaluate.
         **batches : dict[str, np.ndarray]
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
-            and value is a batch of prediction values. Note that the passed keys in ``**batches`` must match arguments in
-            evaluation functions arguments in the Callable in `evaluation_functions`
+            and value is a batch of prediction values. Note that the passed keys in ``**batches`` must match arguments
+            in evaluation functions arguments in the Callable in `evaluation_functions`
             when we initialize `PredictionStore` object.
 
         Raises
@@ -408,7 +410,8 @@ class MovingAverage(ArrayStore):
         >>> for i in range(100):
         >>>     ma_store.append(np.array([int(i)]))
         >>> ma_store.arr
-        [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
+        [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85,
+        86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
         """
         if not isinstance(val, (np.ndarray, torch.Tensor, int, float)):
             raise ValueError(f"Invalid MovingAverage value type {type(val)}")
