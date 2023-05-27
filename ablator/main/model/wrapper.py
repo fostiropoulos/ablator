@@ -539,7 +539,7 @@ class ModelWrapper(ModelBase):
 
     def status_message(self) -> str:
         """
-        Return a string generated from dictinoary of current metrics,including all the static metrics and moving average metrics.
+        Return a string generated from dictionary of current metrics,including all the static metrics and moving average metrics.
 
         Returns
         -------
@@ -828,6 +828,8 @@ class ModelWrapper(ModelBase):
             The metrics from the validation.
         """
         cutoff_itr = len(dataloader) * subsample
+        if model.training:
+            self.logger.warn("Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`")
         for i, batch in enumerate(dataloader):
             with torch.no_grad():
                 outputs, loss = self._model_step(model=model, batch=batch)
