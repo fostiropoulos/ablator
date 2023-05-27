@@ -209,10 +209,11 @@ def test_error_models():
         "Loss Diverged. Terminating. loss: inf",
     )
     
-    assert_error_msg(
-        lambda: TestWrapper(MyCustomModelNoBackward).train(amp_config),
-        "No inf checks were recorded for this optimizer.",
-    )
+    if torch.cuda.is_available():
+        assert_error_msg(
+            lambda: TestWrapper(MyCustomModelNoBackward).train(amp_config),
+            "No inf checks were recorded for this optimizer.",
+        )
 
 
 def assert_console_output(fn, assert_fn):
