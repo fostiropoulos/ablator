@@ -195,9 +195,9 @@ def test_hierarchical():
 
 def test_iterable():
     ErrorConfigList(a4=[11,])
-    ErrorConfigList(a4=(11,))
-    assert_error_msg(lambda:ErrorConfigList(a4=11),"'int' object is not iterable")
-    assert_error_msg(lambda:ErrorConfigList(a4="11"),"'str' object is not iterable")
+    assert_error_msg(lambda:ErrorConfigList(a4=(11,)),"Invalid type <class 'tuple'> for type List")
+    assert_error_msg(lambda:ErrorConfigList(a4=11),"Invalid type <class 'int'> for type List")
+    assert_error_msg(lambda:ErrorConfigList(a4="11"),"Invalid type <class 'str'> for type List")
     
 
 if __name__ == "__main__":
