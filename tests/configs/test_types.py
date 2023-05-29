@@ -191,12 +191,7 @@ def test_hierarchical():
     pc_dict = ParentTestTestConfig(c=pc.to_dict())
     pc_obj = ParentTestTestConfig(c=pc)
     assert pc_dict == pc_obj
-@configclass
-class DictConfig(ConfigBase):
-    a1:Dict[Dict[int]]
-@configclass
-class DictConfig1(ConfigBase):
-    a1:Dict[Stateful[int]]
+
 
 def test_iterable():
     ErrorConfigList(a4=[11,])
@@ -204,8 +199,7 @@ def test_iterable():
     assert_error_msg(lambda:ErrorConfigList(a4=11),"'int' object is not iterable")
     assert_error_msg(lambda:ErrorConfigList(a4="11"),"'str' object is not iterable")
     
-def test_dicts():
-    DictConfig1(a1={"a":{"b":1}})
+
 if __name__ == "__main__":
     # TODO tests for iterable Type
     def assert_error_msg(fn, error_msg):
@@ -216,8 +210,8 @@ if __name__ == "__main__":
             if not error_msg == str(excp):
                 raise excp
 
-    # test_types(assert_error_msg)
-    # test_hierarchical()
-    # test_error_configs(assert_error_msg)
-    test_dicts()
+    test_types(assert_error_msg)
+    test_hierarchical()
+    test_error_configs(assert_error_msg)
+    test_iterable()
 
