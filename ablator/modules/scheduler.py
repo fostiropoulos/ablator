@@ -158,20 +158,20 @@ class PlateuaConfig(SchedulerArgs):
 
     Attributes
     ----------
-        patience : int
+        patience : int, default 10
             Number of epochs with no improvement after which learning rate will be reduced.
-        min_lr : float
+        min_lr : float, default 1e-5
             A lower bound on the learning rate.
-        mode : str
+        mode : str, default "min"
             One of ``'min'``, ``'max'``, or ``'auto'``, which defines the direction of optimization, so as
             to adjust the learning rate accordingly, i.e when a certain metric ceases improving.
-        factor : float
+        factor : float, default 0.1
             Factor by which the learning rate will be reduced. ``new_lr = lr * factor``.
-        threshold : float
+        threshold : float, default 1e-4
             Threshold for measuring the new optimum, to only focus on significant changes.
-        verbose : bool
+        verbose : bool, default False
             If ``True``, prints a message to ``stdout`` for each update.
-        step_when : StepType
+        step_when : StepType, default "val"
             The step type at which the scheduler should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
     """
