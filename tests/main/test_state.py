@@ -180,7 +180,6 @@ def test_state(tmp_path: Path):
         for state, trial_attr_name in zip(
             [
                 TrialState.RUNNING,
-                #TrialState.WAITING,
                 TrialState.FAIL,
                 TrialState.COMPLETE,
             ],
