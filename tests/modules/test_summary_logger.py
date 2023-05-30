@@ -4,12 +4,11 @@ import random
 import sys
 from contextlib import redirect_stdout
 from pathlib import Path
-
+import time
 import numpy as np
 import pandas as pd
 import pytest
 from PIL import Image
-from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
 from ablator.modules.loggers.main import SummaryLogger
@@ -58,11 +57,8 @@ train_c = TrainConfig(
 c = RunConfig(model_config=model_c, train_config=train_c)
 
 
-# TODO fixme
-@pytest.mark.skip(
-    reason="There are write race conditions for which the test fails for Tensorboard "
-)
 def test_summary_logger(tmp_path: Path):
+    from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
     # logpath = tmp_path.joinpath("test.log")
     # logpath.unlink()
     tmp_path = tmp_path.joinpath(f"{random.random()}")
@@ -132,6 +128,34 @@ def test_summary_logger(tmp_path: Path):
 
     l = SummaryLogger(c, tmp_path, resume=True, keep_n_checkpoints=3)
 
+    def wait_for_tensorboard(event_acc, tag, tag_type="scalars", max_wait_time=50, output_fn=False):
+        start_time = time.time()
+        while True:
+            l.dashboard.backend_logger.flush()
+            if time.time() - start_time > max_wait_time:
+                raise RuntimeError(f"Timed out waiting for {tag} to appear in TensorBoard.")
+            event_acc.Reload()
+            if output_fn:
+                print(event_acc.Tags())
+            if tag in event_acc.Tags()[tag_type]:
+                break
+            time.sleep(0.1)
+
+    def wait_for_tensorboard_update(event_acc, tag, expected_value, tag_type="scalars", max_wait_time=50, output_fn=False):
+        start_time = time.time()
+        while True:
+            l.dashboard.backend_logger.flush()
+            if time.time() - start_time > max_wait_time:
+                raise RuntimeError(f"Timed out waiting for the latest value of {tag} to appear in TensorBoard.")
+            event_acc.Reload()
+            if tag in event_acc.Tags()[tag_type]:
+                event_list = event_acc.Scalars(tag)
+                if output_fn:
+                    print(event_list[-1])
+                if event_list[-1].value == expected_value:
+                    return True
+            time.sleep(0.1)
+
     event_acc = EventAccumulator(
         tmp_path.joinpath("dashboard", "tensorboard").as_posix()
     )
@@ -139,6 +163,8 @@ def test_summary_logger(tmp_path: Path):
     tags = event_acc.Tags()["scalars"]
     assert len(tags) == 0
     l.update({"test": 0})
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard(event_acc, "test")
     event_acc.Reload()
     tags = event_acc.Tags()["scalars"]
     assert len(tags) == 1
@@ -147,9 +173,13 @@ def test_summary_logger(tmp_path: Path):
     assert len(event_list) == 1
     assert event_list[0].step == 0
     assert event_list[0].value == 0
-    l.update({"test": 5})
-    l.update({"test": 10}, itr=100)
 
+    l.update({"test": 5})
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard_update(event_acc, "test", 5)
+    l.update({"test": 10}, itr=100)
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard_update(event_acc, "test", 10)
     event_acc.Reload()
     event_list = event_acc.Scalars("test")
     assert event_list[1].step == 1
@@ -158,15 +188,17 @@ def test_summary_logger(tmp_path: Path):
     assert event_list[2].value == 10
 
     l.update({"test_arr": np.array([100, "100"])})
-
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard(event_acc, "test_arr/text_summary", tag_type="tensors")
     event_acc.Reload()
-    event_acc.Tensors("test_arr/text_summary")
     assert str(event_acc.Tensors("test_arr/text_summary")[0]).endswith(
         'dtype: DT_STRING\ntensor_shape {\n  dim {\n    size: 1\n  }\n}\nstring_val: "100 100"\n)'
     )
 
     l.update({"arr": np.array([100, 101])})
-
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard(event_acc, "arr_0", tag_type="scalars")
+    wait_for_tensorboard(event_acc, "arr_1", tag_type="scalars")
     event_acc.Reload()
 
     event_list = event_acc.Scalars("arr_0")
@@ -177,6 +209,8 @@ def test_summary_logger(tmp_path: Path):
     assert event_list[0].value == 101
 
     l.update({"text": "bb"})
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard(event_acc, "text/text_summary", tag_type="tensors")
 
     event_acc.Reload()
     assert str(event_acc.Tensors("text/text_summary")[0]).endswith(
@@ -184,12 +218,17 @@ def test_summary_logger(tmp_path: Path):
     )
 
     l.update({"df": pd.DataFrame(np.zeros(3))})
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard(event_acc, "df/text_summary", tag_type="tensors")
     event_acc.Reload()
     assert str(event_acc.Tensors("df/text_summary")[0]).endswith(
         'string_val: "|    |   0 |\\n|---:|----:|\\n|  0 |   0 |\\n|  1 |   0 |\\n|  2 |   0 |"\n)'
     )
+
     img = Image.fromarray(np.zeros((5, 5, 3), dtype=np.uint8))
     l.update({"img": img})
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard(event_acc, "img", tag_type="images")
     event_acc.Reload()
 
     img_byte_arr = io.BytesIO()

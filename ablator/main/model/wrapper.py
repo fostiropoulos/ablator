@@ -539,7 +539,7 @@ class ModelWrapper(ModelBase):
 
     def status_message(self) -> str:
         """
-        Return a string generated from dictinoary of current metrics,including all the static metrics and moving average metrics.
+        Return a string generated from dictionary of current metrics,including all the static metrics and moving average metrics.
 
         Returns
         -------
@@ -612,7 +612,8 @@ class ModelWrapper(ModelBase):
                 self.metrics.reset("train")
                 self.train_tqdm.reset()
             outputs, train_metrics = self.train_step(batch)
-            self.metrics.append_batch(**outputs, tag="train")
+            if outputs is not None:
+                self.metrics.append_batch(**outputs, tag="train")
             self.metrics.update_ma_metrics(train_metrics, tag="train")
 
             if "loss" in train_metrics and not np.isfinite(train_metrics["loss"]):
@@ -632,7 +633,11 @@ class ModelWrapper(ModelBase):
 
     @ty.final
     def train(
-        self, run_config: RunConfig, smoke_test: bool = False, debug: bool = False
+        self,
+        run_config: RunConfig,
+        smoke_test: bool = False,
+        debug: bool = False,
+        resume: bool = False,
     ) -> TrainMetrics:
         """
         Initialize states and train the model.
@@ -640,19 +645,23 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        run_config: RunConfig
+        run_config : RunConfig
             The run config to use for training.
-        smoke_test: bool
+        smoke_test : bool, default=False
             Whether to run a smoke test.
-        debug: bool
+        debug : bool, default=False
             Whether to run in debug mode.
+        resume : bool, default=False
+            Whether to resume training the model from existing checkpoints and existing experiment state.
 
         Returns
         -------
         TrainMetrics
             The metrics from the training.
         """
-        self._init_state(run_config=run_config, smoke_test=smoke_test, debug=debug)
+        self._init_state(
+            run_config=run_config, smoke_test=smoke_test, debug=debug, resume=resume
+        )
 
         try:
             return self.train_loop(smoke_test)
@@ -775,6 +784,7 @@ class ModelWrapper(ModelBase):
             self.logger.warn(
                 f"Metrics batch-limit {batch_lim} is smaller than "
                 f"the validation dataloader length {len(dataloader)}. "
+                "Consider increasing `metrics_n_batches`."
             )
         metrics_dict = self.validation_loop(
             model, dataloader, metrics, tag, subsample, smoke_test
@@ -818,21 +828,23 @@ class ModelWrapper(ModelBase):
             The metrics from the validation.
         """
         cutoff_itr = len(dataloader) * subsample
+        if model.training:
+            self.logger.warn("Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`")
         for i, batch in enumerate(dataloader):
             with torch.no_grad():
                 outputs, loss = self._model_step(model=model, batch=batch)
+                val_metrics = {}
                 if outputs is not None:
                     aux_metrics = self.aux_metrics(outputs)
                     metrics.append_batch(tag=tag, **outputs)
-
-                val_metrics = {}
+                    if aux_metrics is not None:
+                        assert (
+                            "loss" not in aux_metrics
+                        ), "Invalid return key `loss` from `aux_metrics`"
+                        val_metrics.update(aux_metrics)
                 if loss is not None:
                     val_metrics["loss"] = torch.mean(loss).item()
-                if aux_metrics is not None:
-                    assert (
-                        "loss" not in aux_metrics
-                    ), "Invalid return key `loss` from `aux_metrics`"
-                    val_metrics.update(aux_metrics)
+
                 metrics.update_ma_metrics(val_metrics, tag=tag)
                 if i > cutoff_itr or smoke_test:
                     break

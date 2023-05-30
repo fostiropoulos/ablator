@@ -1,6 +1,7 @@
 import copy
 import multiprocessing as mp
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -15,13 +16,15 @@ import torch
 
 import ablator as ablator_module
 from ablator.main.configs import ParallelConfig
-from ablator.main.model.main import TrainPlateauError
+from ablator.main.model.main import CheckpointNotFoundError, TrainPlateauError
 from ablator.main.model.wrapper import ModelWrapper
 from ablator.main.proto import ProtoTrainer
 from ablator.main.state import ExperimentState, TrialState
 from ablator.modules.loggers.file import FileLogger
+from ablator.modules.loggers.main import DuplicateRunError
 from ablator.modules.metrics.main import LossDivergedError
 from ablator.utils.base import get_gpu_max_mem
+import ablator.utils.base as butils
 
 # The exceptions that are unrecoverable i.e.  [DuplicateRunError]
 CRASH_EXCEPTION_TYPES: list[type] = []
@@ -87,6 +90,8 @@ def train_main_remote(
     root_dir: Path,
     fault_tollerant: bool = True,
     crash_exceptions_types: list[type] | None = None,
+    resume: bool = False,
+    clean_reset: bool = False,
 ) -> tuple[ParallelConfig, dict[str, float] | None, TrialState]:
     """
     The trial job that will be executed remotely at a ray node. This is where model training happens.
@@ -108,16 +113,27 @@ def train_main_remote(
         Whether to tollerate crashes, aka to cease execution when the ray job crashes.
     crash_exceptions_types : list[type], None, optional, default=None
         Types of exceptions that are considered as crashes.
+    resume : bool, default=False
+        Whether to resume training the model from existing checkpoints and existing experiment state.
+    clean_reset : bool, default=False
+        Whether to remove model directory when ``CheckpointNotFoundError`` is raised.
 
     Returns
     -------
-    run_config : ParallelConfig
+    ParallelConfig
         Running configuration of the trial.
     dict[str, float], None
         If exception raised (Except for LossDivergedError and TrainPlateauError),
         this will be ``None`` object. Otherwise, this will be a dictionary of metrics.
     TrialState
-        A TrialState object indicating the state of the trial job.
+        A TrialState object indicating the state of the trial job
+
+        - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training, returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
+
+        - If ``DuplicateRunError``, ``RuntimeError`` (with message ``'CUDA out of memory'``), or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training, returned state will be ``TrialState.RECOVERABLE_ERROR``
+
+        - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised, returned state will be ``TrialState.FAIL``
+
     """
     if crash_exceptions_types is None:
         crash_exceptions_types = []
@@ -139,7 +155,7 @@ def train_main_remote(
         return run_config, None, TrialState.FAIL
 
     try:
-        res = model.train(run_config)
+        res = model.train(run_config, resume=resume)
         mp_logger.info(f"Finished training - {run_config.uid}")
         return run_config, res.to_dict(), TrialState.COMPLETE
     except (LossDivergedError, TrainPlateauError):
@@ -148,6 +164,27 @@ def train_main_remote(
             model.metrics.to_dict(),
             TrialState.PRUNED_POOR_PERFORMANCE,
         )
+    except DuplicateRunError:
+        return (
+            run_config,
+            None,
+            TrialState.RECOVERABLE_ERROR,
+        )
+    except CheckpointNotFoundError:
+        if clean_reset:
+            if model.model_dir is not None:
+                shutil.rmtree(model.model_dir.as_posix())
+            return (
+                run_config,
+                None,
+                TrialState.RECOVERABLE_ERROR,
+            )
+        else:
+            return (
+                run_config,
+                None,
+                TrialState.FAIL,
+            )
     except RuntimeError as e:
         if str(e).startswith("CUDA out of memory."):
             mp_logger.warn(f"Cuda out of memory for {run_config.uid}. Restarting...")
@@ -216,9 +253,12 @@ class ParallelTrainer(ProtoTrainer):
         # Distributed config parser
         run_config = copy.deepcopy(run_config)
         experiment_dir = run_config.experiment_dir or ""
-        run_config.experiment_dir = os.path.join(
-            experiment_dir, f"experiment_{run_config.uid}"
-        )
+        # TODO {junzhu} write a test case for relative path. The trials have
+        # different relative path and fail to find the main directory.
+        experiment_path = Path(experiment_dir).absolute()
+        run_config.experiment_dir = str(experiment_path.joinpath(
+            f"experiment_{run_config.uid}"
+        ))
 
         super().__init__(*args, run_config=run_config, **kwargs)  # type: ignore
 
@@ -228,19 +268,20 @@ class ParallelTrainer(ProtoTrainer):
 
         self.run_config: ParallelConfig
         self.run_config = run_config
-        self.device = self.run_config.device
+        self.device = butils.parse_device(self.run_config.device)
         self.experiment_dir: Path = Path(run_config.experiment_dir)
         self.logger = FileLogger(path=self.experiment_dir / "mp.log")
         self.experiment_state: ExperimentState
         self.total_trials = self.run_config.total_trials
-
-        self.gpu_mem_bottleneck = min(get_gpu_max_mem())
-        if min(get_gpu_max_mem()) != max(get_gpu_max_mem()):
-            self.logger.warn(
-                f"Bottlenecked memory utilization by {self.gpu_mem_bottleneck}."
-            )
+        self.gpu: float = 0.0
         self.cpu: float = self._make_cpu()
-        self.gpu: float = self._make_gpu()
+        if self.device.startswith("cuda"):
+            self.gpu_mem_bottleneck = min(get_gpu_max_mem())
+            if min(get_gpu_max_mem()) != max(get_gpu_max_mem()):
+                self.logger.warn(
+                    f"Bottlenecked memory utilization by {self.gpu_mem_bottleneck}."
+                )
+            self.gpu = self._make_gpu()
         self.experiment_dir.joinpath("default_config.yaml").write_text(
             str(self.run_config), encoding="utf-8"
         )
@@ -248,12 +289,6 @@ class ParallelTrainer(ProtoTrainer):
 
     def _make_gpu(self):
         if (gpu := self.run_config.gpu_mb_per_experiment / self.gpu_mem_bottleneck) > 0:
-            assert (
-                self.device == "cuda"
-            ), "Device must be set to 'cuda' if `gpu_mb_per_experiment` > 0"
-            assert (
-                torch.cuda.is_available()
-            ), "Could not find a torch.cuda installation on your system."
             mem_util = int(gpu * self.run_config.concurrent_trials)
             sys_mem = int(sum(get_gpu_max_mem()))
             if mem_util > sys_mem * 0.8:
@@ -313,17 +348,28 @@ class ParallelTrainer(ProtoTrainer):
         mp_logger = ray.put(copy.deepcopy(self.logger))
         remotes = []
         for run_config in trials:
-            diffs = self.run_config.diff_str(run_config)
-            diffs = "\n\t".join(diffs)
-            msg = f"Scheduling uid: {run_config.uid}\nParameters: \n\t{diffs}\n-----"
-            self.logger.info(msg)
             if (remote_fn := self._make_remote_fn()) is not None:
+                diffs = self.run_config.diff_str(run_config)
+                diffs = "\n\t".join(diffs)
+                resume = run_config.uid in [
+                    cfg.uid for cfg in self.experiment_state.resumed_trials
+                ]
+                action = "Scheduling" if resume is False else "Resuming"
+                msg = f"{action} uid: {run_config.uid}\nParameters: \n\t{diffs}\n-----"
+                self.logger.info(msg)
+                self.experiment_state.update_trial_state(
+                    run_config.uid, None, TrialState.RUNNING
+                )
                 remotes.append(
                     remote_fn.remote(
                         model_obj,
                         copy.deepcopy(run_config),
                         mp_logger,
                         self.experiment_dir,
+                        True,
+                        None,
+                        resume,
+                        True,
                     )
                 )
 
@@ -334,6 +380,7 @@ class ParallelTrainer(ProtoTrainer):
         working_dir: str = "",
         address: str | None = "auto",
         modules: list[tys.ModuleType] | None = None,
+        resume: bool = False,
     ):
         if not ray.is_initialized():
             if modules is None:
@@ -351,7 +398,7 @@ class ParallelTrainer(ProtoTrainer):
         super()._init_state()
         self.sync_down()
         self.experiment_state = ExperimentState(
-            self.experiment_dir, self.run_config, self.logger
+            self.experiment_dir, self.run_config, self.logger, resume=resume
         )
 
     def _rsync_nodes(self):
@@ -447,6 +494,7 @@ class ParallelTrainer(ProtoTrainer):
         working_directory: str,
         auxilary_modules: list[tys.ModuleType] | None = None,
         ray_head_address: str | None = "auto",
+        resume: bool = False,
     ):
         """
         Set up and launch the parallel training and tuning process. This includes:
@@ -455,10 +503,9 @@ class ParallelTrainer(ProtoTrainer):
 
         - if available, synchronize Google Cloud storage buckets to working directory defined in runtime configuration.
 
-        - initialize optuna trials and add them to optuna storage
-        and experiment state database for tracking training progress (or retrieve existing trials from optuna storage).
+        - initialize optuna trials and add them to optuna storage and experiment state database for tracking training progress (or retrieve existing trials from optuna storage).
 
-        Trials initialized (or retrieved), ``self.experiment_state.running_trials``,
+        Trials initialized (or retrieved), :obj:`experiment_state.pending_trials`,
         will be pushed to ray nodes so they can be executed in parallel. After all trials
         have finished and progress is recorded in sqlite databases in the working directory,
         these changes will be synchronized back to the GCP nodes via ``rsync_up()`` method.
@@ -471,6 +518,8 @@ class ParallelTrainer(ProtoTrainer):
             A list of modules to be used as ray clusters' working environment.
         ray_head_address : str, default='auto'
             Ray cluster address.
+        resume : bool, default=False
+            Whether to resume training the model from existing checkpoints and existing experiment state.
         """
         try:
             torch.multiprocessing.set_start_method("spawn")
@@ -481,10 +530,11 @@ class ParallelTrainer(ProtoTrainer):
             working_dir=working_directory,
             address=ray_head_address,
             modules=auxilary_modules,
+            resume=resume,
         )
 
         futures = []
-        trials: list[ParallelConfig] | None = self.experiment_state.running_trials
+        trials: list[ParallelConfig] | None = self.experiment_state.pending_trials
         futures = self.__make_remotes_from_trials(trials)
         config: ParallelConfig
         metrics: dict[str, float] | None

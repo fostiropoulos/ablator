@@ -60,8 +60,6 @@ class ConfigBase:
     ----------
     *args : Any
         Positional arguments.
-    add_attributes : bool, optional
-        Whether to add attributes, by default ``False``.
     **kwargs : Any
         Keyword arguments.
 
@@ -83,7 +81,7 @@ class ConfigBase:
     """
     config_class = type(None)
 
-    def __init__(self, *args, add_attributes=False, **kwargs):
+    def __init__(self, *args, **kwargs):
         class_name = type(self).__name__
         added_variables = {
             item[0]
@@ -110,7 +108,7 @@ class ConfigBase:
             )
         missing_vals = []
         for k, annotation in self.annotations.items():
-            if not annotation.optional and annotation.state not in [Derived, Stateless]:
+            if not annotation.optional and annotation.state not in [Derived]:
                 # make sure non-optional and derived values are not empty or
                 # without a default assignment
                 if not (
@@ -129,9 +127,7 @@ class ConfigBase:
             v = parse_value(v, annotation, k)
             setattr(self, k, v)
 
-        if add_attributes and len(kwargs) > 0:
-            setattr(self, k, v)
-        elif len(kwargs) > 0:
+        if len(kwargs) > 0:
             unspected_args = ", ".join(kwargs.keys())
             raise KeyError(f"Unexpected arguments: `{unspected_args}`")
 
@@ -178,7 +174,19 @@ class ConfigBase:
         if hasattr(self, "__annotations__"):
             annotation_types = dict(self.__annotations__)
             # pylint: disable=no-member
-            dataclass_types = {k: v.type for k, v in self.__dataclass_fields__.items()}
+            # Without the if statement it will over-write new configurations
+            # e.x.
+
+            # class ReConfig(RunConfig):
+            #     train_config: SomeTrainConfig = SomeTrainConfig()
+            #     model_config: SomeModelConfig = SomeModelConfig()
+            # TODO test-me
+
+            dataclass_types = {
+                k: v.type
+                for k, v in self.__dataclass_fields__.items()
+                if k not in annotation_types
+            }
             annotation_types.update(dataclass_types)
 
             annotations = {

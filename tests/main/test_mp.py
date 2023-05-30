@@ -44,7 +44,6 @@ search_space = {
     ),
 }
 
-
 config = MyParallelConfig(
     train_config=train_config,
     model_config=CustomModelConfig(),
@@ -115,30 +114,85 @@ def test_mp(tmp_path: Path):
 
     with tempfile.TemporaryDirectory() as fp:
         config.experiment_dir = fp
-        assert_error_msg(
-            lambda: ParallelTrainer(wrapper=wrapper, run_config=config),
-            "Device must be set to 'cuda' if `gpu_mb_per_experiment` > 0",
-        )
         config.device = "cuda"
-        config.gpu_mb_per_experiment = 1e12
-        config.cpus_per_experiment = 1e12
-        out, err = capture_output(
-            lambda: ParallelTrainer(wrapper=wrapper, run_config=config)
-        )
-        assert (
-            "Expected GPU memory utilization" in out
-            and "Expected CPU core util. exceed system capacity" in out
-        )
+        if torch.cuda.is_available():
+            config.gpu_mb_per_experiment = 1e12
+            config.cpus_per_experiment = 1e12
+            out, err = capture_output(
+                lambda: ParallelTrainer(wrapper=wrapper, run_config=config)
+            )
+            assert (
+                    "Expected GPU memory utilization" in out
+                    and "Expected CPU core util. exceed system capacity" in out
+            )
+        else:
+            assert_error_msg(
+                lambda: ParallelTrainer(wrapper=wrapper, run_config=config),
+                "Could not find a torch.cuda installation on your system."
 
+            )
     config.experiment_dir = tmp_path
-    config.device = "cuda"
+    if not torch.cuda.is_available():
+        config.device = "cpu"
     config.gpu_mb_per_experiment = 0.001
     config.cpus_per_experiment = 0.001
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
-    ablator.gpu = 1 / config.concurrent_trials
+    if torch.cuda.is_available():
+        ablator.gpu = 1 / config.concurrent_trials
     ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
     res = Results(MyParallelConfig, ablator.experiment_dir)
     assert res.data.shape[0] // 2 == len(ablator.experiment_state.complete_trials)
+
+
+def test_resume(tmp_path: Path):
+    # Initial setup and launch
+    wrapper = TestWrapper(MyCustomModel)
+    resume_config = MyParallelConfig(
+        train_config=train_config,
+        model_config=CustomModelConfig(),
+        verbose="silent",
+        device="cuda",
+        amp=False,
+        search_space=search_space,
+        optim_metrics={"val_loss": "min"},
+        total_trials=5,
+        concurrent_trials=5,
+        gpu_mb_per_experiment=0.001,
+        cpus_per_experiment=0.001,
+    )
+    if not torch.cuda.is_available():
+        resume_config.device = "cpu"
+    resume_config.experiment_dir = tmp_path
+    ablator = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
+    if torch.cuda.is_available():
+        ablator.gpu = 1 / config.concurrent_trials
+    ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
+
+    ablator_test = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
+    assert_error_msg(
+        lambda: ablator_test.launch(Path(__file__).parent.as_posix(), ray_head_address=None),
+        f"{ablator_test.experiment_dir.joinpath(f'{resume_config.uid}_optuna.db')} exists. Please remove before starting a study.",
+    )
+    
+    # Check the initial state and save some metrics
+    res = Results(MyParallelConfig, ablator.experiment_dir)
+    initial_trials = len(ablator.experiment_state.complete_trials)
+
+    # Assuming some trial was completed, interrupt the execution
+    assert initial_trials > 0
+
+    # Re-setup and launch with resume=True
+    ablator = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
+    if torch.cuda.is_available():
+        ablator.gpu = 1 / config.concurrent_trials
+    ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None, resume=True)
+
+    # Check the state after resuming
+    res = Results(MyParallelConfig, ablator.experiment_dir)
+    resumed_trials = len(ablator.experiment_state.complete_trials)
+
+    # Check if resumed trials are no less than initial trials
+    assert resumed_trials >= initial_trials
 
 
 if __name__ == "__main__":
@@ -148,5 +202,4 @@ if __name__ == "__main__":
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
     test_mp(tmp_path)
-
-    pass
+    test_resume(tmp_path)

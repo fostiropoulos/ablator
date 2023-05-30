@@ -42,7 +42,7 @@ class TrainConfig(ConfigBase):
     scheduler_config: Optional[SchedulerConfig]
     rand_weights_init: bool = True
 
-
+# TODO decorator @modelconfig as opposed to @configclass ModelConfig
 @configclass
 class ModelConfig(ConfigBase):
     """
@@ -84,8 +84,7 @@ class RunConfig(ConfigBase):
     metrics_mb_limit: int = 100
         max number of megabytes stored in every tag(train, eval, test) for evaluation.
     early_stopping_iter: Optional[int] = None
-        The maximum allowed difference between the current iteration and the last iteration with the best metric
-        before applying early stopping.
+        The maximum allowed difference between the current iteration and the last iteration with the best metric before applying early stopping.
         Early stopping will be triggered if the difference ``(current_itr - best_itr)`` exceeds ``early_stopping_iter``.
         If set to ``None``, early stopping will not be applied.
     eval_epoch: float = 1
@@ -180,8 +179,7 @@ class ParallelConfig(RunConfig):
     concurrent_trials: int
         number of trials to run concurrently.
     search_space: Dict[SearchSpace]
-        search space for hyperparameter search,eg.
-        ``{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}``
+        search space for hyperparameter search,eg. ``{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}``
     optim_metrics: Dict[Optim]
         metrics to optimize, eg. ``{"val_loss": "min"}``
     search_algo: SearchAlgo = SearchAlgo.tpe

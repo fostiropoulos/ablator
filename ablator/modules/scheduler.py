@@ -178,7 +178,7 @@ class PlateuaConfig(SchedulerArgs):
     patience: int = 10
     min_lr: float = 1e-5
     mode: str = "min"
-    factor: float = 0.0
+    factor: float = 0.0 # TODO {fixme} this is error prone -> new_lr = 0
     threshold: float = 1e-4
     verbose: bool = False
     # TODO fix mypy errors for custom types
@@ -245,7 +245,7 @@ class StepLRConfig(SchedulerArgs):
         ----------
         model : nn.Module
             The model to apply the scheduler.
-        optimizer : nn.Module
+        optimizer : Optimizer
             The optimizer used to update the model parameters, whose learning
             rate we want to monitor.
 

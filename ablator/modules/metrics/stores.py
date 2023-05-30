@@ -206,8 +206,6 @@ class PredictionStore:
         ... )
         """
         super().__init__()
-        # self.labels = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
-        # self.preds = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
         self.limit = batch_limit
         self.memory_limit = memory_limit
         self.metrics: dict[str, MovingAverage] = (
@@ -314,7 +312,7 @@ class PredictionStore:
         {'mean': 5.333333333333334}
         """
         if self._keys is None:
-            raise RuntimeError("PredictionStore has no predictions to evaluate.")
+            return {}
         batches = {k: self._get_arr(k).get() for k in self._keys}
 
         if self.__evaluation_functions__ is None or len(batches) == 0:
@@ -354,6 +352,8 @@ class PredictionStore:
         >>> pred_store.append(preds=np.array([4,3,0]), labels=np.array([5,1,3]))
         >>> pred_store.reset()
         """
+        if self._keys is None:
+            return
         for k in self._keys:
             self._get_arr(k).reset()
 

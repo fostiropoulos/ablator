@@ -77,11 +77,12 @@ class EmptyConfig(ConfigBase):
     pass
 
 
-def test_attrs(tmp_path: Path):
+def test_attrs(tmp_path: Path, assert_error_msg):
     e = EmptyConfig()
     e.annotations
     assert len(e.annotations) == 0
-    p = ParentTestConfig()
+    assert_error_msg(ParentTestConfig, "Missing required value ['a10']" )
+    p = ParentTestConfig(a10="")
     # NOTE: to make new test cases:
     # print({k:f"Annotation(state={v.state.__name__},
     # optional={v.optional}, collection={v.collection},
@@ -113,7 +114,7 @@ def test_attrs(tmp_path: Path):
     loaded_p.c2.a1 = "a"
     diff_str = loaded_p.diff_str(p)
     assert len(diff_str) == 3 and [
-        "a10:(str)a->(NoneType)None",
+        "a10:(str)a->(str)",
         "a2:(int)0->(str)10",
         "c2.a1:(str)a->(int)10",
     ] == sorted(diff_str)
@@ -146,4 +147,12 @@ def test_attrs(tmp_path: Path):
 
 
 if __name__ == "__main__":
-    test_attrs(Path("/tmp/"))
+    def assert_error_msg(fn, error_msg):
+        try:
+            fn()
+            assert False
+        except Exception as excp:
+            if not error_msg == str(excp):
+                raise excp
+
+    test_attrs(Path("/tmp/"),assert_error_msg)
