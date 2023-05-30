@@ -373,8 +373,8 @@ class ModelWrapper(ModelBase):
 
         if (
             self.scheduler is not None
-            and hasattr(self.train_config.scheduler_config, "step_when")
-            and self.train_config.scheduler_config.step_when == "val"
+            and hasattr(self.train_config.scheduler_config.arguments, "step_when")
+            and self.train_config.scheduler_config.arguments.step_when == "val"
         ):
             if val_loss is None:
                 raise EvaluationError(
