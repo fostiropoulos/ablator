@@ -374,6 +374,8 @@ def parse_value(val, annot: Annotation, name=None):
                 raise ValueError(f"Invalid type {type(_v)} for {_k} and field {name}")
         return return_dictionary
     if annot.collection == List:
+        if not type(val)==list:
+            raise ValueError(f"Invalid type {type(val)} for type List")
         return [annot.variable_type(_v) for _v in val]
     if annot.collection == Tuple:
         assert len(val) == len(

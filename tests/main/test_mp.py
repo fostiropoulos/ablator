@@ -194,7 +194,25 @@ def test_resume(tmp_path: Path):
     # Check if resumed trials are no less than initial trials
     assert resumed_trials >= initial_trials
 
-
+def test_relative_path(tmp_path:Path):
+    wrapper = TestWrapper(MyCustomModel)
+    relative_path_config=MyParallelConfig(
+        train_config=train_config,
+        model_config=CustomModelConfig(),
+        verbose="silent",
+        device="cpu",
+        amp=False,
+        search_space=search_space,
+        optim_metrics={"val_loss": "min"},
+        total_trials=5,
+        concurrent_trials=5,
+        gpu_mb_per_experiment=0.001,
+        cpus_per_experiment=0.001,
+    )
+    
+    relative_path_config.experiment_dir="../dir"
+    ablator=ParallelTrainer(wrapper=wrapper,run_config=relative_path_config)
+    assert Path(relative_path_config.experiment_dir).absolute() in ablator.experiment_dir.parents
 if __name__ == "__main__":
     import shutil
 
@@ -203,3 +221,4 @@ if __name__ == "__main__":
     tmp_path.mkdir()
     test_mp(tmp_path)
     test_resume(tmp_path)
+    test_relative_path(tmp_path)

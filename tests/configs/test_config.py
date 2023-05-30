@@ -44,6 +44,7 @@ class ParentTestConfig(ConfigBase):
     a6: myEnum = "a"
 
 
+
 annotations = {
     "a1": Annotation(
         state=Stateful, optional=False, collection=None, variable_type=int

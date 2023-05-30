@@ -10,6 +10,7 @@ from ablator import (
     Optional,
     Tuple,
     configclass,
+    Stateful
 )
 
 
@@ -174,7 +175,7 @@ def test_error_configs(assert_error_msg):
     assert True
 
 
-def test_hierarchical():
+def test_hierarchical(assert_error_msg):
     c = SimpleConfig(a1="10")
     assert type(c.a1) == int and c.a1 == int("10")
     # Should fail
@@ -192,6 +193,13 @@ def test_hierarchical():
     assert pc_dict == pc_obj
 
 
+def test_iterable(assert_error_msg):
+    ErrorConfigList(a4=[11,])
+    assert_error_msg(lambda:ErrorConfigList(a4=(11,)),"Invalid type <class 'tuple'> for type List")
+    assert_error_msg(lambda:ErrorConfigList(a4=11),"Invalid type <class 'int'> for type List")
+    assert_error_msg(lambda:ErrorConfigList(a4="11"),"Invalid type <class 'str'> for type List")
+    
+
 if __name__ == "__main__":
     # TODO tests for iterable Type
     def assert_error_msg(fn, error_msg):
@@ -205,3 +213,5 @@ if __name__ == "__main__":
     test_types(assert_error_msg)
     test_hierarchical()
     test_error_configs(assert_error_msg)
+    test_iterable(assert_error_msg)
+
