@@ -686,7 +686,6 @@ class ModelWrapper(ModelBase):
         self._init_state(run_config, resume=True)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
 
-        # TODO make new metrics
         msg = self.metrics.to_dict()
         self.logger.info(f"Current metrics: {msg}")
         metrics = {}
@@ -829,7 +828,9 @@ class ModelWrapper(ModelBase):
         """
         cutoff_itr = len(dataloader) * subsample
         if model.training:
-            self.logger.warn("Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`")
+            self.logger.warn(
+                "Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`"
+            )
         for i, batch in enumerate(dataloader):
             with torch.no_grad():
                 outputs, loss = self._model_step(model=model, batch=batch)
