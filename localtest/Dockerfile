@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 LABEL maintainer="deepusc@usc.com"
 LABEL description="Local test for Ablator"
 
-COPY ./../. .
+COPY . .
 
 RUN apt-get update && \
     apt-get install -y openssh-server rsync && \
