@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cd "$(dirname "$0")"
 length=5
 random_string=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w "$length" | head -n 1)
 
