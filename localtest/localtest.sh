@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define image and container names
-IMAGE_NAME="local-test"
-CONTAINER_NAME="local-test"
+IMAGE_NAME="ablator-local-test"
+CONTAINER_NAME="ablator-local-test"
 
 # Build the Docker image
 docker build -t $IMAGE_NAME .
