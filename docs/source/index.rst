@@ -21,6 +21,7 @@ Welcome to ablator's documentation!
    :caption: Tutorials
 
    notebooks/Environment-settings.ipynb
+   notebooks/Configuration-Basics.ipynb
 
 Indices and tables
 ==================
