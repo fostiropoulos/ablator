@@ -84,7 +84,7 @@ class MyCustomModel2(nn.Module):
 
     def forward(self, x: torch.Tensor):
         x = self.param + torch.rand_like(self.param) * 0.01
-        return {"preds": x}, None
+        return {"preds": x}, x.sum().abs()
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
 train_config = TrainConfig(
