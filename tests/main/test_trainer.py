@@ -8,7 +8,10 @@ from ablator import (
     TrainConfig,
     ProtoTrainer,
     ModelWrapper,
+    SchedulerConfig,
 )
+
+
 import random
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
@@ -74,5 +77,45 @@ def test_proto(tmp_path: Path):
     )
 
 
+class MyCustomModel2(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(100))
+
+    def forward(self, x: torch.Tensor):
+        x = self.param + torch.rand_like(self.param) * 0.01
+        return {"preds": x}, None
+
+optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
+train_config = TrainConfig(
+    dataset="test",
+    batch_size=128,
+    epochs=2,
+    optimizer_config=optimizer_config,
+    scheduler_config=SchedulerConfig("step", arguments={"step_when": "val"}),
+)
+
+config = RunConfig(
+    train_config=train_config,
+    model_config=ModelConfig(),
+    verbose="silent",
+    device="cpu",
+    amp=False,
+)
+
+def test_proto_with_scheduler(tmp_path: Path):
+    wrapper = TestWrapper(MyCustomModel2)
+    config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
+    ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
+    metrics = ablator.launch()
+    val_metrics = ablator.evaluate()
+    assert (
+        abs((metrics.to_dict()["val_loss"] - val_metrics["val"].to_dict()["val_loss"]))
+        < 0.01
+    )
+
+
 if __name__ == "__main__":
     test_proto(Path("/tmp/"))
+    test_proto_with_scheduler(Path("/tmp/"))
+
