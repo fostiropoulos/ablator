@@ -241,11 +241,9 @@ def init_weights(module: nn.Module):
 
     Notes
     -----
-    - If the module is a Linear layer, initialize weight values from a normal distribution N(mu=0, std=1.0).
-    If biases are available, initialize them to zeros.
+    - If the module is a Linear layer, initialize weight values from a normal distribution N(mu=0, std=1.0). If biases are available, initialize them to zeros.
 
-    - If the module is an Embedding layer, initialize embeddings with values from N(mu=0, std=1.0).
-    If padding is enabled, set the padding embedding to a zero vector.
+    - If the module is an Embedding layer, initialize embeddings with values from N(mu=0, std=1.0). If padding is enabled, set the padding embedding to a zero vector.
 
     - If the module is a LayerNorm layer, set all biases to zeros and all weights to 1.
     """
