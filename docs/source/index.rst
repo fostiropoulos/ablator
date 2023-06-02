@@ -8,13 +8,19 @@ Welcome to ablator's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
 
    ablator.analysis
    ablator.config
    ablator.main
    ablator.modules
    ablator.utils
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+
+   notebooks/Environment-settings.ipynb
 
 Indices and tables
 ==================
