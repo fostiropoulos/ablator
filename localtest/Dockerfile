@@ -2,7 +2,7 @@ FROM continuumio/miniconda3:4.10.3
 
 WORKDIR /usr/src/app
 
-LABEL maintainer="deepusc@usc.com"
+LABEL maintainer="dev@iordanis.xyz"
 LABEL description="Local test for Ablator"
 
 COPY . .
@@ -21,7 +21,6 @@ RUN pip install -e .[dev]
 
 RUN conda install -y pytest
 
-RUN chmod +x ./hack/starttest.sh
+RUN chmod +x ./scripts/starttest.sh
 
-# CMD ["sh", "-c","/usr/sbin/sshd -D & && pytest ."]
-CMD ["./hack/starttest.sh"]
+CMD ["./scripts/starttest.sh"]
