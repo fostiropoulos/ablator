@@ -1,5 +1,6 @@
 import copy
 import json
+import time
 from pathlib import Path
 from typing import Optional, Union
 
@@ -256,8 +257,15 @@ class SummaryLogger:
             The metrics to append.
         """
         if self.result_json_path is not None:
-            with open(self.result_json_path, "a", encoding="utf-8") as fp:
-                fp.write(futils.dict_to_json(metrics) + "\n")
+            _metrics = copy.deepcopy(metrics)
+            _metrics["timestamp"] = int(time.time())
+            _metrics_str = futils.dict_to_json(_metrics)
+            if self.result_json_path.exists():
+                futils.truncate_utf8_chars(self.result_json_path, "]")
+                with open(self.result_json_path, "a", encoding="utf-8") as fp:
+                    fp.write(",\n" + _metrics_str + "]")
+            else:
+                self.result_json_path.write_text(f"[{_metrics_str}]", encoding="utf-8")
 
     def update(
         self,

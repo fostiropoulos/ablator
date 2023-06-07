@@ -1,5 +1,6 @@
 import copy
 import json
+import os
 import typing as ty
 from pathlib import Path
 
@@ -161,3 +162,24 @@ def nested_set(_dict, keys: list[str], value: ty.Any):
         x = x[key]
     x[keys[-1]] = value
     return original_dict
+
+
+def truncate_utf8_chars(filename, last_char: str):
+    assert (
+        len(last_char) == 1
+    ), f"Can not truncate up to a single character. `last_char`: {last_char}"
+    last_char_ord = ord(last_char)
+    with open(filename, "rb+") as f:
+        size = os.fstat(f.fileno()).st_size
+        offset = 1
+        while offset <= size:
+            f.seek(-offset, os.SEEK_END)
+            b = ord(f.read(1))
+            if b == last_char_ord:
+                f.seek(-1, os.SEEK_CUR)
+                f.truncate()
+                return
+            offset += 1
+        raise RuntimeError(
+            f"Could not truncate {filename} since `last_char`: {last_char} was not found in the file."
+        )

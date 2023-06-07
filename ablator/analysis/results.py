@@ -15,59 +15,6 @@ from ablator.config.main import ConfigBase
 from ablator.main.configs import Optim, ParallelConfig, SearchSpace
 
 
-def process_row(row: str, **aux_info) -> dict[str, ty.Any] | None:
-    """
-    Process a given row to make it conform to the JSON format, loading it as a JSON object,
-    and updating it with auxiliary information.
-
-    Parameters
-    ----------
-    row : str
-        The input row to be processed, expected to be a JSON-like string.
-    **aux_info : dict
-        Additional key-value pairs to be added to the resulting dictionary.
-
-    Returns
-    -------
-    dict[str, ty.Any] | None
-        A dictionary resulting from the combination of the processed row and auxiliary information,
-        or ``None`` if the input row cannot be parsed as a JSON object.
-
-    Raises
-    ------
-    AssertionError
-        If there are overlapping column names between the auxiliary information and the input row.
-
-    Examples
-    --------
-    >>> row = '"name": "John Doe", "age": 30'
-    >>> aux_info = {"city": "San Francisco"}
-    >>> process_row(row, **aux_info)
-    {'name': 'John Doe', 'age': 30, 'city': 'San Francisco'}
-
-    >>> row = '{"name": "John Doe", "age": 30}'
-    >>> aux_info = {"age": 25, "city": "San Francisco"}
-    >>> process_row(row, **aux_info)
-    AssertionError: Overlapping column names between auxiliary dictionary and run results.
-    aux_info: {'age': 25, 'city': 'San Francisco'}
-    row: {"name": "John Doe", "age": 30}
-    """
-    if not row.startswith("{"):
-        row = "{" + row
-    if not row.endswith("}") and not row.endswith("}\n"):
-        row += "}"
-    s: dict[str, ty.Any] = {}
-    try:
-        s = json.loads(row)
-    except json.decoder.JSONDecodeError:
-        return None
-    assert (
-        len(list(filter(lambda k: k in s, aux_info.keys()))) == 0
-    ), f"Overlapping column names between auxilary dictionary and run results. aux_info: {aux_info}\n\nrow:{row} "
-    s.update(aux_info)
-    return s
-
-
 def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
     """
     Read the results of an experiment and return them as a pandas DataFrame.
@@ -123,23 +70,8 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
         experiment_attributes = experiment_config.make_dict(
             experiment_config.annotations, flatten=True
         )
-
-        with open(json_path, "r", encoding="utf-8") as f:
-            lines = f.read().split("}\n{")
-
-        _process_row = functools.partial(
-            process_row,
-            **{
-                **experiment_attributes,
-                **{"path": json_path.parent.as_posix()},
-            },
-        )
-        processed_rows = [_process_row(l) for l in lines]  # noqa
-        processed_jsons = list(filter(lambda x: x is not None, processed_rows))
-        df = pd.DataFrame(processed_jsons)
-
-        if (malformed_rows := len(processed_rows) - len(processed_jsons)) > 0:
-            print(f"Found {malformed_rows} malformed rows in {json_path}")
+        df = pd.read_json(json_path)
+        df = pd.concat([pd.DataFrame([experiment_attributes] * len(df)), df], axis=1)
         return df.reset_index()
 
     except Exception:
