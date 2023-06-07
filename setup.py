@@ -4,7 +4,7 @@ from pathlib import Path
 package_path = __file__
 setup(
     name="ablator",
-    version="0.1",
+    version="0.0.1b1",
     author="Iordanis Fostiropoulos",
     author_email="dev@iordanis.xyz",
     url="https://iordanis.xyz",
