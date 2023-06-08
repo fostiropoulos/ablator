@@ -4,7 +4,7 @@ from pathlib import Path
 package_path = __file__
 setup(
     name="ablator",
-    version="0.0.1b1",
+    version="0.0.1b2",
     author="Iordanis Fostiropoulos",
     author_email="dev@iordanis.xyz",
     url="https://iordanis.xyz",
@@ -25,7 +25,7 @@ setup(
         "omegaconf==2.2.3",
         "scipy==1.10.1",
         "setproctitle==1.3.2",
-        "ray==2.1.0",
+        "ray>=2.1.0,<=2.2.0",
         "pynvml==11.5.0",
         "optuna==3.1.1",
         "tabulate==0.9.0",
