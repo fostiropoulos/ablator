@@ -378,7 +378,7 @@ class ModelWrapper(ModelBase):
         ):
             if val_loss is None:
                 raise EvaluationError(
-                    f"A validation dataset is rquired with {self.scheduler.__name__} scheduler"
+                    f"A validation dataset is rquired with {self.scheduler.__class__.__name__} scheduler"
                 )
             self.scheduler.step(val_loss)
 
