@@ -16,6 +16,13 @@ Welcome to ablator's documentation!
    ablator.modules
    ablator.utils
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Getting started:
+
+   notebooks/GettingStarted.ipynb
+   notebooks/GettingStarted-more-demos.ipynb
+
 Indices and tables
 ==================
 
