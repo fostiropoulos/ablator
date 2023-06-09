@@ -23,6 +23,8 @@ Welcome to ablator's documentation!
    notebooks/Environment-settings.ipynb
    notebooks/Configuration-Basics.ipynb
    notebooks/Search-Space-Setup.ipynb
+   notebooks/GettingStarted.ipynb
+   notebooks/GettingStarted-more-demos.ipynb
 
 Indices and tables
 ==================
