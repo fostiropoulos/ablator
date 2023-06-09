@@ -17,9 +17,12 @@ Welcome to ablator's documentation!
    ablator.utils
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Getting started:
+   :maxdepth: 2
+   :caption: Tutorials
 
+   notebooks/Environment-settings.ipynb
+   notebooks/Configuration-Basics.ipynb
+   notebooks/Search-Space-Setup.ipynb
    notebooks/GettingStarted.ipynb
    notebooks/GettingStarted-more-demos.ipynb
 
@@ -29,3 +32,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+ :ref:`search`

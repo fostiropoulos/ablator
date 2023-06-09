@@ -19,7 +19,7 @@ release = '0.0.1'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ['sphinx.ext.autodoc','numpydoc',
-    'sphinx.ext.todo','sphinx.ext.viewcode']
+    'sphinx.ext.todo','sphinx.ext.viewcode', 'nbsphinx']
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -31,6 +31,7 @@ exclude_patterns = []
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+
 numpydoc_show_class_members = False
 numpydoc_class_members_toctree = False
 numpydoc_show_inherited_class_membersbool=False
