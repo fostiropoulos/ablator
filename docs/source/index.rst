@@ -25,6 +25,7 @@ Welcome to ablator's documentation!
    notebooks/Search-Space-Setup.ipynb
    notebooks/GettingStarted.ipynb
    notebooks/GettingStarted-more-demos.ipynb
+   notebooks/model-training.ipynb
 
 Indices and tables
 ==================
