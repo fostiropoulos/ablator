@@ -22,6 +22,7 @@ Welcome to ablator's documentation!
 
    notebooks/Environment-settings.ipynb
    notebooks/Configuration-Basics.ipynb
+   notebooks/Search-Space-Setup.ipynb
 
 Indices and tables
 ==================

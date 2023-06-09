@@ -31,6 +31,7 @@ exclude_patterns = []
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+
 numpydoc_show_class_members = False
 numpydoc_class_members_toctree = False
 numpydoc_show_inherited_class_membersbool=False
