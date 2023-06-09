@@ -8,7 +8,7 @@ Welcome to ablator's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents
+   :caption: Contents:
 
    ablator.analysis
    ablator.config
@@ -30,3 +30,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+ :ref:`search`
