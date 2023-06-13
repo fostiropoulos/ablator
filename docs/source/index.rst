@@ -20,12 +20,12 @@ Welcome to ablator's documentation!
    :maxdepth: 2
    :caption: Tutorials
 
+   notebooks/GettingStarted.ipynb
    notebooks/Environment-settings.ipynb
    notebooks/Configuration-Basics.ipynb
+   notebooks/Prototyping-models.ipynb
    notebooks/Search-Space-Setup.ipynb
-   notebooks/GettingStarted.ipynb
    notebooks/GettingStarted-more-demos.ipynb
-   notebooks/model-training.ipynb
 
 Indices and tables
 ==================
