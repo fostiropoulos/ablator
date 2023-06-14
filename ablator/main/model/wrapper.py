@@ -340,6 +340,14 @@ class ModelWrapper(ModelBase):
     def _train_evaluation_step(self, smoke_test=False):
         is_best = False
         val_loss = None
+        # If we are within 10% of the start or end of an epoch, we skip
+        # evalaution of train metrics for faster training
+        if (
+            self.current_iteration % self.epoch_len > 0.1 * self.epoch_len
+            and self.current_iteration % self.epoch_len < 0.9 * self.epoch_len
+        ):
+            self.metrics.evaluate("train", reset=False)
+
         if self.val_dataloader is not None:
             metrics = self._validation_loop(
                 model=self.model,
@@ -445,9 +453,6 @@ class ModelWrapper(ModelBase):
         outputs, loss = self._model_step(model=model, batch=batch)
 
         loss_value = self.apply_loss(model, loss, optimizer, scaler, scheduler)
-        aux_metrics = None
-        if outputs is not None:
-            aux_metrics = self.aux_metrics(outputs)
         if (
             scheduler is not None
             and getattr(scheduler, "step_when", None) == "epoch"
@@ -460,11 +465,6 @@ class ModelWrapper(ModelBase):
         train_metrics = {}
         if loss is not None:
             train_metrics["loss"] = loss_value
-        if aux_metrics is not None:
-            assert (
-                "loss" not in aux_metrics
-            ), "Can not return key `loss` from `aux_metrics`"
-            train_metrics.update(aux_metrics)
         return outputs, train_metrics
 
     def log_step(self):
@@ -609,7 +609,7 @@ class ModelWrapper(ModelBase):
                 # restart the generator if the previous generator is exhausted.
                 generator = iter(train_dataloader)
                 batch = next(generator)
-                self.metrics.reset("train")
+                self.metrics.evaluate("train")
                 self.train_tqdm.reset()
             outputs, train_metrics = self.train_step(batch)
             if outputs is not None:
@@ -836,13 +836,7 @@ class ModelWrapper(ModelBase):
                 outputs, loss = self._model_step(model=model, batch=batch)
                 val_metrics = {}
                 if outputs is not None:
-                    aux_metrics = self.aux_metrics(outputs)
                     metrics.append_batch(tag=tag, **outputs)
-                    if aux_metrics is not None:
-                        assert (
-                            "loss" not in aux_metrics
-                        ), "Invalid return key `loss` from `aux_metrics`"
-                        val_metrics.update(aux_metrics)
                 if loss is not None:
                     val_metrics["loss"] = torch.mean(loss).item()
 
@@ -912,34 +906,6 @@ class ModelWrapper(ModelBase):
         -------
         DataLoader | None
             The validation dataloader.
-        """
-        pass
-
-    def custom_evaluation(
-        self, model: nn.Module, dataloader: Iterable
-    ) -> ty.Optional[dict[str, ty.Any]]:
-        pass
-
-    def aux_metrics(
-        self, output_dict: dict[str, torch.Tensor] | None
-    ) -> ty.Optional[dict[str, ty.Any]]:
-        """
-        Auxiliary metrics to be computed during training.
-
-        Parameters
-        ----------
-        output_dict: dict[str, torch.Tensor] | None
-            The output dictionary from the model.
-
-        Returns
-        -------
-        ty.Optional[dict[str, ty.Any]]
-            The auxiliary metrics.
-
-        Notes
-        -----
-        Auxiliary metrics are computed during training and are used for ``moving_aux_metrics`` in ``TrainMetrics``.
-        Check ``TrainMetrics`` for more details.
         """
         pass
 
