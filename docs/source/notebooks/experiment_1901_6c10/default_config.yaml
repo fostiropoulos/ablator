@@ -1,0 +1,57 @@
+model_config:
+  input_size: 784
+  hidden_size: 256
+  num_classes: 10
+experiment_dir: c:\Users\user\Desktop\ablator\docs\source\notebooks\experiment_1901_6c10
+random_seed: 123
+train_config:
+  dataset: Fashion-mnist
+  batch_size: 32
+  epochs: 10
+  optimizer_config:
+    name: adam
+    arguments:
+      betas:
+      - 0.5
+      - 0.9
+      weight_decay: 0.0
+      lr: 0.001
+  scheduler_config: null
+  rand_weights_init: true
+keep_n_checkpoints: 3
+tensorboard: true
+amp: false
+device: cpu
+verbose: console
+eval_subsample: 1.0
+metrics_n_batches: 32
+metrics_mb_limit: 100
+early_stopping_iter: null
+eval_epoch: 1.0
+log_epoch: 1.0
+init_chkpt: null
+warm_up_epochs: 1.0
+divergence_factor: 100.0
+total_trials: 10
+concurrent_trials: 10
+search_space:
+  train_config.optimizer_config.arguments.lr:
+    value_range:
+    - '0.05'
+    - '0.1'
+    categorical_values: null
+    value_type: float
+  model_config.hidden_size:
+    value_range:
+    - '250'
+    - '500'
+    categorical_values: null
+    value_type: int
+optim_metrics:
+  val_loss: min
+gpu_mb_per_experiment: 100
+cpus_per_experiment: 0.5
+search_algo: tpe
+ignore_invalid_params: false
+remote_config: null
+gcp_config: null

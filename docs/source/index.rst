@@ -24,7 +24,7 @@ Welcome to ablator's documentation!
    notebooks/Environment-settings.ipynb
    notebooks/Configuration-Basics.ipynb
    notebooks/Prototyping-models.ipynb
-   notebooks/Search-Space-Setup.ipynb
+   notebooks/Search-space-tutorial.ipynb
    notebooks/GettingStarted-more-demos.ipynb
 
 Indices and tables
