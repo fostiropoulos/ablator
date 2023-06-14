@@ -382,7 +382,6 @@ class OptunaState:
         optuna_state = state.to_optuna_state()
         optuna_metrics = self._optuna_optim_values(metrics)
 
-        # TODO raises error for nan values in metrics. Fixme
         self.optuna_study.tell(trial_num, optuna_metrics, optuna_state)
 
     def sample_trial(self):
