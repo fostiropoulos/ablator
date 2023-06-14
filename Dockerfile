@@ -2,8 +2,8 @@ FROM continuumio/miniconda3:4.10.3
 
 WORKDIR /usr/src/app
 
-LABEL maintainer="dev@iordanis.xyz"
-LABEL description="Local test for Ablator"
+LABEL maintainer="mail@iordanis.me"
+LABEL description="Running envrionment for Ablator"
 
 RUN apt-get update && \
     apt-get install -y openssh-server rsync && \
