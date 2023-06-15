@@ -19,7 +19,7 @@ jobs:
             brew install rsync
       - name: Generate SSH keys
         run: |
-          ssh-keygen -t rsa -b 4096 -C "ablator@dev.com" -f ~/.ssh/id_rsa -q -N ""
+          ssh-keygen -t rsa -b 4096 -C "dev@ablator.org" -f ~/.ssh/id_rsa -q -N ""
           chmod 700 ~/.ssh
           chmod 600 ~/.ssh/id_rsa
           eval "$(ssh-agent -s)"
