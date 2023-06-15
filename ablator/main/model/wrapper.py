@@ -1,5 +1,6 @@
 import copy
 import multiprocessing as mp
+import time
 import traceback
 import typing as ty
 from abc import abstractmethod
@@ -526,16 +527,7 @@ class ModelWrapper(ModelBase):
         self.metrics.update_static_metrics(self.train_stats)
         if self.verbose != "tqdm":
             return
-        rate = self.train_tqdm.format_dict["rate"]
-        time_remaining = "??"
-        if rate is not None and isinstance(rate, (int, float)):
-            time_remaining = self.train_tqdm.format_interval(
-                (self.total_steps - self.current_iteration) / rate
-            )
-        msg = self.status_message()
-        self.train_tqdm.set_description(msg)
-        self.train_tqdm.set_postfix_str(f"Remaining: {time_remaining}")
-        self.train_tqdm.update(1)
+        self.train_tqdm.update_metrics(self.metrics.to_dict(), self.current_iteration)
 
     def status_message(self) -> str:
         """
@@ -547,7 +539,11 @@ class ModelWrapper(ModelBase):
             The status message.
         """
         # must return current epoch, iter, losses and metrics
-        return " ".join([f"{k}: {v}" for k, v in self.metrics.to_dict().items()])
+        msg_str = ""
+        for k, v in self.metrics.to_dict().items():
+            msg_str += f"{k}: {butils.num_format(v)} "
+
+        return msg_str.strip()
 
     def log(self):
         """

@@ -549,13 +549,7 @@ class ModelBase(ABC):
         self.run_config.assert_state(_run_config)
 
         if self.verbose == "tqdm" and not smoke_test:
-            self.train_tqdm = tqdm(
-                total=self.epoch_len,
-                bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}",
-                position=0,
-                leave=True,
-                dynamic_ncols=True,
-            )
+            self.train_tqdm = butils.ProgressBar(total=self.epoch_len)
         else:
             self.train_tqdm = butils.Dummy()
 
@@ -595,7 +589,9 @@ class ModelBase(ABC):
                         f"Error loading checkpoint {_checkpoint}. Trying another....\n{traceback.format_exc()}"
                     )
         if current_checkpoint is None:
-            raise CheckpointNotFoundError(f"Could not find a valid checkpoint in {chkpt_dir}")
+            raise CheckpointNotFoundError(
+                f"Could not find a valid checkpoint in {chkpt_dir}"
+            )
         self.current_checkpoint = current_checkpoint
 
     def _load_model(self, checkpoint_path: Path, model_only: bool = False) -> None:

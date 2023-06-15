@@ -1,13 +1,17 @@
+import asyncio
 import random
 import sys
+import time
 import typing as ty
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 
 import numpy as np
 import torch
-from torch import nn
 from pynvml.smi import nvidia_smi as smi
+from torch import nn
+from tqdm import tqdm
+
 from ablator.modules.loggers.file import FileLogger
 
 
@@ -23,6 +27,60 @@ class Dummy(FileLogger):
 
     def __getitem__(self, *args, **kwargs):
         return self
+
+
+class ProgressBar(tqdm):
+    def __init__(self, total, update_interval: int = 1):
+        super().__init__(
+            total=total,
+            bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}",
+            position=0,
+            leave=True,
+            dynamic_ncols=True,
+        )
+        self.update_interval = update_interval
+        self._prev_update_time = time.time()
+        self.total_steps = total
+        self.current_iteration = 0
+
+    def _update_text(self, metrics):
+        self.ncols, self.nrows = self.dynamic_ncols(self.fp)
+
+        text = ""
+        _pos = 0
+
+        for k, v in metrics.items():
+            m = f"{k}:{num_format(v)}"
+            if len(text) + len(m) > self.ncols - 1:
+                self.display(text, pos=_pos)
+                _pos += 1
+                text = ""
+
+            text += " " + m
+            if _pos > self.nrows - 5:
+                self.pos = -(_pos + 1)
+                return
+
+        self.display(text, pos=_pos)
+        self.pos = -(_pos + 1)
+
+    async def _update_metrics(self, metrics, current_iteration):
+        rate = self.format_dict["rate"]
+        time_remaining = "??"
+        if rate is not None and isinstance(rate, (int, float)):
+            time_remaining = self.format_interval(
+                (self.total_steps - current_iteration) / rate
+            )
+
+        self._update_text(metrics)
+        self.set_postfix_str(f"Remaining: {time_remaining}")
+        self.update(current_iteration - self.current_iteration)
+        self.current_iteration = current_iteration
+
+    def update_metrics(self, metrics: dict[str, ty.Any], current_iteration: int):
+        if time.time() - self._prev_update_time > self.update_interval:
+            self._prev_update_time = time.time()
+            asyncio.run(self._update_metrics(metrics, current_iteration))
 
 
 def iter_to_numpy(iterable):
@@ -213,13 +271,17 @@ def parse_device(device: ty.Union[str, list[str]]):
     ['cpu', 'cuda:0', 'cuda:1', 'cuda:2']
     """
     if isinstance(device, str):
-        if device=="cpu":
+        if device == "cpu":
             return device
         if device == "cuda" or (device.startswith("cuda:") and device[5:].isdigit()):
-            assert torch.cuda.is_available(),"Could not find a torch.cuda installation on your system."
+            assert (
+                torch.cuda.is_available()
+            ), "Could not find a torch.cuda installation on your system."
             if device.startswith("cuda:"):
                 gpu_number = int(device[5:])
-                assert gpu_number<torch.cuda.device_count(),f"gpu {device} does not exist on this machine"
+                assert (
+                    gpu_number < torch.cuda.device_count()
+                ), f"gpu {device} does not exist on this machine"
             return device
         raise ValueError
     if isinstance(device, int):
@@ -296,3 +358,76 @@ def get_gpu_mem(
     for gpu in instance.DeviceQuery()["gpu"]:
         memory.append(gpu["fb_memory_usage"][mem_type])
     return memory
+
+
+def _num_e_format(value: int | np.integer | float | np.floating, width: int) -> str:
+    # minimum width of 8 "x.xxe+nn" 6 fixed 1.xxe+00 and 2 available
+    diff = 6
+    if value < 0:
+        diff += 1
+    return f"{value:.{width-diff}e}"
+
+
+def _num_format_int(value: int | np.integer, width: int) -> str:
+    str_value = str(value)
+    if len(str_value) > width:
+        return _num_e_format(value, width)
+    return f"{value:0{width}d}"
+
+
+def _num_format_float(value: float | np.floating, width: int) -> str:
+    str_value = str(value)
+    if "e" in str_value:
+        return _num_e_format(value, width)
+
+    int_part, *float_part = str_value.split(".")
+    int_len = len(int_part)
+    if len(float_part):
+        _float_part = float_part[0]
+        float_len = len(_float_part)
+        leading_zeros = float_len - len(_float_part.lstrip("0"))
+    else:
+        _float_part = None
+        float_len = 0
+        leading_zeros = 0
+    if int_len > 0 and int_part != "0":
+        # xxx.xxxx format
+        if float_len + int_len >= width:
+            return _num_e_format(value, width)
+        else:
+            return f"{value:.{width-int_len - 1}f}"
+    elif int_part == "0" and leading_zeros == float_len:
+        return f"{value:.{width-2}f}"
+    elif len(str_value) < width:
+        return f"{value:.{width-2}f}"
+    else:
+        return _num_e_format(value, width)
+
+
+def num_format(
+    value: str | int | float | np.integer | np.floating, width: int = 8
+) -> str:
+    """
+    Format number to be no larger than `width` by converting to scientific
+    notation when the `value` exceeds width either by informative decimal places
+    or size.
+
+    Parameters
+    ----------
+    value : int | float
+        the value to format
+    width : int, optional
+        the width of the decimal places, by default 5
+
+    Returns
+    -------
+    str
+        The formatted string representation of the `value`
+    """
+    assert width >= 8
+    if isinstance(value, (int, np.integer)):
+        return _num_format_int(value, width)
+    elif isinstance(value, (float, np.floating)):
+        return _num_format_float(value, width)
+    else:
+        return value
