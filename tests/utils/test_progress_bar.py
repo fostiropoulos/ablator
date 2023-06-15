@@ -1,4 +1,4 @@
-from ablator.utils.base import num_format
+from ablator.utils.progress_bar import num_format, ProgressBar
 import numpy as np
 
 import time
@@ -66,10 +66,24 @@ def test_perf():
         i = np.random.randint(0, 10**8)
         durs["int"].append(_measure_dur(i))
         durs["int_naive"].append(_measure_dur_naive(i))
-        i = np.random.rand()*i
+        i = np.random.rand() * i
         durs["float"].append(_measure_dur(i))
         durs["float_naive"].append(_measure_dur_naive(i))
-    return durs
+
+
+def _rand_str():
+    return ''.join([chr(ord("a") + np.random.randint(26)) for i in range(10)])
+
+
+def _test_tui():
+    b = ProgressBar(1000000)
+    s = {_rand_str(): np.random.random() for i in range(100)}
+    for i in b:
+        for k,v in s.items():
+            s[k] = np.random.random()
+        b.update_metrics(s,i)
+
 
 if __name__ == "__main__":
-    test_perf()
+    # %%
+    _test_tui()

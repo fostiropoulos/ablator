@@ -29,60 +29,6 @@ class Dummy(FileLogger):
         return self
 
 
-class ProgressBar(tqdm):
-    def __init__(self, total, update_interval: int = 1):
-        super().__init__(
-            total=total,
-            bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}",
-            position=0,
-            leave=True,
-            dynamic_ncols=True,
-        )
-        self.update_interval = update_interval
-        self._prev_update_time = time.time()
-        self.total_steps = total
-        self.current_iteration = 0
-
-    def _update_text(self, metrics):
-        self.ncols, self.nrows = self.dynamic_ncols(self.fp)
-
-        text = ""
-        _pos = 0
-
-        for k, v in metrics.items():
-            m = f"{k}:{num_format(v)}"
-            if len(text) + len(m) > self.ncols - 1:
-                self.display(text, pos=_pos)
-                _pos += 1
-                text = ""
-
-            text += " " + m
-            if _pos > self.nrows - 5:
-                self.pos = -(_pos + 1)
-                return
-
-        self.display(text, pos=_pos)
-        self.pos = -(_pos + 1)
-
-    async def _update_metrics(self, metrics, current_iteration):
-        rate = self.format_dict["rate"]
-        time_remaining = "??"
-        if rate is not None and isinstance(rate, (int, float)):
-            time_remaining = self.format_interval(
-                (self.total_steps - current_iteration) / rate
-            )
-
-        self._update_text(metrics)
-        self.set_postfix_str(f"Remaining: {time_remaining}")
-        self.update(current_iteration - self.current_iteration)
-        self.current_iteration = current_iteration
-
-    def update_metrics(self, metrics: dict[str, ty.Any], current_iteration: int):
-        if time.time() - self._prev_update_time > self.update_interval:
-            self._prev_update_time = time.time()
-            asyncio.run(self._update_metrics(metrics, current_iteration))
-
-
 def iter_to_numpy(iterable):
     """
     Convert elements of the input iterable to NumPy arrays if they are torch.Tensor objects.

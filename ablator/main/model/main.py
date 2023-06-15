@@ -20,6 +20,7 @@ from ablator.main.configs import RunConfig
 from ablator.modules.loggers.main import SummaryLogger
 from ablator.modules.metrics.main import TrainMetrics
 from ablator.utils.base import Dummy
+from ablator.utils.progress_bar import ProgressBar
 
 
 class EvaluationError(Exception):
@@ -549,7 +550,7 @@ class ModelBase(ABC):
         self.run_config.assert_state(_run_config)
 
         if self.verbose == "tqdm" and not smoke_test:
-            self.train_tqdm = butils.ProgressBar(total=self.epoch_len)
+            self.train_tqdm = ProgressBar(total=self.epoch_len)
         else:
             self.train_tqdm = butils.Dummy()
 

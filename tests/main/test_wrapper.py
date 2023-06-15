@@ -1,24 +1,25 @@
 import copy
 import io
+import typing
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
-import typing
 
+import mock
+import numpy as np
 import torch
 from torch import nn
-
 from torch.cuda.amp import GradScaler
+
 from ablator import (
+    Derived,
     ModelConfig,
     ModelWrapper,
     OptimizerConfig,
     RunConfig,
     TrainConfig,
-    Derived,
 )
 from ablator.modules.metrics.main import TrainMetrics
-
-import numpy as np
+from ablator.utils.base import Dummy
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
 train_config = TrainConfig(
@@ -112,6 +113,7 @@ class MyCustomModel(nn.Module):
 
         return {"preds": x}, x.sum().abs() * 1e-7
 
+
 class MyReturnNoneModel(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
@@ -164,15 +166,21 @@ class DisambigiousTestWrapper(ModelWrapper):
         run_config.model_config.ambigious_var = 10
         return run_config
 
+
 class AuxWrapper(ModelWrapper):
     def make_dataloader_train(self, run_config: RunConfig):
         dl = [torch.rand(100) for i in range(100)]
         return dl
+
     def make_dataloader_val(self, run_config: RunConfig):
         dl = [torch.rand(100) for i in range(100)]
         return dl
-    def aux_metrics(self, output_dict: dict[str, torch.Tensor] | None) -> dict[str, typing.Any] | None:
+
+    def aux_metrics(
+        self, output_dict: dict[str, torch.Tensor] | None
+    ) -> dict[str, typing.Any] | None:
         return {"learning_rate": 0.1}
+
 
 def assert_error_msg(fn, error_msg):
     try:
@@ -217,6 +225,14 @@ def capture_output(fn):
     return out.getvalue(), err.getvalue()
 
 
+class DummyScreen(Dummy):
+    def addstr(self, *args, **kwargs):
+        print(args[2])
+
+    def getmaxyx(self):
+        return 100, 100
+
+
 def test_verbosity():
     verbose_config = RunConfig(
         train_config=train_config,
@@ -226,11 +242,18 @@ def test_verbosity():
         device="cpu",
         amp=False,
     )
-    out, err = capture_output(
-        lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
-    )
 
-    assert err.strip().startswith("0%|          | 0/100") and len(out) == 0
+    with mock.patch("curses.initscr", DummyScreen), mock.patch(
+        "curses.endwin", lambda: None
+    ), mock.patch("curses.nocbreak", lambda: None), mock.patch(
+        "curses.echo", lambda: None
+    ), mock.patch(
+        "curses.curs_set", lambda x: None
+    ):
+        out, err = capture_output(
+            lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
+        )
+    assert (out.strip().endswith("?it/s, Remaining: ??]")) and len(err) == 0
     verbose_config = RunConfig(
         train_config=train_config,
         model_config=ModelConfig(),
@@ -248,7 +271,7 @@ def test_verbosity():
     )
     console_config = RunConfig(
         train_config=train_config,
-        model_config=ModelConfig(), 
+        model_config=ModelConfig(),
         verbose="console",
         device="cpu",
         amp=False,
@@ -256,7 +279,9 @@ def test_verbosity():
     out, err = capture_output(
         lambda: TestWrapper(MyCustomModel).train(console_config, debug=True)
     )
-    assert len(err) == 0 and out.endswith("learning_rate: 0.1 total_steps: 200\n")
+    assert len(err) == 0 and out.endswith(
+        "learning_rate: 0.100000 total_steps: 00000200\n"
+    )
 
 
 def test_train_stats():
@@ -398,7 +423,7 @@ def test_train_loop():
     wrapper._init_state(run_config=_config)
     assert_error_msg(
         lambda: wrapper.train_loop(),
-        "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None."
+        "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None.",
     )
 
 
@@ -407,7 +432,9 @@ def test_validation_loop():
     _config = copy.deepcopy(config)
     wrapper._init_state(_config)
     val_dataloder = wrapper.make_dataloader_val(_config)
-    metrics_dict = wrapper.validation_loop(MyBadModel(_config), val_dataloder, wrapper.metrics, 'val')
+    metrics_dict = wrapper.validation_loop(
+        MyBadModel(_config), val_dataloder, wrapper.metrics, "val"
+    )
     assert len(metrics_dict) == 1 and "val_loss" in metrics_dict.keys()
 
 
@@ -429,10 +456,10 @@ if __name__ == "__main__":
     tmp_path = Path("/tmp/")
     # shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)
     # test_load_save(tmp_path)
-    test_error_models()
+    # test_error_models()
     # test_train_stats()
     # test_state()
     test_verbosity()
-    test_train_resume(tmp_path)
-    test_train_loop()
-    test_validation_loop()
+    # test_train_resume(tmp_path)
+    # test_train_loop()
+    # test_validation_loop()

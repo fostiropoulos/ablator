@@ -527,7 +527,9 @@ class ModelWrapper(ModelBase):
         self.metrics.update_static_metrics(self.train_stats)
         if self.verbose != "tqdm":
             return
-        self.train_tqdm.update_metrics(self.metrics.to_dict(), self.current_iteration)
+        self.train_tqdm.update_metrics(
+            self.metrics.to_dict(), self.current_iteration % self.epoch_len
+        )
 
     def status_message(self) -> str:
         """
