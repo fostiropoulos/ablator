@@ -435,6 +435,7 @@ class ExperimentState:
         """
         self.optuna_trial_map: dict[str, optuna.Trial] = {}
         self.config = config
+        # type: ignore
         self.logger: FileLogger = logger if logger is not None else butils.Dummy()
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
