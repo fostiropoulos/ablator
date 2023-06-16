@@ -333,13 +333,13 @@ class ParallelTrainer(ProtoTrainer):
         """
         Kill any ray processes that are idle.
         """
-        with subprocess.Popen(
+        p = subprocess.Popen(
             [
                 "ps aux | grep ray::IDLE | grep -v grep | awk '{print $2}' | xargs kill -9"
             ],
             shell=True,
-        ) as p:
-            os.waitpid(p.pid, 0)
+        )
+        os.waitpid(p.pid, 0)
 
     def _make_remote_fn(
         self,
