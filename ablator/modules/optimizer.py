@@ -80,7 +80,9 @@ def get_optim_parameters(
     dict | list
         - If weight_decay is ``None``, return all model parameters.
 
-        - If weight_decay is not ``None``, return a dictionary of parameter groups of different weight decay. In specific, bias parameters and parameters from layer normalization module will have weight decay of ``0.0``, while any other parameters will have weight decay of ``weight_decay``.
+        - If weight_decay is not ``None``, return a dictionary of parameter groups of different weight decay.
+          In specific, bias parameters and parameters from layer normalization module will have weight decay of ``0.0``,
+          while any other parameters will have weight decay of ``weight_decay``.
 
     Notes
     -----
@@ -150,6 +152,7 @@ class OptimizerArgs(ConfigBase):
     lr : float
         Learning rate of the optimizer
     """
+
     lr: float
 
     @abstractmethod
@@ -157,7 +160,7 @@ class OptimizerArgs(ConfigBase):
         """
         Abstract method to be implemented by derived classes, which initializes the optimizer.
         """
-        pass
+        raise NotImplementedError("init_optimizer method not implemented.")
 
 
 @configclass
@@ -173,6 +176,7 @@ class OptimizerConfig(ConfigBase):
     arguments : OptimizerArgs
         Arguments for the optimizer, specific to a certain type of optimizer.
     """
+
     name: str
     arguments: OptimizerArgs
 
@@ -261,6 +265,7 @@ class SGDConfig(OptimizerArgs):
     --------
     >>> config = SGDConfig(lr=0.1, momentum=0.9)
     """
+
     weight_decay: float = 0.0
     momentum: float = 0.0
 
@@ -330,6 +335,7 @@ class AdamWConfig(OptimizerArgs):
     --------
     >>> config = AdamWConfig(lr=0.1, weight_decay=0.5, betas=(0.9,0.99))
     """
+
     betas: Tuple[float, float] = (0.9, 0.999)
     eps: float = 1e-8
     weight_decay: float = 0.0
@@ -395,6 +401,7 @@ class AdamConfig(OptimizerArgs):
         Weight decay rate (default is ``0.0``).
 
     """
+
     betas: Tuple[float, float] = (0.5, 0.9)
     weight_decay: float = 0.0
 

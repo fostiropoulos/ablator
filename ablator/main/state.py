@@ -3,6 +3,7 @@ import enum
 import typing as ty
 from collections import OrderedDict
 from pathlib import Path
+import builtins
 
 import numpy as np
 import optuna
@@ -58,6 +59,7 @@ class TrialState(enum.IntEnum):
         to_optuna_state: Convert this TrialState to an OptunaTrialState.
 
     """
+
     # extension of "optuna.trial.TrialState"
     RUNNING = 0  # A trial that has been succesfully scheduled to run
     COMPLETE = 1  # Succesfully completed trial
@@ -253,7 +255,7 @@ class OptunaState:
     Attributes
     ----------
     optim_metrics : OrderedDict
-        The ordered dictionary containing the names of the metrics to optimize and their direction (minimize or maximize).
+        The ordered dictionary containing the names of the metrics to optimize and their direction (min or max).
     search_space : dict of str to SearchSpace
         The search space containing the parameters to sample from.
     optuna_study : optuna.study.Study
@@ -293,7 +295,8 @@ class OptunaState:
 
         Notes
         -----
-        For tuning, add an attribute to the searchspace whose name is the name of the hyperparameter and whose value is the search space
+        For tuning, add an attribute to the searchspace whose name is the name of the hyperparameter
+        and whose value is the search space
         eg. ``search_space = {"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 0.1], value_type="float")}``
         """
         sampler: optuna.samplers.BaseSampler
@@ -411,7 +414,8 @@ class ExperimentState:
     ) -> None:
         """
         Initializes the ExperimentState.
-        Initialize databases for storing training states and optuna states,create trials based on total num of trials specified in config
+        Initialize databases for storing training states and optuna states
+        Create trials based on total num of trials specified in config
 
         Parameters
         ----------
@@ -662,6 +666,8 @@ class ExperimentState:
         ------
         RuntimeError
             If the number of invalid or duplicate trials exceeds the error_upper_bound.
+        TypeError
+            If the trial parameter are invalid
         """
         error_upper_bound = n_trials * 10
         sampled_trials: list[ParallelConfig] = (
@@ -689,7 +695,7 @@ class ExperimentState:
                 trial_config = type(self.config)(**trial_kwargs)
                 if trial_config.uid in self.all_trials_uid:
                     trial_state = TrialState.PRUNED_DUPLICATE
-            except Exception as e:
+            except builtins.Exception as e:
                 if ignore_errors:
                     trial_state = TrialState.PRUNED_INVALID
                     self.logger.warn(f"ignoring: {parameter}. Error:{e}")
@@ -750,8 +756,7 @@ class ExperimentState:
             res = session.scalar(stmt)
         if res is not None:
             return int(res.optuna_trial_num)
-        else:
-            raise ValueError(f"No trial found with config_uid: {config_uid}")
+        raise ValueError(f"No trial found with config_uid: {config_uid}")
 
     def _update_internal_trial_state(
         self, config_uid: str, metrics: dict[str, float] | None, state: TrialState

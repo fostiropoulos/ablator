@@ -105,7 +105,7 @@ class Analysis:
         for name, obj_fn in metric_map.items():
             res = (
                 raw_results.groupby("path")
-                .apply(lambda x: _best_perf(x, name, obj_fn))
+                .apply(lambda x, name=name, obj_fn=obj_fn: _best_perf(x, name, obj_fn))
                 .reset_index(drop=True)
             )
             res["best"] = name
