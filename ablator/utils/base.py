@@ -1,7 +1,5 @@
-import asyncio
 import random
 import sys
-import time
 import typing as ty
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
@@ -10,12 +8,9 @@ import numpy as np
 import torch
 from pynvml.smi import nvidia_smi as smi
 from torch import nn
-from tqdm import tqdm
-
-from ablator.modules.loggers.file import FileLogger
 
 
-class Dummy(FileLogger):
+class Dummy:
     def __init__(self, *args, **kwargs):
         pass
 
@@ -270,13 +265,13 @@ def init_weights(module: nn.Module):
         module.weight.data.fill_(1.0)
 
 
-def get_gpu_max_mem() -> ty.List[int]:
+def get_gpu_max_mem() -> list[int]:
     """
     Get the maximum memory of all available GPUs.
 
     Returns
     -------
-    ty.List[int]
+    list[int]
         A list of the maximum memory for each GPU.
     """
     return get_gpu_mem(mem_type="total")
@@ -284,7 +279,7 @@ def get_gpu_max_mem() -> ty.List[int]:
 
 def get_gpu_mem(
     mem_type: ty.Literal["used", "total", "free"] = "total"
-) -> ty.List[int]:
+) -> list[int]:
     """
     Get the memory information of all available GPUs.
 
@@ -295,7 +290,7 @@ def get_gpu_mem(
 
     Returns
     -------
-    ty.List[int]
+    list[int]
         A list of memory values for each GPU, depending on the specified memory type.
     """
     # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
@@ -325,7 +320,6 @@ def _num_format_float(value: float | np.floating, width: int) -> str:
     str_value = str(value)
     if "e" in str_value:
         return _num_e_format(value, width)
-
     int_part, *float_part = str_value.split(".")
     int_len = len(int_part)
     if len(float_part):
@@ -340,14 +334,12 @@ def _num_format_float(value: float | np.floating, width: int) -> str:
         # xxx.xxxx format
         if float_len + int_len >= width:
             return _num_e_format(value, width)
-        else:
-            return f"{value:.{width-int_len - 1}f}"
-    elif int_part == "0" and leading_zeros == float_len:
+        return f"{value:.{width-int_len - 1}f}"
+    if int_part == "0" and leading_zeros == float_len:
         return f"{value:.{width-2}f}"
-    elif len(str_value) < width:
+    if len(str_value) < width:
         return f"{value:.{width-2}f}"
-    else:
-        return _num_e_format(value, width)
+    return _num_e_format(value, width)
 
 
 def num_format(
@@ -373,7 +365,6 @@ def num_format(
     assert width >= 8
     if isinstance(value, (int, np.integer)):
         return _num_format_int(value, width)
-    elif isinstance(value, (float, np.floating)):
+    if isinstance(value, (float, np.floating)):
         return _num_format_float(value, width)
-    else:
-        return value
+    return value

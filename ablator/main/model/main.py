@@ -550,7 +550,9 @@ class ModelBase(ABC):
         self.run_config.assert_state(_run_config)
 
         if self.verbose == "tqdm" and not smoke_test:
-            self.train_tqdm = ProgressBar(total=self.epoch_len)
+            self.train_tqdm = ProgressBar(
+                total=self.epoch_len, logfile=self.logger.log_file_path
+            )
         else:
             self.train_tqdm = butils.Dummy()
 

@@ -164,7 +164,7 @@ def nested_set(_dict, keys: list[str], value: ty.Any):
     return original_dict
 
 
-def truncate_utf8_chars(filename, last_char: str):
+def truncate_utf8_chars(filename: Path, last_char: str):
     assert (
         len(last_char) == 1
     ), f"Can not truncate up to a single character. `last_char`: {last_char}"

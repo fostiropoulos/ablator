@@ -1,21 +1,24 @@
-import asyncio
 import curses
+import os
 import time
 import typing as ty
+from pathlib import Path
+
 from tabulate import tabulate
 from tqdm import tqdm
+
 from ablator.utils.base import num_format
 
 try:
     import ipywidgets as widgets
     from IPython.display import display
-
-except:
+except ImportError:
     widgets = None
 
 
 def in_notebook():
     try:
+        # pylint: disable=import-outside-toplevel
         from IPython import get_ipython
 
         if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
@@ -27,19 +30,26 @@ def in_notebook():
     return True
 
 
+def get_last_line(filename: Path):
+    with open(filename, "rb") as f:
+        try:  # catch OSError in case of a one line file
+            f.seek(-2, os.SEEK_END)
+            while f.read(1) != b"\n":
+                f.seek(-2, os.SEEK_CUR)
+        except OSError:
+            f.seek(0)
+        last_line = f.readline().decode()
+        return last_line
+
+
 SEPERATOR = " | "
 
 
-class ProgressBar:
-    def __init__(self, total, update_interval: int = 1):
-        self.total = total
-        self.update_interval = update_interval
-        self.start_time = time.time()
-        self._prev_update_time = time.time()
-        self.total_steps = total
-        self.current_iteration = 0
+class Display:
+    def __init__(self) -> None:
         self.is_terminal = not in_notebook()
         if self.is_terminal:
+            # get existing stdout and redirect future stdout
             self.stdscr = curses.initscr()
             self.stdscr.clear()
             self.nrows, self.ncols = self.stdscr.getmaxyx()
@@ -47,93 +57,105 @@ class ProgressBar:
             assert (
                 widgets is not None
             ), "Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html"
-            self.ncols = float("inf")
-            self.nrows = float("inf")
+            self.ncols = int(1e3)
+            self.nrows = int(1e3)
             self.html_widget = widgets.HTML(value="")
             self.html_value = ""
             display(self.html_widget)
-        self._update([])
-
-    def __iter__(self):
-        for obj in range(self.total):
-            yield obj
-        return
-
-    def __hash__(self):
-        return id(self)
 
     def _refresh(self):
         if self.is_terminal:
-            self.nrows, self.ncols = self.stdscr.getmaxyx()
             self.stdscr.refresh()
+            self.stdscr.clear()
         else:
             self.html_widget.value = self.html_value
             self.html_value = ""
 
-    def _update(self, rows):
-        self._refresh()
+    def _display(self, text, pos):
         if self.ncols is None or self.nrows is None:
             return
-        text = ""
-        _pos = 0
-        for row in rows:
-            row += SEPERATOR
-            if len(text) + len(row) > self.ncols:
-                text = text[: -len(SEPERATOR)]
-                self._display(text, pos=_pos)
-                _pos += 1
-                text = ""
 
-            text += row
-            if _pos > self.nrows - 5:
-                return
+        # pylint: disable=import-outside-toplevel
+        import _curses
 
-        text = text[: -len(SEPERATOR)]
-        self._display(text, pos=_pos)
-        self._display(self.bar, pos=_pos + 1)
-        self._refresh()
-
-    def _display(self, text, pos):
         if self.is_terminal:
-            self.stdscr.addstr(pos, 0, text)
+            try:
+                self.stdscr.addstr(pos, 0, text)
+            except _curses.error:
+                pass
         else:
             self.html_value += text + "<br>"
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def close(self):
         if self.is_terminal:
+            curses.nocbreak()
+            self.stdscr.keypad(0)
+            curses.echo()
             curses.endwin()
-            curses.nocbreak()  # Turn off cbreak mode
-            curses.echo()  # Turn echo back on
             curses.curs_set(1)  # Turn cursor back on
 
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     def __del__(self):
+        self.close()
+
+    def _update_screen_dims(self):
         if self.is_terminal:
-            curses.endwin()
-            curses.nocbreak()  # Turn off cbreak mode
-            curses.echo()  # Turn echo back on
-            curses.curs_set(1)  # Turn cursor back on
+            self.nrows, self.ncols = self.stdscr.getmaxyx()
+
+    def print_texts(self, texts):
+        self._update_screen_dims()
+        for i, text in enumerate(texts):
+            self._display(text, i)
+        self._refresh()
+
+
+class ProgressBar:
+    def __init__(
+        self,
+        total,
+        logfile: Path | None = None,
+        update_interval: int = 1,
+    ):
+        self.total = total
+        self.update_interval = update_interval
+        self.start_time = time.time()
+        self._prev_update_time = time.time()
+        self.current_iteration = 0
+        self.metrics: dict[str, ty.Any] = {}
+        self.logfile = logfile
+        self.display = Display()
+        self._update()
+
+    def __iter__(self):
+        for obj in range(self.total):
+            yield obj
 
     def reset(self) -> None:
         self.current_iteration = 0
 
-    @property
-    def bar(self):
-        if self.current_iteration > 0:
-            rate = self.current_iteration / (time.time() - self.start_time)
-            time_remaining = (self.total_steps - self.current_iteration) / rate
+    @classmethod
+    def _make_bar(cls, current_iteration, start_time, total_steps):
+        if current_iteration > 0:
+            rate = current_iteration / (time.time() - start_time)
+            time_remaining = (total_steps - current_iteration) / rate
             time_remaining = tqdm.format_interval(time_remaining)
         else:
             time_remaining = "??"
         post_fix = f"Remaining: {time_remaining}"
         return tqdm.format_meter(
-            self.current_iteration,
-            self.total,
-            elapsed=time.time() - self.start_time,
+            current_iteration,
+            total_steps,
+            elapsed=time.time() - start_time,
             bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}",
             postfix=post_fix,
         )
 
-    def _update_metrics(self, metrics, current_iteration):
+    @classmethod
+    def _make_print_message(
+        cls, metrics, nrows, ncols, logfile, current_iteration, start_time, total_steps
+    ):
         rows = tabulate(
             [[k + ":", f"{num_format(v)}"] for k, v in metrics.items()],
             # maxcolwidths=[10, 10],
@@ -141,22 +163,52 @@ class ProgressBar:
             tablefmt="plain",
             stralign="right",
         ).split("\n")
-        self._update(rows)
-        # self.update(current_iteration - self.current_iteration)
-        self.current_iteration = current_iteration
+        text = ""
+        texts = []
+        for row in rows:
+            row += SEPERATOR
+            if len(text) + len(row) > ncols:
+                text = text[: -len(SEPERATOR)]
+                texts.append(text)
+                text = ""
 
-    async def _async_update_metrics(self, metrics, current_iteration):
-        return self._update_metrics(metrics, current_iteration)
+            text += row
+            if len(texts) > nrows - 5:
+                break
+
+        text = text[: -len(SEPERATOR)]
+        texts.append(text)
+        pbar = cls._make_bar(
+            current_iteration=current_iteration,
+            start_time=start_time,
+            total_steps=total_steps,
+        )
+        texts.append(pbar)
+
+        if logfile is not None and logfile.exists():
+            last_line = get_last_line(logfile)
+            texts.append(last_line)
+        return texts
+
+    def _update(self):
+        texts = self._make_print_message(
+            self.metrics,
+            self.display.nrows,
+            self.display.ncols,
+            self.logfile,
+            self.current_iteration,
+            self.start_time,
+            self.total,
+        )
+        self.display.print_texts(texts)
 
     def update_metrics(self, metrics: dict[str, ty.Any], current_iteration: int):
-        if time.time() - self._prev_update_time > self.update_interval:
+        self.metrics = metrics
+        self.current_iteration = current_iteration
+        if (
+            current_iteration == 0
+            or time.time() - self._prev_update_time > self.update_interval
+            or current_iteration + 1 == self.total
+        ):
             self._prev_update_time = time.time()
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:  # 'RuntimeError: There is no current event loop...'
-                loop = None
-
-            if loop:
-                self._update_metrics(metrics, current_iteration)
-            else:
-                asyncio.run(self._async_update_metrics(metrics, current_iteration))
+            self._update()

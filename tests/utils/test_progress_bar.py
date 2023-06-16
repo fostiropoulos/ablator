@@ -1,9 +1,10 @@
 from ablator.utils.progress_bar import num_format, ProgressBar
 import numpy as np
-
+from pathlib import Path
 import time
 from collections import defaultdict
 
+from multiprocessing import Process
 
 def _assert_num_format(num, width):
     str_num = num_format(num, width)
@@ -71,19 +72,38 @@ def test_perf():
         durs["float_naive"].append(_measure_dur_naive(i))
 
 
-def _rand_str():
-    return ''.join([chr(ord("a") + np.random.randint(26)) for i in range(10)])
+def _rand_str(size=10):
+    return "".join([chr(ord("a") + np.random.randint(26)) for i in range(size)])
 
 
-def _test_tui():
-    b = ProgressBar(1000000)
+def write_text(fp: Path, n=1000):
+    with open(fp,'a') as f:
+        for i in range(n):
+
+            f.write(f"Some rand Log: {_rand_str(100)}\n")
+            f.flush()
+            time.sleep(0.5)
+        pass
+
+
+def _test_tui(tmp_path: Path):
+    fp = tmp_path.joinpath(_rand_str(10))
+    p = Process(target=write_text, args=(fp,))
+    p.start()
+
+    b = ProgressBar(100000)
+
     s = {_rand_str(): np.random.random() for i in range(100)}
     for i in b:
-        for k,v in s.items():
+        for k, v in s.items():
             s[k] = np.random.random()
-        b.update_metrics(s,i)
+        b.update_metrics(s, i)
+        time.sleep(0.1)
+    return
+
 
 
 if __name__ == "__main__":
-    # %%
-    _test_tui()
+    tmp_path = Path("/tmp/")
+    _test_tui(tmp_path)
+
