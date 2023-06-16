@@ -13,6 +13,9 @@ from ablator import (
 
 from ablator.modules.metrics.main import TrainMetrics
 import random
+from collections.abc import Callable
+from typing import Dict
+import numpy as np
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
 train_config = TrainConfig(
@@ -51,6 +54,16 @@ class TestWrapper(ModelWrapper):
         dl = [torch.rand(100) for i in range(100)]
         return dl
 
+def my_accuracy(preds):
+    return float(np.mean(preds))
+
+class TestWrapperCustomEval(TestWrapper):
+    def evaluation_functions(self) -> Dict[str, Callable]:
+        return {"mean": my_accuracy}
+
+class TestWrapperCustomEvalUnderscore(TestWrapper):
+    def evaluation_functions(self) -> Dict[str, Callable]:
+        return {"mean_score": my_accuracy}
 
 def assert_error_msg(fn, error_msg):
     try:
@@ -76,6 +89,27 @@ def test_proto(tmp_path: Path):
         < 0.01
     )
 
+def test_proto_custom_eval(tmp_path: Path):
+    wrapper = TestWrapperCustomEval(MyCustomModel)
+    config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
+    ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
+    ablator.launch()
+    try:
+        ablator.evaluate()
+    except Exception as exp:
+        if "There are difference in the class metrics" not in str(exp.__cause__):
+            raise exp.__cause__ # used __cause__ since exp is actually Checkpoint not found, but it's directly caused by __cause__ error
+
+def test_proto_custom_eval_underscore(tmp_path: Path):
+    wrapper = TestWrapperCustomEvalUnderscore(MyCustomModel)
+    config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
+    ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
+    ablator.launch()
+    try:
+        ablator.evaluate()
+    except Exception as exp:
+        if not isinstance(exp.__cause__, KeyError):
+            raise exp.__cause__ # used __cause__ since exp is actually Checkpoint not found, but it's directly caused by __cause__ KeyError
 
 class MyCustomModel2(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
@@ -174,6 +208,8 @@ def test_val_loss_is_none(tmp_path: Path):
 
 
 if __name__ == "__main__":
-    test_proto(Path("/tmp/"))
-    test_proto_with_scheduler(Path("/tmp/"))
-    test_val_loss_is_none(Path("/tmp/"))
+    # test_proto(Path("/tmp/"))
+    # test_proto_with_scheduler(Path("/tmp/"))
+    # test_val_loss_is_none(Path("/tmp/"))
+    test_proto_custom_eval(Path("/tmp/"))
+    test_proto_custom_eval_underscore(Path("/tmp/"))
