@@ -50,6 +50,7 @@ class Display:
         self.is_terminal = not in_notebook()
         if self.is_terminal:
             # get existing stdout and redirect future stdout
+            self._curses = curses
             self.stdscr = curses.initscr()
             self.stdscr.clear()
             self.nrows, self.ncols = self.stdscr.getmaxyx()
@@ -88,11 +89,12 @@ class Display:
 
     def close(self):
         if self.is_terminal:
-            curses.nocbreak()
+            self._curses.nocbreak()
             self.stdscr.keypad(0)
-            curses.echo()
-            curses.endwin()
-            curses.curs_set(1)  # Turn cursor back on
+            self._curses.echo()
+            self._curses.endwin()
+            self._curses.curs_set(1)  # Turn cursor back on
+            self.is_terminal = False
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
@@ -134,6 +136,12 @@ class ProgressBar:
 
     def reset(self) -> None:
         self.current_iteration = 0
+
+    def close(self):
+        self.display.close()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     @classmethod
     def _make_bar(cls, current_iteration, start_time, total_steps):

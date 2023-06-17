@@ -665,6 +665,8 @@ class ModelWrapper(ModelBase):
             return self.train_loop(smoke_test)
         except KeyboardInterrupt:
             self._checkpoint()
+        finally:
+            self.train_tqdm.close()
 
         return self.metrics
 
