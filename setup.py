@@ -41,6 +41,7 @@ setup(
             "pylint==2.17.2",
             "tensorboard==2.12.2",
             "mock==5.0.2",
+            "types-tabulate==0.9.0.2"
         ],
     },
 )
