@@ -140,6 +140,36 @@ and is not advised.
 """
 
 
+def _val2bool(val: str | bool) -> bool:
+    """
+    _val2bool parses the string representation as a boolean expression. It
+    returns `True` if `val` is in ["true", "t", "1"] (case-insentivive)
+    and `False` if `val` is in ["false", "f", "0"] (case-insentivive).
+
+    Parameters
+    ----------
+    val : str | bool
+        the value to parse
+
+    Returns
+    -------
+    bool
+        the boolean representation of `val`
+
+    Raises
+    ------
+    ValueError
+        It raises an error if `val` is not in ["true", "t", "1", "false", "f", "0"] (case-insentivive).
+    """
+    if isinstance(val, bool):
+        return val
+    if val.lower() in {"true", "t", "1"}:
+        return True
+    if val.lower() in {"false", "f", "0"}:
+        return False
+    raise ValueError(f"Cannot parse {val} as bool.")
+
+
 def _strip_hint_state(type_hint):
     """
     Strips the hint state from a type hint.
@@ -374,7 +404,7 @@ def parse_value(val, annot: Annotation, name=None):
                 raise ValueError(f"Invalid type {type(_v)} for {_k} and field {name}")
         return return_dictionary
     if annot.collection == List:
-        if not type(val)==list:
+        if not type(val) == list:
             raise ValueError(f"Invalid type {type(val)} for type List")
         return [annot.variable_type(_v) for _v in val]
     if annot.collection == Tuple:
@@ -384,6 +414,8 @@ def parse_value(val, annot: Annotation, name=None):
         return [tp(_v) for tp, _v in zip(annot.variable_type, val)]
     if annot.collection == Type:
         return _parse_class(annot.variable_type, val)
+    if annot.collection is None and annot.variable_type == bool:
+        return _val2bool(val)
     if annot.collection is None:
         return annot.variable_type(val)
     if issubclass(annot.collection, Enum):

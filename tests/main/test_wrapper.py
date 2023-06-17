@@ -244,44 +244,40 @@ def test_verbosity():
     )
 
     with mock.patch("curses.initscr", DummyScreen), mock.patch(
-        "curses.endwin", lambda: None
-    ), mock.patch("curses.nocbreak", lambda: None), mock.patch(
-        "curses.echo", lambda: None
-    ), mock.patch(
-        "curses.curs_set", lambda x: None
+        "ablator.utils.progress_bar.Display.close", lambda self: None
     ):
         out, err = capture_output(
             lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
         )
-    assert (out.strip().endswith("?it/s, Remaining: ??]")) and len(err) == 0
-    verbose_config = RunConfig(
-        train_config=train_config,
-        model_config=ModelConfig(),
-        verbose="tqdm",
-        metrics_n_batches=32,
-        device="cpu",
-        amp=False,
-    )
-    out, err = capture_output(
-        lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
-    )
-    assert (
-        "Metrics batch-limit 32 is smaller than the validation dataloader length 100."
-        in out
-    )
-    console_config = RunConfig(
-        train_config=train_config,
-        model_config=ModelConfig(),
-        verbose="console",
-        device="cpu",
-        amp=False,
-    )
-    out, err = capture_output(
-        lambda: TestWrapper(MyCustomModel).train(console_config, debug=True)
-    )
-    assert len(err) == 0 and out.endswith(
-        "learning_rate: 0.100000 total_steps: 00000200\n"
-    )
+        assert (out.strip().endswith("?it/s, Remaining: ??]")) and len(err) == 0
+        verbose_config = RunConfig(
+            train_config=train_config,
+            model_config=ModelConfig(),
+            verbose="tqdm",
+            metrics_n_batches=32,
+            device="cpu",
+            amp=False,
+        )
+        out, err = capture_output(
+            lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
+        )
+        assert (
+            "Metrics batch-limit 32 is smaller than the validation dataloader length 100."
+            in out
+        )
+        console_config = RunConfig(
+            train_config=train_config,
+            model_config=ModelConfig(),
+            verbose="console",
+            device="cpu",
+            amp=False,
+        )
+        out, err = capture_output(
+            lambda: TestWrapper(MyCustomModel).train(console_config, debug=True)
+        )
+        assert len(err) == 0 and out.endswith(
+            "learning_rate: 0.100000 total_steps: 00000200\n"
+        )
 
 
 def test_train_stats():
