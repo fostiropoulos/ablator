@@ -1,5 +1,15 @@
 from setuptools import find_packages, setup
 from pathlib import Path
+import subprocess
+import sys
+from setuptools.command.install import install
+
+
+class PostInstallCommand(install):
+    def run(self):
+        install.run(self)  # type: ignore
+        subprocess.run([sys.executable, "./scripts/install_rclone.py"], check=True)
+
 
 package_path = __file__
 setup(
@@ -30,7 +40,8 @@ setup(
         "optuna==3.1.1",
         "tabulate==0.9.0",
         "seaborn==0.12.2",
-        "numpydoc==1.5.0"
+        "numpydoc==1.5.0",
+        "requests",
     ],
     extras_require={
         "dev": [
@@ -41,5 +52,8 @@ setup(
             "pylint==2.17.2",
             "tensorboard==2.12.2",
         ],
+    },
+    cmdclass={
+        'install': PostInstallCommand,
     },
 )
