@@ -27,7 +27,7 @@ jobs:
           cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
       - name: Install dependencies
         run: |
-          pip install -e .[dev]
+          pip install -e .[dev] -v
       - name: Test with pytest
         run: |
           pip install pytest
