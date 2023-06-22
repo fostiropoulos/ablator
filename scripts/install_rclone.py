@@ -119,6 +119,7 @@ def download_and_install_rclone(beta=False):
     os.remove(rclone_zip)
 
 
-download_and_install_rclone()
-logging.info('download_and_install_rclone Finsihed')
-exit(0)
+if __name__ == "__main__":
+    download_and_install_rclone()
+    logging.info('download_and_install_rclone Finsihed')
+    exit(0)
