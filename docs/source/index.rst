@@ -26,6 +26,7 @@ Welcome to ablator's documentation!
    notebooks/Prototyping-models.ipynb
    notebooks/Search-space-tutorial.ipynb
    notebooks/HPO-tutorial.ipynb
+   notebooks/Interpreting-results.ipynb
    notebooks/GettingStarted-more-demos.ipynb
 
 Indices and tables
