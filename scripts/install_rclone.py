@@ -1,7 +1,8 @@
 import os
 import sys
 import platform
-import requests
+import urllib.request
+
 import zipfile
 import glob
 import shutil
@@ -92,10 +93,12 @@ def download_and_install_rclone(beta=False):
     # Download rclone zip file and save it to "rclone_zip" directory
     logging.info(f"download_url: {download_url}")
     print(f"Downloading rclone from {download_url}...")
+    # if not os.path.exists(rclone_zip):
+    #     resp = requests.get(download_url)
+    #     with open(rclone_zip, 'wb') as f_out:
+    #         f_out.write(resp.content)
     if not os.path.exists(rclone_zip):
-        resp = requests.get(download_url)
-        with open(rclone_zip, 'wb') as f_out:
-            f_out.write(resp.content)
+        urllib.request.urlretrieve(download_url, rclone_zip)
 
     # Unzip rclone zip file
     logging.info(f"Unzipping {rclone_zip}...")
