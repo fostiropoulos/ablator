@@ -20,7 +20,8 @@ def test_rclone_sync(tmp_path: Path):
     with open(test_file_name, 'w') as f:
         f.write(test_file_content)
 
-    rclone_path = os.path.join("..", "..", "ablator", "rclone")
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    rclone_path = os.path.join(current_dir, "..", "..", "ablator", "rclone")
     print(rclone_path)
     try:
         if system == 'windows':
@@ -58,15 +59,17 @@ def create_rclone_gcs_config(remote_name, project_number, service_account_file):
 
     config_str = '\n'.join(f'[{name}]\n' + '\n'.join(f'{k} = {v}' for k, v in settings.items()) for name, settings in config.items())
 
-    rclone_conf_path = os.path.join("..", "..", "ablator", "rclone.conf")
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    rclone_conf_path = os.path.join(current_dir, "..", "..", "ablator", "rclone.conf")
     with open(rclone_conf_path, 'w') as f:
         f.write(config_str)
 
-
+@pytest.mark.skip(reason="Can't run this test on Github Actions, Becasue Sharing credentials is not safe")
 def test_rclone_sync_to_gcs(tmp_path: Path):
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     # Create a rclone config file
     remote_name = 'gcs'
-    service_account_file = os.path.join(os.getcwd(), "gcs_service_account.json")  # type: ignore
+    service_account_file = os.path.join(current_dir, "gcs_service_account.json")  # type: ignore
     create_rclone_gcs_config(remote_name, "deepusc-390522", service_account_file)
 
     system = platform.system().lower()
@@ -84,8 +87,8 @@ def test_rclone_sync_to_gcs(tmp_path: Path):
         f.write(test_file_content)
 
     # Sync the file to the GCS using rclone
-    rclone_path = os.path.join("..", "..", "ablator", "rclone")
-    rclone_conf_path = os.path.join("..", "..", "ablator", "rclone.conf")
+    rclone_path = os.path.join(current_dir, "..", "..", "ablator", "rclone")
+    rclone_conf_path = os.path.join(current_dir, "..", "..", "ablator", "rclone.conf")
     try:
         if system == 'windows':
             subprocess.run([rclone_path, '--config', rclone_conf_path, 'sync', str(local_path), remote_path], check=True, shell=True)
