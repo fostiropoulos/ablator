@@ -23,14 +23,20 @@ jobs:
       - name: Install dependencies
         run: |
           pip install .[dev] -v
+      - name: Install SSH and generate keys
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssh-server
+          sudo service ssh start
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
+          cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+          sudo apt-get install -y rsync
       - name: Install pytest pytest-cov
         run: |
           pip install pytest pytest-cov
-
       - name: Run tests
         run: pytest --cov=./ablator --cov-report=xml
         continue-on-error: true
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
