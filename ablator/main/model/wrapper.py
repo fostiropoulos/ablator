@@ -307,7 +307,7 @@ class ModelWrapper(ModelBase):
 
         Returns
         -------
-        out: dict[str, torch.Tensor] | None
+        out: tuple[dict[str, torch.Tensor] | None, torch.Tensor | None]
             The output of the model,contains current predictions and loss of the model
         """
         batch = self.to_device(batch)

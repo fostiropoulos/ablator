@@ -9,6 +9,7 @@ import traceback
 import types as tys
 import typing as ty
 from pathlib import Path
+import builtins
 
 import numpy as np
 import ray
@@ -25,6 +26,7 @@ from ablator.modules.loggers.main import DuplicateRunError
 from ablator.modules.metrics.main import LossDivergedError
 from ablator.utils.base import get_gpu_max_mem
 import ablator.utils.base as butils
+
 
 # The exceptions that are unrecoverable i.e.  [DuplicateRunError]
 CRASH_EXCEPTION_TYPES: list[type] = []
@@ -128,11 +130,15 @@ def train_main_remote(
     TrialState
         A TrialState object indicating the state of the trial job
 
-        - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training, returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
+        - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training,
+          returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
 
-        - If ``DuplicateRunError``, ``RuntimeError`` (with message ``'CUDA out of memory'``), or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training, returned state will be ``TrialState.RECOVERABLE_ERROR``
+        - If ``DuplicateRunError``, ``RuntimeError`` (with message ``'CUDA out of memory'``),
+          or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training,
+          returned state will be ``TrialState.RECOVERABLE_ERROR``
 
-        - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised, returned state will be ``TrialState.FAIL``
+        - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised,
+          returned state will be ``TrialState.FAIL``
 
     """
     if crash_exceptions_types is None:
@@ -179,12 +185,12 @@ def train_main_remote(
                 None,
                 TrialState.RECOVERABLE_ERROR,
             )
-        else:
-            return (
-                run_config,
-                None,
-                TrialState.FAIL,
-            )
+
+        return (
+            run_config,
+            None,
+            TrialState.FAIL,
+        )
     except RuntimeError as e:
         if str(e).startswith("CUDA out of memory."):
             mp_logger.warn(f"Cuda out of memory for {run_config.uid}. Restarting...")
@@ -196,21 +202,27 @@ def train_main_remote(
 
         return handle_exception(e)
 
-    except Exception as e:
+    except builtins.Exception as e:
         return handle_exception(e)
     finally:
         if model.model_dir is not None:
             kwargs = parse_rsync_paths(model.model_dir, root_dir)
             if run_config.gcp_config is not None:
-                run_config.gcp_config.rsync_up(Path(kwargs["local_path"]), str(kwargs["remote_path"]), logger=mp_logger)
+                run_config.gcp_config.rsync_up(
+                    Path(kwargs["local_path"]),
+                    str(kwargs["remote_path"]),
+                    logger=mp_logger,
+                )
             elif run_config.remote_config is not None:
-                run_config.remote_config.rsync_up(Path(kwargs["local_path"]), str(kwargs["remote_path"]))
+                run_config.remote_config.rsync_up(
+                    Path(kwargs["local_path"]), str(kwargs["remote_path"])
+                )
 
 
 class ParallelTrainer(ProtoTrainer):
     """
     A class for parallelizing training of models of different configurations with ray.
-    Performance of these models (metrics) are for optuna to tune hyperparameters. They are also logged to optuna storage.
+    Metrics of these models are for optuna to tune hyperparameters. They are also logged to optuna storage.
 
     Attributes
     ----------
@@ -256,9 +268,9 @@ class ParallelTrainer(ProtoTrainer):
         # TODO {junzhu} write a test case for relative path. The trials have
         # different relative path and fail to find the main directory.
         experiment_path = Path(experiment_dir).absolute()
-        run_config.experiment_dir = str(experiment_path.joinpath(
-            f"experiment_{run_config.uid}"
-        ))
+        run_config.experiment_dir = str(
+            experiment_path.joinpath(f"experiment_{run_config.uid}")
+        )
 
         super().__init__(*args, run_config=run_config, **kwargs)  # type: ignore
 
@@ -503,7 +515,8 @@ class ParallelTrainer(ProtoTrainer):
 
         - if available, synchronize Google Cloud storage buckets to working directory defined in runtime configuration.
 
-        - initialize optuna trials and add them to optuna storage and experiment state database for tracking training progress (or retrieve existing trials from optuna storage).
+        - initialize optuna trials and add them to optuna storage and experiment state database
+          for tracking training progress (or retrieve existing trials from optuna storage).
 
         Trials initialized (or retrieved), :obj:`experiment_state.pending_trials`,
         will be pushed to ray nodes so they can be executed in parallel. After all trials
@@ -559,7 +572,7 @@ class ParallelTrainer(ProtoTrainer):
                     self.logger.info(
                         f"Waiting for {len(futures)} trials to finish running."
                     )
-            except Exception as e:
+            except builtins.Exception as e:
                 # NOTE we do not know which trial caused the error, only
                 # the pending trials (which we can assume one is the errored)
                 exception = traceback.format_exc()
