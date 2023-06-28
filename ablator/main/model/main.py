@@ -502,6 +502,7 @@ class ModelBase(ABC):
                 raise RuntimeError("Checkpoint folder was not found.")
             recent_checkpoint_dir = self.logger.CHKPT_DIRS["recent"]
             # NOTE: current_checkpoint is found in _find_load_valid_checkpoint
+            self.logger.info(f"Trying to load checkpoints from{recent_checkpoint_dir}")
             self._find_load_valid_checkpoint(recent_checkpoint_dir)
         else:
             self.current_checkpoint = None
@@ -595,7 +596,9 @@ class ModelBase(ABC):
                         f"Error loading checkpoint {_checkpoint}. Trying another....\n{traceback.format_exc()}"
                     )
         if current_checkpoint is None:
-            raise CheckpointNotFoundError(f"Could not find a valid checkpoint in {chkpt_dir}")
+            raise CheckpointNotFoundError(
+                f"Could not find a valid checkpoint in {chkpt_dir}"
+            )
         self.current_checkpoint = current_checkpoint
 
     def _load_model(self, checkpoint_path: Path, model_only: bool = False) -> None:

@@ -328,14 +328,14 @@ class Results:
             num_cpus = len(json_paths) / (cpu_count * 4)
         json_path = None
         for json_path in json_paths:
-            if ray.is_initialized():
-                results.append(
-                    ray.remote(num_cpus=num_cpus)(read_result).remote(
-                        config_type, json_path
-                    )
-                )
-            else:
-                results.append(read_result(config_type, json_path))
+            # if ray.is_initialized():
+            #     results.append(
+            #         ray.remote(num_cpus=num_cpus,resources=)(read_result).remote(
+            #             config_type, json_path
+            #         )
+            #     )
+            # else:
+            results.append(read_result(config_type, json_path))
         if ray.is_initialized() and len(json_paths) > 0:
             # smoke test
             read_result(config_type, json_path)
