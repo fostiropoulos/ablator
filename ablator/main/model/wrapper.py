@@ -4,7 +4,7 @@ import traceback
 import typing as ty
 from abc import abstractmethod
 from collections.abc import Callable, Iterable
-
+import json
 import numpy as np
 import torch
 from torch import nn
@@ -18,6 +18,8 @@ from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauErro
 from ablator.modules.metrics.main import LossDivergedError, TrainMetrics
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
+from ablator.modules.storage.cloud import GcpConfig
+from ablator.modules.storage.remote import RemoteConfig
 
 
 class ModelWrapper(ModelBase):
@@ -635,6 +637,8 @@ class ModelWrapper(ModelBase):
     def train(
         self,
         run_config: RunConfig,
+        gcp_config: GcpConfig = None,
+        remote_config: RemoteConfig = None,
         smoke_test: bool = False,
         debug: bool = False,
         resume: bool = False,
@@ -664,7 +668,14 @@ class ModelWrapper(ModelBase):
         )
 
         try:
-            return self.train_loop(smoke_test)
+            metrics = self.train_loop(smoke_test)
+            if gcp_config is not None:
+                gcp_config.rsync_up(
+                    logger=self.logger,
+                    local_path=run_config.experiment_dir,
+                    remote_path="",
+                )
+            return metrics
         except KeyboardInterrupt:
             self._checkpoint()
 
@@ -711,9 +722,9 @@ class ModelWrapper(ModelBase):
                     subsample=1,
                 )
                 metrics[tag] = eval_metrics
-                msg = self.metrics.to_dict()
-                self.logger.info(f"Evaluation: {msg}")
-        return metrics
+                metrics_dict = {k: v.to_dict() for k, v in metrics.items()}
+                self.logger.info(f"Evaluation: {metrics_dict}")
+        return metrics_dict
 
     def apply_loss(
         self,
