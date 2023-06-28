@@ -30,6 +30,12 @@ Welcome to ablator's documentation!
    notebooks/Interpreting-results.ipynb
    notebooks/GettingStarted-more-demos.ipynb
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Intermediate Tutorials
+
+   notebooks/Searchspace-for-diff-optimizers.ipynb
+
 Indices and tables
 ==================
 
