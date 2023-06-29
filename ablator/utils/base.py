@@ -299,3 +299,7 @@ def get_gpu_mem(
 def parse_gcloud_path_relative(remote_path: Path | str) -> str:
     remote_path = Path(remote_path).absolute()
     return Path(*remote_path.parts[1:]).as_posix()
+
+
+def parse_dict_to_str(dictionary: dict) -> str:
+    return " ".join([f"{k}: {v}" for k, v in dictionary.items()])
