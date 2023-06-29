@@ -502,7 +502,7 @@ class ModelBase(ABC):
                 raise RuntimeError("Checkpoint folder was not found.")
             recent_checkpoint_dir = self.logger.CHKPT_DIRS["recent"]
             # NOTE: current_checkpoint is found in _find_load_valid_checkpoint
-            self.logger.info(f"Trying to load checkpoints from{recent_checkpoint_dir}")
+            self.logger.info(f"Trying to load checkpoints from {recent_checkpoint_dir}")
             self._find_load_valid_checkpoint(recent_checkpoint_dir)
         else:
             self.current_checkpoint = None

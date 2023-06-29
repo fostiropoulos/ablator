@@ -18,8 +18,7 @@ from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauErro
 from ablator.modules.metrics.main import LossDivergedError, TrainMetrics
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
-from ablator.modules.storage.cloud import GcpConfig
-from ablator.modules.storage.remote import RemoteConfig
+from ablator.main.configs import ParallelConfig
 
 
 class ModelWrapper(ModelBase):
@@ -636,9 +635,7 @@ class ModelWrapper(ModelBase):
     @ty.final
     def train(
         self,
-        run_config: RunConfig,
-        gcp_config: GcpConfig = None,
-        remote_config: RemoteConfig = None,
+        run_config: ParallelConfig = None,
         smoke_test: bool = False,
         debug: bool = False,
         resume: bool = False,
@@ -668,14 +665,7 @@ class ModelWrapper(ModelBase):
         )
 
         try:
-            metrics = self.train_loop(smoke_test)
-            if gcp_config is not None:
-                gcp_config.rsync_up(
-                    logger=self.logger,
-                    local_path=run_config.experiment_dir,
-                    remote_path="",
-                )
-            return metrics
+            return self.train_loop(smoke_test)
         except KeyboardInterrupt:
             self._checkpoint()
 
