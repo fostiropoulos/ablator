@@ -635,7 +635,7 @@ class ModelWrapper(ModelBase):
     @ty.final
     def train(
         self,
-        run_config: RunConfig = None,
+        run_config: RunConfig,
         smoke_test: bool = False,
         debug: bool = False,
         resume: bool = False,
