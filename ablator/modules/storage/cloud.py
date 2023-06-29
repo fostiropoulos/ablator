@@ -146,7 +146,7 @@ class GcpConfig(ConfigBase):
 
     def rsync_up(
         self,
-        local_path: str,
+        local_path: Path,
         remote_path: str,
         logger: FileLogger | None = None,
     ):
@@ -237,7 +237,7 @@ class GcpConfig(ConfigBase):
     def rsync_down(
         self,
         remote_path: str,
-        local_path: str,
+        local_path: Path,
         logger: FileLogger | None = None,
         verbose=True,
     ):
