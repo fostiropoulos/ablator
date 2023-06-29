@@ -35,7 +35,7 @@ CRASH_EXCEPTION_TYPES: list[type] = []
 
 def parse_rsync_paths(
     rsynced_folder: Path | str
-) -> dict[str | Path, str]:
+) -> dict[str, Path | str]:
     """
     Parse the experiment directory that's being in sync with remote servers (Google cloud storage, other
     remote nodes) and the root folder.
@@ -85,8 +85,10 @@ def parse_metrics(optim_direction: list[str], metrics: dict[str, float] | None):
 
 
 def evaluate_remote(model: ModelWrapper, eval_config: ParallelConfig, logger: FileLogger):
-    experiment_dir = Path(eval_config.experiment_dir)/eval_config.uid
-    eval_config.gcp_config.rsync_down("", str(experiment_dir), logger=logger)
+    experiment_dir = Path(eval_config.experiment_dir or "")/eval_config.uid
+    if eval_config.gcp_config is None:
+        raise ValueError("GCP config is not provided.You should provide a GCP config to sync files for evaluating in parallel.")
+    eval_config.gcp_config.rsync_down(str(experiment_dir), experiment_dir, logger=logger)
     metrics = model.evaluate(eval_config)
     with open(experiment_dir/"metrics.json", "w", encoding="utf-8") as f:
         formatter_str = json.dumps(metrics, indent=4)
