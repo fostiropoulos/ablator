@@ -567,7 +567,7 @@ class ExperimentState:
 
         trials = self.__sample_trials(
             trials_to_sample,
-            self.pending_trials,
+            None,
             ignore_errors=self.config.ignore_invalid_params,
         )[:max_trials_conc]
 
