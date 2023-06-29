@@ -88,12 +88,13 @@ def evaluate_remote(model: ModelWrapper, eval_config: ParallelConfig, logger: Fi
     experiment_dir = Path(eval_config.experiment_dir or "")/eval_config.uid
     if eval_config.gcp_config is None:
         raise ValueError("GCP config is not provided.You should provide a GCP config to sync files for evaluating in parallel.")
-    eval_config.gcp_config.rsync_down(str(experiment_dir), experiment_dir, logger=logger)
+    kwargs = parse_rsync_paths(experiment_dir)
+    eval_config.gcp_config.rsync_down(**kwargs, logger=logger)
     metrics = model.evaluate(eval_config)
     with open(experiment_dir/"metrics.json", "w", encoding="utf-8") as f:
         formatter_str = json.dumps(metrics, indent=4)
         f.write(formatter_str)
-    eval_config.gcp_config.rsync_up(str(experiment_dir), "", logger=logger)
+    eval_config.gcp_config.rsync_up(**kwargs, logger=logger)
 
 
 def train_main_remote(

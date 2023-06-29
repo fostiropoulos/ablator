@@ -132,7 +132,6 @@ class GcpConfig(ConfigBase):
             if destination is not None
             else Path(self.bucket)
         )
-        print(destination)
         cmd = ["gsutil", "ls", f"gs://{destination}"]
 
         p = self._make_process(cmd, verbose=False)
