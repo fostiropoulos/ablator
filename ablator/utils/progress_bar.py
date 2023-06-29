@@ -1,9 +1,12 @@
 import curses
+import html
 import os
 import time
 import typing as ty
 from pathlib import Path
+from re import T
 
+import ray
 from tabulate import tabulate
 from tqdm import tqdm
 
@@ -31,6 +34,8 @@ def in_notebook():
 
 
 def get_last_line(filename: Path):
+    if filename is None or not filename.exists():
+        return None
     with open(filename, "rb") as f:
         try:  # catch OSError in case of a one line file
             f.seek(-2, os.SEEK_END)
@@ -81,11 +86,11 @@ class Display:
 
         if self.is_terminal:
             try:
-                self.stdscr.addstr(pos, 0, text)
+                self.stdscr.addstr(pos, 0, text[: self.ncols - 1])
             except _curses.error:
                 pass
         else:
-            self.html_value += text + "<br>"
+            self.html_value += html.escape(text) + "<br>"
 
     def close(self):
         if self.is_terminal:
@@ -113,12 +118,86 @@ class Display:
         self._refresh()
 
 
+from collections import defaultdict
+
+
+@ray.remote
+class RemoteProgressBar:
+    def __init__(self, total_trials: int | None):
+        super().__init__()
+        self.start_time = time.time()
+        self.total_trials = total_trials if total_trials is not None else float("inf")
+        self.closed: dict[str, bool] = defaultdict(lambda: False)
+        self.texts: dict[str, list[str]] = defaultdict(lambda: [])
+
+    def __iter__(self):
+        for obj in range(self.total_trials):
+            yield obj
+
+    def close(self, uid):
+        self.closed[uid] = True
+
+    def make_bar(self):
+        return ProgressBar.make_bar(
+            current_iteration=self.current_iteration,
+            start_time=self.start_time,
+            total_steps=self.total_trials,
+            ncols=100,
+        )
+
+    @property
+    def current_iteration(self):
+        return sum(self.closed.values())
+
+    def make_print_texts(self):
+        def _concat_texts(texts):
+            _texts = [f"{texts[1]}{SEPERATOR}{texts[0]}"]
+            if len(texts) > 2:
+                padding = " " * (len(texts[1].split(":")[0]) + 2)
+                _texts.append(f"{padding}{texts[2]}")
+            return _texts
+
+        texts: list[str] = []
+        texts.append(self.make_bar())
+
+        for uid in sorted(self.texts):
+            if not self.closed[uid]:
+                texts += _concat_texts(self.texts[uid])
+
+        return texts
+
+    def update(self, finished_trials):
+        self.finished_trials = finished_trials
+
+    def update_status(self, uid: str, texts: list[str]):
+        self.texts[uid] = texts
+
+
+class RemoteDisplay(Display):
+    def __init__(
+        self, remote_progress_bar: RemoteProgressBar, update_interval=1
+    ) -> None:
+        super().__init__()
+        self._prev_update_time = time.time()
+        self.update_interval = update_interval
+        self.remote_progress_bar = remote_progress_bar
+
+    def refresh(self, force=False):
+        if time.time() - self._prev_update_time > self.update_interval or force:
+            self._prev_update_time = time.time()
+            self.print_texts(
+                ray.get(self.remote_progress_bar.make_print_texts.remote())
+            )
+
+
 class ProgressBar:
     def __init__(
         self,
         total,
         logfile: Path | None = None,
         update_interval: int = 1,
+        remote_display: RemoteProgressBar = None,
+        uid: str | None = None,
     ):
         self.total = total
         self.update_interval = update_interval
@@ -127,7 +206,13 @@ class ProgressBar:
         self.current_iteration = 0
         self.metrics: dict[str, ty.Any] = {}
         self.logfile = logfile
-        self.display = Display()
+        self.display: Display | None = None
+        self.remote_display: RemoteProgressBar | None = None
+        if remote_display is None:
+            self.display = Display()
+        else:
+            self.remote_display = remote_display
+        self.uid = uid
         self._update()
 
     def __iter__(self):
@@ -138,13 +223,16 @@ class ProgressBar:
         self.current_iteration = 0
 
     def close(self):
-        self.display.close()
+        if self.display is not None:
+            self.display.close()
+        else:
+            self.remote_display.close.remote(self.uid)
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
     @classmethod
-    def _make_bar(cls, current_iteration, start_time, total_steps):
+    def make_bar(cls, current_iteration, start_time, total_steps, ncols=None):
         if current_iteration > 0:
             rate = current_iteration / (time.time() - start_time)
             time_remaining = (total_steps - current_iteration) / rate
@@ -158,11 +246,15 @@ class ProgressBar:
             elapsed=time.time() - start_time,
             bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}",
             postfix=post_fix,
+            ncols=ncols,
         )
 
     @classmethod
-    def _make_print_message(
-        cls, metrics, nrows, ncols, logfile, current_iteration, start_time, total_steps
+    def make_metrics_message(
+        cls,
+        metrics: dict[str, ty.Any],
+        nrows: int | None = None,
+        ncols: int | None = None,
     ):
         rows = tabulate(
             [[k + ":", f"{num_format(v)}"] for k, v in metrics.items()],
@@ -175,40 +267,57 @@ class ProgressBar:
         texts = []
         for row in rows:
             row += SEPERATOR
-            if len(text) + len(row) > ncols:
+            if ncols is not None and len(text) + len(row) > ncols:
                 text = text[: -len(SEPERATOR)]
                 texts.append(text)
                 text = ""
 
             text += row
-            if len(texts) > nrows - 5:
+            if nrows is not None and len(texts) > nrows:
                 break
 
         text = text[: -len(SEPERATOR)]
         texts.append(text)
-        pbar = cls._make_bar(
-            current_iteration=current_iteration,
-            start_time=start_time,
-            total_steps=total_steps,
-        )
-        texts.append(pbar)
+        return texts
 
-        if logfile is not None and logfile.exists():
-            last_line = get_last_line(logfile)
+    @property
+    def ncols(self):
+        if self.display is not None:
+            return self.display.ncols
+        else:
+            return None  # ray.get(self.remote_display.ncols.remote())
+
+    @property
+    def nrows(self):
+        if self.display is not None:
+            return self.display.nrows - 5  # padding
+        else:
+            return None  # ray.get(self.remote_display.nrows.remote())
+
+    def make_print_message(self):
+        texts = self.make_metrics_message(self.metrics, self.nrows, self.ncols)
+        pbar = self.make_bar(
+            current_iteration=self.current_iteration,
+            start_time=self.start_time,
+            total_steps=self.total,
+        )
+        if self.uid is not None:
+            texts.append(f"{self.uid}: {pbar}")
+        else:
+            texts.append(pbar)
+        last_line = get_last_line(self.logfile)
+        if last_line is not None:
             texts.append(last_line)
         return texts
 
     def _update(self):
-        texts = self._make_print_message(
-            self.metrics,
-            self.display.nrows,
-            self.display.ncols,
-            self.logfile,
-            self.current_iteration,
-            self.start_time,
-            self.total,
-        )
-        self.display.print_texts(texts)
+        texts = self.make_print_message()
+        if self.display is not None:
+            self.display.print_texts(texts)
+        else:
+            ray.get(self.remote_display.update_status.remote(self.uid, texts))
+            if self.current_iteration + 1 == self.total:
+                self.close()
 
     def update_metrics(self, metrics: dict[str, ty.Any], current_iteration: int):
         self.metrics = metrics

@@ -1,10 +1,16 @@
-from ablator.utils.progress_bar import num_format, ProgressBar
+from ablator.utils.progress_bar import (
+    num_format,
+    ProgressBar,
+    RemoteProgressBar,
+    RemoteDisplay,
+)
 import numpy as np
 from pathlib import Path
 import time
 from collections import defaultdict
-
+import ray
 from multiprocessing import Process
+
 
 def _assert_num_format(num, width):
     str_num = num_format(num, width)
@@ -77,21 +83,22 @@ def _rand_str(size=10):
 
 
 def write_text(fp: Path, n=1000):
-    with open(fp,'a') as f:
+    with open(fp, "a") as f:
         for i in range(n):
-
             f.write(f"Some rand Log: {_rand_str(100)}\n")
             f.flush()
             time.sleep(0.5)
         pass
 
 
-def _test_tui(tmp_path: Path):
-    fp = tmp_path.joinpath(_rand_str(10))
+def _test_tui(tmp_path: Path, progress_bar=None):
+    uid = _rand_str(10)
+    fp = tmp_path.joinpath(uid)
+    fp.write_text("")
     p = Process(target=write_text, args=(fp,))
     p.start()
 
-    b = ProgressBar(100000)
+    b = ProgressBar(100000, logfile=fp, remote_display=progress_bar, uid=uid)
 
     s = {_rand_str(): np.random.random() for i in range(100)}
     for i in b:
@@ -102,8 +109,32 @@ def _test_tui(tmp_path: Path):
     return
 
 
+def _test_tui_remote(tmp_path: Path):
+    if not ray.is_initialized():
+        ray.init()
+    import random
+
+    @ray.remote
+    def test_remote(i, progress_bar: RemoteProgressBar):
+        _test_tui(tmp_path, progress_bar)
+
+    trials = 20
+    progress_bar = RemoteProgressBar.remote(trials)
+
+    dis = RemoteDisplay(progress_bar)
+
+    remotes = []
+    for i in range(trials):
+        remotes.append(test_remote.remote(i, progress_bar))
+        time.sleep(random.random())
+        dis.refresh(force=True)
+    while len(remotes) > 0:
+        done_id, remotes = ray.wait(remotes, num_returns=1, timeout=0.1)
+        dis.refresh()
+        time.sleep(random.random() / 10)
+
 
 if __name__ == "__main__":
     tmp_path = Path("/tmp/")
-    _test_tui(tmp_path)
-
+    # _test_tui(tmp_path)
+    # _test_tui_remote(tmp_path)
