@@ -34,9 +34,8 @@ CRASH_EXCEPTION_TYPES: list[type] = []
 
 
 def parse_rsync_paths(
-    rsynced_folder: Path | str,
-    root_folder: Path | str | None = None,
-) -> dict[str | str]:
+    rsynced_folder: Path | str
+) -> dict[str | Path, str]:
     """
     Parse the experiment directory that's being in sync with remote servers (Google cloud storage, other
     remote nodes) and the root folder.
@@ -54,13 +53,11 @@ def parse_rsync_paths(
         A dictionary with 2 keys: ``local_path`` and ``remote_path``, which specifies the local directory
         and the remote path that will be in sync.
     """
-    rsync_path = Path(rsynced_folder)
-    root_path = rsync_path if root_folder is None else Path(root_folder)
 
+    rsync_path = Path(rsynced_folder).absolute()
     return {
-        "local_path": str(rsync_path),
-        # "remote_path": rsync_path.relative_to(root_path.parent).as_posix(),
-        "remote_path": "",
+        "local_path": rsync_path,
+        "remote_path": butils.parse_gcloud_path_relative(rsync_path)
     }
 
 
@@ -93,7 +90,6 @@ def evaluate_remote(model: ModelWrapper, eval_config: ParallelConfig, logger: Fi
     metrics = model.evaluate(eval_config)
     with open(experiment_dir/"metrics.json", "w", encoding="utf-8") as f:
         formatter_str = json.dumps(metrics, indent=4)
-        print("metrics:", formatter_str)
         f.write(formatter_str)
     eval_config.gcp_config.rsync_up(str(experiment_dir), "", logger=logger)
 
@@ -219,7 +215,7 @@ def train_main_remote(
         return handle_exception(e)
     finally:
         if model.model_dir is not None:
-            kwargs = parse_rsync_paths(model.model_dir, root_dir)
+            kwargs = parse_rsync_paths(model.model_dir)
             if run_config.gcp_config is not None:
                 run_config.gcp_config.rsync_up(
                     Path(kwargs["local_path"]),
@@ -262,7 +258,7 @@ class ParallelTrainer(ProtoTrainer):
 
     """
 
-    def __init__(self, *args, run_config: ParallelConfig, working_dir: str = "", **kwargs,):
+    def __init__(self, *args, run_config: ParallelConfig, **kwargs,):
         """
         Initialize ``ParallelTrainer`` using config from ``run_config``.
 
@@ -423,7 +419,7 @@ class ParallelTrainer(ProtoTrainer):
         super()._init_state()
         self.sync_down()
         if resume:
-            self.logger.info("Trying to running from resume experiment...")
+            self.logger.info("Trying to run from resumed experiment...")
         self.experiment_state = ExperimentState(
             self.experiment_dir, self.run_config, self.logger, resume=resume
         )

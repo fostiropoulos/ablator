@@ -3,10 +3,12 @@ import os
 import socket
 import subprocess
 import typing as ty
+import sys
 from pathlib import Path
 from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Optional
 from ablator.modules.loggers.file import FileLogger
+from ablator.utils.base import parse_gcloud_path_relative
 
 
 @configclass
@@ -65,7 +67,7 @@ class GcpConfig(ConfigBase):
         #     == 1
         # ), "Can only use GcpConfig from Google Cloud Server. Consider switching to RemoteConfig."
 
-    def _make_cmd_up(self, local_path: str, destination: str):
+    def _make_cmd_up(self, local_path: Path, remote_path: str):
         """
         Make the command to upload files to the bucket.
 
@@ -81,18 +83,16 @@ class GcpConfig(ConfigBase):
         list[str]
             The command to upload the file.
         """
-        local_path_striped = str(local_path).lstrip("/")
-        destination = str(Path(self.bucket) / destination / local_path_striped)
-        src = local_path
+        remote_path = remote_path.lstrip("/")
         cmd = ["gsutil", "-m", "rsync", "-r"]
         if self.exclude_glob is not None:
             cmd += ["--exclude", f"{self.exclude_glob}"]
         if self.exclude_chkpts:
             cmd += ["--exclude", "*.pt"]
-        cmd += [f"{src}", f"gs://{destination}"]
+        cmd += [f"{local_path}", f"gs://{self.bucket}/{remote_path}"]
         return cmd
 
-    def _make_cmd_down(self, src_path: str, local_path: str):
+    def _make_cmd_down(self, remote_path: str, local_path: Path):
         """
         Make the command to download files from the bucket.
 
@@ -108,11 +108,9 @@ class GcpConfig(ConfigBase):
         list[str]
             The command to download the file.
         """
-        local_path_striped = str(local_path).lstrip("/")
-        src = Path(self.bucket) / src_path / local_path_striped
-        destination = local_path
+        remote_path = remote_path.lstrip("/")
         cmd = ["gsutil", "-m", "rsync", "-r"]
-        cmd += [f"gs://{src}", f"{destination}"]
+        cmd += [f"gs://{self.bucket}/{remote_path}", f"{local_path}"]
         return cmd
 
     def list_bucket(self, destination: str | None = None):
@@ -134,6 +132,7 @@ class GcpConfig(ConfigBase):
             if destination is not None
             else Path(self.bucket)
         )
+        print(destination)
         cmd = ["gsutil", "ls", f"gs://{destination}"]
 
         p = self._make_process(cmd, verbose=False)
@@ -198,7 +197,11 @@ class GcpConfig(ConfigBase):
         else:
             stdout = subprocess.PIPE
             stderr = subprocess.PIPE
-        p = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
+
+        if sys.platform == "win32":
+            p = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, shell=True)
+        else:
+            p = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
         return p
 
     def _find_gcp_nodes(

@@ -213,13 +213,13 @@ def parse_device(device: ty.Union[str, list[str]]):
     ['cpu', 'cuda:0', 'cuda:1', 'cuda:2']
     """
     if isinstance(device, str):
-        if device=="cpu":
+        if device == "cpu":
             return device
         if device == "cuda" or (device.startswith("cuda:") and device[5:].isdigit()):
-            assert torch.cuda.is_available(),"Could not find a torch.cuda installation on your system."
+            assert torch.cuda.is_available(), "Could not find a torch.cuda installation on your system."
             if device.startswith("cuda:"):
                 gpu_number = int(device[5:])
-                assert gpu_number<torch.cuda.device_count(),f"gpu {device} does not exist on this machine"
+                assert gpu_number < torch.cuda.device_count(), f"gpu {device} does not exist on this machine"
             return device
         raise ValueError
     if isinstance(device, int):
@@ -294,3 +294,8 @@ def get_gpu_mem(
     for gpu in instance.DeviceQuery()["gpu"]:
         memory.append(gpu["fb_memory_usage"][mem_type])
     return memory
+
+
+def parse_gcloud_path_relative(remote_path: Path | str) -> str:
+    remote_path = Path(remote_path).absolute()
+    return Path(*remote_path.parts[1:]).as_posix()
