@@ -28,6 +28,7 @@ from ablator.utils.base import get_gpu_max_mem
 import ablator.utils.base as butils
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 
+
 # The exceptions that are unrecoverable i.e.  [DuplicateRunError]
 CRASH_EXCEPTION_TYPES: list[type] = []
 
@@ -133,11 +134,15 @@ def train_main_remote(
     TrialState
         A TrialState object indicating the state of the trial job
 
-        - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training, returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
+        - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training,
+          returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
 
-        - If ``DuplicateRunError``, ``RuntimeError`` (with message ``'CUDA out of memory'``), or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training, returned state will be ``TrialState.RECOVERABLE_ERROR``
+        - If ``DuplicateRunError``, ``RuntimeError`` (with message ``'CUDA out of memory'``),
+          or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training,
+          returned state will be ``TrialState.RECOVERABLE_ERROR``
 
-        - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised, returned state will be ``TrialState.FAIL``
+        - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised,
+          returned state will be ``TrialState.FAIL``
 
     """
     if crash_exceptions_types is None:
@@ -220,7 +225,7 @@ def train_main_remote(
 class ParallelTrainer(ProtoTrainer):
     """
     A class for parallelizing training of models of different configurations with ray.
-    Performance of these models (metrics) are for optuna to tune hyperparameters. They are also logged to optuna storage.
+    Metrics of these models are for optuna to tune hyperparameters. They are also logged to optuna storage.
 
     Attributes
     ----------

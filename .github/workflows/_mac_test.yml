@@ -1,0 +1,34 @@
+name: mac-test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install rsync (macOS)
+        if: runner.os == 'macOS'
+        run: |
+            brew install rsync
+      - name: Generate SSH keys
+        run: |
+          ssh-keygen -t rsa -b 4096 -C "dev@ablator.org" -f ~/.ssh/id_rsa -q -N ""
+          chmod 700 ~/.ssh
+          chmod 600 ~/.ssh/id_rsa
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_rsa
+          cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+      - name: Install dependencies
+        run: |
+          pip install -e .[dev] -v
+      - name: Test with pytest
+        run: |
+          pip install pytest
+          pytest
