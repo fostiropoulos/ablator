@@ -119,6 +119,8 @@ def train_main_remote(
         Whether to resume training the model from existing checkpoints and existing experiment state.
     clean_reset : bool, default=False
         Whether to remove model directory when ``CheckpointNotFoundError`` is raised.
+    progress_bar : RemoteProgressBar, optional
+        Optionally, we can use a remote progress bar to update the results of the trial.
 
     Returns
     -------
@@ -282,6 +284,8 @@ class ParallelTrainer(ProtoTrainer):
         self.total_trials = self.run_config.total_trials
         self.gpu: float = 0.0
         self.cpu: float = self._make_cpu()
+        self._progress_bar: ty.Optional[RemoteProgressBar] = None
+        self._display: butils.Dummy | RemoteDisplay = butils.Dummy()
         if self.device.startswith("cuda"):
             self.gpu_mem_bottleneck = min(get_gpu_max_mem())
             if min(get_gpu_max_mem()) != max(get_gpu_max_mem()):
@@ -393,7 +397,9 @@ class ParallelTrainer(ProtoTrainer):
         verbose = self.run_config.verbose
         if ray.is_initialized():
             self.logger.warn(
-                "Ray is already initialized. Can not start another instance. Unexpected behavior can occur. We recommend to perform `ray.shutdown()` or `ray stop` before starting the experiment."
+                "Ray is already initialized. Can not start another instance. "
+                "Unexpected behavior can occur. We recommend to perform `ray.shutdown()` "
+                "or `ray stop` before starting the experiment."
             )
         else:
             if modules is None:
@@ -417,11 +423,9 @@ class ParallelTrainer(ProtoTrainer):
             self.experiment_dir, self.run_config, self.logger, resume=resume
         )
         self.logger.verbose = verbose == "console"
-        self._progress_bar = None
-        self._display = butils.Dummy()
         if verbose == "progress":
-            self._progress_bar = RemoteProgressBar.remote(self.total_trials)
-            self._display = RemoteDisplay(self._progress_bar)
+            self._progress_bar = RemoteProgressBar.remote(self.total_trials)  # type: ignore
+            self._display = RemoteDisplay(self._progress_bar)  # type: ignore
 
     def _rsync_nodes(self):
         if self.run_config.gcp_config is None:

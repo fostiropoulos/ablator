@@ -1,6 +1,5 @@
 import copy
 import multiprocessing as mp
-import time
 import traceback
 import typing as ty
 from abc import abstractmethod
@@ -19,7 +18,7 @@ from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauErro
 from ablator.modules.metrics.main import LossDivergedError, TrainMetrics
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
-from ablator.utils.progress_bar import ProgressBar, RemoteProgressBar
+from ablator.utils.progress_bar import RemoteProgressBar
 
 
 class ModelWrapper(ModelBase):

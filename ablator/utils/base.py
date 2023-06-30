@@ -277,9 +277,7 @@ def get_gpu_max_mem() -> list[int]:
     return get_gpu_mem(mem_type="total")
 
 
-def get_gpu_mem(
-    mem_type: ty.Literal["used", "total", "free"] = "total"
-) -> list[int]:
+def get_gpu_mem(mem_type: ty.Literal["used", "total", "free"] = "total") -> list[int]:
     """
     Get the memory information of all available GPUs.
 
@@ -358,11 +356,11 @@ def is_oom_exception(err: RuntimeError) -> bool:
     """
     return any(
         x in str(err)
-        for x in [
-            'CUDA out of memory',
-            'CUBLAS_STATUS_ALLOC_FAILED',
-            'CUDA error: out of memory',
-        ]
+        for x in (
+            "CUDA out of memory",
+            "CUBLAS_STATUS_ALLOC_FAILED",
+            "CUDA error: out of memory",
+        )
     )
 
 

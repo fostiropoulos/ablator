@@ -13,7 +13,6 @@ import setproctitle
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 
 import ablator.utils.base as butils
 from ablator.main.configs import RunConfig
@@ -58,7 +57,7 @@ class ModelBase(ABC):
         An optional DataLoader object used for model evaluation.
     test_dataloader : Optional[DataLoader]
         An optional DataLoader object used for model testing.
-    logger : Union[SummaryLogger, tutils.Dummy]
+    logger : Union[SummaryLogger, Dummy]
         Records information on the program's operation and model training, such as progress and performance metrics.
     device : str
         The type of device used for running the experiment. i.e. ``"cuda"``, ``"cpu"``, ``"cuda:0"``.
@@ -75,9 +74,9 @@ class ModelBase(ABC):
         If ``True``, apply automatic mixed precision training, otherwise default precision.
     random_seed : Optional[int]
         Sets the seed for generating random numbers.
-    train_tqdm : tqdm, optional
-        An optional instance of ``tqdm`` that creates progress bars and displays real-time information during training.
-        i.e. time remaining. Only applied for the master process.
+    progress_bar : Union[ProgressBar, Dummy]
+        An optional instance of ``ProgressBar`` that displays real-time information during training.
+        e.g. time remaining. Only applied for the master process.
     current_checkpoint : Optional[Path]
         Directory for the current checkpoint file, by default None.
     metrics : Metrics
@@ -135,7 +134,7 @@ class ModelBase(ABC):
         self.verbose: ty.Literal["progress", "console", "silent"]
         self.amp: bool
         self.random_seed: ty.Optional[int]
-        self.train_tqdm: ProgressBar = None
+        self.train_tqdm: ProgressBar | butils.Dummy
 
         self.current_checkpoint: Path | None = None
         # Runtime metrics
@@ -517,7 +516,7 @@ class ModelBase(ABC):
         smoke_test: bool = False,
         debug: bool = False,
         resume: bool = False,
-        remote_progress_bar: RemoteProgressBar = None,
+        remote_progress_bar: ty.Optional[RemoteProgressBar] = None,
     ):
         """
         Initializes the state of the trainer based on provided configuration and parameters.

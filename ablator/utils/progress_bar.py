@@ -3,8 +3,8 @@ import html
 import os
 import time
 import typing as ty
+from collections import defaultdict
 from pathlib import Path
-from re import T
 
 import ray
 from tabulate import tabulate
@@ -118,17 +118,15 @@ class Display:
         self._refresh()
 
 
-from collections import defaultdict
-
-
 @ray.remote
 class RemoteProgressBar:
     def __init__(self, total_trials: int | None):
         super().__init__()
-        self.start_time = time.time()
+        self.start_time: float = time.time()
         self.total_trials = total_trials if total_trials is not None else float("inf")
         self.closed: dict[str, bool] = defaultdict(lambda: False)
         self.texts: dict[str, list[str]] = defaultdict(lambda: [])
+        self.finished_trials: int = 0
 
     def __iter__(self):
         for obj in range(self.total_trials):
@@ -196,7 +194,7 @@ class ProgressBar:
         total,
         logfile: Path | None = None,
         update_interval: int = 1,
-        remote_display: RemoteProgressBar = None,
+        remote_display: ty.Optional[RemoteProgressBar] = None,
         uid: str | None = None,
     ):
         self.total = total
@@ -258,7 +256,6 @@ class ProgressBar:
     ):
         rows = tabulate(
             [[k + ":", f"{num_format(v)}"] for k, v in metrics.items()],
-            # maxcolwidths=[10, 10],
             disable_numparse=True,
             tablefmt="plain",
             stralign="right",
@@ -284,15 +281,13 @@ class ProgressBar:
     def ncols(self):
         if self.display is not None:
             return self.display.ncols
-        else:
-            return None  # ray.get(self.remote_display.ncols.remote())
+        return None
 
     @property
     def nrows(self):
         if self.display is not None:
             return self.display.nrows - 5  # padding
-        else:
-            return None  # ray.get(self.remote_display.nrows.remote())
+        return None
 
     def make_print_message(self):
         texts = self.make_metrics_message(self.metrics, self.nrows, self.ncols)
@@ -305,8 +300,8 @@ class ProgressBar:
             texts.append(f"{self.uid}: {pbar}")
         else:
             texts.append(pbar)
-        last_line = get_last_line(self.logfile)
-        if last_line is not None:
+
+        if (last_line := get_last_line(self.logfile)) is not None:
             texts.append(last_line)
         return texts
 
