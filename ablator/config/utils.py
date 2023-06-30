@@ -6,7 +6,9 @@ from functools import reduce
 import typing as ty
 
 
-def flatten_nested_dict(_dict, expand_list=True, seperator=".") -> dict[str, ty.Any]:
+def flatten_nested_dict(
+    _dict: dict, expand_list=True, seperator="."
+) -> dict[str, ty.Any]:
     """
     Flattens a nested dictionary, expanding lists and tuples if specified.
 

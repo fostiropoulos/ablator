@@ -104,7 +104,7 @@ class ArrayStore(Sequence):
         ), f"Invalid ArrayStore value type {type(val)}"
         self.arr.append(val)
         if len(self.arr) > self.limit:
-            self.arr = self.arr[-self.limit:]
+            self.arr = self.arr[-self.limit :]
         elif (
             self.memory_limit is not None
             and sys.getsizeof(self.arr) > self.memory_limit
@@ -233,8 +233,6 @@ class PredictionStore:
 
         Parameters
         ----------
-        tag : str
-            A tag that specifies which set of predictions to evaluate.
         **batches : dict[str, np.ndarray]
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
             and value is a batch of prediction values. Note that the passed keys in ``**batches`` must match arguments

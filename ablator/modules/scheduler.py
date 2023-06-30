@@ -3,9 +3,10 @@ from abc import abstractmethod
 
 from torch import nn
 from torch.optim.lr_scheduler import OneCycleLR, ReduceLROnPlateau, StepLR, _LRScheduler
+from torch.optim import Optimizer
 
 from ablator.config.main import ConfigBase, Derived, configclass
-from torch.optim import Optimizer
+
 
 Scheduler = ty.Union[_LRScheduler, ReduceLROnPlateau, ty.Any]
 
@@ -23,6 +24,7 @@ class SchedulerArgs(ConfigBase):
         The step type at which the scheduler.step() should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
     """
+
     # step every train step or every validation step
     step_when: StepType
 
@@ -31,7 +33,7 @@ class SchedulerArgs(ConfigBase):
         """
         Abstract method to be implemented by derived classes, which creates and returns a scheduler object.
         """
-        pass
+        raise NotImplementedError("init_optimizer method not implemented.")
 
 
 @configclass
@@ -47,6 +49,7 @@ class SchedulerConfig(ConfigBase):
         The arguments needed to initialize the scheduler.
 
     """
+
     name: str
     arguments: SchedulerArgs
 
@@ -116,6 +119,7 @@ class OneCycleConfig(SchedulerArgs):
         The step type at which the scheduler.step() should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
     """
+
     max_lr: float
     total_steps: Derived[int]
     # TODO fix mypy errors for custom types
@@ -175,10 +179,11 @@ class PlateuaConfig(SchedulerArgs):
             The step type at which the scheduler should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
     """
+
     patience: int = 10
     min_lr: float = 1e-5
     mode: str = "min"
-    factor: float = 0.0 # TODO {fixme} this is error prone -> new_lr = 0
+    factor: float = 0.0  # TODO {fixme} this is error prone -> new_lr = 0
     threshold: float = 1e-4
     verbose: bool = False
     # TODO fix mypy errors for custom types
@@ -231,6 +236,7 @@ class StepLRConfig(SchedulerArgs):
         The step type at which the scheduler should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
     """
+
     step_size: int = 1
     gamma: float = 0.99
     # TODO fix mypy errors for custom types

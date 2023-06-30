@@ -307,7 +307,7 @@ class ModelWrapper(ModelBase):
 
         Returns
         -------
-        out: dict[str, torch.Tensor] | None
+        out: tuple[dict[str, torch.Tensor] | None, torch.Tensor | None]
             The output of the model,contains current predictions and loss of the model
         """
         batch = self.to_device(batch)
@@ -373,12 +373,12 @@ class ModelWrapper(ModelBase):
 
         if (
             self.scheduler is not None
-            and hasattr(self.train_config.scheduler_config, "step_when")
-            and self.train_config.scheduler_config.step_when == "val"
+            and hasattr(self.train_config.scheduler_config.arguments, "step_when")
+            and self.train_config.scheduler_config.arguments.step_when == "val"
         ):
             if val_loss is None:
                 raise EvaluationError(
-                    f"A validation dataset is rquired with {self.scheduler.__name__} scheduler"
+                    f"A validation dataset is rquired with {self.scheduler.__class__.__name__} scheduler"
                 )
             self.scheduler.step(val_loss)
 
@@ -686,7 +686,6 @@ class ModelWrapper(ModelBase):
         self._init_state(run_config, resume=True)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
 
-        # TODO make new metrics
         msg = self.metrics.to_dict()
         self.logger.info(f"Current metrics: {msg}")
         metrics = {}
@@ -829,7 +828,9 @@ class ModelWrapper(ModelBase):
         """
         cutoff_itr = len(dataloader) * subsample
         if model.training:
-            self.logger.warn("Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`")
+            self.logger.warn(
+                "Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`"
+            )
         for i, batch in enumerate(dataloader):
             with torch.no_grad():
                 outputs, loss = self._model_step(model=model, batch=batch)

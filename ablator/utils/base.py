@@ -197,7 +197,7 @@ def parse_device(device: ty.Union[str, list[str]]):
     ValueError
         If the device string is not one of {'cpu', 'cuda'} or doesn't start with 'cuda:'.
     AssertionError
-        If cuda is not found on system or gpu number of device is not available. 
+        If cuda is not found on system or gpu number of device is not available.
 
     Examples
     --------
@@ -248,11 +248,11 @@ def init_weights(module: nn.Module):
     - If the module is a LayerNorm layer, set all biases to zeros and all weights to 1.
     """
     if isinstance(module, nn.Linear):
-        module.weight.data.normal_(mean=0.0, std=1.0)
+        module.weight.data.normal_(mean=0.0, std=0.01)
         if module.bias is not None:
             module.bias.data.zero_()
     elif isinstance(module, nn.Embedding):
-        module.weight.data.normal_(mean=0.0, std=1.0)
+        module.weight.data.normal_(mean=0.0, std=0.01)
         if module.padding_idx is not None:
             module.weight.data[module.padding_idx].zero_()
     elif isinstance(module, nn.LayerNorm):

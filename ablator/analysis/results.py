@@ -5,6 +5,7 @@ import traceback
 import typing as ty
 from logging import warning
 from pathlib import Path
+import builtins
 
 import numpy as np
 import pandas as pd
@@ -142,7 +143,7 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
             print(f"Found {malformed_rows} malformed rows in {json_path}")
         return df.reset_index()
 
-    except Exception:
+    except builtins.Exception:
         traceback.print_exc()
         return None
 
@@ -268,7 +269,7 @@ class Results:
         list[str]
             list of optimize metric names
         """
-        return list(map(str, self.metric_map.values()))
+        return [str(value) for value in self.metric_map.values()]
 
     def _parse_results(
         self,

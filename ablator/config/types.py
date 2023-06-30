@@ -342,6 +342,9 @@ def parse_value(val, annot: Annotation, name=None):
     ------
     RuntimeError
         If the required value is missing and it is not optional or derived or stateless.
+    ValueError
+        If the value type in dict is not valid
+        If the value of a list is no valid
 
     Examples
     --------
@@ -374,7 +377,7 @@ def parse_value(val, annot: Annotation, name=None):
                 raise ValueError(f"Invalid type {type(_v)} for {_k} and field {name}")
         return return_dictionary
     if annot.collection == List:
-        if not type(val)==list:
+        if not type(val) == list:
             raise ValueError(f"Invalid type {type(val)} for type List")
         return [annot.variable_type(_v) for _v in val]
     if annot.collection == Tuple:

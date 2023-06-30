@@ -1,2 +1,4 @@
 nbsphinx
 ipykernel
+sphinx-book-theme
+pydata-sphinx-theme

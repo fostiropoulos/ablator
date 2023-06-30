@@ -1,0 +1,27 @@
+version: '3.3'
+
+services:
+
+  builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ablatorci:test
+
+  unittest:
+    image: ablatorci:test
+    volumes:
+      - .:/usr/src/app
+    command: ["./scripts/starttest.sh"]
+
+  pylint:
+    image: ablatorci:test
+    volumes:
+      - .:/usr/src/app
+    command: ["sh", "-c", "pylint ablator"]
+
+  mypy:
+    image: ablatorci:test
+    volumes:
+      - .:/usr/src/app
+    command: ["sh", "-c", "mypy ablator"]
