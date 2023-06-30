@@ -102,9 +102,11 @@ class ModelBase(ABC):
 
     2. Users must implement the abstract methods to customize the model's behavior.
 
-    3. Mixed precision training enables some operations to use the ``torch.float32`` datatype and other operations use lower
+    3. Mixed precision training enables some operations to use the ``torch.float32`` datatype and
+    other operations use lower
     precision floating point datatype ``torch.float16``. This is for saving time and reducing memory usage. Ordinarily,
-    "automatic mixed precision training" means training with ``torch.autocast`` and ``torch.cuda.amp.GradScaler`` together.
+    "automatic mixed precision training" means training with ``torch.autocast`` and
+    ``torch.cuda.amp.GradScaler`` together.
     More information: https://pytorch.org/docs/stable/amp.html
 
     """
@@ -531,6 +533,8 @@ class ModelBase(ABC):
             If True, disables logging and model directory creation, by default False.
         resume : bool, optional
             If True, tries to resume training from a checkpoint, by default False.
+        remote_progress_bar: RemoteProgressBar, optional
+            A remote progress bar can be used to report metrics from the internal progress bar
         """
         self.run_config = run_config
         self.random_seed = self.run_config.random_seed

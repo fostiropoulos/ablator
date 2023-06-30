@@ -533,7 +533,8 @@ class ModelWrapper(ModelBase):
 
     def status_message(self) -> str:
         """
-        Return a string generated from dictionary of current metrics,including all the static metrics and moving average metrics.
+        Return a string generated from dictionary of current metrics,
+        including all the static metrics and moving average metrics.
 
         Returns
         -------
@@ -589,7 +590,8 @@ class ModelWrapper(ModelBase):
     def train_loop(self, smoke_test=False):
         """
         Train the model in many steps, evaluate the model and log the metrics for each iteration.
-        metrics including static metrics like learning rate, along with validation and training metrics like loss and mean.
+        metrics including static metrics like learning rate, along with validation and
+        training metrics like loss and mean.
 
         Parameters
         ----------
@@ -879,7 +881,6 @@ class ModelWrapper(ModelBase):
         DataLoader
             The training dataloader.
         """
-        pass
 
     def evaluation_functions(self) -> dict[str, Callable] | None:
         """
@@ -888,8 +889,6 @@ class ModelWrapper(ModelBase):
         dict[str, Callable]
             The evaluation functions to use.Also see ``TrainMetrics`` for details.
         """
-
-        return None
 
     # Functions that can be optionally over-written.
     def make_dataloader_test(self, run_config: RunConfig) -> DataLoader | None:
@@ -906,7 +905,6 @@ class ModelWrapper(ModelBase):
         DataLoader | None
             The test dataloader.
         """
-        pass
 
     def make_dataloader_val(self, run_config: RunConfig) -> DataLoader | None:
         """
@@ -922,7 +920,6 @@ class ModelWrapper(ModelBase):
         DataLoader | None
             The validation dataloader.
         """
-        pass
 
     def config_parser(self, run_config: RunConfig):
         """
@@ -936,7 +933,9 @@ class ModelWrapper(ModelBase):
         dataloaders are pickled with the object when running distributed.
         """
         self.train_dataloader = self.make_dataloader_train(run_config)
+        # pylint: disable=assignment-from-no-return
         self.val_dataloader = self.make_dataloader_val(run_config)
+        # pylint: disable=assignment-from-no-return
         self.test_dataloader = self.make_dataloader_test(run_config)
 
     def checkpoint(self, is_best=False):

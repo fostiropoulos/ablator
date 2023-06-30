@@ -79,14 +79,14 @@ class SchedulerConfig(ConfigBase):
             _arguments = argument_cls(**arguments)
         super().__init__(name=name, arguments=_arguments)
 
-    def make_scheduler(self, model, optimizer) -> Scheduler:
+    def make_scheduler(self, model: nn.Module, optimizer: Optimizer) -> Scheduler:
         """
         Creates a new scheduler for an optimizer, based on the configuration.
 
         Parameters
         ----------
-        model
-            The model.
+        model: nn.Module
+            Some schedulers require information from the model. The model is passed as an argument.
         optimizer
             The optimizer used to update the model parameters, whose learning rate we want to monitor.
 
@@ -122,8 +122,6 @@ class OneCycleConfig(SchedulerArgs):
 
     max_lr: float
     total_steps: Derived[int]
-    # TODO fix mypy errors for custom types
-    # type: ignore
     step_when: StepType = "train"
 
     def init_scheduler(self, model: nn.Module, optimizer: Optimizer):

@@ -60,6 +60,7 @@ class SummaryLogger:
     result_json_path : Path | None
         Path to the results JSON file.
     """
+
     SUMMARY_DIR_NAME = "dashboard"
     RESULTS_JSON_NAME = "results.json"
     LOG_FILE_NAME = "train.log"
@@ -202,6 +203,7 @@ class SummaryLogger:
         if self.dashboard is not None:
             self.dashboard.write_config(run_config)
 
+    # pylint: disable
     def _add_metric(self, k, v, itr):
         """
         Add a metric to the dashboard.
@@ -249,7 +251,7 @@ class SummaryLogger:
             )
 
     def _append_metrics(self, metrics: dict[str, float]):
-        """ Append metrics to the result json file.
+        """Append metrics to the result json file.
 
         Parameters
         ----------
@@ -272,7 +274,7 @@ class SummaryLogger:
         metrics: Union[TrainMetrics, dict],
         itr: Optional[int] = None,
     ):
-        """ Update the dashboard with the given metrics.
+        """Update the dashboard with the given metrics.
         write some metrics to json files and update the current metadata (``log_iteration``)
 
         Parameters

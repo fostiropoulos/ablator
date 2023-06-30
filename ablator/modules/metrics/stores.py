@@ -97,7 +97,6 @@ class ArrayStore(Sequence):
         >>> array_store.limit
         4
         """
-        """Appends a batch of values"""
         # Appending by batch is faster than converting numpy to list
         assert isinstance(
             val, (np.ndarray, int, float)

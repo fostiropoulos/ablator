@@ -90,13 +90,13 @@ def default_val_parser(val):
     return str(val)
 
 
-def json_to_dict(_json):
+def json_to_dict(json_):
     """
     Convert a JSON string into a dictionary.
 
     Parameters
     ----------
-    _json : str
+    json_ : str
         JSON string to be converted.
 
     Returns
@@ -105,17 +105,17 @@ def json_to_dict(_json):
         A dictionary representation of the JSON string.
     """
 
-    _dict = json.loads(_json)
-    return _dict
+    dict_ = json.loads(json_)
+    return dict_
 
 
-def dict_to_json(_dict):
+def dict_to_json(dict_):
     """
     Convert a dictionary into a JSON string.
 
     Parameters
     ----------
-    _dict : dict
+    dict_ : dict
         The dictionary to be converted.
 
     Returns
@@ -123,19 +123,19 @@ def dict_to_json(_dict):
     str
         The JSON string representation of the dictionary.
     """
-    _json = json.dumps(_dict, indent=0, default=default_val_parser)
+    _json = json.dumps(dict_, indent=0, default=default_val_parser)
     # make sure it can be decoded
     json_to_dict(_json)
     return _json
 
 
-def nested_set(_dict, keys: list[str], value: ty.Any):
+def nested_set(dict_, keys: list[str], value: ty.Any):
     """
     Set a value in a nested dictionary.
 
     Parameters
     ----------
-    _dict : dict
+    dict_ : dict
         The dictionary to update.
     keys : list[str]
         List of keys representing the nested path.
@@ -144,9 +144,9 @@ def nested_set(_dict, keys: list[str], value: ty.Any):
 
     Examples
     --------
-    >>> _dict = {'a': {'b': {'c': 1}}}
-    >>> nested_set(_dict, ['a', 'b', 'c'], 2)
-    >>> _dict
+    >>> dict_ = {'a': {'b': {'c': 1}}}
+    >>> nested_set(dict_, ['a', 'b', 'c'], 2)
+    >>> dict_
     {'a': {'b': {'c': 2}}}
 
     Returns
@@ -154,7 +154,7 @@ def nested_set(_dict, keys: list[str], value: ty.Any):
     dict
         The updated dictionary with the new value set.
     """
-    original_dict = copy.deepcopy(_dict)
+    original_dict = copy.deepcopy(dict_)
     x = original_dict
     for key in keys[:-1]:
         if key not in x:
@@ -174,8 +174,7 @@ def truncate_utf8_chars(filename: Path, last_char: str):
         offset = 1
         while offset <= size:
             f.seek(-offset, os.SEEK_END)
-            b = ord(f.read(1))
-            if b == last_char_ord:
+            if ord(f.read(1)) == last_char_ord:
                 f.seek(-1, os.SEEK_CUR)
                 f.truncate()
                 return

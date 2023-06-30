@@ -52,8 +52,6 @@ class ModelConfig(ConfigBase):
     When initializing a model, the config is passed to the model constructor.
     """
 
-    pass
-
 
 @configclass
 class RunConfig(ConfigBase):
