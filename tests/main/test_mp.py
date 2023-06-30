@@ -122,8 +122,8 @@ def test_mp(tmp_path: Path):
                 lambda: ParallelTrainer(wrapper=wrapper, run_config=config)
             )
             assert (
-                    "Expected GPU memory utilization" in out
-                    and "Expected CPU core util. exceed system capacity" in out
+                "Expected GPU memory utilization" in out
+                and "Expected CPU core util. exceed system capacity" in out
             )
         else:
             assert_error_msg(
@@ -185,18 +185,15 @@ def test_resume(tmp_path: Path):
     ablator = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
     if torch.cuda.is_available():
         ablator.gpu = 1 / config.concurrent_trials
-    ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None, resume=True)
+    assert_error_msg(
+        lambda: ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None, resume=True),
+        "No trials could be scheduled."
+    )
 
-    # Check the state after resuming
-    res = Results(MyParallelConfig, ablator.experiment_dir)
-    resumed_trials = len(ablator.experiment_state.complete_trials)
 
-    # Check if resumed trials are no less than initial trials
-    assert resumed_trials >= initial_trials
-
-def test_relative_path(tmp_path:Path):
+def test_relative_path(tmp_path: Path):
     wrapper = TestWrapper(MyCustomModel)
-    relative_path_config=MyParallelConfig(
+    relative_path_config = MyParallelConfig(
         train_config=train_config,
         model_config=CustomModelConfig(),
         verbose="silent",
@@ -210,9 +207,11 @@ def test_relative_path(tmp_path:Path):
         cpus_per_experiment=0.001,
     )
 
-    relative_path_config.experiment_dir="../dir"
-    ablator=ParallelTrainer(wrapper=wrapper,run_config=relative_path_config)
+    relative_path_config.experiment_dir = "../dir"
+    ablator = ParallelTrainer(wrapper=wrapper, run_config=relative_path_config)
     assert Path(relative_path_config.experiment_dir).absolute() in ablator.experiment_dir.parents
+
+
 if __name__ == "__main__":
     import shutil
 

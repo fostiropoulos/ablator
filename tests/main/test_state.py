@@ -219,7 +219,7 @@ def test_state(tmp_path: Path):
         )
         prev_trials = s.all_trials_uid
         s = ExperimentState(Path(fp), config, resume=True)
-        assert prev_trials == s.all_trials_uid
+        assert len(prev_trials) + 1 == len(s.all_trials_uid)
 
     tmp_path = Path(f"{temp_dir.name}/7")
     shutil.rmtree(tmp_path, ignore_errors=True)

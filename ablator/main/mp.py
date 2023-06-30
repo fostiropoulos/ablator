@@ -91,8 +91,10 @@ def evaluate_remote(model: ModelWrapper, eval_config: ParallelConfig, logger: Fi
     kwargs = parse_rsync_paths(experiment_dir)
     eval_config.gcp_config.rsync_down(**kwargs, logger=logger)
     metrics = model.evaluate(eval_config)
+    metrics_dict = {k: v.to_dict() for k, v in metrics.items()}
+    logger.info(f"Evaluation: {butils.parse_dict_to_str(metrics_dict)}")
     with open(experiment_dir/"metrics.json", "w", encoding="utf-8") as f:
-        formatter_str = json.dumps(metrics, indent=4)
+        formatter_str = json.dumps(metrics_dict, indent=4)
         f.write(formatter_str)
     eval_config.gcp_config.rsync_up(**kwargs, logger=logger)
 
@@ -261,7 +263,7 @@ class ParallelTrainer(ProtoTrainer):
 
     """
 
-    def __init__(self, *args, run_config: ParallelConfig, **kwargs,):
+    def __init__(self, *args, run_config: ParallelConfig, **kwargs):
         """
         Initialize ``ParallelTrainer`` using config from ``run_config``.
 
