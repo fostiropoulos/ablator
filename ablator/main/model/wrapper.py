@@ -713,9 +713,7 @@ class ModelWrapper(ModelBase):
                     subsample=1,
                 )
                 metrics[tag] = eval_metrics
-        metrics_dict = {k: v.to_dict() for k, v in metrics.items()}
-        self.logger.info(f"Evaluation: {butils.parse_dict_to_str(metrics_dict)}")
-        return metrics_dict
+        return metrics
 
     def apply_loss(
         self,

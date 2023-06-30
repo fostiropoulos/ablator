@@ -564,7 +564,6 @@ class ExperimentState:
         for trial in self.running_trials:
             self.update_trial_state(trial.uid, None, TrialState.RESUME)
             running_trials.append(trial)
-
         trials = self.__sample_trials(
             trials_to_sample,
             None,

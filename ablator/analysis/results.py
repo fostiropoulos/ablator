@@ -326,7 +326,7 @@ class Results:
         cpu_count = mp.cpu_count()
         if num_cpus is None:
             num_cpus = len(json_paths) / (cpu_count * 4)
-        read_results_partial = functools.partial(read_result, config_type=config_type)
-        with mp.Pool(cpu_count) as p:
-            results = p.map(read_results_partial, json_paths)
+        if len(json_paths) > 0:
+            with mp.Pool(cpu_count) as p:
+                results = p.starmap(read_result, [(config_type, path) for path in json_paths])
         return pd.concat(results)
