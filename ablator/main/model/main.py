@@ -136,7 +136,7 @@ class ModelBase(ABC):
         self.verbose: ty.Literal["progress", "console", "silent"]
         self.amp: bool
         self.random_seed: ty.Optional[int]
-        self.train_tqdm: ProgressBar | butils.Dummy
+        self.progress_bar: ProgressBar | butils.Dummy
 
         self.current_checkpoint: Path | None = None
         # Runtime metrics
@@ -554,14 +554,14 @@ class ModelBase(ABC):
         self._init_model_state(resume, smoke_test or debug)
         self.run_config.assert_state(_run_config)
         if self.verbose == "progress" and not smoke_test:
-            self.train_tqdm = ProgressBar(
+            self.progress_bar = ProgressBar(
                 total=self.epoch_len,
                 logfile=self.logger.log_file_path,
                 remote_display=remote_progress_bar,
                 uid=self.uid,
             )
         else:
-            self.train_tqdm = butils.Dummy()
+            self.progress_bar = butils.Dummy()
 
     def _find_load_valid_checkpoint(self, chkpt_dir):
         """

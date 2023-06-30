@@ -527,7 +527,7 @@ class ModelWrapper(ModelBase):
         self.metrics.update_static_metrics(self.train_stats)
         if self.verbose != "progress":
             return
-        self.train_tqdm.update_metrics(
+        self.progress_bar.update_metrics(
             self.metrics.to_dict(), self.current_iteration % self.epoch_len
         )
 
@@ -610,7 +610,7 @@ class ModelWrapper(ModelBase):
                 generator = iter(train_dataloader)
                 batch = next(generator)
                 self.metrics.evaluate("train")
-                self.train_tqdm.reset()
+                self.progress_bar.reset()
             outputs, train_metrics = self.train_step(batch)
             if outputs is not None:
                 self.metrics.append_batch(**outputs, tag="train")
@@ -675,12 +675,12 @@ class ModelWrapper(ModelBase):
         except KeyboardInterrupt:
             self._checkpoint()
         finally:
-            self.train_tqdm.close()
+            self.progress_bar.close()
 
             msgs = (
                 []
-                if isinstance(self.train_tqdm, butils.Dummy)
-                else self.train_tqdm.make_metrics_message(self.metrics.to_dict())
+                if isinstance(self.progress_bar, butils.Dummy)
+                else self.progress_bar.make_metrics_message(self.metrics.to_dict())
             )
             for msg in msgs:
                 self.logger.info(msg, verbose=True)
