@@ -35,12 +35,14 @@ class TrainConfig(ConfigBase):
     rand_weights_init: bool = True
         whether to initialize model weights randomly.
     """
+
     dataset: str
     batch_size: int
     epochs: int
     optimizer_config: OptimizerConfig
     scheduler_config: Optional[SchedulerConfig]
     rand_weights_init: bool = True
+
 
 # TODO decorator @modelconfig as opposed to @configclass ModelConfig
 @configclass
@@ -49,6 +51,7 @@ class ModelConfig(ConfigBase):
     Model configuration.
     When initializing a model, the config is passed to the model constructor.
     """
+
     pass
 
 
@@ -84,7 +87,8 @@ class RunConfig(ConfigBase):
     metrics_mb_limit: int = 100
         max number of megabytes stored in every tag(train, eval, test) for evaluation.
     early_stopping_iter: Optional[int] = None
-        The maximum allowed difference between the current iteration and the last iteration with the best metric before applying early stopping.
+        The maximum allowed difference between the current iteration and the last iteration
+        with the best metric before applying early stopping.
         Early stopping will be triggered if the difference ``(current_itr - best_itr)`` exceeds ``early_stopping_iter``.
         If set to ``None``, early stopping will not be applied.
     eval_epoch: float = 1
@@ -99,6 +103,7 @@ class RunConfig(ConfigBase):
         if ``cur_loss > best_loss > divergence_factor``, the model is considered to have diverged.
 
     """
+
     # location to store experiment artifacts
     experiment_dir: Stateless[Optional[str]] = None
     random_seed: Optional[int] = None
@@ -131,6 +136,7 @@ class SearchType(Enum):
     """
     Type of search space.
     """
+
     integer = "int"
     numerical = "float"
 
@@ -140,6 +146,7 @@ class SearchSpace(ConfigBase):
     """
     Search space configuration.
     """
+
     value_range: Optional[Tuple[str, str]]
     categorical_values: Optional[List[str]]
     value_type: SearchType = SearchType.numerical
@@ -155,6 +162,7 @@ class SearchAlgo(Enum):
     """
     Type of search algorithm.
     """
+
     random = "random"
     tpe = "tpe"
 
@@ -163,6 +171,7 @@ class Optim(Enum):
     """
     Type of optimization direction.
     """
+
     min = "min"
     max = "max"
 
@@ -179,7 +188,8 @@ class ParallelConfig(RunConfig):
     concurrent_trials: int
         number of trials to run concurrently.
     search_space: Dict[SearchSpace]
-        search space for hyperparameter search,eg. ``{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}``
+        search space for hyperparameter search,
+        eg. ``{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}``
     optim_metrics: Dict[Optim]
         metrics to optimize, eg. ``{"val_loss": "min"}``
     search_algo: SearchAlgo = SearchAlgo.tpe
@@ -192,6 +202,7 @@ class ParallelConfig(RunConfig):
         gcp configuration.
 
     """
+
     total_trials: int
     concurrent_trials: Stateless[int]
     search_space: Dict[SearchSpace]

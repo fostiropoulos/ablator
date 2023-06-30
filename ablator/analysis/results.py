@@ -5,6 +5,7 @@ import traceback
 import typing as ty
 from logging import warning
 from pathlib import Path
+import builtins
 
 import numpy as np
 import pandas as pd
@@ -74,7 +75,7 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
         df = pd.concat([pd.DataFrame([experiment_attributes] * len(df)), df], axis=1)
         return df.reset_index()
 
-    except Exception:
+    except builtins.Exception:
         traceback.print_exc()
         return None
 

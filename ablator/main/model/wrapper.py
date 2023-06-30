@@ -308,7 +308,7 @@ class ModelWrapper(ModelBase):
 
         Returns
         -------
-        out: dict[str, torch.Tensor] | None
+        out: tuple[dict[str, torch.Tensor] | None, torch.Tensor | None]
             The output of the model,contains current predictions and loss of the model
         """
         batch = self.to_device(batch)
@@ -387,7 +387,7 @@ class ModelWrapper(ModelBase):
         ):
             if val_loss is None:
                 raise EvaluationError(
-                    f"A validation dataset is rquired with {self.scheduler.__name__} scheduler"
+                    f"A validation dataset is rquired with {self.scheduler.__class__.__name__} scheduler"
                 )
             self.scheduler.step(val_loss)
 
@@ -652,7 +652,8 @@ class ModelWrapper(ModelBase):
             Whether to run in debug mode.
         resume : bool, default=False
             Whether to resume training the model from existing checkpoints and existing experiment state.
-        remote_progress_bar : Progress TODO
+        remote_progress_bar : RemoteProgressBar, optional
+            Optionally, we can pass a remote progress bar to report progress of the training.
 
         Returns
         -------

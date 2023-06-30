@@ -21,6 +21,7 @@ class PlotAnalysis(Analysis):
     """
     Class for analyzing plotting
     """
+
     @classmethod
     def _write_images(
         cls,
@@ -66,8 +67,8 @@ class PlotAnalysis(Analysis):
         metric_map: dict[str, Optim],
         append=False,
         ax: Axes | None = None,
-        metric_name_remap=None,
-        attribute_name_remap=None,
+        metric_name_remap: dict[str, str] | None = None,
+        attribute_name_remap: dict[str, str] | None = None,
         **kwargs,
     ):
         """
@@ -89,10 +90,10 @@ class PlotAnalysis(Analysis):
             A boolean indicating whether to append plots to an existing axes object.
         ax: Axes | None
             A matplotlib.axes.Axes object representing the axis to plot on.
-        metric_name_remap:
-            A dictionary mapping metric names to new metric names.
-        attribute_name_remap:
-            A dictionary mapping attribute names to new attribute names.
+        metric_name_remap: dict[str, str] | None
+            An optional dictionary mapping metric names to new metric names.
+        attribute_name_remap: dict[str, str] | None
+            An optional dictionary mapping attribute names to new attribute names.
         kwargs: Additional keyword arguments to pass to the plot method.
 
         Examples
@@ -134,8 +135,8 @@ class PlotAnalysis(Analysis):
             if path is not None:
                 p = path.joinpath(original_metric_name)
                 cls._write_images(axes_map, p)
-            for ax in axes_map.values():
-                plt.close(ax.figure)
+            for axe in axes_map.values():
+                plt.close(axe.figure)
             axes[metric_name] = axes_map
         return axes
 
@@ -226,7 +227,7 @@ class PlotAnalysis(Analysis):
             num_attrs = list(set(attribute_name_remap.keys()).intersection(num_attrs))
 
         if len(cat_attrs) > 0:
-            for plot_fn in ["make_violinplot"]:
+            for plot_fn in ("make_violinplot",):
                 getattr(self, plot_fn)(
                     cat_attrs,
                     self.metric_names,
@@ -236,7 +237,7 @@ class PlotAnalysis(Analysis):
                     **plt_kwargs,
                 )
         if len(num_attrs) > 0:
-            for plot_fn in ["make_linearplot"]:
+            for plot_fn in ("make_linearplot",):
                 getattr(self, plot_fn)(
                     num_attrs,
                     self.metric_names,

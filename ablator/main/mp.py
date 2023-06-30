@@ -9,6 +9,7 @@ import traceback
 import types as tys
 import typing as ty
 from pathlib import Path
+import builtins
 
 import numpy as np
 import ray
@@ -182,12 +183,12 @@ def train_main_remote(
                 None,
                 TrialState.RECOVERABLE_ERROR,
             )
-        else:
-            return (
-                run_config,
-                None,
-                TrialState.FAIL,
-            )
+
+        return (
+            run_config,
+            None,
+            TrialState.FAIL,
+        )
     except RuntimeError as e:
         if butils.is_oom_exception(e):
             mp_logger.warn(f"Cuda out of memory for {run_config.uid}. Restarting...")
@@ -199,7 +200,7 @@ def train_main_remote(
 
         return handle_exception(e)
 
-    except Exception as e:
+    except builtins.Exception as e:
         return handle_exception(e)
     finally:
         if model.model_dir is not None:
@@ -529,7 +530,8 @@ class ParallelTrainer(ProtoTrainer):
 
         - if available, synchronize Google Cloud storage buckets to working directory defined in runtime configuration.
 
-        - initialize optuna trials and add them to optuna storage and experiment state database for tracking training progress (or retrieve existing trials from optuna storage).
+        - initialize optuna trials and add them to optuna storage and experiment state database
+          for tracking training progress (or retrieve existing trials from optuna storage).
 
         Trials initialized (or retrieved), :obj:`experiment_state.pending_trials`,
         will be pushed to ray nodes so they can be executed in parallel. After all trials
@@ -585,7 +587,7 @@ class ParallelTrainer(ProtoTrainer):
                     self.logger.info(
                         f"Waiting for {len(futures)} trials to finish running."
                     )
-            except Exception as e:
+            except builtins.Exception as e:
                 # NOTE we do not know which trial caused the error, only
                 # the pending trials (which we can assume one is the errored)
                 exception = traceback.format_exc()

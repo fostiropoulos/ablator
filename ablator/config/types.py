@@ -372,6 +372,9 @@ def parse_value(val, annot: Annotation, name=None):
     ------
     RuntimeError
         If the required value is missing and it is not optional or derived or stateless.
+    ValueError
+        If the value type in dict is not valid
+        If the value of a list is no valid
 
     Examples
     --------
