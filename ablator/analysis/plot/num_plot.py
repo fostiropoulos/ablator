@@ -15,9 +15,6 @@ class Numerical(Plot):
 
 
 class LinearPlot(Numerical):
-
-
-
     def _make(
         self,
         scatter_plot: bool = True,
@@ -37,7 +34,9 @@ class LinearPlot(Numerical):
             ],
             axis=1,
         )
-        g = sns.regplot(df, x="x", y="y", ax = self.ax, marker=".", scatter_kws={"alpha": 0.3})
+        g = sns.regplot(
+            df, x="x", y="y", ax=self.ax, marker=".", scatter_kws={"alpha": 0.3}
+        )
         self.ax = g
         self.figure = g.figure
 

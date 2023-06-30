@@ -250,8 +250,8 @@ class ConfigBase:
     def make_dict(
         self,
         annotations: dict[str, Annotation],
-        ignore_stateless=False,
-        flatten=False,
+        ignore_stateless: bool = False,
+        flatten: bool = False,
     ):
         """
         Create a dictionary representation of the configuration object.
@@ -395,7 +395,7 @@ class ConfigBase:
 
         return left_config
 
-    def diff_str(self, config: "ConfigBase", ignore_stateless=False):
+    def diff_str(self, config: "ConfigBase", ignore_stateless: bool = False):
         """
         Get the differences between the current configuration object and another configuration object as strings.
 
@@ -420,7 +420,7 @@ class ConfigBase:
         return str_diffs
 
     def diff(
-        self, config: "ConfigBase", ignore_stateless=False
+        self, config: "ConfigBase", ignore_stateless: bool = False
     ) -> list[tuple[str, tuple[type, ty.Any], tuple[type, ty.Any]]]:
         """
         Get the differences between the current configuration object and another configuration object.
@@ -492,7 +492,7 @@ class ConfigBase:
                 diffs.append((k, (left_type, left_v), (right_type, right_v)))
         return diffs
 
-    def to_dict(self, ignore_stateless=False):
+    def to_dict(self, ignore_stateless: bool = False):
         """
         Convert the configuration object to a dictionary.
 
@@ -521,7 +521,7 @@ class ConfigBase:
         """
         return str(self)
 
-    def to_dot_path(self, ignore_stateless=False):
+    def to_dot_path(self, ignore_stateless: bool = False):
         """
         Convert the configuration object to a dictionary with dot notation paths as keys.
 
@@ -587,8 +587,10 @@ class ConfigBase:
                 and getattr(self, k) is not None
             ):
                 if annot.collection in [List, Tuple]:
-                    [_lval.assert_unambigious() for _lval in getattr(self, k)]
+                    for _lval in getattr(self, k):
+                        _lval.assert_unambigious()
                 elif annot.collection in [Dict]:
-                    [_lval.assert_unambigious() for _lval in getattr(self, k).values()]
+                    for _lval in getattr(self, k).values():
+                        _lval.assert_unambigious()
                 else:
                     getattr(self, k).assert_unambigious()

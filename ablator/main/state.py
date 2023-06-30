@@ -255,7 +255,8 @@ class OptunaState:
     Attributes
     ----------
     optim_metrics : OrderedDict
-        The ordered dictionary containing the names of the metrics to optimize and their direction (minimize or maximize).
+        The ordered dictionary containing the names of the metrics to optimize and their direction
+        (minimize or maximize).
     search_space : dict of str to SearchSpace
         The search space containing the parameters to sample from.
     optuna_study : optuna.study.Study
@@ -575,7 +576,8 @@ class ExperimentState:
         """
         Sample ``n`` trials from the search space and update database.
         Number ``n`` is the miniumn value of ``n_trials_to_sample`` and ``n_trials_remaining``.
-        ``n_trials_remaining`` is the number of ``total_trials`` (defined in config) minus the number of trials that have been sampled.
+        ``n_trials_remaining`` is the number of ``total_trials`` (defined in config) minus
+        the number of trials that have been sampled.
 
         Parameters
         ----------
@@ -686,7 +688,7 @@ class ExperimentState:
                 trial_kwargs=self.config.to_dict(), augmentation=parameter
             )
 
-            trial_state = TrialState.WAITING
+            trial_state: TrialState = TrialState.WAITING
 
             try:
                 trial_config = type(self.config)(**trial_kwargs)

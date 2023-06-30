@@ -1,22 +1,25 @@
-import typing as ty
-from collections import namedtuple
-from enum import Enum as _Enum
-
 """
 Custom types for runtime checking
 """
 
+import typing as ty
+from collections import namedtuple
+from enum import Enum as _Enum
+
 T = ty.TypeVar("T")
 
 
+# pylint: disable=deprecated-typing-alias
 class Dict(ty.Dict[str, T]):
     pass
 
 
+# pylint: disable=deprecated-typing-alias
 class List(ty.List[T]):
     pass
 
 
+# pylint: disable=deprecated-typing-alias
 class Tuple(ty.Tuple[T]):
     pass
 
@@ -407,7 +410,7 @@ def parse_value(val, annot: Annotation, name=None):
                 raise ValueError(f"Invalid type {type(_v)} for {_k} and field {name}")
         return return_dictionary
     if annot.collection == List:
-        if not type(val) == list:
+        if not isinstance(val, list):
             raise ValueError(f"Invalid type {type(val)} for type List")
         return [annot.variable_type(_v) for _v in val]
     if annot.collection == Tuple:
@@ -427,29 +430,6 @@ def parse_value(val, annot: Annotation, name=None):
         ), f"{val} is not supported by {annot.collection}"
         return annot.collection(val)
     raise NotImplementedError
-
-
-def get_annotation_state(annotation):
-    """
-    Get state of an annotation
-
-    Parameters
-    ----------
-    annotation :
-        type annotation
-
-    Returns
-    -------
-    Stateful, Derived, Stateless, or None
-    (Stateful is the default)
-    """
-    origin = ty.get_origin(annotation)
-    if origin is None:
-        return Stateful
-    if origin in [Derived, Stateless]:
-        return annotation
-
-    return Stateful
 
 
 class Stateful(ty.Generic[T]):
