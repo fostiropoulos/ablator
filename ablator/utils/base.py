@@ -342,6 +342,30 @@ def _num_format_float(value: float | np.floating, width: int) -> str:
     return _num_e_format(value, width)
 
 
+def is_oom_exception(err: RuntimeError) -> bool:
+    """
+    is_oom_exception checks whether the exception is caused by CUDA out of memory errors.
+
+    Parameters
+    ----------
+    err : RuntimeError
+        the exception to parse
+
+    Returns
+    -------
+    bool
+        whether the exception indicates out of memory error.
+    """
+    return any(
+        x in str(err)
+        for x in [
+            'CUDA out of memory',
+            'CUBLAS_STATUS_ALLOC_FAILED',
+            'CUDA error: out of memory',
+        ]
+    )
+
+
 def num_format(
     value: str | int | float | np.integer | np.floating, width: int = 8
 ) -> str:

@@ -75,7 +75,7 @@ class RunConfig(ConfigBase):
         whether to use automatic mixed precision when running on gpu.
     device: str = "cuda" or "cpu"
         device to run on.
-    verbose: Literal["console", "tqdm", "silent"] = "console"
+    verbose: Literal["console", "progress", "silent"] = "console"
         verbosity level.
     eval_subsample: float = 1
         fraction of the dataset to use for evaluation.
@@ -108,7 +108,7 @@ class RunConfig(ConfigBase):
     tensorboard: Stateless[bool] = True
     amp: Stateless[bool] = True
     device: Stateless[str] = "cuda"
-    verbose: Stateless[Literal["console", "tqdm", "silent"]] = "console"
+    verbose: Stateless[Literal["console", "progress", "silent"]] = "console"
     eval_subsample: Stateless[float] = 1
     metrics_n_batches: Stateless[int] = 32
     metrics_mb_limit: Stateless[int] = 100

@@ -237,7 +237,7 @@ def test_verbosity():
     verbose_config = RunConfig(
         train_config=train_config,
         model_config=ModelConfig(),
-        verbose="tqdm",
+        verbose="progress",
         metrics_n_batches=100,
         device="cpu",
         amp=False,
@@ -249,11 +249,11 @@ def test_verbosity():
         out, err = capture_output(
             lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
         )
-        assert (out.strip().endswith("?it/s, Remaining: ??]")) and len(err) == 0
+        assert (out.strip().split("\n")[0].endswith("?it/s, Remaining: ??]")) and len(err) == 0
         verbose_config = RunConfig(
             train_config=train_config,
             model_config=ModelConfig(),
-            verbose="tqdm",
+            verbose="progress",
             metrics_n_batches=32,
             device="cpu",
             amp=False,

@@ -587,9 +587,6 @@ class ExperimentState:
         assert n_trials_to_sample > 0
         n_trials_to_sample = min(self.n_trials_remaining, n_trials_to_sample)
         if self.n_trials_remaining == 0:
-            self.logger.warn(
-                f"Limit of trials to sample '{self.config.total_trials}' reached."
-            )
             return None
         trials = self.__sample_trials(
             n_trials_to_sample,
@@ -859,7 +856,6 @@ class ExperimentState:
     @property
     def all_trials(self) -> list[ParallelConfig]:
         stmt = select(Trial).where(
-            # (Trial.state != TrialState.WAITING)
             (Trial.state != TrialState.PRUNED_DUPLICATE)
             & (Trial.state != TrialState.PRUNED_INVALID)
         )

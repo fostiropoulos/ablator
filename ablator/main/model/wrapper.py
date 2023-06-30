@@ -19,6 +19,7 @@ from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauErro
 from ablator.modules.metrics.main import LossDivergedError, TrainMetrics
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
+from ablator.utils.progress_bar import ProgressBar, RemoteProgressBar
 
 
 class ModelWrapper(ModelBase):
@@ -525,7 +526,7 @@ class ModelWrapper(ModelBase):
         and then all metrics (static and moving average) will be set as description for the ``tqdm`` progress.
         """
         self.metrics.update_static_metrics(self.train_stats)
-        if self.verbose != "tqdm":
+        if self.verbose != "progress":
             return
         self.train_tqdm.update_metrics(
             self.metrics.to_dict(), self.current_iteration % self.epoch_len
@@ -636,6 +637,7 @@ class ModelWrapper(ModelBase):
         smoke_test: bool = False,
         debug: bool = False,
         resume: bool = False,
+        remote_progress_bar: ty.Optional[RemoteProgressBar] = None,
     ) -> TrainMetrics:
         """
         Initialize states and train the model.
@@ -651,6 +653,7 @@ class ModelWrapper(ModelBase):
             Whether to run in debug mode.
         resume : bool, default=False
             Whether to resume training the model from existing checkpoints and existing experiment state.
+        remote_progress_bar : Progress TODO
 
         Returns
         -------
@@ -658,7 +661,11 @@ class ModelWrapper(ModelBase):
             The metrics from the training.
         """
         self._init_state(
-            run_config=run_config, smoke_test=smoke_test, debug=debug, resume=resume
+            run_config=run_config,
+            smoke_test=smoke_test,
+            debug=debug,
+            resume=resume,
+            remote_progress_bar=remote_progress_bar,
         )
 
         try:
@@ -667,6 +674,14 @@ class ModelWrapper(ModelBase):
             self._checkpoint()
         finally:
             self.train_tqdm.close()
+
+            msgs = (
+                []
+                if isinstance(self.train_tqdm, butils.Dummy)
+                else self.train_tqdm.make_metrics_message(self.metrics.to_dict())
+            )
+            for msg in msgs:
+                self.logger.info(msg, verbose=True)
 
         return self.metrics
 

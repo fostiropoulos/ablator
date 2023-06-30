@@ -20,7 +20,7 @@ from ablator.main.configs import RunConfig
 from ablator.modules.loggers.main import SummaryLogger
 from ablator.modules.metrics.main import TrainMetrics
 from ablator.utils.base import Dummy
-from ablator.utils.progress_bar import ProgressBar
+from ablator.utils.progress_bar import ProgressBar, RemoteProgressBar
 
 
 class EvaluationError(Exception):
@@ -132,10 +132,10 @@ class ModelBase(ABC):
         self.model_dir: Path | None = None
         self.experiment_dir: Path | None = None
         self.autocast: torch.autocast
-        self.verbose: ty.Literal["tqdm", "console", "silent"]
+        self.verbose: ty.Literal["progress", "console", "silent"]
         self.amp: bool
         self.random_seed: ty.Optional[int]
-        self.train_tqdm: tqdm = None
+        self.train_tqdm: ProgressBar = None
 
         self.current_checkpoint: Path | None = None
         # Runtime metrics
@@ -398,8 +398,8 @@ class ModelBase(ABC):
         )
         if butils.debugger_is_active() and not debug:
             self.logger.warn("Debug flag is False but running in debug mode.")
-
-        self.logger.info(f"Model directory: {self.model_dir}")
+        if self.model_dir is not None:
+            self.logger.info(f"Model directory: {self.model_dir}")
 
     def _make_dataloaders(self, run_config: RunConfig):
         """
@@ -506,7 +506,8 @@ class ModelBase(ABC):
             self._find_load_valid_checkpoint(recent_checkpoint_dir)
         else:
             self.current_checkpoint = None
-            self.logger.info("Creating new model")
+            if not smoke_test:
+                self.logger.info("Creating new model")
             self.create_model()
             self._update_save_dict()
 
@@ -516,6 +517,7 @@ class ModelBase(ABC):
         smoke_test: bool = False,
         debug: bool = False,
         resume: bool = False,
+        remote_progress_bar: RemoteProgressBar = None,
     ):
         """
         Initializes the state of the trainer based on provided configuration and parameters.
@@ -546,12 +548,14 @@ class ModelBase(ABC):
             self._init_logger(resume=resume, debug=debug)
         else:
             self.logger = butils.Dummy()
-        self._init_model_state(resume, smoke_test)
+        self._init_model_state(resume, smoke_test or debug)
         self.run_config.assert_state(_run_config)
-
-        if self.verbose == "tqdm" and not smoke_test:
+        if self.verbose == "progress" and not smoke_test:
             self.train_tqdm = ProgressBar(
-                total=self.epoch_len, logfile=self.logger.log_file_path
+                total=self.epoch_len,
+                logfile=self.logger.log_file_path,
+                remote_display=remote_progress_bar,
+                uid=self.uid,
             )
         else:
             self.train_tqdm = butils.Dummy()

@@ -122,14 +122,13 @@ def test_mp(tmp_path: Path):
                 lambda: ParallelTrainer(wrapper=wrapper, run_config=config)
             )
             assert (
-                    "Expected GPU memory utilization" in out
-                    and "Expected CPU core util. exceed system capacity" in out
+                "Expected GPU memory utilization" in out
+                and "Expected CPU core util. exceed system capacity" in out
             )
         else:
             assert_error_msg(
                 lambda: ParallelTrainer(wrapper=wrapper, run_config=config),
-                "Could not find a torch.cuda installation on your system."
-
+                "Could not find a torch.cuda installation on your system.",
             )
     config.experiment_dir = tmp_path
     if not torch.cuda.is_available():
@@ -170,7 +169,9 @@ def test_resume(tmp_path: Path):
 
     ablator_test = ParallelTrainer(wrapper=wrapper, run_config=resume_config)
     assert_error_msg(
-        lambda: ablator_test.launch(Path(__file__).parent.as_posix(), ray_head_address=None),
+        lambda: ablator_test.launch(
+            Path(__file__).parent.as_posix(), ray_head_address=None
+        ),
         f"{ablator_test.experiment_dir.joinpath(f'{resume_config.uid}_optuna.db')} exists. Please remove before starting a study.",
     )
 
@@ -194,9 +195,10 @@ def test_resume(tmp_path: Path):
     # Check if resumed trials are no less than initial trials
     assert resumed_trials >= initial_trials
 
-def test_relative_path(tmp_path:Path):
+
+def test_relative_path(tmp_path: Path):
     wrapper = TestWrapper(MyCustomModel)
-    relative_path_config=MyParallelConfig(
+    relative_path_config = MyParallelConfig(
         train_config=train_config,
         model_config=CustomModelConfig(),
         verbose="silent",
@@ -210,16 +212,21 @@ def test_relative_path(tmp_path:Path):
         cpus_per_experiment=0.001,
     )
 
-    relative_path_config.experiment_dir="../dir"
-    ablator=ParallelTrainer(wrapper=wrapper,run_config=relative_path_config)
-    assert Path(relative_path_config.experiment_dir).absolute() in ablator.experiment_dir.parents
+    relative_path_config.experiment_dir = "../dir"
+    ablator = ParallelTrainer(wrapper=wrapper, run_config=relative_path_config)
+    assert (
+        Path(relative_path_config.experiment_dir).absolute()
+        in ablator.experiment_dir.parents
+    )
+
+
 if __name__ == "__main__":
     import shutil
 
     tmp_path = Path("/tmp/experiment_dir")
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_path.mkdir()
-    test_mp(tmp_path)
+    # shutil.rmtree(tmp_path, ignore_errors=True)
+    # tmp_path.mkdir()
+    # test_mp(tmp_path)
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
     test_resume(tmp_path)
