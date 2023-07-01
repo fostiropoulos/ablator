@@ -16,6 +16,26 @@ Welcome to ablator's documentation!
    ablator.modules
    ablator.utils
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+
+   notebooks/GettingStarted.ipynb
+   notebooks/Environment-settings.ipynb
+   notebooks/Configuration-Basics.ipynb
+   notebooks/Prototyping-models.ipynb
+   notebooks/Search-space-tutorial.ipynb
+   notebooks/HPO-tutorial.ipynb
+   notebooks/Experiment-dir.ipynb
+   notebooks/Interpreting-results.ipynb
+   notebooks/GettingStarted-more-demos.ipynb
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Intermediate Tutorials
+
+   notebooks/Searchspace-for-diff-optimizers.ipynb
+
 Indices and tables
 ==================
 
