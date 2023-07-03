@@ -173,7 +173,7 @@ def test_resume(tmp_path: Path):
         lambda: ablator_test.launch(Path(__file__).parent.as_posix(), ray_head_address=None),
         f"{ablator_test.experiment_dir.joinpath(f'{resume_config.uid}_optuna.db')} exists. Please remove before starting a study.",
     )
-    
+
     # Check the initial state and save some metrics
     res = Results(MyParallelConfig, ablator.experiment_dir)
     initial_trials = len(ablator.experiment_state.complete_trials)
@@ -209,7 +209,7 @@ def test_relative_path(tmp_path:Path):
         gpu_mb_per_experiment=0.001,
         cpus_per_experiment=0.001,
     )
-    
+
     relative_path_config.experiment_dir="../dir"
     ablator=ParallelTrainer(wrapper=wrapper,run_config=relative_path_config)
     assert Path(relative_path_config.experiment_dir).absolute() in ablator.experiment_dir.parents

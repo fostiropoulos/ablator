@@ -209,6 +209,34 @@ def test_prediction_store_reset(assert_error_msg):
     assert len(ps._get_arr('labels')) == 0, "Reset did not clear the appended predictions."
 
 
+def test_update_static_metrics(self):
+        # Create a model.
+        model = Model()
+
+        # Set the static metrics of the model.
+        model.static_metrics = {"accuracy": 0.9, "loss": 0.1}
+
+        # Update the static metrics of the model.
+        update_static_metrics(model, {"accuracy": 0.95, "loss": 0.05})
+
+        # Check that the static metrics of the model have been updated.
+        self.assertEqual(model.accuracy, 0.95)
+        self.assertEqual(model.loss, 0.05)
+
+def test_update_ma_metrics(self):
+    # Create a model.
+    model = Model()
+
+    # Set the moving average metrics of the model.
+    model.moving_average_metrics = {"accuracy": [0.8, 0.9], "loss": [0.2, 0.1]}
+
+    # Update the moving average metrics of the model.
+    update_ma_metrics(model, {"accuracy": 0.95, "loss": 0.05})
+
+    # Check that the moving average metrics of the model have been updated.
+    self.assertEqual(model.moving_average_metrics["accuracy"], [0.8, 0.9, 0.95])
+    self.assertEqual(model.moving_average_metrics["loss"], [0.2, 0.1, 0.05])
+
 
 if __name__ == "__main__":
 
