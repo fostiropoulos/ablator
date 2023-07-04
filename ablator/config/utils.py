@@ -7,14 +7,14 @@ import typing as ty
 
 
 def flatten_nested_dict(
-    _dict: dict, expand_list=True, seperator="."
+    dict_: dict, expand_list=True, seperator="."
 ) -> dict[str, ty.Any]:
     """
     Flattens a nested dictionary, expanding lists and tuples if specified.
 
     Parameters
     ----------
-    _dict : dict
+    dict_ : dict
         The input dictionary to be flattened.
     expand_list : bool, optional
         Whether to expand lists and tuples in the dictionary, by default ``True``.
@@ -32,8 +32,8 @@ def flatten_nested_dict(
     >>> flatten_nested_dict(nested_dict)
     {'a.b': 1, 'a.c.d': 2, 'e.0': 3, 'e.1': 4}
     """
-    flatten_dict = copy.deepcopy(_dict)
-    for k, v in _dict.items():
+    flatten_dict = copy.deepcopy(dict_)
+    for k, v in dict_.items():
         _gen: ty.Optional[abc.Iterable] = None
         if isinstance(v, dict):
             _gen = v.items()
@@ -46,7 +46,7 @@ def flatten_nested_dict(
             for _k, _v in _gen:
                 flatten_dict[f"{k}{seperator}{_k}"] = _v
 
-    if len(flatten_dict) != len(_dict):
+    if len(flatten_dict) != len(dict_):
         return flatten_nested_dict(flatten_dict)
     return flatten_dict
 

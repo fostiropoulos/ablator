@@ -255,7 +255,8 @@ class OptunaState:
     Attributes
     ----------
     optim_metrics : OrderedDict
-        The ordered dictionary containing the names of the metrics to optimize and their direction (min or max).
+        The ordered dictionary containing the names of the metrics to optimize and their direction
+        (minimize or maximize).
     search_space : dict of str to SearchSpace
         The search space containing the parameters to sample from.
     optuna_study : optuna.study.Study
@@ -439,7 +440,7 @@ class ExperimentState:
         """
         self.optuna_trial_map: dict[str, optuna.Trial] = {}
         self.config = config
-        self.logger: FileLogger = logger if logger is not None else butils.Dummy()
+        self.logger: FileLogger = logger if logger is not None else butils.Dummy()  # type: ignore
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
         default_vals = self.config.make_dict(self.config.annotations, flatten=True)
@@ -575,7 +576,8 @@ class ExperimentState:
         """
         Sample ``n`` trials from the search space and update database.
         Number ``n`` is the miniumn value of ``n_trials_to_sample`` and ``n_trials_remaining``.
-        ``n_trials_remaining`` is the number of ``total_trials`` (defined in config) minus the number of trials that have been sampled.
+        ``n_trials_remaining`` is the number of ``total_trials`` (defined in config) minus
+        the number of trials that have been sampled.
 
         Parameters
         ----------
@@ -591,9 +593,6 @@ class ExperimentState:
         assert n_trials_to_sample > 0
         n_trials_to_sample = min(self.n_trials_remaining, n_trials_to_sample)
         if self.n_trials_remaining == 0:
-            self.logger.warn(
-                f"Limit of trials to sample '{self.config.total_trials}' reached."
-            )
             return None
         trials = self.__sample_trials(
             n_trials_to_sample,
@@ -689,7 +688,7 @@ class ExperimentState:
                 trial_kwargs=self.config.to_dict(), augmentation=parameter
             )
 
-            trial_state = TrialState.WAITING
+            trial_state: TrialState = TrialState.WAITING
 
             try:
                 trial_config = type(self.config)(**trial_kwargs)
@@ -864,7 +863,6 @@ class ExperimentState:
     @property
     def all_trials(self) -> list[ParallelConfig]:
         stmt = select(Trial).where(
-            # (Trial.state != TrialState.WAITING)
             (Trial.state != TrialState.PRUNED_DUPLICATE)
             & (Trial.state != TrialState.PRUNED_INVALID)
         )

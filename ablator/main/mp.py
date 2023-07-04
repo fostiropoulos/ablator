@@ -26,6 +26,7 @@ from ablator.modules.loggers.main import DuplicateRunError
 from ablator.modules.metrics.main import LossDivergedError
 from ablator.utils.base import get_gpu_max_mem
 import ablator.utils.base as butils
+from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 
 
 # The exceptions that are unrecoverable i.e.  [DuplicateRunError]
@@ -94,6 +95,7 @@ def train_main_remote(
     crash_exceptions_types: list[type] | None = None,
     resume: bool = False,
     clean_reset: bool = False,
+    progress_bar: ty.Optional[RemoteProgressBar] = None,
 ) -> tuple[ParallelConfig, dict[str, float] | None, TrialState]:
     """
     The trial job that will be executed remotely at a ray node. This is where model training happens.
@@ -119,6 +121,8 @@ def train_main_remote(
         Whether to resume training the model from existing checkpoints and existing experiment state.
     clean_reset : bool, default=False
         Whether to remove model directory when ``CheckpointNotFoundError`` is raised.
+    progress_bar : RemoteProgressBar, optional
+        Optionally, we can use a remote progress bar to update the results of the trial.
 
     Returns
     -------
@@ -149,7 +153,6 @@ def train_main_remote(
         if hasattr(model, "logger"):
             model.logger.error(exception_str)
         mp_logger.error(f"Error Occured {run_config.uid}")
-        traceback.print_exc()
         if not fault_tollerant or isinstance(e, tuple(crash_exceptions_types)):
             error_msg = (
                 f"Error {type(e).__name__} in"
@@ -161,7 +164,7 @@ def train_main_remote(
         return run_config, None, TrialState.FAIL
 
     try:
-        res = model.train(run_config, resume=resume)
+        res = model.train(run_config, resume=resume, remote_progress_bar=progress_bar)
         mp_logger.info(f"Finished training - {run_config.uid}")
         return run_config, res.to_dict(), TrialState.COMPLETE
     except (LossDivergedError, TrainPlateauError):
@@ -192,7 +195,7 @@ def train_main_remote(
             TrialState.FAIL,
         )
     except RuntimeError as e:
-        if str(e).startswith("CUDA out of memory."):
+        if butils.is_oom_exception(e):
             mp_logger.warn(f"Cuda out of memory for {run_config.uid}. Restarting...")
             return (
                 run_config,
@@ -287,6 +290,8 @@ class ParallelTrainer(ProtoTrainer):
         self.total_trials = self.run_config.total_trials
         self.gpu: float = 0.0
         self.cpu: float = self._make_cpu()
+        self._progress_bar: ty.Optional[RemoteProgressBar] = None
+        self._display: butils.Dummy | RemoteDisplay = butils.Dummy()
         if self.device.startswith("cuda"):
             self.gpu_mem_bottleneck = min(get_gpu_max_mem())
             if min(get_gpu_max_mem()) != max(get_gpu_max_mem()):
@@ -382,6 +387,7 @@ class ParallelTrainer(ProtoTrainer):
                         None,
                         resume,
                         True,
+                        self._progress_bar,
                     )
                 )
 
@@ -394,7 +400,14 @@ class ParallelTrainer(ProtoTrainer):
         modules: list[tys.ModuleType] | None = None,
         resume: bool = False,
     ):
-        if not ray.is_initialized():
+        verbose = self.run_config.verbose
+        if ray.is_initialized():
+            self.logger.warn(
+                "Ray is already initialized. Can not start another instance. "
+                "Unexpected behavior can occur. We recommend to perform `ray.shutdown()` "
+                "or `ray stop` before starting the experiment."
+            )
+        else:
             if modules is None:
                 modules = [ablator_module]
             if ablator_module not in modules:
@@ -404,6 +417,9 @@ class ParallelTrainer(ProtoTrainer):
                 "py_modules": modules,
             }
             ray.init(
+                log_to_driver=verbose == "console",
+                logging_level="warning",
+                include_dashboard=False,
                 address=address,
                 runtime_env=runtime_env,
             )
@@ -412,6 +428,10 @@ class ParallelTrainer(ProtoTrainer):
         self.experiment_state = ExperimentState(
             self.experiment_dir, self.run_config, self.logger, resume=resume
         )
+        self.logger.verbose = verbose == "console"
+        if verbose == "progress":
+            self._progress_bar = RemoteProgressBar.remote(self.total_trials)  # type: ignore
+            self._display = RemoteDisplay(self._progress_bar)  # type: ignore
 
     def _rsync_nodes(self):
         if self.run_config.gcp_config is None:
@@ -430,7 +450,7 @@ class ParallelTrainer(ProtoTrainer):
         if self.run_config.remote_config is None:
             return
         kwargs = parse_rsync_paths(self.experiment_dir)
-        self.run_config.remote_config.rsync_up(logger=self.logger, **kwargs)
+        self.run_config.remote_config.rsync_up(**kwargs)
 
     def _rsync_remote_down(self):
         if self.run_config.remote_config is None:
@@ -556,7 +576,7 @@ class ParallelTrainer(ProtoTrainer):
         while len(futures) > 0:
             try:
                 done_id, futures = ray.wait(
-                    futures, num_returns=n_trials_to_sample, timeout=60
+                    futures, num_returns=n_trials_to_sample, timeout=1
                 )
                 if len(done_id) > 0:
                     config, metrics, trial_state = ray.get(done_id[0])
@@ -584,7 +604,8 @@ class ParallelTrainer(ProtoTrainer):
                         f"There are {len(pending_trials)} unfinished trials. with ids: {pending_trials}"
                     )
                     sys.exit(0)
-
+            finally:
+                self._display.refresh(force=True)
         complete_ids = [c.uid for c in self.experiment_state.complete_trials]
         self.logger.info(
             f"There are {len(self.experiment_state.complete_trials)} complete trials. with ids: {complete_ids}"

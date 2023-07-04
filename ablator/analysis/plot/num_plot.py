@@ -34,9 +34,11 @@ class LinearPlot(Numerical):
             ],
             axis=1,
         )
-        g = sns.lmplot(df, x="x", y="y", markers=".", scatter_kws={"alpha": 0.3})
-        self.ax = g.ax
-        self.figure = g.ax.figure
+        g = sns.regplot(
+            df, x="x", y="y", ax=self.ax, marker=".", scatter_kws={"alpha": 0.3}
+        )
+        self.ax = g
+        self.figure = g.figure
 
         return self.figure, self.ax
 

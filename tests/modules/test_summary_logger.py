@@ -8,6 +8,7 @@ import time
 import numpy as np
 import pandas as pd
 import pytest
+import json
 from PIL import Image
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
@@ -59,6 +60,7 @@ c = RunConfig(model_config=model_c, train_config=train_c)
 
 def test_summary_logger(tmp_path: Path):
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+
     # logpath = tmp_path.joinpath("test.log")
     # logpath.unlink()
     tmp_path = tmp_path.joinpath(f"{random.random()}")
@@ -237,8 +239,30 @@ def test_summary_logger(tmp_path: Path):
     assert event_acc.Images("img")[0].encoded_image_string == img_byte_arr
 
 
+def test_results_json(tmp_path: Path):
+    tmp_path = tmp_path.joinpath(f"{random.random()}")
+    l = SummaryLogger(c, tmp_path)
+    for i in range(10):
+        df = pd.DataFrame(np.random.rand(3))
+        l.update({"df": df})
+        results = json.loads(l.result_json_path.read_text())
+        assert (df == pd.DataFrame(results[-1]["df"])).all().all()
+    assert len(results) == 10
+
+    l.update({"test": 5})
+    results = json.loads(l.result_json_path.read_text())
+    assert results[-1]["test"] == 5
+    assert "df" not in results[-1]
+    l.update({"test": "10"})
+    results = json.loads(l.result_json_path.read_text())
+    assert results[-1]["test"] == "10"
+    # breakpoint()
+    # return
+    pass
+
+
 if __name__ == "__main__":
-    # TODO test results.json
-    test_summary_logger(Path("/tmp/"))
+    test_results_json(Path("/tmp/"))
+    # test_summary_logger(Path("/tmp/"))
 
     pass

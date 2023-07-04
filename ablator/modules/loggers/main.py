@@ -1,5 +1,6 @@
 import copy
 import json
+import time
 from pathlib import Path
 from typing import Optional, Union
 
@@ -59,6 +60,7 @@ class SummaryLogger:
     result_json_path : Path | None
         Path to the results JSON file.
     """
+
     SUMMARY_DIR_NAME = "dashboard"
     RESULTS_JSON_NAME = "results.json"
     LOG_FILE_NAME = "train.log"
@@ -201,6 +203,7 @@ class SummaryLogger:
         if self.dashboard is not None:
             self.dashboard.write_config(run_config)
 
+    # pylint: disable
     def _add_metric(self, k, v, itr):
         """
         Add a metric to the dashboard.
@@ -248,7 +251,7 @@ class SummaryLogger:
             )
 
     def _append_metrics(self, metrics: dict[str, float]):
-        """ Append metrics to the result json file.
+        """Append metrics to the result json file.
 
         Parameters
         ----------
@@ -256,15 +259,22 @@ class SummaryLogger:
             The metrics to append.
         """
         if self.result_json_path is not None:
-            with open(self.result_json_path, "a", encoding="utf-8") as fp:
-                fp.write(futils.dict_to_json(metrics) + "\n")
+            _metrics = copy.deepcopy(metrics)
+            _metrics["timestamp"] = int(time.time())
+            _metrics_str = futils.dict_to_json(_metrics)
+            if self.result_json_path.exists():
+                futils.truncate_utf8_chars(self.result_json_path, "]")
+                with open(self.result_json_path, "a", encoding="utf-8") as fp:
+                    fp.write(",\n" + _metrics_str + "]")
+            else:
+                self.result_json_path.write_text(f"[{_metrics_str}]", encoding="utf-8")
 
     def update(
         self,
         metrics: Union[TrainMetrics, dict],
         itr: Optional[int] = None,
     ):
-        """ Update the dashboard with the given metrics.
+        """Update the dashboard with the given metrics.
         write some metrics to json files and update the current metadata (``log_iteration``)
 
         Parameters

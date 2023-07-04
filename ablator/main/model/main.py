@@ -13,13 +13,13 @@ import setproctitle
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 
 import ablator.utils.base as butils
 from ablator.main.configs import RunConfig
 from ablator.modules.loggers.main import SummaryLogger
 from ablator.modules.metrics.main import TrainMetrics
 from ablator.utils.base import Dummy
+from ablator.utils.progress_bar import ProgressBar, RemoteProgressBar
 
 
 class EvaluationError(Exception):
@@ -57,7 +57,7 @@ class ModelBase(ABC):
         An optional DataLoader object used for model evaluation.
     test_dataloader : Optional[DataLoader]
         An optional DataLoader object used for model testing.
-    logger : Union[SummaryLogger, tutils.Dummy]
+    logger : Union[SummaryLogger, Dummy]
         Records information on the program's operation and model training, such as progress and performance metrics.
     device : str
         The type of device used for running the experiment. i.e. ``"cuda"``, ``"cpu"``, ``"cuda:0"``.
@@ -74,9 +74,9 @@ class ModelBase(ABC):
         If ``True``, apply automatic mixed precision training, otherwise default precision.
     random_seed : Optional[int]
         Sets the seed for generating random numbers.
-    train_tqdm : tqdm, optional
-        An optional instance of ``tqdm`` that creates progress bars and displays real-time information during training.
-        i.e. time remaining. Only applied for the master process.
+    progress_bar : Union[ProgressBar, Dummy]
+        An optional instance of ``ProgressBar`` that displays real-time information during training.
+        e.g. time remaining. Only applied for the master process.
     current_checkpoint : Optional[Path]
         Directory for the current checkpoint file, by default None.
     metrics : Metrics
@@ -102,9 +102,11 @@ class ModelBase(ABC):
 
     2. Users must implement the abstract methods to customize the model's behavior.
 
-    3. Mixed precision training enables some operations to use the ``torch.float32`` datatype and other operations use lower
+    3. Mixed precision training enables some operations to use the ``torch.float32`` datatype and
+    other operations use lower
     precision floating point datatype ``torch.float16``. This is for saving time and reducing memory usage. Ordinarily,
-    "automatic mixed precision training" means training with ``torch.autocast`` and ``torch.cuda.amp.GradScaler`` together.
+    "automatic mixed precision training" means training with ``torch.autocast`` and
+    ``torch.cuda.amp.GradScaler`` together.
     More information: https://pytorch.org/docs/stable/amp.html
 
     """
@@ -131,10 +133,10 @@ class ModelBase(ABC):
         self.model_dir: Path | None = None
         self.experiment_dir: Path | None = None
         self.autocast: torch.autocast
-        self.verbose: ty.Literal["tqdm", "console", "silent"]
+        self.verbose: ty.Literal["progress", "console", "silent"]
         self.amp: bool
         self.random_seed: ty.Optional[int]
-        self.train_tqdm: tqdm = None
+        self.progress_bar: ProgressBar | butils.Dummy
 
         self.current_checkpoint: Path | None = None
         # Runtime metrics
@@ -397,8 +399,8 @@ class ModelBase(ABC):
         )
         if butils.debugger_is_active() and not debug:
             self.logger.warn("Debug flag is False but running in debug mode.")
-
-        self.logger.info(f"Model directory: {self.model_dir}")
+        if self.model_dir is not None:
+            self.logger.info(f"Model directory: {self.model_dir}")
 
     def _make_dataloaders(self, run_config: RunConfig):
         """
@@ -505,7 +507,8 @@ class ModelBase(ABC):
             self._find_load_valid_checkpoint(recent_checkpoint_dir)
         else:
             self.current_checkpoint = None
-            self.logger.info("Creating new model")
+            if not smoke_test:
+                self.logger.info("Creating new model")
             self.create_model()
             self._update_save_dict()
 
@@ -515,6 +518,7 @@ class ModelBase(ABC):
         smoke_test: bool = False,
         debug: bool = False,
         resume: bool = False,
+        remote_progress_bar: ty.Optional[RemoteProgressBar] = None,
     ):
         """
         Initializes the state of the trainer based on provided configuration and parameters.
@@ -529,6 +533,8 @@ class ModelBase(ABC):
             If True, disables logging and model directory creation, by default False.
         resume : bool, optional
             If True, tries to resume training from a checkpoint, by default False.
+        remote_progress_bar: RemoteProgressBar, optional
+            A remote progress bar can be used to report metrics from the internal progress bar
         """
         self.run_config = run_config
         self.random_seed = self.run_config.random_seed
@@ -545,19 +551,17 @@ class ModelBase(ABC):
             self._init_logger(resume=resume, debug=debug)
         else:
             self.logger = butils.Dummy()
-        self._init_model_state(resume, smoke_test)
+        self._init_model_state(resume, smoke_test or debug)
         self.run_config.assert_state(_run_config)
-
-        if self.verbose == "tqdm" and not smoke_test:
-            self.train_tqdm = tqdm(
+        if self.verbose == "progress" and not smoke_test:
+            self.progress_bar = ProgressBar(
                 total=self.epoch_len,
-                bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}",
-                position=0,
-                leave=True,
-                dynamic_ncols=True,
+                logfile=self.logger.log_file_path,
+                remote_display=remote_progress_bar,
+                uid=self.uid,
             )
         else:
-            self.train_tqdm = butils.Dummy()
+            self.progress_bar = butils.Dummy()
 
     def _find_load_valid_checkpoint(self, chkpt_dir):
         """
@@ -595,7 +599,9 @@ class ModelBase(ABC):
                         f"Error loading checkpoint {_checkpoint}. Trying another....\n{traceback.format_exc()}"
                     )
         if current_checkpoint is None:
-            raise CheckpointNotFoundError(f"Could not find a valid checkpoint in {chkpt_dir}")
+            raise CheckpointNotFoundError(
+                f"Could not find a valid checkpoint in {chkpt_dir}"
+            )
         self.current_checkpoint = current_checkpoint
 
     def _load_model(self, checkpoint_path: Path, model_only: bool = False) -> None:

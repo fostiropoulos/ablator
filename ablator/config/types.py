@@ -1,22 +1,25 @@
-import typing as ty
-from collections import namedtuple
-from enum import Enum as _Enum
-
 """
 Custom types for runtime checking
 """
 
+import typing as ty
+from collections import namedtuple
+from enum import Enum as _Enum
+
 T = ty.TypeVar("T")
 
 
+# pylint: disable=deprecated-typing-alias
 class Dict(ty.Dict[str, T]):
     pass
 
 
+# pylint: disable=deprecated-typing-alias
 class List(ty.List[T]):
     pass
 
 
+# pylint: disable=deprecated-typing-alias
 class Tuple(ty.Tuple[T]):
     pass
 
@@ -138,6 +141,36 @@ TODO
 Parsing the dictionary however can be error prone if you have complex arguments
 and is not advised.
 """
+
+
+def _val2bool(val: str | bool) -> bool:
+    """
+    _val2bool parses the string representation as a boolean expression. It
+    returns `True` if `val` is in ["true", "t", "1"] (case-insentivive)
+    and `False` if `val` is in ["false", "f", "0"] (case-insentivive).
+
+    Parameters
+    ----------
+    val : str | bool
+        the value to parse
+
+    Returns
+    -------
+    bool
+        the boolean representation of `val`
+
+    Raises
+    ------
+    ValueError
+        It raises an error if `val` is not in ["true", "t", "1", "false", "f", "0"] (case-insentivive).
+    """
+    if isinstance(val, bool):
+        return val
+    if val.lower() in {"true", "t", "1"}:
+        return True
+    if val.lower() in {"false", "f", "0"}:
+        return False
+    raise ValueError(f"Cannot parse {val} as bool.")
 
 
 def _strip_hint_state(type_hint):
@@ -377,7 +410,7 @@ def parse_value(val, annot: Annotation, name=None):
                 raise ValueError(f"Invalid type {type(_v)} for {_k} and field {name}")
         return return_dictionary
     if annot.collection == List:
-        if not type(val) == list:
+        if not isinstance(val, list):
             raise ValueError(f"Invalid type {type(val)} for type List")
         return [annot.variable_type(_v) for _v in val]
     if annot.collection == Tuple:
@@ -387,6 +420,8 @@ def parse_value(val, annot: Annotation, name=None):
         return [tp(_v) for tp, _v in zip(annot.variable_type, val)]
     if annot.collection == Type:
         return _parse_class(annot.variable_type, val)
+    if annot.collection is None and annot.variable_type == bool:
+        return _val2bool(val)
     if annot.collection is None:
         return annot.variable_type(val)
     if issubclass(annot.collection, Enum):
@@ -395,29 +430,6 @@ def parse_value(val, annot: Annotation, name=None):
         ), f"{val} is not supported by {annot.collection}"
         return annot.collection(val)
     raise NotImplementedError
-
-
-def get_annotation_state(annotation):
-    """
-    Get state of an annotation
-
-    Parameters
-    ----------
-    annotation :
-        type annotation
-
-    Returns
-    -------
-    Stateful, Derived, Stateless, or None
-    (Stateful is the default)
-    """
-    origin = ty.get_origin(annotation)
-    if origin is None:
-        return Stateful
-    if origin in [Derived, Stateless]:
-        return annotation
-
-    return Stateful
 
 
 class Stateful(ty.Generic[T]):

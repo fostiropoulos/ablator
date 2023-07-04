@@ -6,12 +6,11 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from torch import nn
 from pynvml.smi import nvidia_smi as smi
-from ablator.modules.loggers.file import FileLogger
+from torch import nn
 
 
-class Dummy(FileLogger):
+class Dummy:
     def __init__(self, *args, **kwargs):
         pass
 
@@ -213,13 +212,17 @@ def parse_device(device: ty.Union[str, list[str]]):
     ['cpu', 'cuda:0', 'cuda:1', 'cuda:2']
     """
     if isinstance(device, str):
-        if device=="cpu":
+        if device == "cpu":
             return device
         if device == "cuda" or (device.startswith("cuda:") and device[5:].isdigit()):
-            assert torch.cuda.is_available(),"Could not find a torch.cuda installation on your system."
+            assert (
+                torch.cuda.is_available()
+            ), "Could not find a torch.cuda installation on your system."
             if device.startswith("cuda:"):
                 gpu_number = int(device[5:])
-                assert gpu_number<torch.cuda.device_count(),f"gpu {device} does not exist on this machine"
+                assert (
+                    gpu_number < torch.cuda.device_count()
+                ), f"gpu {device} does not exist on this machine"
             return device
         raise ValueError
     if isinstance(device, int):
@@ -260,21 +263,19 @@ def init_weights(module: nn.Module):
         module.weight.data.fill_(1.0)
 
 
-def get_gpu_max_mem() -> ty.List[int]:
+def get_gpu_max_mem() -> list[int]:
     """
     Get the maximum memory of all available GPUs.
 
     Returns
     -------
-    ty.List[int]
+    list[int]
         A list of the maximum memory for each GPU.
     """
     return get_gpu_mem(mem_type="total")
 
 
-def get_gpu_mem(
-    mem_type: ty.Literal["used", "total", "free"] = "total"
-) -> ty.List[int]:
+def get_gpu_mem(mem_type: ty.Literal["used", "total", "free"] = "total") -> list[int]:
     """
     Get the memory information of all available GPUs.
 
@@ -285,7 +286,7 @@ def get_gpu_mem(
 
     Returns
     -------
-    ty.List[int]
+    list[int]
         A list of memory values for each GPU, depending on the specified memory type.
     """
     # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
@@ -294,3 +295,96 @@ def get_gpu_mem(
     for gpu in instance.DeviceQuery()["gpu"]:
         memory.append(gpu["fb_memory_usage"][mem_type])
     return memory
+
+
+def _num_e_format(value: int | np.integer | float | np.floating, width: int) -> str:
+    # minimum width of 8 "x.xxe+nn" 6 fixed 1.xxe+00 and 2 available
+    diff = 6
+    if value < 0:
+        diff += 1
+    return f"{value:.{width-diff}e}"
+
+
+def _num_format_int(value: int | np.integer, width: int) -> str:
+    str_value = str(value)
+    if len(str_value) > width:
+        return _num_e_format(value, width)
+    return f"{value:0{width}d}"
+
+
+def _num_format_float(value: float | np.floating, width: int) -> str:
+    str_value = str(value)
+    if "e" in str_value:
+        return _num_e_format(value, width)
+    int_part, *float_part = str_value.split(".")
+    int_len = len(int_part)
+    if len(float_part):
+        _float_part = float_part[0]
+        float_len = len(_float_part)
+        leading_zeros = float_len - len(_float_part.lstrip("0"))
+    else:
+        _float_part = None
+        float_len = 0
+        leading_zeros = 0
+    if int_len > 0 and int_part != "0":
+        # xxx.xxxx format
+        if float_len + int_len >= width:
+            return _num_e_format(value, width)
+        return f"{value:.{width-int_len - 1}f}"
+    if int_part == "0" and leading_zeros == float_len:
+        return f"{value:.{width-2}f}"
+    if len(str_value) < width:
+        return f"{value:.{width-2}f}"
+    return _num_e_format(value, width)
+
+
+def is_oom_exception(err: RuntimeError) -> bool:
+    """
+    is_oom_exception checks whether the exception is caused by CUDA out of memory errors.
+
+    Parameters
+    ----------
+    err : RuntimeError
+        the exception to parse
+
+    Returns
+    -------
+    bool
+        whether the exception indicates out of memory error.
+    """
+    return any(
+        x in str(err)
+        for x in (
+            "CUDA out of memory",
+            "CUBLAS_STATUS_ALLOC_FAILED",
+            "CUDA error: out of memory",
+        )
+    )
+
+
+def num_format(
+    value: str | int | float | np.integer | np.floating, width: int = 8
+) -> str:
+    """
+    Format number to be no larger than `width` by converting to scientific
+    notation when the `value` exceeds width either by informative decimal places
+    or size.
+
+    Parameters
+    ----------
+    value : int | float
+        the value to format
+    width : int, optional
+        the width of the decimal places, by default 5
+
+    Returns
+    -------
+    str
+        The formatted string representation of the `value`
+    """
+    assert width >= 8
+    if isinstance(value, (int, np.integer)):
+        return _num_format_int(value, width)
+    if isinstance(value, (float, np.floating)):
+        return _num_format_float(value, width)
+    return value

@@ -67,8 +67,8 @@ class PlotAnalysis(Analysis):
         metric_map: dict[str, Optim],
         append=False,
         ax: Axes | None = None,
-        metric_name_remap=None,
-        attribute_name_remap=None,
+        metric_name_remap: dict[str, str] | None = None,
+        attribute_name_remap: dict[str, str] | None = None,
         **kwargs,
     ):
         """
@@ -90,10 +90,10 @@ class PlotAnalysis(Analysis):
             A boolean indicating whether to append plots to an existing axes object.
         ax: Axes | None
             A matplotlib.axes.Axes object representing the axis to plot on.
-        metric_name_remap: dict
-            A dictionary mapping metric names to new metric names.
-        attribute_name_remap: dict
-            A dictionary mapping attribute names to new attribute names.
+        metric_name_remap: dict[str, str] | None
+            An optional dictionary mapping metric names to new metric names.
+        attribute_name_remap: dict[str, str] | None
+            An optional dictionary mapping attribute names to new attribute names.
         kwargs: Additional keyword arguments to pass to the plot method.
 
         Examples
