@@ -7,7 +7,7 @@ from contextlib import redirect_stdout
 import io
 
 
-def assert_console_output(fn,assert_fn):
+def assert_console_output(fn, assert_fn):
     f = io.StringIO()
     with redirect_stdout(f):
         fn()
@@ -39,14 +39,10 @@ def test_file_logger(tmp_path: Path):
     assert_console_output(lambda: l.info("hello"), lambda s: len(s) == 0)
     assert_console_output(lambda: l.info("hello", verbose=True), lambda s: s.endswith("hello\n"))
     assert_console_output(lambda: l.warn("hello"), lambda s: s.endswith("1 - \x1b[93mhello\x1b[0m\n"))
-    assert_console_output(lambda: l.warn("hello", verbose=False), lambda s: len(s)==0)
+    assert_console_output(lambda: l.warn("hello", verbose=False), lambda s: len(s) == 0)
     assert_console_output(lambda: l.error("hello"), lambda s: s.endswith("\x1b[91mhello\x1b[0m\n"))
 
 
-
 if __name__ == "__main__":
-
-
     test_file_logger(Path("/tmp/"))
-
     pass
