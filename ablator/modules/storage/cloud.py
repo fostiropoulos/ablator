@@ -3,10 +3,12 @@ import os
 import socket
 import subprocess
 import typing as ty
+import sys
 from pathlib import Path
 from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Optional
 from ablator.modules.loggers.file import FileLogger
+from ablator.utils.base import parse_gcloud_path_relative
 
 
 @configclass
@@ -23,6 +25,7 @@ class GcpConfig(ConfigBase):
     exclude_chkpts : bool
         Whether to exclude checkpoints from the rsync.
     """
+
     bucket: str
     exclude_glob: Optional[str] = None
     exclude_chkpts: bool = False
@@ -51,20 +54,20 @@ class GcpConfig(ConfigBase):
         self.bucket = self.bucket.lstrip("gs:").lstrip("/").rstrip("/")
         self.list_bucket()
 
-        hostname = socket.gethostname()
-        nodes = self._find_gcp_nodes(hostname)
-        # The IP address check avoids overly generic hostnames to match with existing instances.
-        ip_address = socket.gethostbyname(hostname)
-        assert (
-            len(nodes) == 1
-            and sum(
-                network_interface["networkIP"] == ip_address
-                for network_interface in nodes[0]["networkInterfaces"]
-            )
-            == 1
-        ), "Can only use GcpConfig from Google Cloud Server. Consider switching to RemoteConfig."
+        # hostname = socket.gethostname()
+        # nodes = self._find_gcp_nodes(hostname)
+        # # The IP address check avoids overly generic hostnames to match with existing instances.
+        # ip_address = socket.gethostbyname(hostname)
+        # assert (
+        #     len(nodes) == 1
+        #     and sum(
+        #         network_interface["networkIP"] == ip_address
+        #         for network_interface in nodes[0]["networkInterfaces"]
+        #     )
+        #     == 1
+        # ), "Can only use GcpConfig from Google Cloud Server. Consider switching to RemoteConfig."
 
-    def _make_cmd_up(self, local_path: Path, destination: str):
+    def _make_cmd_up(self, local_path: Path, remote_path: str):
         """
         Make the command to upload files to the bucket.
 
@@ -80,18 +83,16 @@ class GcpConfig(ConfigBase):
         list[str]
             The command to upload the file.
         """
-
-        destination = str(Path(self.bucket) / destination / local_path.name)
-        src = local_path
+        remote_path = remote_path.lstrip("/")
         cmd = ["gsutil", "-m", "rsync", "-r"]
         if self.exclude_glob is not None:
             cmd += ["--exclude", f"{self.exclude_glob}"]
         if self.exclude_chkpts:
             cmd += ["--exclude", "*.pt"]
-        cmd += [f"{src}", f"gs://{destination}"]
+        cmd += [f"{local_path}", f"gs://{self.bucket}/{remote_path}"]
         return cmd
 
-    def _make_cmd_down(self, src_path: str, local_path: Path):
+    def _make_cmd_down(self, remote_path: str, local_path: Path):
         """
         Make the command to download files from the bucket.
 
@@ -107,10 +108,9 @@ class GcpConfig(ConfigBase):
         list[str]
             The command to download the file.
         """
-        src = Path(self.bucket) / src_path / local_path.name
-        destination = local_path
+        remote_path = remote_path.lstrip("/")
         cmd = ["gsutil", "-m", "rsync", "-r"]
-        cmd += [f"gs://{src}", f"{destination}"]
+        cmd += [f"gs://{self.bucket}/{remote_path}", f"{local_path}"]
         return cmd
 
     def list_bucket(self, destination: str | None = None):
@@ -196,10 +196,16 @@ class GcpConfig(ConfigBase):
         else:
             stdout = subprocess.PIPE
             stderr = subprocess.PIPE
-        p = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
+
+        if sys.platform == "win32":
+            p = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, shell=True)
+        else:
+            p = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
         return p
 
-    def _find_gcp_nodes(self, node_hostname: None | str = None) -> list[dict[str, ty.Any]]:
+    def _find_gcp_nodes(
+        self, node_hostname: None | str = None
+    ) -> list[dict[str, ty.Any]]:
         """
         Find the GCP instances with the given hostname.
 

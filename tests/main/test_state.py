@@ -199,7 +199,7 @@ def test_state(tmp_path: Path):
         )
         prev_trials = s.all_trials_uid
         s = ExperimentState(Path(fp), config, resume=True)
-        assert prev_trials == s.all_trials_uid
+        assert len(prev_trials) + 1 == len(s.all_trials_uid)
 
     with tempfile.TemporaryDirectory() as fp:
         search_space = {

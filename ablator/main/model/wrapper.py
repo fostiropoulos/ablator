@@ -4,7 +4,7 @@ import traceback
 import typing as ty
 from abc import abstractmethod
 from collections.abc import Callable, Iterable
-
+import json
 import numpy as np
 import torch
 from torch import nn
@@ -18,6 +18,8 @@ from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauErro
 from ablator.modules.metrics.main import LossDivergedError, TrainMetrics
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
+from ablator.main.configs import ParallelConfig
+import ablator.utils.base as butils
 
 
 class ModelWrapper(ModelBase):
@@ -687,7 +689,7 @@ class ModelWrapper(ModelBase):
         self.logger.info(f"Evaluating {self.current_checkpoint}")
 
         msg = self.metrics.to_dict()
-        self.logger.info(f"Current metrics: {msg}")
+        self.logger.info(f"Current metrics: {butils.parse_dict_to_str(msg)}")
         metrics = {}
         for loader, tag in zip(
             [self.test_dataloader, self.val_dataloader], ["test", "val"]
@@ -711,8 +713,6 @@ class ModelWrapper(ModelBase):
                     subsample=1,
                 )
                 metrics[tag] = eval_metrics
-                msg = self.metrics.to_dict()
-                self.logger.info(f"Evaluation: {msg}")
         return metrics
 
     def apply_loss(

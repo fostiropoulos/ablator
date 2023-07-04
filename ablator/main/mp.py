@@ -10,6 +10,7 @@ import types as tys
 import typing as ty
 from pathlib import Path
 import builtins
+import json
 
 import numpy as np
 import ray
@@ -33,8 +34,7 @@ CRASH_EXCEPTION_TYPES: list[type] = []
 
 
 def parse_rsync_paths(
-    rsynced_folder: Path | str,
-    root_folder: Path | str | None = None,
+    rsynced_folder: Path | str
 ) -> dict[str, Path | str]:
     """
     Parse the experiment directory that's being in sync with remote servers (Google cloud storage, other
@@ -53,12 +53,11 @@ def parse_rsync_paths(
         A dictionary with 2 keys: ``local_path`` and ``remote_path``, which specifies the local directory
         and the remote path that will be in sync.
     """
-    rsync_path = Path(rsynced_folder)
-    root_path = rsync_path if root_folder is None else Path(root_folder)
 
+    rsync_path = Path(rsynced_folder).absolute()
     return {
         "local_path": rsync_path,
-        "remote_path": rsync_path.relative_to(root_path.parent).as_posix(),
+        "remote_path": butils.parse_gcloud_path_relative(rsync_path)
     }
 
 
@@ -83,6 +82,21 @@ def parse_metrics(optim_direction: list[str], metrics: dict[str, float] | None):
         if metrics is not None
         else None
     )
+
+
+def evaluate_remote(model: ModelWrapper, eval_config: ParallelConfig, logger: FileLogger):
+    experiment_dir = Path(eval_config.experiment_dir or "")/eval_config.uid
+    if eval_config.gcp_config is None:
+        raise ValueError("GCP config is not provided.You should provide a GCP config to sync files for evaluating in parallel.")
+    kwargs = parse_rsync_paths(experiment_dir)
+    eval_config.gcp_config.rsync_down(logger=logger, **kwargs)
+    metrics = model.evaluate(eval_config)
+    metrics_dict = {k: v.to_dict() for k, v in metrics.items()}
+    logger.info(f"Evaluation: {butils.parse_dict_to_str(metrics_dict)}")
+    with open(experiment_dir/"metrics.json", "w", encoding="utf-8") as f:
+        formatter_str = json.dumps(metrics_dict, indent=4)
+        f.write(formatter_str)
+    eval_config.gcp_config.rsync_up(logger=logger, **kwargs)
 
 
 def train_main_remote(
@@ -206,7 +220,7 @@ def train_main_remote(
         return handle_exception(e)
     finally:
         if model.model_dir is not None:
-            kwargs = parse_rsync_paths(model.model_dir, root_dir)
+            kwargs = parse_rsync_paths(model.model_dir)
             if run_config.gcp_config is not None:
                 run_config.gcp_config.rsync_up(
                     Path(kwargs["local_path"]),
@@ -409,6 +423,8 @@ class ParallelTrainer(ProtoTrainer):
             )
         super()._init_state()
         self.sync_down()
+        if resume:
+            self.logger.info("Trying to run from resumed experiment...")
         self.experiment_state = ExperimentState(
             self.experiment_dir, self.run_config, self.logger, resume=resume
         )
@@ -481,25 +497,45 @@ class ParallelTrainer(ProtoTrainer):
         self._rsync_gcp_up()
         self._rsync_remote_up()
 
-    def evaluate(self):
+    def evaluate(self, working_directory: str, ray_head_address: str | None = "auto", auxilary_modules: list[tys.ModuleType] | None = None):
         """
         Evaluate model performance in trials that are completed, using evaluation functions defined
         in the model wrapper. Evaluation results will be logged to the console and log files in the
         experiment directory. This method also synchronizes the experiment directory to Google cloud
         storage and remote servers.
         """
+        self._init_state(
+            working_dir=working_directory,
+            address=ray_head_address,
+            modules=auxilary_modules,
+            resume=True,
+        )
         eval_configs = []
         trial_uids = self.experiment_state.complete_trials
         for config in trial_uids:
-            model_config = type(self.run_config).load(
-                self.experiment_dir.joinpath(config.uid, "config.yaml")
-            )
+            config_path = self.experiment_dir.joinpath(config.uid, "config.yaml")
+            if os.path.exists(
+                config_path
+            ):
+                model_config = type(self.run_config).load(
+                    config_path
+                )
             eval_configs.append(model_config)
+            self.logger.info(f"Evaluating trials...uid: {config.uid}")
 
         # TODO evaluate in parallel
+        futures = []
         for model_config in eval_configs:
-            self.wrapper.evaluate(model_config)
-        self.sync_up()
+            if ray.is_initialized():
+                self.logger.info("Evaluating in parallel...")
+                futures.append(
+                    ray.remote(num_gpus=self.gpu, num_cpus=self.cpu)(
+                        evaluate_remote
+                    ).remote(self.wrapper, model_config, self.logger)
+                )
+            else:
+                self.wrapper.evaluate(model_config)
+        ray.wait(futures, num_returns=len(futures))
 
     def launch(  # type: ignore
         self,
@@ -539,6 +575,7 @@ class ParallelTrainer(ProtoTrainer):
             mp.set_start_method("spawn", force=True)
         except RuntimeError:
             pass
+
         self._init_state(
             working_dir=working_directory,
             address=ray_head_address,
