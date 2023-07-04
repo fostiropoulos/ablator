@@ -1,7 +1,7 @@
 # from tests.configs.test_types import test_error_configs, test_hierarchical, test_types
 import copy
 from pathlib import Path
-
+from collections import namedtuple
 from ablator import (
     Annotation,
     ConfigBase,
@@ -14,6 +14,7 @@ from ablator import (
     Type,
     configclass,
 )
+import pytest
 
 
 class Pass:
@@ -44,7 +45,6 @@ class ParentTestConfig(ConfigBase):
     a6: myEnum = "a"
 
 
-
 annotations = {
     "a1": Annotation(
         state=Stateful, optional=False, collection=None, variable_type=int
@@ -69,8 +69,28 @@ annotations = {
 }
 
 
-def test_merge():
-    pass
+@configclass
+class ParentLeftTestConfig(ConfigBase):
+    a13: int = 10
+    a14: str = 10
+
+
+@configclass
+class ParentRightTestConfigDiff(ConfigBase):
+    a13: int = 15
+    a14: str = 16
+
+
+
+def test_merge_diff_keys_values():
+    """
+        Testing merge function with different keys or values but of same configbase class.
+    """
+    left_config = ParentLeftTestConfig()
+    right_config = ParentRightTestConfigDiff()
+    with pytest.raises(AssertionError):
+        assert left_config == left_config.merge(right_config)
+
 
 
 @configclass
@@ -82,7 +102,7 @@ def test_attrs(tmp_path: Path, assert_error_msg):
     e = EmptyConfig()
     e.annotations
     assert len(e.annotations) == 0
-    assert_error_msg(ParentTestConfig, "Missing required value ['a10']" )
+    assert_error_msg(ParentTestConfig, "Missing required value ['a10']")
     p = ParentTestConfig(a10="")
     # NOTE: to make new test cases:
     # print({k:f"Annotation(state={v.state.__name__},
@@ -156,4 +176,4 @@ if __name__ == "__main__":
             if not error_msg == str(excp):
                 raise excp
 
-    test_attrs(Path("/tmp/"),assert_error_msg)
+    test_attrs(Path("/tmp/"), assert_error_msg)
