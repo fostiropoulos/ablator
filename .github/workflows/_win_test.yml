@@ -1,0 +1,35 @@
+name: win-test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install Chocolatey
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+      - name: Install rsync
+        run: |
+          choco install rsync -y
+          echo "C:\ProgramData\chocolatey\bin" >> $GITHUB_PATH
+      - name: Install dependencies
+        run: |
+          pip install -e .[dev] -v
+      - name: Generate SSH keys
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -t rsa -b 4096 -C "ablator@dev.com" -f ~/.ssh/id_rsa -q -N ""
+          cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+      - name: Test with pytest
+        run: |
+          pip install pytest
+          pytest
