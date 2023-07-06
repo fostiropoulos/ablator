@@ -28,6 +28,3 @@ jobs:
       run: |
         pip install pytest
         pytest
-    - name: gsutil ls
-      run: |
-        gsutil ls
