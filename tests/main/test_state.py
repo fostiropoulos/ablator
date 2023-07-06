@@ -1,6 +1,7 @@
 from pathlib import Path
 import tempfile
-
+import sys
+import pytest
 import numpy as np
 
 
@@ -41,6 +42,7 @@ def capture_output(fn):
     return out.getvalue(), err.getvalue()
 
 
+@pytest.mark.skipif(sys.platform == 'win32', reason="Does not run on Windows, Python's issue")
 def test_state(tmp_path: Path):
     assert_error_msg(
         lambda: SearchSpace(

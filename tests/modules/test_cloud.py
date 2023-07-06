@@ -4,6 +4,7 @@ from unittest import mock
 import socket
 import torch
 import os
+import sys
 from unittest.mock import patch
 from ablator.modules.loggers.file import FileLogger
 def assert_error_msg(fn, error_msg):
@@ -50,20 +51,20 @@ def mock_list_bucket_error_cmd(self, destination: str | None = None):
     raise Exception(f"There was an error running `{' '.join(cmd)}`. "
             "Make sure gsutil is installed and that the destination exists. `CommandException: One or more URLs matched no objects.`")
 
-
+@pytest.mark.skipif(sys.platform == 'win32', reason="Does not run on Windows, And also rsync and gsutil are deprecated")
 def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
-    
+
     mock_gs_path = f"{tmp_path}/gs"
     bucket_name=bucket.lstrip('gs:').lstrip('/').rstrip('/')
     os.makedirs(f"{mock_gs_path}/{bucket_name}")
-    
+
     rand_folder = f"{torch.rand(1).item()}"
-    
+
     tmp_path=tmp_path/"localhost"
     os.mkdir(tmp_path)
     rand_destination = bucket + rand_folder
     # GcpConfig(bucket=rand_destination)._make_process(["gsutil", "-m", "rm", "-rf", rand_destination], verbose=False)
-    
+
     def mock_make_cmd_up(self, local_path: Path, destination: str):
         os.mkdir(f"{mock_gs_path}/{bucket_name}/{rand_folder}")
         destination = Path(self.bucket) / destination / local_path.name
@@ -109,8 +110,8 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
                     lambda: GcpConfig(bucket=bucket),
                     f"Can only use GcpConfig from Google Cloud Server. Consider switching to RemoteConfig.",
                 )
-    
-    
+
+
     with mock.patch("socket.gethostname", return_value="gcp-machine1"):
         with mock.patch("socket.gethostbyname",return_value="111.111.111.111"):
             with mock.patch("ablator.modules.storage.cloud.GcpConfig._find_gcp_nodes",return_value=[{"networkInterfaces":[{"networkIP":"111.111.111.111"}]}]):
@@ -121,7 +122,7 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
                         original_tensors = write_rand_tensors(tmp_path)
                         cfg.rsync_up(tmp_path, rand_folder)
 
-    
+
     with mock.patch("ablator.modules.storage.cloud.GcpConfig.list_bucket",mock_list_bucket):
         new_files = cfg.list_bucket()
     rand_destination = rand_folder
@@ -136,14 +137,14 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
     loaded_tensors = load_rand_tensors(tmp_path=tmp_path)
     assert_tensor_list_eq(loaded_tensors, new_tensors)
     # Update the local tensors with the original tensors from gcp
-    
+
     with mock.patch("ablator.modules.storage.cloud.GcpConfig._make_cmd_down",mock_make_cmd_down):
         cfg.rsync_down(rand_folder, tmp_path, verbose=False)
     loaded_tensors = load_rand_tensors(tmp_path=tmp_path)
     assert_tensor_list_eq(loaded_tensors, original_tensors)
 
     # Update a mock node from gcp
-    
+
     hostname = "localhost"
     mock_node_path = tmp_path.joinpath(hostname).joinpath(tmp_path.name)
 
@@ -169,12 +170,12 @@ def test_gcp(tmp_path: Path, bucket: str = "gs://iordanis/"):
     assert_tensor_list_eq(node_tensors, original_tensors)
     # TODO teardown refactoring
     cmd = ["rm", "-rf", f"{mock_gs_path}/{bucket_name}/{rand_destination}"]
-    
+
 
 
     p = cfg._make_process(cmd, verbose=False)
     out, err = p.communicate()
-    assert len(out) == 0 
+    assert len(out) == 0
 
 
 if __name__ == "__main__":
