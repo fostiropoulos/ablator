@@ -5,6 +5,7 @@ import getpass
 import time
 import sys
 import torch
+import pytest
 
 
 def write_rand_tensors(tmp_path: Path, n=2):

@@ -5,6 +5,7 @@ import socket
 import torch
 import os
 import sys
+import pytest
 from unittest.mock import patch
 from ablator.modules.loggers.file import FileLogger
 def assert_error_msg(fn, error_msg):
