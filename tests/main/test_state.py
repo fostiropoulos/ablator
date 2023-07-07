@@ -1,9 +1,8 @@
 from pathlib import Path
-import tempfile
-
+import shutil
 import numpy as np
-
-
+import os
+import tempfile
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
 from ablator.main.configs import ParallelConfig, SearchSpace
 from ablator.main.state import ExperimentState, TrialState
@@ -41,6 +40,7 @@ def capture_output(fn):
     return out.getvalue(), err.getvalue()
 
 
+# @pytest.mark.skipif(sys.platform == 'win32', reason="Does not run on Windows, Python's issue")
 def test_state(tmp_path: Path):
     assert_error_msg(
         lambda: SearchSpace(
@@ -69,7 +69,15 @@ def test_state(tmp_path: Path):
         cpus_per_experiment=0.1,
     )
     default_vals = config.make_dict(config.annotations, flatten=True)
-    with tempfile.TemporaryDirectory() as fp:
+
+    temp_dir = tempfile.TemporaryDirectory()
+    # tmp_path = Path("./temp")
+
+    tmp_path = Path(f"{temp_dir.name}/1")
+    print(tmp_path)
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir()
+    with tmp_path as fp:
         assert_error_msg(
             lambda: ExperimentState(Path(fp), config),
             f"SearchSpace parameter some_var was not found in the configuration {sorted(list(default_vals.keys()))}.",
@@ -94,7 +102,10 @@ def test_state(tmp_path: Path):
         gpu_mb_per_experiment=0,
         cpus_per_experiment=0.1,
     )
-    with tempfile.TemporaryDirectory() as fp:
+    tmp_path = Path(f"{temp_dir.name}/2")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir()
+    with tmp_path as fp:
         assert_error_msg(
             lambda: ExperimentState(Path(fp), config),
             "Invalid trial parameters {'train_config.optimizer_config.name': '0'}",
@@ -114,13 +125,18 @@ def test_state(tmp_path: Path):
         gpu_mb_per_experiment=0,
         cpus_per_experiment=0.1,
     )
-    with tempfile.TemporaryDirectory() as fp:
+    tmp_path = Path(f"{temp_dir.name}/3")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir()
+    with tmp_path as fp:
         assert_error_msg(
             lambda: ExperimentState(Path(fp), config),
             "Reached maximum limit of misconfigured trials. 10\nFound 0 duplicate and 11 invalid trials.",
         )
-
-    with tempfile.TemporaryDirectory() as fp:
+    tmp_path = Path(f"{temp_dir.name}/4")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir()
+    with tmp_path as fp:
         config.search_space = {
             "train_config.optimizer_config.arguments.lr": SearchSpace(
                 categorical_values=[0, 1], value_type="int"
@@ -131,8 +147,10 @@ def test_state(tmp_path: Path):
             lambda: ExperimentState(Path(fp), config),
             "Reached maximum limit of misconfigured trials. 30\nFound 31 duplicate and 0 invalid trials.",
         )
-
-    with tempfile.TemporaryDirectory() as fp:
+    tmp_path = Path(f"{temp_dir.name}/5")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir()
+    with tmp_path as fp:
         config.search_space = {
             "train_config.optimizer_config.name": SearchSpace(
                 categorical_values=["sgd", 0], value_type="int"
@@ -149,8 +167,10 @@ def test_state(tmp_path: Path):
             "ignoring: {'train_config.optimizer_config.name': '0'," in out
             and len(err) == 0
         )
-
-    with tempfile.TemporaryDirectory() as fp:
+    tmp_path = Path(f"{temp_dir.name}/6")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir()
+    with tmp_path as fp:
         config.search_space = {
             "train_config.optimizer_config.arguments.lr": SearchSpace(
                 value_range=[0, 1], value_type="float"
@@ -201,7 +221,10 @@ def test_state(tmp_path: Path):
         s = ExperimentState(Path(fp), config, resume=True)
         assert prev_trials == s.all_trials_uid
 
-    with tempfile.TemporaryDirectory() as fp:
+    tmp_path = Path(f"{temp_dir.name}/7")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir()
+    with tmp_path as fp:
         search_space = {
             # "train_config.optimizer_config.name": SearchSpace(
             #     categorical_values=["sgd"], value_type="int"
@@ -243,11 +266,5 @@ def test_state(tmp_path: Path):
             "ufunc 'isfinite' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''",
         )
 
-
-if __name__ == "__main__":
-    import shutil
-
-    tmp_path = Path("/tmp/state")
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_path.mkdir()
-    test_state(tmp_path)
+    # tmp_path = Path("./temp")
+    # shutil.rmtree(tmp_path)
