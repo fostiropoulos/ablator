@@ -1,8 +1,7 @@
-from pathlib import Path
 from ablator.modules.metrics.main import TrainMetrics
 from ablator.modules.metrics.stores import PredictionStore
 import numpy as np
-
+import math
 import sys
 
 
@@ -181,6 +180,23 @@ def test_metrics(assert_error_msg):
     m3.evaluate("my_tag", reset=False, update_ma=True)
     assert np.isclose(m3.to_dict()["my_tag_mean"], 46.42857142857142)
 
+    m3.reset(tag="my_tag")
+    m3.evaluate("my_tag", reset=False, update_ma=True)
+    value = m3.to_dict()["my_tag_mean"]
+    assert math.isnan(value)
+
+    m4 = TrainMetrics(
+        batch_limit=30,
+        memory_limit=None,
+        evaluation_functions={"mean": lambda x: np.mean(x)},
+        moving_average_limit=100,
+        tags=None,
+        static_aux_metrics={"lr": 1.0},
+        moving_aux_metrics={"loss"},
+    )
+    value = m4.to_dict()["train_mean"]
+    assert math.isnan(value)
+
 
 def test_prediction_store_reset(assert_error_msg):
     ps = PredictionStore(batch_limit=30, memory_limit=100, moving_average_limit=3000,
@@ -207,7 +223,6 @@ def test_prediction_store_reset(assert_error_msg):
     ps.reset()
     assert len(ps._get_arr('preds')) == 0, "Reset did not clear the appended predictions."
     assert len(ps._get_arr('labels')) == 0, "Reset did not clear the appended predictions."
-
 
 
 if __name__ == "__main__":

@@ -1,18 +1,17 @@
 import copy
 import io
 import random
-import sys
 from contextlib import redirect_stdout
 from pathlib import Path
 import time
 import numpy as np
 import pandas as pd
-import pytest
 import json
 from PIL import Image
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
 from ablator.modules.loggers.main import SummaryLogger
+from ablator.modules.loggers.tensor import TensorboardLogger
 
 
 def assert_console_output(fn, assert_fn):
@@ -260,6 +259,16 @@ def test_results_json(tmp_path: Path):
     # return
     pass
 
+
+def test_add_scalar_with_none_value(tmp_path: Path):
+    dashboard = TensorboardLogger(tmp_path.joinpath("tensorboard"))
+    dashboard.add_scalar('test_scalar', None, 1)
+    pass
+
+def test_sync(tmp_path: Path):
+    dashboard = TensorboardLogger(tmp_path.joinpath("tensorboard"))
+    dashboard._sync()
+    pass
 
 if __name__ == "__main__":
     test_results_json(Path("/tmp/"))

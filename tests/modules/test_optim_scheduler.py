@@ -1,4 +1,5 @@
 import torch
+import pytest
 from torch import nn
 
 from ablator import (
@@ -7,6 +8,8 @@ from ablator import (
     SCHEDULER_CONFIG_MAP,
     SchedulerConfig,
 )
+from ablator.modules.optimizer import get_optim_parameters, get_parameter_names, OptimizerArgs
+from ablator.modules.scheduler import SchedulerArgs
 
 
 class MyModel(nn.Module):
@@ -55,6 +58,59 @@ def test_optimizers():
     for optim_name in OPTIMIZER_CONFIG_MAP:
         for scheduler_name in SCHEDULER_CONFIG_MAP:
             run_optimizer(optim_name, scheduler_name)
+
+
+def test_get_optim_parameters_without_decay():
+    model = torch.nn.Linear(10, 1)
+    params = get_optim_parameters(model)
+    assert len(list(model.parameters())) == len(params)
+    for p1, p2 in zip(model.parameters(), params):
+        assert torch.all(p1 == p2)
+
+
+def test_get_optim_parameters_without_decay_and_with_all_parameters():
+    model = torch.nn.Linear(10, 1)
+    params = get_optim_parameters(model, only_requires_grad=False)
+    assert len(list(model.parameters())) == len(params)
+    for p1, p2 in zip(model.parameters(), params):
+        assert torch.all(p1 == p2)
+
+
+def test_get_parameter_names_with_submodules():
+    model = torch.nn.Sequential(
+        torch.nn.Linear(10, 10),
+        torch.nn.ReLU(),
+        torch.nn.Linear(10, 1)
+    )
+    param_names = get_parameter_names(model, forbidden_layer_types=[])
+    expected_param_names = ['0.weight', '0.bias', '2.weight', '2.bias']
+    assert set(param_names) == set(expected_param_names)
+
+
+def test_init_optimizer_not_implemented():
+    class DummyModel(nn.Module):
+        def forward(self, x):
+            return x
+    optimizer_args = OptimizerArgs(lr=0.01)
+    dummy_model = DummyModel()
+    with pytest.raises(NotImplementedError) as e_info:
+        optimizer_args.init_optimizer(dummy_model)
+    assert str(e_info.value) == "init_optimizer method not implemented."
+
+
+def test_init_scheduler_not_implemented():
+    class DummyModel(nn.Module):
+        def forward(self, x):
+            return x
+
+    class DummyOptimizer:
+        pass
+    scheduler_args = SchedulerArgs(step_when='train')
+    dummy_model = DummyModel()
+    dummy_optimizer = DummyOptimizer()
+    with pytest.raises(NotImplementedError) as e_info:
+        scheduler_args.init_scheduler(dummy_model, dummy_optimizer)
+    assert str(e_info.value) == "init_optimizer method not implemented."
 
 
 if __name__ == "__main__":

@@ -3,7 +3,12 @@ from ablator.utils.progress_bar import (
     ProgressBar,
     RemoteProgressBar,
     RemoteDisplay,
+    Display,
+    in_notebook,
+    get_last_line
 )
+from pytest import raises
+from unittest.mock import MagicMock, patch
 import numpy as np
 from pathlib import Path
 import time
@@ -132,6 +137,38 @@ def _test_tui_remote(tmp_path: Path):
         done_id, remotes = ray.wait(remotes, num_returns=1, timeout=0.1)
         dis.refresh()
         time.sleep(random.random() / 10)
+
+
+def test_in_notebook():
+    with patch.dict('sys.modules', {'IPython': None}):
+        assert in_notebook() == False
+
+
+def test_get_last_line():
+    from pathlib import Path
+    import os
+
+    assert get_last_line(Path("non_existing_file.txt")) == None
+
+    assert get_last_line(None) == None
+
+    with open("empty.txt", "w") as f:
+        pass
+    assert get_last_line(Path("empty.txt")) == ""
+
+    with open("one_line.txt", "w") as f:
+        f.write("This is the only line.")
+    assert get_last_line(Path("one_line.txt")) == "This is the only line."
+
+    with open("multi_line.txt", "w") as f:
+        f.write("This is the first line.\n")
+        f.write("This is the second line.\n")
+        f.write("This is the last line.")
+    assert get_last_line(Path("multi_line.txt")) == "This is the last line."
+
+    os.remove("empty.txt")
+    os.remove("one_line.txt")
+    os.remove("multi_line.txt")
 
 
 if __name__ == "__main__":
