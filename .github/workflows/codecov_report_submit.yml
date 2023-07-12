@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - trainers
+      - remote_progress_bar # just for easy to see test report after all test finished it should be removed
 
 jobs:
   Codecov:

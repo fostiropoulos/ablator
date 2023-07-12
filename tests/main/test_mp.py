@@ -290,8 +290,8 @@ def test_evaluate(tmp_path: Path):
 def test_mp_cpu(tmp_path: Path):
     import multiprocessing as mp, math
     cnt = mp.cpu_count()
-    
-    config.cpus_per_experiment = (cnt * 0.5) + 0.5 ## if cnt = 8, cpu should be 4 (np.floor)
+
+    config.cpus_per_experiment = (cnt * 0.5) ## if cnt = 8, cpu should be 4
     config.concurrent_trials = 3
     config.experiment_dir = tmp_path
 
@@ -368,16 +368,16 @@ if __name__ == "__main__":
     tmp_path = Path("/tmp/experiment_dir")
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
-    test_mp(tmp_path)
+    # test_mp(tmp_path)
 
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_path.mkdir()
-    test_resume(tmp_path)
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_path.mkdir()
-    test_relative_path(tmp_path)
+    # shutil.rmtree(tmp_path, ignore_errors=True)
+    # tmp_path.mkdir()
+    # test_resume(tmp_path)
+    # shutil.rmtree(tmp_path, ignore_errors=True)
+    # tmp_path.mkdir()
+    # test_relative_path(tmp_path)
     
-    test_evaluate(tmp_path)
+    # test_evaluate(tmp_path)
     test_mp_cpu(tmp_path)
-    test_train_main_remote(Path("/tmp/exp/"))
+    # test_train_main_remote(Path("/tmp/exp/"))
 
