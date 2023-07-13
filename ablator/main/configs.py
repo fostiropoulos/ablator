@@ -11,8 +11,7 @@ from ablator.config.types import (
 )
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import SchedulerConfig
-from ablator.modules.storage.cloud import GcpConfig
-from ablator.modules.storage.remote import RemoteConfig
+from ablator.modules.storage.rclone import RcloneConfig
 
 
 @configclass
@@ -177,6 +176,35 @@ class Optim(Enum):
 
 
 @configclass
+class GcsRcloneConfig(RcloneConfig):
+    config_name = "gcs"
+    type: str = "google cloud storage"
+    project_number: int = 0
+    service_account_file: str
+    bucket: str
+    object_acl: str = "private"
+    bucket_acl: str = "private"
+    location: str = "us"
+    storage_class: str = "STANDARD"
+
+    def get_remote_path_prefix(self) -> str:
+        return f"{self.config_name}:{self.bucket}"
+
+
+@configclass
+class RemoteRcloneConfig(RcloneConfig):
+    config_name = "remote"
+    host: Stateless[str]
+    user: Stateless[str]
+    port: Stateless[int] = 22
+    password: Stateless[str] = None
+    key_file: Stateless[str]
+
+
+allowed_rclone_remote_configs = ("gcs_rclone_config", "remote_rclone_config")
+
+
+@configclass
 class ParallelConfig(RunConfig):
     """
     Parallel training configuration. ``{"val_loss": "min"}``
@@ -211,5 +239,6 @@ class ParallelConfig(RunConfig):
     cpus_per_experiment: Stateless[float]
     search_algo: Stateless[SearchAlgo] = SearchAlgo.tpe
     ignore_invalid_params: Stateless[bool] = False
-    remote_config: Stateless[Optional[RemoteConfig]] = None
-    gcp_config: Stateless[Optional[GcpConfig]] = None
+    rclone_config: Stateless[Optional[RcloneConfig]] = None
+    gcs_rclone_config: Optional[GcsRcloneConfig] = None
+    remote_rclone_config: Optional[RemoteRcloneConfig] = None

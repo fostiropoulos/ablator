@@ -570,7 +570,6 @@ class ExperimentState:
             ignore_errors=self.config.ignore_invalid_params,
         )[:max_trials_conc]
 
-        assert len(trials) > 0, "No trials could be scheduled."
         return trials
 
     def sample_trials(self, n_trials_to_sample: int) -> list[ParallelConfig] | None:
