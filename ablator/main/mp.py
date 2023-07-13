@@ -17,7 +17,7 @@ import ray
 import torch
 
 import ablator as ablator_module
-from ablator.main.configs import ParallelConfig
+from ablator.main.configs import ParallelConfig, allowed_rclone_remote_configs
 from ablator.main.model.main import CheckpointNotFoundError, TrainPlateauError
 from ablator.main.model.wrapper import ModelWrapper
 from ablator.main.proto import ProtoTrainer
@@ -27,8 +27,8 @@ from ablator.modules.loggers.main import DuplicateRunError
 from ablator.modules.metrics.main import LossDivergedError
 from ablator.utils.base import get_gpu_max_mem
 import ablator.utils.base as butils
-
-
+import pyrclone
+import time
 # The exceptions that are unrecoverable i.e.  [DuplicateRunError]
 CRASH_EXCEPTION_TYPES: list[type] = []
 
@@ -97,6 +97,7 @@ def evaluate_remote(model: ModelWrapper, eval_config: ParallelConfig, logger: Fi
         formatter_str = json.dumps(metrics_dict, indent=4)
         f.write(formatter_str)
     eval_config.gcp_config.rsync_up(logger=logger, **kwargs)
+    return metrics_dict, eval_config
 
 
 def train_main_remote(
@@ -157,7 +158,9 @@ def train_main_remote(
     """
     if crash_exceptions_types is None:
         crash_exceptions_types = []
-
+    if run_config.rclone_config is not None:
+            mock_rclone_config=copy.deepcopy(run_config.rclone_config)
+            mock_rclone_config.startMount(run_config.experiment_dir)
     def handle_exception(e):
         exception_str = traceback.format_exc()
         if hasattr(model, "logger"):
@@ -221,16 +224,6 @@ def train_main_remote(
     finally:
         if model.model_dir is not None:
             kwargs = parse_rsync_paths(model.model_dir)
-            if run_config.gcp_config is not None:
-                run_config.gcp_config.rsync_up(
-                    Path(kwargs["local_path"]),
-                    str(kwargs["remote_path"]),
-                    logger=mp_logger,
-                )
-            elif run_config.remote_config is not None:
-                run_config.remote_config.rsync_up(
-                    Path(kwargs["local_path"]), str(kwargs["remote_path"])
-                )
 
 
 class ParallelTrainer(ProtoTrainer):
@@ -296,7 +289,12 @@ class ParallelTrainer(ProtoTrainer):
         self.run_config = run_config
         self.device = butils.parse_device(self.run_config.device)
         self.experiment_dir: Path = Path(run_config.experiment_dir)
+        self.make_rclone_config()
+        if self.run_config.rclone_config is not None:
+            self.mock_rclone_config=copy.deepcopy(self.run_config.rclone_config)
+            self.mock_rclone_config.startMount(self.experiment_dir)
         self.logger = FileLogger(path=self.experiment_dir / "mp.log")
+
         self.experiment_state: ExperimentState
         self.total_trials = self.run_config.total_trials
         self.gpu: float = 0.0
@@ -312,6 +310,18 @@ class ParallelTrainer(ProtoTrainer):
             str(self.run_config), encoding="utf-8"
         )
         self.total_mem_usage = 0
+
+    def make_rclone_config(self):
+        count = 0
+        rclone_config = None
+        for rclone_config_name in allowed_rclone_remote_configs:
+            config = getattr(self.run_config, rclone_config_name)
+            if config:
+                count += 1
+                rclone_config = config
+        assert count <= 1, "You can just have one central remote repository"
+        if rclone_config is not None:
+            self.run_config.rclone_config = rclone_config
 
     def _make_gpu(self):
         if (gpu := self.run_config.gpu_mb_per_experiment / self.gpu_mem_bottleneck) > 0:
@@ -422,49 +432,11 @@ class ParallelTrainer(ProtoTrainer):
                 runtime_env=runtime_env,
             )
         super()._init_state()
-        self.sync_down()
         if resume:
             self.logger.info("Trying to run from resumed experiment...")
         self.experiment_state = ExperimentState(
             self.experiment_dir, self.run_config, self.logger, resume=resume
         )
-
-    def _rsync_nodes(self):
-        if self.run_config.gcp_config is None:
-            return
-        node_hostnames = [
-            str(node["NodeManagerHostname"])
-            for node in ray.nodes()
-            if node["NodeManagerHostname"] != socket.gethostname()
-        ]
-        for hostname in node_hostnames:
-            self.run_config.gcp_config.rsync_down_node(
-                hostname, self.experiment_dir, self.logger
-            )
-
-    def _rsync_remote_up(self):
-        if self.run_config.remote_config is None:
-            return
-        kwargs = parse_rsync_paths(self.experiment_dir)
-        self.run_config.remote_config.rsync_up(logger=self.logger, **kwargs)
-
-    def _rsync_remote_down(self):
-        if self.run_config.remote_config is None:
-            return
-        kwargs = parse_rsync_paths(self.experiment_dir)
-        self.run_config.remote_config.rsync_down(logger=self.logger, **kwargs)
-
-    def _rsync_gcp_up(self):
-        if self.run_config.gcp_config is None:
-            return
-        kwargs = parse_rsync_paths(self.experiment_dir)
-        self.run_config.gcp_config.rsync_up(logger=self.logger, **kwargs)
-
-    def _rsync_gcp_down(self):
-        if self.run_config.gcp_config is None:
-            return
-        kwargs = parse_rsync_paths(self.experiment_dir)
-        self.run_config.gcp_config.rsync_down(logger=self.logger, **kwargs)
 
     def __make_remotes_from_trials(self, trials: list[ParallelConfig] | None):
         if trials is None or len(trials) == 0:
@@ -473,31 +445,7 @@ class ParallelTrainer(ProtoTrainer):
         futures = self._make_remotes(trials)
         return futures
 
-    def sync_down(self):
-        """
-        Synchronize content of Google cloud storage to current working directory and to all GCP nodes.
-
-        Notes
-        -----
-        GCP nodes names should be equal to ray node names.
-        Can be previously run trials if we are resuming the state.
-        First sync down from the remote
-
-        """
-        # Can be previously run trials if we are resuming the state.
-        # First sync down from the remote
-        self._rsync_gcp_down()
-        self._rsync_nodes()
-
-    def sync_up(self):
-        """
-        Synchronize content of current experiment directory to Google cloud storage and
-        other remote servers.
-        """
-        self._rsync_gcp_up()
-        self._rsync_remote_up()
-
-    def evaluate(self, working_directory: str, ray_head_address: str | None = "auto", auxilary_modules: list[tys.ModuleType] | None = None):
+    def evaluate(self, parallel=False, working_directory: str = "", ray_head_address: str | None = "auto", auxilary_modules: list[tys.ModuleType] | None = None):
         """
         Evaluate model performance in trials that are completed, using evaluation functions defined
         in the model wrapper. Evaluation results will be logged to the console and log files in the
@@ -525,8 +473,9 @@ class ParallelTrainer(ProtoTrainer):
 
         # TODO evaluate in parallel
         futures = []
+        all_config_metrics = {}
         for model_config in eval_configs:
-            if ray.is_initialized():
+            if ray.is_initialized() and parallel:
                 self.logger.info("Evaluating in parallel...")
                 futures.append(
                     ray.remote(num_gpus=self.gpu, num_cpus=self.cpu)(
@@ -534,8 +483,13 @@ class ParallelTrainer(ProtoTrainer):
                     ).remote(self.wrapper, model_config, self.logger)
                 )
             else:
-                self.wrapper.evaluate(model_config)
-        ray.wait(futures, num_returns=len(futures))
+                metrics_dict = self.wrapper.evaluate(model_config)
+                all_config_metrics[model_config.uid] = metrics_dict
+        while len(futures) > 0:
+            done_id, futures = ray.wait(futures, num_returns=1)
+            metrics_dict, eval_config = ray.get(done_id[0])
+            all_config_metrics[eval_config.uid] = metrics_dict
+        return all_config_metrics
 
     def launch(  # type: ignore
         self,
@@ -575,7 +529,6 @@ class ParallelTrainer(ProtoTrainer):
             mp.set_start_method("spawn", force=True)
         except RuntimeError:
             pass
-
         self._init_state(
             working_dir=working_directory,
             address=ray_head_address,
@@ -635,4 +588,3 @@ class ParallelTrainer(ProtoTrainer):
             self.logger.error(
                 f"There are {len(errored)} unfinished trials. with ids: {errored_ids}"
             )
-        self.sync_up()
