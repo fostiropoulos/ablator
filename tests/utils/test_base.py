@@ -26,11 +26,11 @@ def test_getitem_dummy():
 def test_set_seed():
     seed = 42
     base.set_seed(seed)
-    # test that the seed is set for numpy
+    # Test if the seed is set successfully
     assert np.random.randint(1000) == np.random.RandomState(seed).randint(1000)
 
 
-# test parse_device
+# Test parse_device if returns the correct device
 def test_parse_device():
     assert base.parse_device(0) == 0
     assert base.parse_device(1) == 1
@@ -48,18 +48,21 @@ def test_parse_device():
 
 def test_init_weights():
     # Test `init_weights`with Linear layer
+    # Check if initialization of weights and bias is correct for Linear layer
     linear = nn.Linear(10000, 5000)
     base.init_weights(linear)
     assert torch.allclose(linear.weight.mean(), torch.tensor(0.0), atol=0.02)
     assert torch.all(linear.bias == 0)
 
     # Test `init_weights` with Embedding layer
+    # Check if initialization of weights and bias is correct for Embedding layer
     embedding = nn.Embedding(10000, 5000, padding_idx=1)
     base.init_weights(embedding)
     assert torch.allclose(embedding.weight.mean(), torch.tensor(0.0), atol=0.02)
     assert torch.all(embedding.weight[embedding.padding_idx] == 0)
 
     # Test `init_weights` with LayerNorm
+    # Check if initialization of weights and bias is correct for LayerNorm
     layernorm = nn.LayerNorm(10)
     base.init_weights(layernorm)
     assert torch.all(layernorm.bias == 0)
@@ -102,7 +105,7 @@ def test_is_oom_exception():
         assert base.is_oom_exception(RuntimeError(error)) is False, f"Expected False for error message '{error}'"
 
 
-# testing that the apply_lambda_to_iter function correctly applies a lambda function
+# Test If the apply_lambda_to_iter function correctly applies a lambda function
 # (in this case, a function to square a number) to each element in a list
 def test_apply_lambda_to_iter():
     input_list = [1, 2, 3, 4, 5]
@@ -113,5 +116,5 @@ def test_apply_lambda_to_iter():
 
 def test_num_format_with_non_numeric_value():
     value = "not_a_number"
-    # test `num_format` with non-numeric value
+    # Test `num_format` with non-numeric value
     assert base.num_format(value) == value, "Non-numeric values should be returned as is"

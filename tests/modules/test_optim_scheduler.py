@@ -70,17 +70,19 @@ def test_get_optim_parameters_without_decay():
     for p1, p2 in zip(model.parameters(), params):
         assert torch.all(p1 == p2)
 
-
+# This will test whether the function correctly extracts all the parameters from the model
+# and whether these are the correct parameters.
+# This test case is written for the scenario where `only_requires_grad`` is False.
 def test_get_optim_parameters_without_decay_and_with_all_parameters():
     model = torch.nn.Linear(10, 1)
-    # Test `only_requires_grad`` is set to False
     params = get_optim_parameters(model, only_requires_grad=False)
     assert len(list(model.parameters())) == len(params)
     for p1, p2 in zip(model.parameters(), params):
         assert torch.all(p1 == p2)
 
 
-# it will cover the recursive line in get_parameter_names function.
+# Test the recursive line in get_parameter_names function.
+# To check if return parameter names of all submodules.
 def test_get_parameter_names_with_submodules():
     model = torch.nn.Sequential(
         torch.nn.Linear(10, 10),

@@ -180,13 +180,13 @@ def test_metrics(assert_error_msg):
     m3.evaluate("my_tag", reset=False, update_ma=True)
     assert np.isclose(m3.to_dict()["my_tag_mean"], 46.42857142857142)
 
-    # test reset function
+    # Test if reset function works
     m3.reset(tag="my_tag")
     m3.evaluate("my_tag", reset=False, update_ma=True)
     value = m3.to_dict()["my_tag_mean"]
     assert math.isnan(value)
 
-    # test TrainMetrics with tags is None
+    # Test if TrainMetrics with auto add `train` tag when tags is None.
     m4 = TrainMetrics(
         batch_limit=30,
         memory_limit=None,

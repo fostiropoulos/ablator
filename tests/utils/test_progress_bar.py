@@ -143,9 +143,9 @@ def test_in_notebook():
     with patch.dict('sys.modules', {'IPython': None}):
         assert in_notebook() == False
 
-# Test case for the function `get_last_line`
 
 
+# Test case for the function `get_last_line` to check if it returns the last line of a file
 def test_get_last_line(tmp_path: Path):
     # Test with non-existing file
     assert get_last_line(tmp_path.joinpath("non_existing_file.txt")) == None
@@ -179,7 +179,6 @@ def test_get_last_line(tmp_path: Path):
 
 
 if __name__ == "__main__":
-    # tmp_path = Path("/tmp/")
+    tmp_path = Path("/tmp/")
     # _test_tui(tmp_path)
     # _test_tui_remote(tmp_path)
-    test_in_notebook()
