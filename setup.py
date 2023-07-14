@@ -6,8 +6,8 @@ setup(
     name="ablator",
     version="0.0.1b2",
     author="Iordanis Fostiropoulos",
-    author_email="dev@iordanis.xyz",
-    url="https://iordanis.xyz",
+    author_email="mail@iordanis.me",
+    url="https://ablator.org",
     packages=find_packages(),
     description="Model Ablation Tool-Kit",
     python_requires=">3.10",
@@ -25,12 +25,18 @@ setup(
         "omegaconf==2.2.3",
         "scipy==1.10.1",
         "setproctitle==1.3.2",
-        "ray>=2.1.0,<=2.2.0",
+        # ray default as we need to use the state API
+        # keeping it fixed as the API changes a lot between versions.
+        "ray[default]==2.5.1",
+        # TODO when to migrate from "pydantic<2" to >2 https://github.com/ray-project/ray/issues/37019
+        "pydantic==1.10.11",
         "pynvml==11.5.0",
         "optuna==3.1.1",
         "tabulate==0.9.0",
         "seaborn==0.12.2",
         "numpydoc==1.5.0",
+        "paramiko==3.2.0",
+        "gpustat==1.0",  # must stay fixed because https://github.com/ray-project/ray/issues/35384
     ],
     extras_require={
         "dev": [
@@ -41,7 +47,9 @@ setup(
             "pylint==2.17.2",
             "tensorboard==2.12.2",
             "mock==5.0.2",
-            "types-tabulate==0.9.0.2"
+            "types-tabulate==0.9.0.2",
+            "types-paramiko==3.2.0.0",
+            "docker==6.1.3",
         ],
     },
 )
