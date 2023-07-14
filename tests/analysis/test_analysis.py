@@ -63,7 +63,7 @@ def test_analysis(tmp_path: Path):
     )
     
     try:
-        correct = PlotAnalysis(
+        no_cache = PlotAnalysis(
             df,
             save_dir=tmp_path.as_posix(),
             cache=False,
@@ -71,6 +71,13 @@ def test_analysis(tmp_path: Path):
             numerical_attributes=list(numerical_name_remap.keys()),
             categorical_attributes=list(categorical_name_remap.keys()),
         )
+
+        # checking whether if cache = False, clears memory.
+        assert no_cache.cache == None
+
+        # Ensuring that the incorrect path provided must not exists.
+        assert not Path("/random_folder/nonexistent_folder/").parent.exists()
+
         incorrect_path = PlotAnalysis(
             df,
             save_dir="/nonexistent_folder/file.txt",
@@ -80,13 +87,10 @@ def test_analysis(tmp_path: Path):
             categorical_attributes=list(categorical_name_remap.keys()),
         )
     except FileNotFoundError as f:
-        if not str(f).startswith("Save directory does not exist"):
-            raise f
-    except Exception as e:
-        raise e
-    pass
+        # Expecting the constructor to fail because of incorrect_path. 
+        assert str(f).startswith("Save directory does not exist")
+    
 
-        
 def test_name_remap():
     name_map = {'a': 'A', 'b': 'B'}
     defaults = None

@@ -6,6 +6,7 @@ import tempfile
 import ray
 import torch
 from torch import nn
+import os, shutil
 
 from ablator import (
     ModelConfig,
@@ -232,20 +233,24 @@ class MyCustomModelEval(nn.Module):
         self.param = nn.Parameter(torch.ones(100))
 
     def forward(self, x: torch.Tensor):
-        x = self.param + torch.rand_like(x) * 0.01
+        x =  self.param + x * 0.01
         return {"preds": x}, x.sum().abs()
 
 
 class TestWrapperEval(ModelWrapper):
     def make_dataloader_train(self, run_config: RunConfig):
-        dl = [torch.rand(100) for i in range(100)]
+        dl = [torch.full((100,), 4.0) for i in range(100)]
         return dl
 
     def make_dataloader_val(self, run_config: RunConfig):
-        dl = [torch.rand(100) for i in range(100)]
+        dl = [torch.full((100,), 3.0) for i in range(100)]
         return dl
     
-def test_evaluate(tmp_path: Path):
+    def make_dataloader_test(self, run_config: RunConfig):
+        dl = [torch.full((100,), 3.0) for i in range(100)]
+        return dl
+    
+def test_mp_evaluate(tmp_path: Path):
     train_config = TrainConfig(
     dataset="test",
     batch_size=128,
@@ -276,16 +281,33 @@ def test_evaluate(tmp_path: Path):
     wrapper = TestWrapperEval(MyCustomModelEval)
     config.experiment_dir = tmp_path
 
-    import shutil, os
     shutil.rmtree(tmp_path, ignore_errors=True)
     ablator = ParallelTrainer(wrapper=wrapper, run_config = config)
-    ablator.launch(working_directory = os.getcwd(), ray_head_address=None)
-
-    try:
-        ablator.evaluate()
-    except Exception as exp:
-        raise exp
+    ablator.launch(working_directory = Path(__file__).parent.as_posix(), ray_head_address=None)
     
+    # breaking down [ParallelTrainer] ablator.evaluate() to verify metrics
+
+    eval_configs = []
+    trial_uids = ablator.experiment_state.complete_trials
+    for config in trial_uids:
+        model_config = type(ablator.run_config).load(
+            ablator.experiment_dir.joinpath(config.uid, "config.yaml")
+        )
+        eval_configs.append(model_config)
+
+        
+    for model_config in eval_configs:
+        metrics = ablator.wrapper.evaluate(model_config)
+        
+        # To check whether metrics are produced for all the dataloaders provided.
+        assert all(key in metrics.keys() for key in ["val","test"])
+
+        # The val_loss of validation dataloader should be same as val_loss during last epoch.
+        assert metrics['val'].to_dict()["val_loss"] == ablator.wrapper.metrics.to_dict()["val_loss"]
+        # test and val dataloaders are the same and there is not randomization in the model. 
+        # Therefore, val_loss and test_loss must be same.
+        assert metrics['val'].to_dict()["val_loss"] == metrics['test'].to_dict()["test_loss"]
+
 
 def test_mp_cpu(tmp_path: Path):
     import multiprocessing as mp, math
@@ -377,7 +399,7 @@ if __name__ == "__main__":
     # tmp_path.mkdir()
     # test_relative_path(tmp_path)
     
-    # test_evaluate(tmp_path)
-    test_mp_cpu(tmp_path)
+    test_mp_evaluate(tmp_path)
+    # test_mp_cpu(tmp_path)
     # test_train_main_remote(Path("/tmp/exp/"))
 
