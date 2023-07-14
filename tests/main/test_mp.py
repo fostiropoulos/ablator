@@ -137,8 +137,10 @@ def test_mp(tmp_path: Path):
     config.gpu_mb_per_experiment = 0.001
     config.cpus_per_experiment = 0.001
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
+    # set to percentae of gpu memory, because we don't know the total memory of test machine gpu
+    # set to 0.35 to avoid OOM memory error, so by default it just run 2 concurrent trials which are 0.7 of gpu memory
     if torch.cuda.is_available():
-        ablator.gpu = 1 / config.concurrent_trials
+        ablator.gpu = 0.35
     ablator.launch(Path(__file__).parent.as_posix(), ray_head_address=None)
     res = Results(MyParallelConfig, ablator.experiment_dir)
     assert res.data.shape[0] // 2 == len(ablator.experiment_state.complete_trials)

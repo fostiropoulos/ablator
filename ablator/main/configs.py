@@ -188,16 +188,16 @@ class GcsRcloneConfig(RcloneConfig):
     storage_class: str = "STANDARD"
 
     def get_remote_path_prefix(self) -> str:
-        return f"{self.config_name}:{self.bucket}"
+        return f"{self.config_name}:{self.bucket}/{self.remote_path}"
 
 
 @configclass
 class RemoteRcloneConfig(RcloneConfig):
+    type: str = "sftp"
     config_name = "remote"
     host: Stateless[str]
     user: Stateless[str]
     port: Stateless[int] = 22
-    password: Stateless[str] = None
     key_file: Stateless[str]
 
 

@@ -33,34 +33,6 @@ import time
 CRASH_EXCEPTION_TYPES: list[type] = []
 
 
-def parse_rsync_paths(
-    rsynced_folder: Path | str
-) -> dict[str, Path | str]:
-    """
-    Parse the experiment directory that's being in sync with remote servers (Google cloud storage, other
-    remote nodes) and the root folder.
-
-    Parameters
-    ----------
-    rsynced_folder : Path, str
-        The experiment directory that's being in sync with remote servers.
-    root_folder : Path, str, None, default=None
-        The root folder that contains all experiment directories.
-
-    Returns
-    -------
-    dict[str, Path]
-        A dictionary with 2 keys: ``local_path`` and ``remote_path``, which specifies the local directory
-        and the remote path that will be in sync.
-    """
-
-    rsync_path = Path(rsynced_folder).absolute()
-    return {
-        "local_path": rsync_path,
-        "remote_path": butils.parse_gcloud_path_relative(rsync_path)
-    }
-
-
 def parse_metrics(optim_direction: list[str], metrics: dict[str, float] | None):
     """
     Parse metrics to be optimized.
@@ -85,18 +57,12 @@ def parse_metrics(optim_direction: list[str], metrics: dict[str, float] | None):
 
 
 def evaluate_remote(model: ModelWrapper, eval_config: ParallelConfig, logger: FileLogger):
-    experiment_dir = Path(eval_config.experiment_dir or "")/eval_config.uid
-    if eval_config.gcp_config is None:
-        raise ValueError("GCP config is not provided.You should provide a GCP config to sync files for evaluating in parallel.")
-    kwargs = parse_rsync_paths(experiment_dir)
-    eval_config.gcp_config.rsync_down(logger=logger, **kwargs)
     metrics = model.evaluate(eval_config)
     metrics_dict = {k: v.to_dict() for k, v in metrics.items()}
     logger.info(f"Evaluation: {butils.parse_dict_to_str(metrics_dict)}")
-    with open(experiment_dir/"metrics.json", "w", encoding="utf-8") as f:
+    with open(eval_config.experiment_dir/"metrics.json", "w", encoding="utf-8") as f:
         formatter_str = json.dumps(metrics_dict, indent=4)
         f.write(formatter_str)
-    eval_config.gcp_config.rsync_up(logger=logger, **kwargs)
     return metrics_dict, eval_config
 
 
@@ -158,9 +124,7 @@ def train_main_remote(
     """
     if crash_exceptions_types is None:
         crash_exceptions_types = []
-    if run_config.rclone_config is not None:
-            mock_rclone_config=copy.deepcopy(run_config.rclone_config)
-            mock_rclone_config.startMount(run_config.experiment_dir)
+
     def handle_exception(e):
         exception_str = traceback.format_exc()
         if hasattr(model, "logger"):
@@ -221,9 +185,6 @@ def train_main_remote(
 
     except builtins.Exception as e:
         return handle_exception(e)
-    finally:
-        if model.model_dir is not None:
-            kwargs = parse_rsync_paths(model.model_dir)
 
 
 class ParallelTrainer(ProtoTrainer):
@@ -291,7 +252,7 @@ class ParallelTrainer(ProtoTrainer):
         self.experiment_dir: Path = Path(run_config.experiment_dir)
         self.make_rclone_config()
         if self.run_config.rclone_config is not None:
-            self.mock_rclone_config=copy.deepcopy(self.run_config.rclone_config)
+            self.mock_rclone_config = copy.deepcopy(self.run_config.rclone_config)
             self.mock_rclone_config.startMount(self.experiment_dir)
         self.logger = FileLogger(path=self.experiment_dir / "mp.log")
 

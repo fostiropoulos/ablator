@@ -11,7 +11,7 @@ import time
 @configclass
 class RcloneConfig(ConfigBase):
     config_name: str
-    remote_path: str = "/"
+    remote_path: str = ""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -25,12 +25,12 @@ class RcloneConfig(ConfigBase):
         if sys.platform == "win32":
             self.rcloneProcess = self.rcloneWrapper.mount(f"{self.get_remote_path_prefix()}", self.experiment_dir, ["--rc",
                                                                                                                     "--gcs-bucket-policy-only",
-                                                                                                                    "--vfs-cache-mode", "full", "--dir-cache-time", "10s",
+                                                                                                                    "--vfs-cache-mode", "writes", "--dir-cache-time", "10s",
                                                                                                                     "--poll-interval", "10s", "-o", 'FileSecurity=D:P(A;;FA;;;WD)',
-                                                                                                                    "--stats", "10s"], verbose=verbose)
+                                                                                                                    "--stats", "10s", "--transfers", "64", "-vv"], verbose=verbose)
         else:
             self.rcloneProcess = self.rcloneWrapper.mount(f"{self.get_remote_path_prefix()}", self.experiment_dir, [
-                "--rc", '--gcs-bucket-policy-only', '--dir-cache-time', '10s', '--poll-interval', '10s', '--vfs-cache-mode', 'full'], verbose=verbose)
+                "--rc", '--gcs-bucket-policy-only', '--dir-cache-time', '10s', '--poll-interval', '10s', '--vfs-cache-mode', 'writes', "--transfers", "64"], verbose=verbose)
         for i in range(5, 0, -1):
             print("wait for rclone mouting", i)
             time.sleep(1)
