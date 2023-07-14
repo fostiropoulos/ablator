@@ -33,7 +33,7 @@ class SchedulerArgs(ConfigBase):
         """
         Abstract method to be implemented by derived classes, which creates and returns a scheduler object.
         """
-        raise NotImplementedError("init_optimizer method not implemented.")
+        raise NotImplementedError("init_scheduler method not implemented.")
 
 
 @configclass
