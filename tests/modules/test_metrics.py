@@ -1,9 +1,11 @@
 from ablator.modules.metrics.main import TrainMetrics
 from ablator.modules.metrics.stores import PredictionStore
+from ablator.modules.metrics.stores import MovingAverage
 import numpy as np
 import math
 import sys
-
+import torch
+import pytest
 
 moving_average_limit = 100
 memory_limit = 100
@@ -200,7 +202,13 @@ def test_metrics(assert_error_msg):
     assert math.isnan(value)
 
 
-def test_prediction_store_reset(assert_error_msg):
+def test_prediction_store_reset():
+    # Test evaluate when no evaluation functions are provided.
+    ps = PredictionStore(batch_limit=30, memory_limit=100, moving_average_limit=3000,
+                         evaluation_functions=None)
+    res = ps.evaluate()
+    assert res == {}, "Evaluate should return nan when no evaluation functions are provided."
+
     ps = PredictionStore(batch_limit=30, memory_limit=100, moving_average_limit=3000,
                          evaluation_functions={"mean": lambda preds, labels: np.mean(preds) + np.mean(labels)})
 
@@ -227,6 +235,90 @@ def test_prediction_store_reset(assert_error_msg):
     assert len(ps._get_arr('labels')) == 0, "Reset did not clear the appended predictions."
 
 
+def test_moving_average_init():
+    # Testing the initialization of MovingAverage object.
+    ma = MovingAverage()
+    assert isinstance(ma, MovingAverage)
+    # By default, if no values are appended, the value should be numpy NaN.
+    assert math.isnan(ma.value)
+
+
+def test_moving_average_append():
+    # Testing the append functionality and moving average calculation.
+    ma = MovingAverage()
+    ma.append(5)
+    assert ma.value == 5
+    ma.append(10)
+    # The moving average of 5 and 10 is 7.5
+    assert ma.value == 7.5
+
+
+def test_moving_average_append_with_numpy():
+    # Testing the append functionality when a numpy array is given as input.
+    ma = MovingAverage()
+    ma.append(np.array([5]))
+    assert ma.value == 5
+    ma.append(np.array([10]))
+    # The moving average of 5 and 10 is 7.5
+    assert ma.value == 7.5
+
+
+def test_moving_average_append_with_torch():
+    # Testing the append functionality when a PyTorch Tensor is given as input.
+    ma = MovingAverage()
+    ma.append(torch.Tensor([5]))
+    assert ma.value == 5
+    ma.append(torch.Tensor([10]))
+    # The moving average of 5 and 10 is 7.5
+    assert ma.value == 7.5
+
+
+def test_moving_average_append_invalid():
+    # Testing how the class handles invalid input types.
+    ma = MovingAverage()
+    # Trying to append a string should raise ValueError.
+    with pytest.raises(ValueError):
+        ma.append('invalid')
+
+
+def test_moving_average_comparison():
+    # Testing the comparison functionality of MovingAverage object with float.
+    ma = MovingAverage()
+    ma.append(5)
+    # If the moving average of ma is less than 10, __lt__ should return True.
+    assert ma < 10
+    # Since the moving average is not equal to 10, __eq__ should return False.
+    assert ma != 10
+    ma.append(10)
+    # Now, the moving average is 7.5 which is still less than 10.
+    assert ma < 10
+    # Since the moving average is not equal to 10, __eq__ should return False.
+    assert ma != 10
+    ma.append(15)
+    # After appending 15, the moving average becomes 10 so __eq__ should return True.
+    assert ma == 10
+
+
+def test_moving_average_float():
+    # Testing the conversion of MovingAverage object to float.
+    ma = MovingAverage()
+    ma.append(5)
+    assert float(ma) == 5.0
+    ma.append(10)
+    # After appending 10, the moving average becomes 7.5
+    assert float(ma) == 7.5
+
+
+def test_moving_average_format():
+    # Testing the string formatting of MovingAverage object.
+    ma = MovingAverage()
+    ma.append(5)
+    assert "{:.2e}".format(ma) == "5.00e+00"
+    ma.append(10)
+    # After appending 10, the moving average becomes 7.5
+    assert "{:.2e}".format(ma) == "7.50e+00"
+
+
 if __name__ == "__main__":
 
     def assert_error_msg(fn, error_msg):
@@ -238,4 +330,4 @@ if __name__ == "__main__":
                 raise excp
 
     test_metrics(assert_error_msg)
-    test_prediction_store_reset(assert_error_msg)
+    test_prediction_store_reset()
