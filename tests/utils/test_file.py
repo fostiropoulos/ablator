@@ -7,6 +7,7 @@ from ablator.utils.file import (default_val_parser, nested_set, truncate_utf8_ch
 def test_default_val_parser_tensor():
     tensor = torch.tensor([1, 2, 3])
     expected_output = [1, 2, 3]
+    # test `default_val_parser` with tensor input
     assert default_val_parser(tensor) == expected_output
 
 
@@ -15,6 +16,7 @@ def test_nested_set_path_not_exist():
     keys = ['b', 'c']
     value = 2
     expected_output = {'a': 1, 'b': {'c': 2}}
+    # test `nested_set` with keys not in dict
     assert nested_set(dict_, keys, value) == expected_output
 
 
@@ -27,5 +29,6 @@ def test_truncate_utf8_chars_not_found():
     with pytest.raises(RuntimeError) as err:
         truncate_utf8_chars(file_name, last_char)
 
+    # test `truncate_utf8_chars` with last_char not in that file
     assert 'Could not truncate' in str(err.value)
     os.remove(file_name)

@@ -3,12 +3,12 @@ from ablator.utils.progress_bar import (
     ProgressBar,
     RemoteProgressBar,
     RemoteDisplay,
-    Display,
     in_notebook,
     get_last_line
 )
-from pytest import raises
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+import os
+from unittest.mock import patch
 import numpy as np
 from pathlib import Path
 import time
@@ -143,35 +143,43 @@ def test_in_notebook():
     with patch.dict('sys.modules', {'IPython': None}):
         assert in_notebook() == False
 
+# Test case for the function `get_last_line`
 
-def test_get_last_line():
-    from pathlib import Path
-    import os
 
-    assert get_last_line(Path("non_existing_file.txt")) == None
+def test_get_last_line(tmp_path: Path):
+    # Test with non-existing file
+    assert get_last_line(tmp_path.joinpath("non_existing_file.txt")) == None
 
+    # Test with None as filename
     assert get_last_line(None) == None
 
-    with open("empty.txt", "w") as f:
+    emptyp = tmp_path.joinpath("empty.txt")
+    with open(emptyp, "w") as f:
         pass
-    assert get_last_line(Path("empty.txt")) == ""
+    # Test with an empty file
+    assert get_last_line(emptyp) == ""
 
-    with open("one_line.txt", "w") as f:
+    onelinep = tmp_path.joinpath("one_line.txt")
+    with open(onelinep, "w") as f:
         f.write("This is the only line.")
-    assert get_last_line(Path("one_line.txt")) == "This is the only line."
+    # Test with a one-line file
+    assert get_last_line(onelinep) == "This is the only line."
 
-    with open("multi_line.txt", "w") as f:
+    multi_linep = tmp_path.joinpath("multi_line.txt")
+    with open(multi_linep, "w") as f:
         f.write("This is the first line.\n")
         f.write("This is the second line.\n")
         f.write("This is the last line.")
-    assert get_last_line(Path("multi_line.txt")) == "This is the last line."
+    # Test with a multi-line file
+    assert get_last_line(multi_linep) == "This is the last line."
 
-    os.remove("empty.txt")
-    os.remove("one_line.txt")
-    os.remove("multi_line.txt")
+    os.remove(emptyp)
+    os.remove(onelinep)
+    os.remove(multi_linep)
 
 
 if __name__ == "__main__":
-    tmp_path = Path("/tmp/")
+    # tmp_path = Path("/tmp/")
     # _test_tui(tmp_path)
     # _test_tui_remote(tmp_path)
+    test_in_notebook()

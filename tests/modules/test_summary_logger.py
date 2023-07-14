@@ -8,10 +8,12 @@ import numpy as np
 import pandas as pd
 import json
 from PIL import Image
+import math
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
 from ablator.modules.loggers.main import SummaryLogger
 from ablator.modules.loggers.tensor import TensorboardLogger
+from ablator.modules.metrics.stores import MovingAverage
 
 
 def assert_console_output(fn, assert_fn):
@@ -238,6 +240,43 @@ def test_summary_logger(tmp_path: Path):
     assert event_acc.Images("img")[0].encoded_image_string == img_byte_arr
 
 
+    l.dashboard.add_scalar('test_scalar', None, 1)
+    l.dashboard.add_scalar('test_scalar', 100, 1)
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard_update(event_acc, "test_scalar", 100)
+    event_acc.Reload()
+    event_list = event_acc.Scalars("test_scalar")
+    assert math.isnan(event_list[0].value) # test TensorboardLogger's add_scalar function with None value
+
+
+    # dic = {
+    #     "loss": {
+    #         "train": 0.2,
+    #         "validation": 0.3,
+    #     }
+    # }
+    # l.update({"dic": dic})
+
+    # ma = MovingAverage(batch_limit=10, memory_limit=1000)
+    # for i in range(100):
+    #     ma.append(np.array([[int(i)]]))
+    # print(ma.arr)
+    # l.update({"ma": ma})
+    # l.dashboard.backend_logger.flush()
+    # event_acc.Reload()
+    # results = json.loads(l.result_json_path.read_text())
+    # print(results)
+
+    # test SummaryLogger's _add_metric fcuntion with an unfitable data type
+    set = {1, 2, 3, 4, 5}
+    assert_error_msg(
+        lambda: l.update({"test": set}),
+        f"Unsupported dashboard value {set}. Must be "
+        "[int,float, pd.DataFrame, Image.Image, str, "
+        "MovingAverage, dict[str,float|int], list[float,int], np.ndarray] "
+    )
+
+
 def test_results_json(tmp_path: Path):
     tmp_path = tmp_path.joinpath(f"{random.random()}")
     l = SummaryLogger(c, tmp_path)
@@ -265,10 +304,27 @@ def test_add_scalar_with_none_value(tmp_path: Path):
     dashboard.add_scalar('test_scalar', None, 1)
     pass
 
+
 def test_sync(tmp_path: Path):
     dashboard = TensorboardLogger(tmp_path.joinpath("tensorboard"))
-    dashboard._sync()
-    pass
+    try:
+        dashboard._sync() # Cause _sync doesn't has any content, there just test if it can run without any error
+    except Exception as e:
+        assert False, f"An exception was thrown: {e}"
+
+
+
+def test_summary_logger_with_none():
+    l = SummaryLogger(c)
+
+    # test _make_dashboard function with `summary_dir` is None
+    assert l._make_dashboard(summary_dir=None) is None
+
+    # test _write_config function with `model_dir` is None
+    assert l._write_config(c) is None
+
+    # test clean_checkpoints function with `model_dir` is None
+    assert l.clean_checkpoints(1) is None
 
 if __name__ == "__main__":
     test_results_json(Path("/tmp/"))

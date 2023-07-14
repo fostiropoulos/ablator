@@ -31,11 +31,11 @@ def test_file_logger(tmp_path: Path):
     assert_console_output(lambda: l.warn("hello", verbose=False), lambda s: len(s)==0)
     assert_console_output(lambda: l.error("hello"), lambda s: s.endswith("\x1b[91mhello\x1b[0m\n"))
 
-
+# TODO:
+# def test_file_logger_with_none(tmp_path: Path):
+#     logpath = tmp_path.joinpath("test.log")
+#     l = FileLogger(logpath, verbose=True, prefix="1")
 
 if __name__ == "__main__":
-
-
     test_file_logger(Path("/tmp/"))
 
-    pass
