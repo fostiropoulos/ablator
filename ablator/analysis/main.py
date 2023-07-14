@@ -5,7 +5,7 @@ import pandas as pd
 from joblib import Memory
 
 from ablator.analysis.plot.utils import parse_name_remap
-from ablator.main.configs import Optim
+from ablator.config.mp import Optim
 
 logger = logging.getLogger(__name__)
 

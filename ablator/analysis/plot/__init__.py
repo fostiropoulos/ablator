@@ -7,7 +7,7 @@ import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from ablator.main.configs import Optim
+from ablator.config.mp import Optim
 
 logger = logging.getLogger(__name__)
 

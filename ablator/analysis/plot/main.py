@@ -12,7 +12,7 @@ from ablator.analysis.main import Analysis
 from ablator.analysis.plot import Plot
 from ablator.analysis.plot.cat_plot import ViolinPlot
 from ablator.analysis.plot.num_plot import LinearPlot
-from ablator.main.configs import Optim
+from ablator.config.mp import Optim
 
 logger = logging.getLogger(__name__)
 
