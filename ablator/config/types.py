@@ -28,6 +28,12 @@ class Optional(ty.Generic[T]):
     pass
 
 
+# Support for nested objects
+# TODO mypy support for Self types
+class Self:
+    pass
+
+
 Type = type
 Literal = ty.Literal
 
@@ -137,7 +143,6 @@ class MyClass:
     def __init__(self, arg1:int, arg2:str):
         pass
 
-TODO
 Parsing the dictionary however can be error prone if you have complex arguments
 and is not advised.
 """
@@ -262,9 +267,6 @@ def _strip_hint_collection(type_hint):
         args = ty.get_args(type_hint)
         assert len(args) == 1
         # Dict and list annotations only support a single type
-        assert args[0] in ALLOWED_TYPES or issubclass(
-            type(args[0]), (Enum, Type)
-        ), f"Invalid type_hint: {type_hint}."
         collection = Dict if origin == Dict else List
         return collection, args[0]
     if origin == Tuple:
@@ -285,12 +287,14 @@ def _strip_hint_collection(type_hint):
     )
 
 
-def parse_type_hint(type_hint):
+def parse_type_hint(cls, type_hint):
     """
     Parses a type hint and returns a parsed annotation.
 
     Parameters
     ----------
+    cls : Any
+        The class being annotated.
     type_hint : Type
         The input type hint to parse.
 
@@ -309,7 +313,8 @@ def parse_type_hint(type_hint):
     optional, _type_hint = _strip_hint_optional(_type_hint)
 
     collection, variable_type = _strip_hint_collection(_type_hint)
-
+    if variable_type == Self:
+        variable_type = cls
     return Annotation(
         state=state,
         optional=optional,
@@ -412,7 +417,18 @@ def parse_value(val, annot: Annotation, name=None):
     if annot.collection == List:
         if not isinstance(val, list):
             raise ValueError(f"Invalid type {type(val)} for type List")
-        return [annot.variable_type(_v) for _v in val]
+        if annot.variable_type in ALLOWED_TYPES or issubclass(
+            annot.variable_type, Enum
+        ):
+            return_list = []
+            for _v in val:
+                return_list.append(annot.variable_type(_v))
+            return return_list
+        if issubclass(type(annot.variable_type), Type):
+            _kwargs = annot._asdict()
+            _kwargs["collection"] = Type
+            return [parse_value(_v, Annotation(**_kwargs)) for _v in val]
+        raise ValueError(f"Invalid type {type(annot.variable_type)} and field {name}")
     if annot.collection == Tuple:
         assert len(val) == len(
             annot.variable_type

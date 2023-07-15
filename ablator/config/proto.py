@@ -1,18 +1,11 @@
-# TODO fix mypy that does not recognize correctly the types i.e. Stateless
 from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import (
     Optional,
     Stateless,
     Literal,
-    Tuple,
-    List,
-    Enum,
-    Dict,
 )
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import SchedulerConfig
-from ablator.modules.storage.cloud import GcpConfig
-from ablator.modules.storage.remote import RemoteConfig
 
 
 @configclass
@@ -128,86 +121,3 @@ class RunConfig(ConfigBase):
         model_uid = self.model_config.uid
         uid = f"{train_uid}_{model_uid}"
         return uid
-
-
-class SearchType(Enum):
-    """
-    Type of search space.
-    """
-
-    integer = "int"
-    numerical = "float"
-
-
-@configclass
-class SearchSpace(ConfigBase):
-    """
-    Search space configuration.
-    """
-
-    value_range: Optional[Tuple[str, str]]
-    categorical_values: Optional[List[str]]
-    value_type: SearchType = SearchType.numerical
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        assert (
-            self.value_range is None or self.categorical_values is None
-        ), "Can not specify value_range and categorical_values for SearchSpace."
-
-
-class SearchAlgo(Enum):
-    """
-    Type of search algorithm.
-    """
-
-    random = "random"
-    tpe = "tpe"
-
-
-class Optim(Enum):
-    """
-    Type of optimization direction.
-    """
-
-    min = "min"
-    max = "max"
-
-
-@configclass
-class ParallelConfig(RunConfig):
-    """
-    Parallel training configuration. ``{"val_loss": "min"}``
-
-    Attributes
-    ----------
-    total_trials: int
-        total number of trials.
-    concurrent_trials: int
-        number of trials to run concurrently.
-    search_space: Dict[SearchSpace]
-        search space for hyperparameter search,
-        eg. ``{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}``
-    optim_metrics: Dict[Optim]
-        metrics to optimize, eg. ``{"val_loss": "min"}``
-    search_algo: SearchAlgo = SearchAlgo.tpe
-        type of search algorithm.
-    ignore_invalid_params: bool = False
-        whether to ignore invalid parameters when sampling.
-    remote_config: Optional[RemoteConfig] = None
-        remote storage configuration.
-    gcp_config: Optional[GcpConfig] = None
-        gcp configuration.
-
-    """
-
-    total_trials: int
-    concurrent_trials: Stateless[int]
-    search_space: Dict[SearchSpace]
-    optim_metrics: Stateless[Dict[Optim]]
-    gpu_mb_per_experiment: Stateless[int]
-    cpus_per_experiment: Stateless[float]
-    search_algo: Stateless[SearchAlgo] = SearchAlgo.tpe
-    ignore_invalid_params: Stateless[bool] = False
-    remote_config: Stateless[Optional[RemoteConfig]] = None
-    gcp_config: Stateless[Optional[GcpConfig]] = None
