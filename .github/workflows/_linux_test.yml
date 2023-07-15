@@ -24,6 +24,10 @@ jobs:
         ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
         cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
         sudo apt-get install -y rsync
+    - name: Setup rclone
+      run: |
+        apt-get install -y unzip
+        sudo -v ; curl https://rclone.org/install.sh | sudo bash    
     - name: Test with pytest
       run: |
         pip install pytest
