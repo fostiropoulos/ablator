@@ -85,7 +85,7 @@ def test_summary_logger(tmp_path: Path):
     assert_error_msg_fn(
         lambda: SummaryLogger(c2, tmp_path, resume=True),
         lambda msg: msg.startswith(
-            "Different supplied run_config than existing run_config"
+            "Differences between configurations:"
         ),
     )
     l = SummaryLogger(c, tmp_path, resume=True)
@@ -262,7 +262,7 @@ def test_results_json(tmp_path: Path):
 
 
 if __name__ == "__main__":
-    test_results_json(Path("/tmp/"))
-    # test_summary_logger(Path("/tmp/"))
+    # test_results_json(Path("/tmp/"))
+    test_summary_logger(Path("/tmp/"))
 
     pass
