@@ -1,3 +1,5 @@
+import contextlib
+import os
 import random
 import sys
 import typing as ty
@@ -6,8 +8,16 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from pynvml.smi import nvidia_smi as smi
 from torch import nn
+
+try:
+    # pylint: disable
+    with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
+        from pynvml.smi import nvidia_smi as smi
+        # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
+# pylint: disable=broad-exception-caught
+except Exception as e:
+    smi = None
 
 
 class Dummy:
@@ -233,6 +243,7 @@ def parse_device(device: ty.Union[str, list[str]]):
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
+# TODO not a good initialization. Performs poorly for some networks.
 def init_weights(module: nn.Module):
     """
     Initialize the weights of a module.
@@ -265,19 +276,9 @@ def init_weights(module: nn.Module):
         module.weight.data.fill_(1.0)
 
 
-def get_gpu_max_mem() -> list[int]:
-    """
-    Get the maximum memory of all available GPUs.
-
-    Returns
-    -------
-    list[int]
-        A list of the maximum memory for each GPU.
-    """
-    return get_gpu_mem(mem_type="total")
-
-
-def get_gpu_mem(mem_type: ty.Literal["used", "total", "free"] = "total") -> list[int]:
+def get_gpu_mem(
+    mem_type: ty.Literal["used", "total", "free"] = "total"
+) -> dict[str, int]:
     """
     Get the memory information of all available GPUs.
 
@@ -291,11 +292,17 @@ def get_gpu_mem(mem_type: ty.Literal["used", "total", "free"] = "total") -> list
     list[int]
         A list of memory values for each GPU, depending on the specified memory type.
     """
-    # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
-    instance = smi.getInstance()
-    memory = []
-    for gpu in instance.DeviceQuery()["gpu"]:
-        memory.append(gpu["fb_memory_usage"][mem_type])
+    memory: dict[str, int] = {}
+    if smi is not None:
+        instance = smi.getInstance()
+        device = instance.DeviceQuery()
+    else:
+        return memory
+    if not "gpu" in device:
+        return memory
+    for gpu in device["gpu"]:
+        device_id = f"{gpu['product_name']}_{gpu['id']}"
+        memory[device_id] = int(gpu["fb_memory_usage"][mem_type])
     return memory
 
 
