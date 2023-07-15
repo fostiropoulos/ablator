@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import torch
 
-from ablator.main.configs import RunConfig
+from ablator.config.proto import RunConfig
 from ablator.main.model.wrapper import ModelWrapper
 
 
@@ -52,14 +52,19 @@ class ProtoTrainer:
         shared between trainers.
         """
 
+    def _mount(self):
+        # TODO
+        # mount experiment directory
+        # https://rclone.org/commands/rclone_mount/
+        pass
+
     def _init_state(self):
         """
         Initialize the data state of the wrapper to force downloading and processing any data artifacts
         in the main train process as opposed to inside the wrapper.
         """
+        self._mount()
         self.pre_train_setup()
-        mock_wrapper = copy.deepcopy(self.wrapper)
-        mock_wrapper._init_state(run_config=copy.deepcopy(self.run_config), debug=True)
 
     def launch(self, debug: bool = False):
         """
@@ -79,13 +84,7 @@ class ProtoTrainer:
         """
         self._init_state()
         metrics = self.wrapper.train(run_config=self.run_config, debug=debug)
-        self.sync()
         return metrics
-
-    def sync(self):
-        """
-        Syncs training artifacts with external logging services.
-        """
 
     def evaluate(self):
         """
@@ -97,8 +96,9 @@ class ProtoTrainer:
         metrics : TrainMetrics
             Metrics returned after evaluation.
         """
+        self._init_state()
+        # TODO load model if it is un-trained
         metrics = self.wrapper.evaluate(self.run_config)
-        self.sync()
         return metrics
 
     def smoke_test(self, config=None):
