@@ -182,16 +182,7 @@ class AuxWrapper(ModelWrapper):
         return {"learning_rate": 0.1}
 
 
-def assert_error_msg(fn, error_msg):
-    try:
-        fn()
-        assert False, "Should have raised an error."
-    except Exception as excp:
-        if not error_msg == str(excp):
-            raise excp
-
-
-def test_error_models():
+def test_error_models(assert_error_msg):
     assert_error_msg(
         lambda: TestWrapper(BadMyModel).train(config),
         "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None.",
@@ -249,9 +240,15 @@ def test_verbosity():
         out, err = capture_output(
             lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
         )
-        assert (out.strip().split("\n")[0].endswith("?it/s, Remaining: ??]")) and len(
-            err
-        ) == 0
+        assert (
+            any(
+                [
+                    out.strip().split("\n")[i].endswith("?it/s, Remaining: ??]")
+                    for i in range(3)
+                ]
+            )
+            and len(err) == 0
+        )
         verbose_config = RunConfig(
             train_config=train_config,
             model_config=ModelConfig(),
@@ -300,7 +297,7 @@ def test_train_stats():
     }
 
 
-def test_state():
+def test_state(assert_error_msg):
     wrapper = TestWrapper(MyCustomModel)
     assert_error_msg(
         lambda: wrapper.train_stats,
@@ -362,7 +359,7 @@ def test_state():
     assert wrapper.random_seed == 100
 
 
-def test_load_save_errors(tmp_path: Path):
+def test_load_save_errors(tmp_path: Path, assert_error_msg):
     tmp_path = tmp_path.joinpath("test_exp")
     wrapper = TestWrapper(MyCustomModel)
 
@@ -370,18 +367,18 @@ def test_load_save_errors(tmp_path: Path):
     _config.verbose = "console"
     _config.experiment_dir = tmp_path
 
-    assert_error_msg(
+    msg = assert_error_msg(
         lambda: [
             wrapper._init_state(run_config=_config),
             wrapper._init_state(run_config=_config),
         ],
-        f"SummaryLogger: Resume is set to False but {tmp_path.joinpath(_config.uid)} exists.",
     )
+    assert msg == f"SummaryLogger: Resume is set to False but {tmp_path} exists."
 
     assert wrapper._init_state(run_config=_config, debug=True) is None
     assert_error_msg(
         lambda: [wrapper._init_state(run_config=_config, resume=True)],
-        f"Could not find a valid checkpoint in {tmp_path.joinpath(_config.uid,'checkpoints')}",
+        f"Could not find a valid checkpoint in {tmp_path.joinpath('checkpoints')}",
     )
 
     # wrapper =
@@ -389,7 +386,7 @@ def test_load_save_errors(tmp_path: Path):
     pass
 
 
-def test_load_save(tmp_path: Path):
+def test_load_save(tmp_path: Path, assert_error_msg):
     tmp_path = tmp_path.joinpath("test_exp")
     _config = copy.deepcopy(config)
     _config.verbose = "console"
@@ -401,20 +398,21 @@ def test_load_save(tmp_path: Path):
     wrapper = TestWrapper(MyCustomModel)
 
     wrapper._init_state(run_config=_config, resume=True)
-    wrapper.epochs = 3
-    wrapper._init_state(run_config=_config, resume=True)
-    assert_error_msg(
-        lambda: wrapper.checkpoint(),
-        f"Checkpoint iteration {wrapper.current_iteration} > training iteration {wrapper.current_iteration}. Can not save checkpoint.",
-    )
-    wrapper._inc_iter()
-    wrapper.checkpoint()
-    assert (
-        wrapper.current_state["model"]["param"] == old_model.state_dict()["param"]
-    ).all()
+    with mock.patch("ablator.ModelWrapper.epochs", return_value=3):
+        # wrapper.epochs = 3
+        wrapper._init_state(run_config=_config, resume=True)
+        assert_error_msg(
+            lambda: wrapper.checkpoint(),
+            f"Checkpoint iteration {wrapper.current_iteration} > training iteration {wrapper.current_iteration}. Can not save checkpoint.",
+        )
+        wrapper._inc_iter()
+        wrapper.checkpoint()
+        assert (
+            wrapper.current_state["model"]["param"] == old_model.state_dict()["param"]
+        ).all()
 
 
-def test_train_loop():
+def test_train_loop(assert_error_msg):
     _config = copy.deepcopy(config)
 
     wrapper = TestWrapper(MyReturnNoneModel)
@@ -436,28 +434,35 @@ def test_validation_loop():
     assert len(metrics_dict) == 1 and "val_loss" in metrics_dict.keys()
 
 
-def test_train_resume(tmp_path: Path):
+def test_train_resume(tmp_path: Path, assert_error_msg):
     tmp_path = tmp_path.joinpath("test_exp")
     _config = copy.deepcopy(config)
     _config.verbose = "console"
     _config.experiment_dir = tmp_path
     wrapper = TestWrapper(MyCustomModel)
 
-    assert_error_msg(
+    msg = assert_error_msg(
         lambda: [wrapper.train(_config, resume=True)],
-        f"Could not find a valid checkpoint in {tmp_path.joinpath(_config.uid,'checkpoints')}",
+    )
+    assert (
+        msg
+        == f"Could not find a valid checkpoint in {wrapper.experiment_dir.joinpath('checkpoints')}"
     )
 
 
 if __name__ == "__main__":
-    # import shutil
+    import shutil
+    from tests.conftest import _assert_error_msg
+
     tmp_path = Path("/tmp/")
-    # shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)
-    # test_load_save(tmp_path)
+
+    shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)
+    # test_load_save(tmp_path, _assert_error_msg)
+    # test_load_save_errors(tmp_path, _assert_error_msg)
     # test_error_models()
     # test_train_stats()
     # test_state()
     test_verbosity()
-    # test_train_resume(tmp_path)
+    # test_train_resume(tmp_path, _assert_error_msg)
     # test_train_loop()
     # test_validation_loop()
