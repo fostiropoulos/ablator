@@ -52,6 +52,7 @@ def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type
             if not isinstance(child, tuple(forbidden_layer_types))
         ]
     # Add model specific parameters (defined with nn.Parameter) since they are not in any child.
+    # pylint: disable
     result += list(model._parameters.keys())
     return result
 
