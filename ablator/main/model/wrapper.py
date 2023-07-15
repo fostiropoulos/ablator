@@ -13,7 +13,7 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 import ablator.utils.base as butils
-from ablator.main.configs import ModelConfig, RunConfig, TrainConfig
+from ablator.config.proto import ModelConfig, RunConfig, TrainConfig
 from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauError
 from ablator.modules.metrics.main import LossDivergedError, TrainMetrics
 from ablator.modules.optimizer import OptimizerConfig
@@ -587,6 +587,13 @@ class ModelWrapper(ModelBase):
         """
         return self.epoch_len * self.epochs
 
+    @property
+    def epochs(self):
+        """
+        The total number of epochs.
+        """
+        return self._epochs
+
     def train_loop(self, smoke_test=False):
         """
         Train the model in many steps, evaluate the model and log the metrics for each iteration.
@@ -762,6 +769,7 @@ class ModelWrapper(ModelBase):
             The loss value.
         """
         if loss is not None:
+            # pylint: disable=no-member
             loss = torch.mean(loss)
             if self.amp:
                 scaler.scale(loss).backward()
@@ -855,6 +863,7 @@ class ModelWrapper(ModelBase):
                 if outputs is not None:
                     metrics.append_batch(tag=tag, **outputs)
                 if loss is not None:
+                    # pylint: disable=no-member
                     val_metrics["loss"] = torch.mean(loss).item()
 
                 metrics.update_ma_metrics(val_metrics, tag=tag)

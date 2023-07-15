@@ -9,13 +9,14 @@ from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
 
+from filelock import FileLock
 import setproctitle
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
 import ablator.utils.base as butils
-from ablator.main.configs import RunConfig
+from ablator.config.proto import RunConfig
 from ablator.modules.loggers.main import SummaryLogger
 from ablator.modules.metrics.main import TrainMetrics
 from ablator.utils.base import Dummy
@@ -130,7 +131,6 @@ class ModelBase(ABC):
         self.test_dataloader: DataLoader | None = None
         self.logger: ty.Union[SummaryLogger, Dummy]
         self.device: str
-        self.model_dir: Path | None = None
         self.experiment_dir: Path | None = None
         self.autocast: torch.autocast
         self.verbose: ty.Literal["progress", "console", "silent"]
@@ -150,6 +150,10 @@ class ModelBase(ABC):
         self.current_iteration = 0
         self.best_iteration = 0
         self.best_loss = float("inf")
+
+        # internal properties
+        self._uid: str
+        self._epochs: int
 
     @property
     def train_stats(self) -> OrderedDict:
@@ -254,24 +258,7 @@ class ModelBase(ABC):
         str
             A string representing the unique identifier of the current run configuration.
         """
-        return self.run_config.uid
-
-    def _get_process_name(self) -> str:
-        """
-        Retrieves the process name based on the model directory, experiment directory, or UID.
-
-        Returns
-        -------
-        str
-            The process name for the current instance.
-        """
-        if self.model_dir is not None and self.experiment_dir is not None:
-            proc_title = self.model_dir.relative_to(
-                self.experiment_dir.parent
-            ).as_posix()
-        else:
-            proc_title = self.uid
-        return proc_title
+        return getattr(self, "_uid", self.run_config.uid)
 
     @abstractmethod
     def create_model(
@@ -388,19 +375,21 @@ class ModelBase(ABC):
         resume : bool, optional
             If True, the logger will resume logging from a previous experiment, by default False.
         debug : bool, optional
-            If True, logger will log additional debug information, by default False.
+            If True, no artifacts will be saved by the ``SummaryLogger``, by default False.
         """
         self.logger = SummaryLogger(
             run_config=self.run_config,
-            model_dir=self.model_dir,
+            experiment_dir=self.experiment_dir if not debug else None,
             resume=resume,
             keep_n_checkpoints=self.run_config.keep_n_checkpoints,
             verbose=self.run_config.verbose == "console",
         )
         if butils.debugger_is_active() and not debug:
-            self.logger.warn("Debug flag is False but running in debug mode.")
-        if self.model_dir is not None:
-            self.logger.info(f"Model directory: {self.model_dir}")
+            self.logger.warn("Debug flag is False but running debugger.")
+        elif debug:
+            self.logger.warn("Debug flag is True, will not save any checkpoints.")
+        if self.experiment_dir is not None:
+            self.logger.info(f"Model directory: {self.experiment_dir}")
 
     def _make_dataloaders(self, run_config: RunConfig):
         """
@@ -415,9 +404,9 @@ class ModelBase(ABC):
         assert (
             len(self.train_dataloader) > 0
         ), "Must define a train dataloader in `make_dataloader`"
-        self.epochs = self.run_config.train_config.epochs
+        self._epochs = self.run_config.train_config.epochs
 
-    def _init_class_attributes(self, debug=False):
+    def _init_class_attributes(self):
         """
         Initializes the class attributes based on the provided configuration.
 
@@ -425,19 +414,16 @@ class ModelBase(ABC):
         warnings handling, early stopping, metrics, experiment and model directories, and
         process title.
 
-        Parameters
-        ----------
-        debug : bool, optional
-            If True, disables the experiment and model directories creation, by default False.
         """
         run_config = self.run_config
         self.device = butils.parse_device(run_config.device)
 
         self.amp = run_config.amp
         if self.device == "cpu" and self.amp:
-            raise ValueError(
-                "AMP is not supported for CPU. You will need to set `run_config.amp` to False."
+            self.logger.warn(
+                "Automatic Mixed Precision (AMP) is not supported for CPU. Setting `amp` to False."
             )
+            self.amp = False
 
         self.autocast = torch.autocast(
             enabled=self.amp,
@@ -466,14 +452,10 @@ class ModelBase(ABC):
             static_aux_metrics=self.train_stats,
             moving_aux_metrics=["loss"] + getattr(self, "aux_metric_names", []),
         )
-        if self.run_config.experiment_dir is not None and not debug:
+        if self.run_config.experiment_dir is not None:
             self.experiment_dir = Path(self.run_config.experiment_dir)
-            self.model_dir = self.experiment_dir.joinpath(self.uid)
 
-        if debug and (self.experiment_dir is not None or self.model_dir is not None):
-            self.experiment_dir = self.model_dir = None
-
-        setproctitle.setproctitle(self._get_process_name())
+        setproctitle.setproctitle(self.uid)
 
     def _init_model_state(self, resume: bool = False, smoke_test: bool = False):
         """
@@ -542,17 +524,27 @@ class ModelBase(ABC):
             butils.set_seed(self.random_seed)
         self.run_config = run_config
         _run_config = copy.deepcopy(run_config)
-        self._make_dataloaders(self.run_config)
+        # TODO unit test
+        with FileLock(Path.home().joinpath(".data-lock-abtorch")):
+            self._make_dataloaders(self.run_config)
 
         self.run_config = self.config_parser(run_config)
-        self._init_class_attributes(debug=debug)
+        self._init_class_attributes()
         # Does not create log artifacts during smoke test
         if not smoke_test:
             self._init_logger(resume=resume, debug=debug)
         else:
             self.logger = butils.Dummy()
+
+        if debug and self.experiment_dir is not None:
+            self.logger.warn(
+                f"Experiment Directory specified {self.experiment_dir} while running on debug mode. "
+                 "You can disable the file system by setting `run_config.experiment_dir=False`. "
+            )
         self._init_model_state(resume, smoke_test or debug)
         self.run_config.assert_state(_run_config)
+        self.run_config.assert_unambigious()
+        # TODO freeze config here
         if self.verbose == "progress" and not smoke_test:
             self.progress_bar = ProgressBar(
                 total=self.epoch_len,
@@ -589,6 +581,7 @@ class ModelBase(ABC):
                     self._load_model(_checkpoint, model_only=False)
                     current_checkpoint = _checkpoint
                     break
+                # pylint: disable=broad-exception-caught
                 except Exception as e:
                     if i == len(latest_checkpoints) - 1:
                         # if it is the last checkpoint raise exception
