@@ -10,7 +10,7 @@ import ray
 from joblib import Memory
 
 from ablator.config.main import ConfigBase
-from ablator.main.configs import Optim, ParallelConfig, SearchSpace
+from ablator.config.mp import Optim, ParallelConfig, SearchSpace
 
 
 def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
@@ -70,7 +70,10 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
         )
         df = pd.read_json(json_path)
         df = pd.concat([pd.DataFrame([experiment_attributes] * len(df)), df], axis=1)
-        return df.reset_index()
+        df.index.name = "step"
+        df.reset_index(inplace=True)
+        df["trial_uid"] = json_path.parent.name
+        return df.set_index(["trial_uid", "step"])
 
     except builtins.Exception:
         traceback.print_exc()
@@ -198,7 +201,7 @@ class Results:
         list[str]
             list of optimize metric names
         """
-        return list(map(str, self.metric_map.values()))
+        return [str(v) for v in self.metric_map.values()]
 
     def _parse_results(
         self,
@@ -226,7 +229,7 @@ class Results:
     def read_results(
         cls,
         config_type: type[ConfigBase],
-        experiment_dir: Path,
+        experiment_dir: Path | str,
         num_cpus=None,
     ) -> pd.DataFrame:
         """
@@ -238,7 +241,7 @@ class Results:
         ----------
         config_type : type[ConfigBase]
             The configuration class
-        experiment_dir : Path
+        experiment_dir : Path | str
             The experiment directory
         num_cpus : int, optional
             Number of CPUs to use for ray processing, by default ``None``
@@ -249,7 +252,7 @@ class Results:
             A dataframe of all the results
         """
         results = []
-        json_paths = list(experiment_dir.rglob("results.json"))
+        json_paths = list(Path(experiment_dir).rglob("results.json"))
         if len(json_paths) == 0:
             raise RuntimeError(f"No results found in {experiment_dir}")
         cpu_count = mp.cpu_count()
