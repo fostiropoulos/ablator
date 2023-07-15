@@ -9,16 +9,12 @@ import pandas as pd
 from PIL import Image
 
 import ablator.utils.file as futils
-from ablator.main.configs import RunConfig
+from ablator.config.proto import RunConfig
 from ablator.modules.loggers import LoggerBase
 from ablator.modules.loggers.file import FileLogger
 from ablator.modules.loggers.tensor import TensorboardLogger
 from ablator.modules.metrics.main import TrainMetrics
 from ablator.modules.metrics.stores import MovingAverage
-
-
-class DuplicateRunError(Exception):
-    pass
 
 
 class SummaryLogger:
@@ -55,8 +51,8 @@ class SummaryLogger:
         Path to the log file.
     dashboard : LoggerBase | None
         Dashboard logger.
-    model_dir : Path | None
-        the model directory.
+    experiment_dir : Path | None
+        the trial directory.
     result_json_path : Path | None
         Path to the results JSON file.
     """
@@ -73,7 +69,7 @@ class SummaryLogger:
     def __init__(
         self,
         run_config: RunConfig,
-        model_dir: str | None | Path = None,
+        experiment_dir: str | None | Path = None,
         resume: bool = False,
         keep_n_checkpoints: int | None = None,
         verbose: bool = True,
@@ -85,8 +81,8 @@ class SummaryLogger:
         ----------
         run_config : RunConfig
             The run configuration.
-        model_dir : str | None | Path, optional
-            Path to the model directory, by default ``None``.
+        experiment_dir : str | None | Path, optional
+            Path to the trial directory, by default ``None``.
         resume : bool, optional
             Whether to resume from an existing model directory, by default ``False``.
         keep_n_checkpoints : int | None, optional
@@ -104,29 +100,23 @@ class SummaryLogger:
         self.checkpoint_iteration: dict[str, dict[str, int]] = {}
         self.log_file_path: Path | None = None
         self.dashboard: LoggerBase | None = None
-        self.model_dir: Path | None = None
+        self.experiment_dir: Path | None = None
         self.result_json_path: Path | None = None
         self.CHKPT_DIRS = {}
-        if model_dir is not None:
-            self.model_dir = Path(model_dir)
-            if not resume and self.model_dir.exists():
-                raise DuplicateRunError(
-                    f"SummaryLogger: Resume is set to {resume} but {self.model_dir} exists."
+        if experiment_dir is not None:
+            self.experiment_dir = Path(experiment_dir)
+            if not resume and self.experiment_dir.exists():
+                raise FileExistsError(
+                    f"SummaryLogger: Resume is set to {resume} but {self.experiment_dir} exists."
                 )
-            if resume and self.model_dir.exists():
+            if resume and self.experiment_dir.exists():
                 _run_config = type(run_config).load(
-                    self.model_dir.joinpath(self.CONFIG_FILE_NAME)
+                    self.experiment_dir.joinpath(self.CONFIG_FILE_NAME)
                 )
-                assert (
-                    run_config.train_config == _run_config.train_config
-                    and run_config.model_config == _run_config.model_config
-                ), (
-                    "Different supplied run_config than"
-                    f" existing run_config {self.model_dir}. \n{run_config}----\n{_run_config}"
-                )
-
+                run_config.train_config.assert_state(_run_config.train_config)
+                run_config.model_config.assert_state(_run_config.model_config)
                 metadata = json.loads(
-                    self.model_dir.joinpath(self.METADATA_JSON).read_text(
+                    self.experiment_dir.joinpath(self.METADATA_JSON).read_text(
                         encoding="utf-8"
                     )
                 )
@@ -134,13 +124,13 @@ class SummaryLogger:
                 self.log_iteration = metadata["log_iteration"]
 
             (self.summary_dir, *chkpt_dirs) = futils.make_sub_dirs(
-                model_dir, self.SUMMARY_DIR_NAME, *self.CHKPT_DIR_VALUES
+                experiment_dir, self.SUMMARY_DIR_NAME, *self.CHKPT_DIR_VALUES
             )
             for name, path in zip(self.CHKPT_DIR_NAMES, chkpt_dirs):
                 self.CHKPT_DIRS[name] = path
 
-            self.result_json_path = self.model_dir / self.RESULTS_JSON_NAME
-            self.log_file_path = self.model_dir.joinpath(self.LOG_FILE_NAME)
+            self.result_json_path = self.experiment_dir / self.RESULTS_JSON_NAME
+            self.log_file_path = self.experiment_dir.joinpath(self.LOG_FILE_NAME)
             self.dashboard = self._make_dashboard(self.summary_dir, run_config)
             self._write_config(run_config)
             self._update_metadata()
@@ -150,9 +140,9 @@ class SummaryLogger:
         """
         Update the metadata file.
         """
-        if self.model_dir is None:
+        if self.experiment_dir is None:
             return
-        metadata_path = self.model_dir.joinpath(self.METADATA_JSON)
+        metadata_path = self.experiment_dir.joinpath(self.METADATA_JSON)
         metadata_path.write_text(
             json.dumps(
                 {
@@ -194,9 +184,9 @@ class SummaryLogger:
         run_config : RunConfig
             The run configuration.
         """
-        if self.model_dir is None:
+        if self.experiment_dir is None:
             return
-        self.model_dir.joinpath(self.CONFIG_FILE_NAME).write_text(
+        self.experiment_dir.joinpath(self.CONFIG_FILE_NAME).write_text(
             str(run_config), encoding="utf-8"
         )
 
@@ -353,7 +343,7 @@ class SummaryLogger:
         AssertionError
             If the provided ``itr`` is not larger than the current iteration associated with the checkpoint.
         """
-        if self.model_dir is None:
+        if self.experiment_dir is None:
             return
         dir_name = "best" if is_best else "recent"
         if self.keep_n_checkpoints > 0:
@@ -371,7 +361,7 @@ class SummaryLogger:
                 ), f"Checkpoint iteration {cur_iter} > training iteration {itr}. Can not save checkpoint."
                 self.checkpoint_iteration[dir_name][file_name] = itr
 
-            dir_path = self.model_dir.joinpath(self.CHKPT_DIRS[dir_name])
+            dir_path = self.experiment_dir.joinpath(self.CHKPT_DIRS[dir_name])
 
             file_path = dir_path.joinpath(f"{file_name}_{itr:010}.pt")
 
@@ -389,10 +379,10 @@ class SummaryLogger:
         keep_n_checkpoints : int
             Number of checkpoints to keep.
         """
-        if self.model_dir is None:
+        if self.experiment_dir is None:
             return
         for chkpt_dir in self.CHKPT_DIR_VALUES:
-            dir_path = self.model_dir.joinpath(chkpt_dir)
+            dir_path = self.experiment_dir.joinpath(chkpt_dir)
             futils.clean_checkpoints(dir_path, keep_n_checkpoints)
 
     def info(self, *args, **kwargs):
