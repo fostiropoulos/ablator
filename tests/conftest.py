@@ -162,6 +162,9 @@ class DockerRayCluster:
             v.kill()
         self.cs = {}
 
+@pytest.fixture(scope="function")
+def docker_ray_cluster():
+    return DockerRayCluster
 
 @pytest.fixture(scope="function")
 def ray_cluster():

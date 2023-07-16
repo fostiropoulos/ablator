@@ -26,7 +26,6 @@ from ablator.main.state.store import TrialState
 from ablator.modules.loggers.file import FileLogger
 from ablator.mp.node_manager import NodeManager, Resource
 from ablator.utils.base import Dummy
-from tests.conftest import DockerRayCluster
 
 LR_ERROR_LIMIT = 5
 
@@ -40,11 +39,14 @@ WORKING_DIR = Path(__file__).parent.as_posix()
 
 
 @pytest.fixture(scope="function")
-def mp_ray_cluster():
-    cluster = DockerRayCluster()
+def mp_ray_cluster(docker_ray_cluster):
+    if ray.is_initialized():
+        ray.shutdown()
+    cluster = docker_ray_cluster()
     cluster.setUp(WORKING_DIR)
     yield cluster
     cluster.tearDown()
+    ray.shutdown()
 
 
 class MyCustomException(Exception):
@@ -282,12 +284,7 @@ def test_mp_sampling_limits(tmp_path: Path, error_wrapper):
 
 
 @pytest.mark.order(-1)
-def test_mp_run(
-    tmp_path: Path,
-    assert_error_msg,
-    mp_ray_cluster,
-    error_wrapper
-):
+def test_mp_run(tmp_path: Path, assert_error_msg, mp_ray_cluster, error_wrapper):
     n_trials = 10
     config = make_config(tmp_path, search_space_limit=n_trials)
     config.experiment_dir = tmp_path
@@ -423,7 +420,9 @@ def test_zombie_remotes(tmp_path: Path, wrapper):
     assert prev_memory_allocated == torch.cuda.memory_allocated()
 
 
-def test_train_main_remote(tmp_path: Path, assert_error_msg, capture_output, error_wrapper, wrapper):
+def test_train_main_remote(
+    tmp_path: Path, assert_error_msg, capture_output, error_wrapper, wrapper
+):
     config = make_config(tmp_path)
     config.experiment_dir = tmp_path.joinpath("mock_dir")
 
@@ -611,6 +610,7 @@ def _mp_test(tmp_path):
 
 
 if __name__ == "__main__":
+    from tests.conftest import DockerRayCluster
     from tests.conftest import _assert_error_msg, _capture_output
 
     tmp_path = Path("/tmp/experiment_dir")
