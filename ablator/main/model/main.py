@@ -539,7 +539,7 @@ class ModelBase(ABC):
         if debug and self.experiment_dir is not None:
             self.logger.warn(
                 f"Experiment Directory specified {self.experiment_dir} while running on debug mode. "
-                 "You can disable the file system by setting `run_config.experiment_dir=False`. "
+                "You can disable the file system by setting `run_config.experiment_dir=False`. "
             )
         self._init_model_state(resume, smoke_test or debug)
         self.run_config.assert_state(_run_config)

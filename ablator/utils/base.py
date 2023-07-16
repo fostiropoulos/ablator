@@ -16,7 +16,7 @@ try:
         from pynvml.smi import nvidia_smi as smi
         # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
 # pylint: disable=broad-exception-caught
-except Exception as e:
+except Exception:
     smi = None
 
 
@@ -298,7 +298,7 @@ def get_gpu_mem(
         device = instance.DeviceQuery()
     else:
         return memory
-    if not "gpu" in device:
+    if "gpu" not in device:
         return memory
     for gpu in device["gpu"]:
         device_id = f"{gpu['product_name']}_{gpu['id']}"

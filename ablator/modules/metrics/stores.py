@@ -103,7 +103,7 @@ class ArrayStore(Sequence):
         ), f"Invalid ArrayStore value type {type(val)}"
         self.arr.append(val)
         if len(self.arr) > self.limit:
-            self.arr = self.arr[-self.limit :]
+            self.arr = self.arr[-self.limit:]
         elif (
             self.memory_limit is not None
             and sys.getsizeof(self.arr) > self.memory_limit
