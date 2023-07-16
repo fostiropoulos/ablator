@@ -1,3 +1,7 @@
+"""
+File is obsolete to be replaced with rclone. TODO
+"""
+# pylint: skip-file
 import os
 import signal
 import subprocess

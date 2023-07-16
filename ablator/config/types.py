@@ -358,6 +358,7 @@ def _parse_class(cls, kwargs):
     return kwargs
 
 
+# pylint: disable=too-complex
 def parse_value(val, annot: Annotation, name=None):
     """
     Parses a value based on the given annotation.

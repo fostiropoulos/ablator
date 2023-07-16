@@ -20,7 +20,7 @@ from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
 from ablator.utils.progress_bar import RemoteProgressBar
 
-
+# pylint: disable=too-many-public-methods
 class ModelWrapper(ModelBase):
     """
     A wrapper around model_class that removes training boiler-plate code, with over-writable functions

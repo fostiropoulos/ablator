@@ -247,6 +247,7 @@ class ConfigBase:
         annot: dict[str, Annotation] = self.get_val_with_dot_path(annot_dot_path)
         return annot[element].variable_type
 
+    # pylint: disable=too-complex
     def make_dict(
         self,
         annotations: dict[str, Annotation],

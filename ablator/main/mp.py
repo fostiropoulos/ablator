@@ -3,7 +3,6 @@ import copy
 import multiprocessing as mp
 import os
 import shutil
-import subprocess
 import sys
 import traceback
 import types as tys
@@ -17,7 +16,6 @@ import numpy as np
 import ray
 import torch
 
-import ablator as ablator_module
 import ablator.utils.base as butils
 from ablator.config.mp import ParallelConfig
 from ablator.main.model.main import CheckpointNotFoundError, TrainPlateauError
@@ -32,6 +30,8 @@ from ablator.utils.base import get_gpu_mem
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 
 
+# TODO refactor into a seperate file and reduce complexity
+# pylint: disable=too-complex,broad-exception-caught
 def train_main_remote(
     model: ModelWrapper,
     run_config: ParallelConfig,
@@ -191,15 +191,15 @@ class ParallelTrainer(ProtoTrainer):
 
         Parameters
         ----------
+        wrapper: ModelWrapper
+            The model wrapper for the ParallelTrainer
         run_config : ParallelConfig
             The runtime configuration for this trainer.
-        *args : tuple
-            Extra arguments used for ``ProtoTrainer``
-        **kwargs : dict, optional
-            Extra arguments to  ``ProtoTrainer``, this can be ``{'wrapper': ModelWrapper}``.
         """
+
+        self.run_config: ParallelConfig
+        super().__init__(wrapper=wrapper, run_config=run_config)
         # Distributed config parser
-        self.run_config: ParallelConfig = copy.deepcopy(run_config)
         experiment_dir = self.run_config.experiment_dir or ""
         experiment_path = Path(experiment_dir).absolute().resolve()
         if not experiment_path.stem.startswith("experiment_"):
@@ -213,7 +213,6 @@ class ParallelTrainer(ProtoTrainer):
             type(self.run_config), ParallelConfig
         ), f"run_config must be of a type - { ParallelConfig.__name__} received {type(self.run_config)}"
 
-        self.wrapper = wrapper
         assert issubclass(
             type(self.wrapper), ModelWrapper
         ), f"run_config must be of a type - { ModelWrapper.__name__} received {self.wrapper}"
@@ -225,7 +224,6 @@ class ParallelTrainer(ProtoTrainer):
         self.available_resources: dict[str, Resource]
         self._progress_bar: ty.Optional[RemoteProgressBar] = None
         self._display: butils.Dummy | RemoteDisplay = butils.Dummy()
-        self._runtime_env: dict[str, str | list[str]] | None = None
         self.node_manager: NodeManager
 
     @cached_property
@@ -267,18 +265,6 @@ class ParallelTrainer(ProtoTrainer):
 
         return 0.001
 
-    def _kill_idle(self):
-        """
-        Kill any ray processes that are idle.
-        """
-        p = subprocess.Popen(
-            [
-                "ps aux | grep ray::IDLE | grep -v grep | awk '{print $2}' | xargs kill -9"
-            ],
-            shell=True,
-        )
-        os.waitpid(p.pid, 0)
-
     def _make_remote(
         self,
         trial_id: int,
@@ -289,6 +275,7 @@ class ParallelTrainer(ProtoTrainer):
     ):
         trial_uuid = f"{run_config.uid}_{str(uuid.uuid4())[:4]}"
         wrapper = copy.deepcopy(self.wrapper)
+        # pylint: disable=protected-access
         wrapper._uid = trial_uuid
         model_obj = ray.put(wrapper)
 
@@ -297,8 +284,7 @@ class ParallelTrainer(ProtoTrainer):
             num_cpus=self._cpu,
             max_calls=1,
             max_retries=max_error_retries,
-            runtime_env=self._runtime_env,
-        )(train_main_remote).options(
+        )(train_main_remote).options( # type: ignore
             resources={f"node:{node_ip}": 0.001}, name=trial_uuid
         )
         run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
@@ -399,6 +385,7 @@ class ParallelTrainer(ProtoTrainer):
         mock_wrapper = copy.deepcopy(self.wrapper)
         mock_config = copy.deepcopy(self.run_config)
         mock_config.experiment_dir = None
+        # pylint: disable=protected-access
         future = (
             ray.remote(
                 num_gpus=self._gpu,
@@ -448,6 +435,7 @@ class ParallelTrainer(ProtoTrainer):
             excluding_files = [".git/**"]
 
         if verbose == "progress":
+            # pylint: disable=no-member
             self._progress_bar = RemoteProgressBar.remote(self.total_trials)  # type: ignore
             self._display = RemoteDisplay(self._progress_bar)  # type: ignore
 
@@ -470,7 +458,8 @@ class ParallelTrainer(ProtoTrainer):
                 "excludes": [".git"] + excluding_files,
                 "py_modules": modules,
             }
-
+            # pylint: disable=cyclic-import,import-outside-toplevel
+            import ablator as ablator_module
             if modules is None:
                 modules = [ablator_module]
             if ablator_module not in modules:
@@ -490,6 +479,7 @@ class ParallelTrainer(ProtoTrainer):
         self._heartbeat()
         super()._init_state()
 
+    # pylint: disable=arguments-renamed
     def launch(  # type: ignore
         self,
         working_directory: str,
@@ -550,6 +540,8 @@ class ParallelTrainer(ProtoTrainer):
         trial_state: TrialState
         heart_beat_interval = 1
         while len(futures) > 0:
+
+            # pylint: disable=broad-exception-caught
             try:
                 done_id, futures = ray.wait(
                     futures, num_returns=1, timeout=heart_beat_interval
@@ -565,7 +557,7 @@ class ParallelTrainer(ProtoTrainer):
             except StopIteration:
                 # Reached maximum number of sample trials
                 continue
-            except builtins.Exception:
+            except Exception:
                 exception = traceback.format_exc()
                 self.logger.error(f"Unhandled Exception: {exception}")
             finally:

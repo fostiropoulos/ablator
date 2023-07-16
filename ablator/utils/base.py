@@ -11,7 +11,7 @@ import torch
 from torch import nn
 
 try:
-    # pylint: disable
+    # pylint: disable=unspecified-encoding
     with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
         from pynvml.smi import nvidia_smi as smi
         # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493

@@ -339,6 +339,7 @@ class TrainMetrics:
             preds.reset()
         return metrics
 
+    # pylint: disable=missing-param-doc
     def append_batch(self, *args, tag, **kwargs):
         """
         Appends a batch of predictions to a specific set.

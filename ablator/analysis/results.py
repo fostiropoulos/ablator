@@ -13,7 +13,7 @@ from ablator.config.main import ConfigBase
 from ablator.config.mp import Optim, ParallelConfig, SearchSpace
 
 
-def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
+def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame | None:
     """
     Read the results of an experiment and return them as a pandas DataFrame.
 
@@ -31,15 +31,10 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
 
     Returns
     -------
-    pd.DataFrame
+    pd.DataFrame | None
         A pandas DataFrame containing the processed experiment results.
+        Returns None if there was an error in reading the json_path results.
 
-    Raises
-    ------
-    Exception
-        If there is an error in processing the JSON file or loading the
-        experiment configuration, the exception will be caught and the
-        traceback will be printed.
 
     Examples
     --------
@@ -75,6 +70,7 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame:
         df["trial_uid"] = json_path.parent.name
         return df.set_index(["trial_uid", "step"])
 
+    # pylint: disable=broad-exception-caught
     except builtins.Exception:
         traceback.print_exc()
         return None
@@ -203,6 +199,8 @@ class Results:
         """
         return [str(v) for v in self.metric_map.values()]
 
+    # method-hidden because we over-write it with the cached version.
+    # pylint: disable=method-hidden
     def _parse_results(
         self,
         experiment_dir: Path,
@@ -251,7 +249,8 @@ class Results:
         pd.DataFrame
             A dataframe of all the results
         """
-        results = []
+        results: list[pd.DataFrame] = []
+        futures: list[ray.ObjectRef] = []
         json_paths = list(Path(experiment_dir).rglob("results.json"))
         if len(json_paths) == 0:
             raise RuntimeError(f"No results found in {experiment_dir}")
@@ -261,7 +260,7 @@ class Results:
         json_path = None
         for json_path in json_paths:
             if ray.is_initialized():
-                results.append(
+                futures.append(
                     ray.remote(num_cpus=num_cpus)(read_result).remote(
                         config_type, json_path
                     )
@@ -271,6 +270,6 @@ class Results:
         if ray.is_initialized() and len(json_paths) > 0:
             # smoke test
             read_result(config_type, json_path)
-            results = ray.get(results)
+            results = ray.get(futures)
             results = list(filter(lambda x: x is not None, results))
         return pd.concat(results)

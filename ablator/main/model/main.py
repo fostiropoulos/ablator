@@ -38,7 +38,7 @@ class LogStepError(Exception):
 class CheckpointNotFoundError(FileNotFoundError):
     pass
 
-
+# pylint: disable=too-many-instance-attributes
 class ModelBase(ABC):
     """
     Base class that removes training boiler-plate code with extensible support

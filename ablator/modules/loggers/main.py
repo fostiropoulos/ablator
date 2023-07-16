@@ -193,7 +193,7 @@ class SummaryLogger:
         if self.dashboard is not None:
             self.dashboard.write_config(run_config)
 
-    # pylint: disable
+    # pylint: disable=too-complex
     def _add_metric(self, k, v, itr):
         """
         Add a metric to the dashboard.

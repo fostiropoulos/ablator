@@ -1,7 +1,28 @@
-# TODO current implementation is meant to be temporary until there is a concrete replacement to
-# Optuna or better integeration.
 # type: ignore
 # pylint: skip-file
+"""
+TODO current implementation is meant to be temporary until there is a concrete replacement to
+Optuna or better integeration. The problems with using optuna are several:
+1. Optuna does not support conditional search spaces
+    for example if config-01.a=1 was sampled from [config-01,config-02] it is not taken into account when sampling
+    config.a
+
+2. Optuna internal TrialStates are limited, there are few states, and transition between the states can cause error. For example we can not report metrics None for TrialState.COMPLETE which is required when there are no optim_metrics
+for a given sampling strategy.
+
+3. Resuming the Sampler is problematic. As we have to now match the internal experiment state to that of Optuna
+sampler.
+
+4. Obscure implementation details. For example, it is unclear the benefit the distincition between `indepedent sampling` and `relative sampling`. Additional implementation nuances can be seen by inspecting the code, like
+if a parameter is already sampled for a given trial, return that parameter, which is error prone as we might need
+to for example re-sample a parameter in case of an error.
+
+5. Removing trials in case of errors or issues is not possible. For example once a trial is sampled, it is stored
+in the internal state. If the sampled configuration is invalid for whatever reason we do not want to store it.
+
+Just to name a few...
+
+"""
 import collections
 import typing as ty
 import warnings
@@ -172,7 +193,6 @@ class _Study:
         self.get_trial(trial_id).update(metrics, state)
 
 
-# TODO we need to refactor TPE and Random samplers to remove depedency to Optuna.
 class OptunaSampler(BaseSampler):
     """
     OptunaSampler this class serves as an interface for Optuna based samplers.
