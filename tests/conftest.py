@@ -1,15 +1,18 @@
 import copy
 import io
 import platform
+import random
 import re
 import time
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 import docker
+import numpy as np
 import pytest
 import ray
 import torch
+from xdist.scheduler.loadscope import LoadScopeScheduling
 
 from ablator import package_dir
 
@@ -52,20 +55,18 @@ def capture_output():
 
 
 def make_node(docker_client: docker.DockerClient, img, cluster_address):
-    cuda_args = (
-        dict(
+    cuda_args = {}
+
+    if torch.cuda.is_available():
+        cuda_args = dict(
             runtime="nvidia",
             device_requests=[
                 {"driver": "nvidia", "count": -1, "capabilities": [["gpu"]]}
             ],
         )
-        if torch.cuda.is_available()
-        else dict()
-    )
     c = docker_client.containers.run(
         img, entrypoint="/bin/bash", detach=True, tty=True, stdin_open=True, **cuda_args
     )
-    # --runtime=nvidia --gpus all
     res = c.exec_run(f"service ssh start")
     assert "Starting OpenBSD Secure Shell server" in res.output.decode()
     res = c.exec_run(f"ray start --address='{cluster_address}'")
@@ -169,3 +170,25 @@ def ray_cluster():
     yield cluster
     cluster.tearDown()
     ray.shutdown()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def seed():
+    random.seed(1)
+    np.random.seed(1)
+    torch.manual_seed(1)
+
+
+class MPScheduler(LoadScopeScheduling):
+    # NOTE must schedule all tests that use ray in the same node because of concurrency problems
+    # when having interacting ray instances.
+    def _split_scope(self, nodeid):
+        file_names = ["test_node_manager.py", "test_mp.py", "test_file_logger.py"]
+        if any(f in nodeid for f in file_names):
+            self.log(f"Scheduling {nodeid} with mp-tests.")
+            return "mp-tests"
+        return nodeid
+
+
+def pytest_xdist_make_scheduler(config, log):
+    return MPScheduler(config, log)

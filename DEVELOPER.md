@@ -105,3 +105,27 @@ To kill / clean all running containers you can run `docker kill $(docker ps -q)`
 It is recommended you do that before every test.
 
 
+## Testing changes
+
+To test changes you can run in the main directory:
+```
+pytest .
+```
+
+You can also specify additional threads to use for tests e.g.
+
+```
+pytest -n 10 .
+```
+
+where `-n` is the number of parallel tests to run.
+
+As the tests are slow (especially the ones that test for multi-processing) when developing it is a better idea to only run the tests that affect your changes and reserve running all tests at the end of your work. e.g. `pytest -n 10 tests/your_tests.py`
+
+## Contributing Guide-Lines
+
+To avoid polluting the commit-history, each commit should be tested prior to pushing. Each commit should pass the tests, pylint, mypy and flake8. In the main directory:
+
+1. pylint: `pylint ablator`
+2. mypy: `mypy ablator`
+3. flake8: `flake8 ablator`
