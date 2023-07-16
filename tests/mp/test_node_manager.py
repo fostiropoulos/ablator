@@ -4,10 +4,9 @@ import unittest
 
 import ray
 from ablator.mp.node_manager import NodeManager, Resource
-from tests.conftest import DockerRayCluster
 
 
-def test_node_manager(tmp_path: Path, ray_cluster: DockerRayCluster):
+def test_node_manager(tmp_path: Path, ray_cluster):
     # TODO py-test clean-ups
     timeout = 15
     n_nodes = 2

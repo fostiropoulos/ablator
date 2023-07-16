@@ -10,9 +10,6 @@ import pytest
 import ray
 
 from ablator.modules.loggers.file import FileLogger, RemoteFileLogger
-from ablator.modules.loggers.main import SummaryLogger
-from ablator.modules.loggers.tensor import TensorboardLogger
-from tests.conftest import DockerRayCluster
 
 
 def assert_console_output(fn, assert_fn):
@@ -55,7 +52,7 @@ def mock_remote(i: int, file_logger: FileLogger):
 
 
 
-def test_remote_file_logger(tmp_path: Path, ray_cluster: DockerRayCluster):
+def test_remote_file_logger(tmp_path: Path, ray_cluster):
     logpath = tmp_path.joinpath("test.log")
     if logpath.exists():
         logpath.unlink()
