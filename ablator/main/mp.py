@@ -31,8 +31,6 @@ from ablator.mp.utils import _sorted_nodes_by_util
 from ablator.utils.base import get_gpu_mem
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 
-CRASH_EXCEPTION_TYPES: list[type] = []
-
 
 def train_main_remote(
     model: ModelWrapper,
@@ -417,6 +415,14 @@ class ParallelTrainer(ProtoTrainer):
         )
         ray.get(future)
 
+    @property
+    def total_trials(self):
+        return self.run_config.total_trials
+
+    @total_trials.setter
+    def total_trials(self, value):
+        self.run_config.total_trials = value
+
     def _init_state(
         self,
         working_dir: str = "",
@@ -426,7 +432,6 @@ class ParallelTrainer(ProtoTrainer):
         excluding_files: list[str] | None = None,
     ):
         verbose = self.run_config.verbose
-        self.total_trials = self.run_config.total_trials
 
         if self.experiment_dir.exists() and not resume:
             raise RuntimeError(f"Experiment Directory {self.experiment_dir} exists.")
@@ -527,7 +532,7 @@ class ParallelTrainer(ProtoTrainer):
             mp.set_start_method("spawn", force=True)
         except RuntimeError:
             pass
-
+        # TODO move inside __init__
         self._init_state(
             working_dir=working_directory,
             address=ray_head_address,
