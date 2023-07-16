@@ -1,6 +1,7 @@
 # TODO current implementation is meant to be temporary until there is a concrete replacement to
 # Optuna or better integeration.
 # type: ignore
+# pylint: skip-file
 import collections
 import typing as ty
 import warnings
@@ -19,7 +20,7 @@ from optuna.trial import TrialState
 
 from ablator.config.hpo import FieldType, SearchSpace
 from ablator.config.mp import Optim, SearchAlgo
-from ablator.main import state as _state
+from ablator.main.state import store as _state_store
 from ablator.main.hpo.base import BaseSampler
 
 
@@ -34,7 +35,7 @@ class _Trial:
         study: "_Study",
         sampler: optuna.samplers.BaseSampler,
         optim_metrics: OrderedDict[str, str],
-        resume_trial: ty.Optional["_state.Trial"] = None,
+        resume_trial: ty.Optional["_state_store.Trial"] = None,
     ) -> None:
         self.state = TrialState.RUNNING
 
@@ -61,13 +62,13 @@ class _Trial:
         )
 
     def update(
-        self, metrics: OrderedDict[str, float] | None, state: "_state.TrialState"
+        self, metrics: OrderedDict[str, float] | None, state: "_state_store.TrialState"
     ):
-        if state == _state.TrialState.COMPLETE:
+        if state == _state_store.TrialState.COMPLETE:
             self.state = TrialState.COMPLETE
-        elif state == _state.TrialState.FAIL:
+        elif state == _state_store.TrialState.FAIL:
             self.state = TrialState.FAIL
-        elif state == _state.TrialState.RUNNING:
+        elif state == _state_store.TrialState.RUNNING:
             self.state = TrialState.RUNNING
         else:
             return
@@ -114,7 +115,7 @@ class _Study:
         self,
         optim_metrics: collections.OrderedDict,
         sampler: optuna.samplers.BaseSampler,
-        trials: list["_state.Trial"] | None = None,
+        trials: list["_state_store.Trial"] | None = None,
     ) -> None:
         trials = [] if trials is None else trials
         self.trials: list[_Trial] = [
@@ -184,7 +185,8 @@ class OptunaSampler(BaseSampler):
         search_algo: SearchAlgo,
         search_space: dict[str, SearchSpace],
         optim_metrics: collections.OrderedDict[str, Optim],
-        trials: list["_state.Trial"] | None = None,
+        trials: list["_state_store.Trial"] | None = None,
+        seed: int | None = None,
     ):
         super().__init__()
         self.sampler: optuna.samplers.TPESampler | optuna.samplers.RandomSampler
@@ -195,9 +197,9 @@ class OptunaSampler(BaseSampler):
         if search_algo == SearchAlgo.tpe:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                self.sampler = optuna.samplers.TPESampler(constant_liar=True)
+                self.sampler = optuna.samplers.TPESampler(constant_liar=True, seed=seed)
         elif search_algo == SearchAlgo.random:
-            self.sampler = optuna.samplers.RandomSampler()
+            self.sampler = optuna.samplers.RandomSampler(seed=seed)
         else:
             raise ValueError(f"Unrecognized search algorithm: {search_algo}.")
         self._study = _Study(optim_metrics, sampler=self.sampler, trials=trials)
@@ -262,43 +264,47 @@ class OptunaSampler(BaseSampler):
         self,
         trial: _Trial,
         search_space: dict[str, SearchSpace | dict],
-        _prefix: str = "",
     ) -> dict[str, ty.Any]:
         parameter: dict[str, ty.Any] = {}
 
-        for k, v in search_space.items():
-            _new_prefix = f"{_prefix}.{k}" if len(_prefix) > 0 else k
+        def _sample_params(
+            v,
+            prefix: str = "",
+        ):
             if isinstance(v, dict):
-                parameter[k] = self._sample_trial_params(trial, v, _prefix=_new_prefix)
-            elif not isinstance(v, SearchSpace):
-                parameter[k] = v
-            elif v.value_range is not None and v.value_type == FieldType.discrete:
-                parameter[k] = self._suggest_int(
-                    trial, _new_prefix, v.parsed_value_range(), v.log, v.n_bins
+                return {
+                    _k: _sample_params(_v, prefix=f"{prefix}.{_k}")
+                    for _k, _v in v.items()
+                }
+            if not isinstance(v, SearchSpace):
+                return v
+            if v.value_range is not None and v.value_type == FieldType.discrete:
+                return self._suggest_int(
+                    trial, prefix, v.parsed_value_range(), v.log, v.n_bins
                 )
-            elif v.value_range is not None and v.value_type == FieldType.continuous:
-                parameter[k] = self._suggest_float(
-                    trial, _new_prefix, v.parsed_value_range(), v.log, v.n_bins
+            if v.value_range is not None and v.value_type == FieldType.continuous:
+                return self._suggest_float(
+                    trial, prefix, v.parsed_value_range(), v.log, v.n_bins
                 )
-            elif v.categorical_values is not None:
-                parameter[k] = self._suggest_categorical(
-                    trial, _new_prefix, v.categorical_values
-                )
-            elif v.subspaces is not None:
+            if v.categorical_values is not None:
+                return self._suggest_categorical(trial, prefix, v.categorical_values)
+            if v.subspaces is not None:
                 # TODO make it non-random e.g. pick the best sub-configuration.
                 # Can use a dummy categorical variable
                 idx = np.random.choice(len(v.subspaces))
-                parameter[k] = self._sample_trial_params(
-                    trial,
-                    {k: v.subspaces[idx]},
-                    _prefix=_prefix + f"{_prefix}_{idx}",
-                )[k]
-            elif v.sub_configuration is not None:
-                parameter[k] = self._sample_trial_params(
-                    trial, v.sub_configuration.arguments, _prefix=_new_prefix
+                return _sample_params(
+                    v.subspaces[idx],
+                    prefix=f"{prefix}_{idx}",
                 )
-            else:
-                raise ValueError(f"Invalid SearchSpace {v}.")
+            if v.sub_configuration is not None:
+                return {
+                    _k: _sample_params(_v, prefix=f"{prefix}.{_k}")
+                    for _k, _v in v.sub_configuration.arguments.items()
+                }
+            raise ValueError(f"Invalid SearchSpace {v}.")
+
+        for k, v in search_space.items():
+            parameter[k] = _sample_params(v, k)
 
         return parameter
 
