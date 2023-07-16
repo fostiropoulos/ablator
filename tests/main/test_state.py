@@ -1,39 +1,17 @@
-from pathlib import Path
-
+import io
 import shutil
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 
 import numpy as np
 import optuna
 import pandas as pd
 import pytest
 
-
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
 from ablator.config.mp import ParallelConfig, SearchAlgo, SearchSpace
 from ablator.main.state import ExperimentState, TrialState
-import io
-from contextlib import redirect_stderr, redirect_stdout
-
 from ablator.modules.loggers.file import FileLogger
-
-optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
-train_config = TrainConfig(
-    dataset="test",
-    batch_size=128,
-    epochs=2,
-    optimizer_config=optimizer_config,
-    scheduler_config=None,
-)
-
-
-def capture_output(fn):
-    out = io.StringIO()
-
-    err = io.StringIO()
-    with redirect_stdout(out), redirect_stderr(err):
-        fn()
-
-    return out.getvalue(), err.getvalue()
 
 
 def _clean_path(p: Path):
@@ -50,7 +28,16 @@ class MockParallelConfig(ParallelConfig):
 
 
 def make_config(search_space, search_algo):
-    is_grid_sampler = search_algo in {"grid", "discrete"}
+    optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
+    train_config = TrainConfig(
+        dataset="test",
+        batch_size=128,
+        epochs=2,
+        optimizer_config=optimizer_config,
+        scheduler_config=None,
+    )
+
+    is_grid_sampler = search_algo in {"grid"}
     optim_metrics = {"acc": "max"} if not is_grid_sampler else None
     return MockParallelConfig(
         train_config=train_config,
@@ -63,7 +50,6 @@ def make_config(search_space, search_algo):
         total_trials=100,
         concurrent_trials=100,
         gpu_mb_per_experiment=0,
-        # cpus_per_experiment=0.1,
         search_algo=search_algo,
     )
 
@@ -112,7 +98,7 @@ def test_state(tmp_path: Path, search_algo, assert_error_msg):
 
 
 @pytest.mark.parametrize("search_algo", list(SearchAlgo.__members__.keys()))
-def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg):
+def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_output):
     search_space = {
         "train_config.optimizer_config.name": SearchSpace(
             categorical_values=[0], value_type="int"
@@ -120,17 +106,13 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg):
     }
     config = make_config(search_space, search_algo)
     config.ignore_invalid_params = True
-    config.sample_duplicate_params = False
 
-    is_grid_sampler = search_algo in {"grid", "discrete"}
-    if search_algo == "grid":
-        error_upper_bound = 1
-    else:
-        error_upper_bound = 20
+    error_upper_bound = 20
 
+    _clean_path(tmp_path)
     assert_error_msg(
         lambda: ExperimentState(tmp_path, config).sample_trial(),
-        f"Reached maximum limit of misconfigured trials, {error_upper_bound}.\nFound 0 duplicate and {error_upper_bound} invalid trials.",
+        f"Reached maximum limit of misconfigured trials, {error_upper_bound} with {error_upper_bound} invalid trials.",
     )
 
     _clean_path(tmp_path)
@@ -139,26 +121,18 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg):
             categorical_values=[0, 1], value_type="int"
         )
     }
-    state = ExperimentState(tmp_path, config)
-    state.sample_trial()
-    state.sample_trial()
-    if search_algo == "grid":
-        assert_error_msg(
-            lambda: state.sample_trial(),
-            f"Reached maximum number of trials, for sampler {state.sampler.__class__.__name__}",
-        )
-    else:
-        assert_error_msg(
-            lambda: state.sample_trial(),
-            f"Reached maximum limit of misconfigured trials, 20.\nFound 20 duplicate and 0 invalid trials.",
-        )
+    state = ExperimentState(tmp_path, config, sampler_seed=1)
+    for i in range(4):
+        state.sample_trial()
+    # this is because there are 2 categorical values
+    assert len(set([t.config_uid for t in state.valid_trials()])) == 2
     _clean_path(tmp_path)
     config.search_space = {
         "train_config.optimizer_config.name": SearchSpace(
             categorical_values=["sgd", 0], value_type="int"
         ),
         "train_config.optimizer_config.arguments.lr": SearchSpace(
-            value_range=[0, 1], value_type="float"
+            value_range=[0, 1], value_type="float", n_bins=100
         ),
     }
     state = ExperimentState(tmp_path, config, logger=FileLogger())
@@ -172,7 +146,7 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg):
         "train_config.optimizer_config.arguments.lr": SearchSpace(
             value_range=[0, 1],
             value_type="float",
-            n_bins=1000 if is_grid_sampler else None,
+            n_bins=1000,
         ),
     }
     s = ExperimentState(tmp_path, config)
@@ -208,26 +182,16 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg):
     )
     s.update_trial_state(
         0,
-        {"acc": 0} if not is_grid_sampler else None,
+        {"acc": 0},
         state=TrialState.COMPLETE,
     )
-    if config.optim_metrics is None:
-        assert_error_msg(
-            lambda: s.update_trial_state(
-                0,
-                {"acc": 0},
-                state=TrialState.COMPLETE,
-            ),
-            f"Can not specificy 'metrics' when not setting 'config.optim_metrics'.",
-        )
 
 
 @pytest.mark.parametrize("search_algo", list(SearchAlgo.__members__.keys()))
 def test_state_resume(tmp_path: Path, search_algo, assert_error_msg):
     search_space = {
         "train_config.optimizer_config.arguments.lr": SearchSpace(
-            value_range=[0, 1],
-            value_type="float",
+            value_range=[0, 1], value_type="float", n_bins=100
         ),
     }
 
@@ -385,12 +349,12 @@ if __name__ == "__main__":
     # _clean_path(tmp_path)
     # test_mock_run(tmp_path)
     # for search_algo in list(SearchAlgo.__members__.keys()):
-    for search_algo in ["tpe"]:
+    for search_algo in ["random"]:
         # _clean_path(tmp_path)
         # test_state(tmp_path, search_algo)
 
-        # _clean_path(tmp_path)
-        # test_sample_limits(tmp_path, search_algo)
-
         _clean_path(tmp_path)
-        test_state_resume(tmp_path, search_algo, _assert_error_msg)
+        test_sample_limits(tmp_path, search_algo, _assert_error_msg)
+
+        # _clean_path(tmp_path)
+        # test_state_resume(tmp_path, search_algo, _assert_error_msg)

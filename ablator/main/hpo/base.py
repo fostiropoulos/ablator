@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import typing as ty
 
+from ablator.main.state.store import TrialState
+
 
 class BaseSampler(ABC):
     def __init__(self) -> None:
@@ -15,28 +17,43 @@ class BaseSampler(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def update_trial(self, trial_id, metrics: dict[str, float] | None, state):
+    def update_trial(
+        self, trial_id: int, metrics: dict[str, float] | None, state: TrialState
+    ):
         """
-        update_trial TODO
+        Update the trial state given the trial_id, the updated metrics, and the current trial state.
 
         Parameters
         ----------
-        trial_id : _type_
-            _description_
+        trial_id : int
+            the trial_id which was returned when running ``eager_sampler``
         metrics : dict[str, float]
-            _description_
-        state : _type_
-            _description_
-
-        Raises
-        ------
-        NotImplementedError
-            _description_
+            a metric dictionary corresponding to the updated metrics.
+        state : TrialState
+            the updated trial state
         """
         raise NotImplementedError
 
-    def internal_repr(self, trial_id):
-        pass
+    @abstractmethod
+    def internal_repr(self, trial_id: int) -> None | dict[str, ty.Any]:
+        """
+        Return the internal representation of the trial if one is maintained by
+        the sampler.
+
+        Parameters
+        ----------
+        trial_id : int
+            the trial_id which internal representation is retrieved.
+
+        Returns
+        -------
+        None | dict[str, ty.Any]
+            ``None`` when there is no internal representation maintained by the sampler.
+            Otherwise a dictionary with keys as the internal configuration names and values, the
+            corresponding values.
+
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def _drop(self):

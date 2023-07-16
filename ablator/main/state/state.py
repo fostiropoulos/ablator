@@ -1,3 +1,4 @@
+import traceback
 import builtins
 import copy
 import random
@@ -6,6 +7,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 from sqlalchemy import create_engine, select
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
 import ablator.utils.base as butils
@@ -30,6 +32,7 @@ class ExperimentState:
         config: ParallelConfig,
         logger: FileLogger | None = None,
         resume: bool = False,
+        sampler_seed: int | None = None,
     ) -> None:
         """
         Initializes the ExperimentState.
@@ -46,6 +49,8 @@ class ExperimentState:
             The logger to use for outputting experiment logs. If not specified, a dummy logger will be used.
         resume : bool, optional
             Whether to resume a previously interrupted experiment. Default is ``False``.
+        sampler_seed : int | None
+            The seed to use for the trial sampler. Default is ``None``.
 
         Raises
         ------
@@ -96,23 +101,30 @@ class ExperimentState:
             else OrderedDict({})
         )
         self._ignore_errored_trials = self.config.ignore_invalid_params
-        self._ignore_duplicate_trials = self.config.sample_duplicate_params
         self.sampler: BaseSampler
+        # TODO unit-test for resuming with different sampler
         if search_algo in {SearchAlgo.random, SearchAlgo.tpe} or search_algo is None:
             self.sampler = OptunaSampler(
                 search_algo,
                 search_space,
                 self.optim_metrics,
                 self.valid_trials(),
+                seed=sampler_seed,
             )
-        elif search_algo in {SearchAlgo.grid, SearchAlgo.discrete}:
+        elif search_algo == SearchAlgo.grid:
             if len(self.optim_metrics):
                 raise RuntimeError("Can not specify `optim_metrics` with GridSampler.")
-            self.sampler = GridSampler(search_algo, search_space, self.valid_trials())
+            # TODO unit-test resuming with GridSampler for experiment state
+            aug_cs: list[dict[str, ty.Any]] = [
+                dict(c.aug_config_param) for c in self.valid_trials()
+            ]
+            self.sampler = GridSampler(search_space, aug_cs, seed=sampler_seed)
         else:
             raise NotImplementedError
         for trial in self.get_trials_by_state(TrialState.RUNNING):
-            self.update_trial_state(trial.trial_num, None, TrialState.WAITING)
+            # mypy error for sqlalchemy types
+            trial_id = int(trial.trial_num)  # type: ignore
+            self.update_trial_state(trial_id, None, TrialState.WAITING)
 
     @staticmethod
     def search_space_dot_path(trial: ParallelConfig) -> dict[str, ty.Any]:
@@ -165,37 +177,7 @@ class ExperimentState:
 
     def sample_trial(self) -> tuple[int, ParallelConfig]:
         """
-        TODO docs
-        """
-        # Return pending trials when sampling first.
-        pending_trials = self.get_trials_by_state(TrialState.WAITING)
-        if len(pending_trials) > 0:
-            trial = random.choice(pending_trials)
-            trial_id = int(trial.trial_num)
-            trial_config = type(self.config)(**trial.config_param)
-            self._update_internal_trial_state(trial_id, None, TrialState.RUNNING)
-            return trial_id, trial_config
-
-        trial_id, trial_config = self.__sample_trial(
-            ignore_duplicates=self._ignore_duplicate_trials,
-            ignore_errors=self._ignore_errored_trials,
-        )
-        return trial_id, trial_config
-
-    def __sample_trial(
-        self,
-        ignore_errors=False,
-        ignore_duplicates=False,
-    ) -> tuple[int, ParallelConfig]:
-        """
         Samples a trial from the search space and persists the trial state to the experiment database.
-
-        Parameters
-        ----------
-        ignore_errors : bool, optional
-            Whether to ignore invalid parameters and continue sampling, by default False.
-        ignore_duplicates : bool, optional
-            Whether to ignore invalid parameters and continue sampling, by default False.
 
         Returns
         -------
@@ -205,24 +187,45 @@ class ExperimentState:
         Raises
         ------
         StopIteration
-            If the number of invalid or duplicate trials exceeds the error_upper_bound or
+            If the number of invalid trials sampled exceeds the internal upper bound (`20`) or the
+            sampler raises a StopIteration exception indicating that the search space has been exhaustively
+            evaluated.
         TypeError
-            If the trial parameter are invalid
+            If the trial parameter are invalid and `config.ignore_invalid_params` is set to False
         """
+        # Return pending trials when sampling first.
+        pending_trials = self.get_trials_by_state(TrialState.WAITING)
+        if len(pending_trials) > 0:
+            trial = random.choice(pending_trials)
+            # mypy errors for sqlalchemy types
+            trial_id = int(trial.trial_num)  # type: ignore
+            trial_config = type(self.config)(**trial.config_param)  # type: ignore
+            self._update_internal_trial_state(trial_id, None, TrialState.RUNNING)
+            return trial_id, trial_config
+
+        trial_id, trial_config = self.__sample_trial(
+            ignore_errors=self._ignore_errored_trials,
+        )
+        return trial_id, trial_config
+
+    def __sample_trial(
+        self,
+        ignore_errors=False,
+    ) -> tuple[int, ParallelConfig]:
         error_upper_bound = 20
-        i = 0
-
-        duplicate_trials = 0
         errored_trials = 0
-
+        i = 0
         while i < error_upper_bound:
             drop = False
             try:
-                trial_id, config, _opt_args = self.sampler.eager_sample()
-            except StopIteration:
-                error_upper_bound = i
-                drop = True
-                break
+                # NOTE _optuna args is a monkey-patch for optuna compatibility
+                # We store information about the sampling distribution to be able
+                # to restore the sampler.
+                trial_id, config, _optuna_args = self.sampler.eager_sample()
+            except StopIteration as e:
+                raise StopIteration(
+                    f"Reached maximum number of trials, for sampler `{self.sampler.__class__.__name__}`."
+                ) from e
             trial_kwargs = augment_trial_kwargs(
                 trial_kwargs=self.config.to_dict(), augmentation=config
             )
@@ -230,14 +233,11 @@ class ExperimentState:
             try:
                 trial_config = type(self.config)(**trial_kwargs)
                 trial_uid = trial_config.uid
-                valid_trials = [t.config_uid for t in self.valid_trials()]
-                if trial_uid in valid_trials and not ignore_duplicates:
-                    drop = True
-                    duplicate_trials += 1
-
+            # pylint: disable=broad-exception-caught
             except builtins.Exception as e:
                 if ignore_errors:
-                    self.logger.warn(f"ignoring: {config}. Error:{e}")
+                    excp = traceback.format_exc()
+                    self.logger.warn(f"ignoring: {config}. \n{excp}")
                     drop = True
                     errored_trials += 1
 
@@ -247,28 +247,26 @@ class ExperimentState:
                 self.sampler.unlock(drop)
                 i += 1
             if not drop:
-                # NOTE we want to update outside the try / except because we want to capture
-                # errors in adding the trial.
+                # NOTE we want to update outside the try / except because we want to raise
+                # errors for when adding the trial.
                 trial_state: TrialState = TrialState.RUNNING
-                if _opt_args is None:
-                    _opt_args = {}
+                if _optuna_args is None:
+                    _optuna_args = {}
                 self._append_trial_internal(
                     config_uid=trial_uid,
                     trial_kwargs=trial_kwargs,
                     trial_aug_kwargs=config,
                     trial_num=trial_id,
                     trial_state=trial_state,
-                    **_opt_args,
+                    **_optuna_args,
                 )
                 return trial_id, trial_config
-        if i == 0:
-            raise StopIteration(
-                f"Reached maximum number of trials, for sampler {self.sampler.__class__.__name__}"
-            )
+
         raise StopIteration(
-            f"Reached maximum limit of misconfigured trials, {error_upper_bound}.\n"
-            f"Found {duplicate_trials} duplicate and "
-            f"{errored_trials} invalid trials."
+            (
+                f"Reached maximum limit of misconfigured trials, {error_upper_bound} "
+                f"with {errored_trials} invalid trials."
+            )
         )
 
     def update_trial_state(
@@ -300,7 +298,12 @@ class ExperimentState:
         internal_metrics = _parse_metrics(self.optim_metrics, metrics)
         _verify_metrics(internal_metrics)
         self.sampler.update_trial(trial_id, internal_metrics, state)
-        self._update_internal_trial_state(trial_id, internal_metrics, state)
+        try:
+            self._update_internal_trial_state(trial_id, internal_metrics, state)
+        except MultipleResultsFound as e:
+            raise RuntimeError(
+                "Corrupt experiment state, with repeating trials. "
+            ) from e
 
     def _update_internal_trial_state(
         self, trial_id: int, metrics: dict[str, float] | None, state: TrialState
@@ -322,14 +325,9 @@ class ExperimentState:
         bool
             True if the update was successful.
         """
-        if self.config.optim_metrics is None and metrics is not None:
-            raise RuntimeError(
-                "Can not specificy 'metrics' when not setting 'config.optim_metrics'."
-            )
 
         with Session(self.engine) as session:
             stmt = select(Trial).where(Trial.trial_num == trial_id)
-
             if (res := session.execute(stmt).scalar_one_or_none()) is None:
                 raise RuntimeError(f"Trial {trial_id} was not found.")
             if metrics is not None:
