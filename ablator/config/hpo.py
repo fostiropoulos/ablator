@@ -148,8 +148,8 @@ class SearchSpace(ConfigBase):
         if self.categorical_values is not None:
             return f"SearchSpace(categorical_values={self.categorical_values})"
         if self.subspaces is not None:
-            l = ",".join([v.to_str() for v in self.subspaces])
-            str_repr = f"SearchSpace(subspaces=[{l}])"
+            subspaces = ",".join([v.to_str() for v in self.subspaces])
+            str_repr = f"SearchSpace(subspaces=[{subspaces}])"
             return str_repr
         if self.sub_configuration is not None:
             sub_config = self.sub_configuration.arguments
