@@ -2,10 +2,11 @@ from mypy.plugin import *
 from mypy.types import TupleType, UnionType, NoneType, AnyType, TypeOfAny
 from mypy import errorcodes
 
+
 prefix = "ablator.config.types"
 
 
-class TestPlugin(Plugin):
+class AblatorPlugin(Plugin):
     def get_type_analyze_hook(
         self, fullname: str
     ) -> Callable[[AnalyzeTypeContext], Type] | None:
@@ -61,4 +62,4 @@ def LiteralCallback(ctx: AnalyzeTypeContext) -> Type:
 
 
 def plugin(version: str):
-    return TestPlugin
+    return AblatorPlugin
