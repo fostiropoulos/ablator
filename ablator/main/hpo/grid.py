@@ -64,10 +64,13 @@ class GridSampler(BaseSampler):
         """
         GridSampler, expands the grid-space into evenly spaced intervals. For example,
         a search space over ``SearchSpace(value_range=[1,10], n_bins=10)`` will be discritized to
-        10 intervals [1,..,10]. If the search space is composed of integers, e.g. ``value_type='int'`` the search space will be rounded down via the default python `int()` implementation and only the unique subset
+        10 intervals [1,..,10]. If the search space is composed of integers, e.g. ``value_type='int'``
+        the search space will be rounded down via the default python `int()` implementation and only the unique subset
         will be considered. As a result the discritized search-space can be smaller than n_bins. For example:
         ``SearchSpace(value_range=[1,5], value_type='int', n_bins=1000)`` will produce a SearchSpace of ``{1,2,3,4,5}``.
-        In contrast, ``SearchSpace(value_range=[1,5], value_type='float', n_bins=1000)`` will produce a SearchSpace of 1000 floats, ``[1. , 1.004004  , 1.00800801, ... , 4.98798799, 4.99199199, 4.995996  , 5.]``.
+        In contrast, ``SearchSpace(value_range=[1,5], value_type='float', n_bins=1000)`` will
+        produce a SearchSpace of 1000 floats,
+        ``[1. , 1.004004  , 1.00800801, ... , 4.98798799, 4.99199199, 4.995996  , 5.]``.
 
 
         Previous configurations can be supplied via the `configs` argument. If the configurations are not found in

@@ -165,6 +165,8 @@ class DockerRayCluster:
 
 @pytest.fixture(scope="function")
 def ray_cluster():
+    if ray.is_initialized():
+        ray.shutdown()
     cluster = DockerRayCluster()
     cluster.setUp(Path(__file__).parent)
     yield cluster

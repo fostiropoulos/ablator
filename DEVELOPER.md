@@ -124,8 +124,15 @@ As the tests are slow (especially the ones that test for multi-processing) when 
 
 ## Contributing Guide-Lines
 
-To avoid polluting the commit-history, each commit should be tested prior to pushing. Each commit should pass the tests, pylint, mypy and flake8. In the main directory:
+To avoid polluting the commit-history, each commit should be tested prior to pushing. Each commit should pass the tests, pylint, mypy and flake8. In the main directory (after activating the correct enviroment):
 
-1. pylint: `pylint ablator`
-2. mypy: `mypy ablator`
-3. flake8: `flake8 ablator`
+1. `bash scripts/make_docker.sh`
+2. `docker run -v /var/run/docker.sock:/var/run/docker.sock --cpuset-cpus="0-4" ablator`
+3. pylint: `pylint ablator`
+4. mypy: `mypy ablator`
+5. flake8: `flake8 ablator`
+6. pydoc-lint: `pydoclint ablator`
+
+Or simply
+
+`bash scripts/run_test.sh`

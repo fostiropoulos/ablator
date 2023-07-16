@@ -51,7 +51,9 @@ setup(
             "types-paramiko==3.2.0.0",
             "docker==6.1.3",
             "pytest-xdist==3.3.1",  # plug-in for distributed pytests
-            "pytest-order==1.1.0" # ordering is important for test_mp.py
+            "pytest-order==1.1.0",  # ordering is important for test_mp.py
+            "pytest-rerunfailures==12.0",  # randomness in tests can require to re-run them a few times
+            "pydoclint==0.1.0"
         ],
     },
 )

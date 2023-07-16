@@ -20,4 +20,4 @@ RUN pip install -e .[dev]
 
 
 EXPOSE 22
-CMD ["./scripts/starttest.sh"]
+CMD ["pytest","."]
