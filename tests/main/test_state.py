@@ -5,12 +5,14 @@ import numpy as np
 
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
-from ablator.main.configs import ParallelConfig, SearchSpace
-from ablator.main.state import ExperimentState, TrialState
+from ablator.main.configs import Optim, ParallelConfig, SearchAlgo, SearchSpace
+from ablator.main.state import ExperimentState, OptunaState, TrialState
 import io
 from contextlib import redirect_stderr, redirect_stdout
 
 from ablator.modules.loggers.file import FileLogger
+
+from optuna.trial import TrialState as OptunaTrialState
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
 train_config = TrainConfig(
@@ -242,7 +244,58 @@ def test_state(tmp_path: Path):
             lambda: s.update_trial_state(some_uid, {"acc": "A"}, TrialState.COMPLETE),
             "ufunc 'isfinite' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''",
         )
+    
+    optuna_trial_state = TrialState.to_optuna_state(TrialState.PRUNED)
+    assert type(optuna_trial_state) == OptunaTrialState and optuna_trial_state == TrialState.PRUNED
 
+    optuna_trial_state = TrialState.to_optuna_state(TrialState.RUNNING)
+    assert optuna_trial_state == None
+
+
+def test_st():    
+    search_space = {
+        "train_config.optimizer_config.arguments.lr": SearchSpace(
+            value_range=[0, 1], value_type="float",
+        ),
+        "train_config.batch_size": SearchSpace(
+            categorical_values=[32, 64, 128],
+        ),
+    }
+    config = ParallelConfig(
+        train_config=train_config,
+        model_config=ModelConfig(),
+        verbose="silent",
+        device="cpu",
+        amp=False,
+        search_space=search_space,
+        search_algo = "random",
+        optim_metrics={"acc": "max"},
+        total_trials=1,
+        concurrent_trials=100,
+        ignore_invalid_params=True,
+        gpu_mb_per_experiment=0,
+        cpus_per_experiment=0.1,
+    )
+
+    assert_error_msg(lambda: OptunaState("/tmp/random", "optuna_study", None, SearchAlgo.random, search_space),
+                      "Must specify optim_metrics.")
+    dir_path = "/tmp/random/"
+
+    import os, shutil
+    if os.path.exists(dir_path):
+        shutil.rmtree(dir_path)
+    os.makedirs(dir_path)
+
+    exp_state = ExperimentState(Path(dir_path), config)
+
+    assert_error_msg(lambda: exp_state.update_trial_state(
+        exp_state.all_trials[0].uid, None, state=TrialState.COMPLETE
+    ), "Missing metrics for complete trial 0.")
+
+    msg = exp_state.tune_trial_str(config)
+    assert msg == "train_config.optimizer_config.arguments.lr -> 0.1 \n\ttrain_config.batch_size -> 128 "
+        
+    exp_state.update_trial_state(exp_state.all_trials[0].uid, None, TrialState.RUNNING)
 
 if __name__ == "__main__":
     import shutil
@@ -251,3 +304,4 @@ if __name__ == "__main__":
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
     test_state(tmp_path)
+    test_st()

@@ -6,6 +6,7 @@ import tempfile
 import ray
 import torch
 from torch import nn
+import os, shutil
 
 from ablator import (
     ModelConfig,
@@ -19,6 +20,12 @@ from ablator.config.main import configclass
 from ablator.main.configs import ParallelConfig, SearchSpace
 from ablator.main.mp import ParallelTrainer
 from ablator import Derived
+
+from ablator.modules.loggers.main import FileLogger
+from ablator.main.mp import train_main_remote
+from ablator.main.model.wrapper import LossDivergedError
+from ablator.modules.loggers.main import DuplicateRunError
+from ablator.main.model.main import CheckpointNotFoundError, TrainPlateauError
 
 
 class CustomModelConfig(ModelConfig):
@@ -220,16 +227,179 @@ def test_relative_path(tmp_path: Path):
     )
 
 
+class MyCustomModelEval(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(100))
+
+    def forward(self, x: torch.Tensor):
+        x =  self.param + x * 0.01
+        return {"preds": x}, x.sum().abs()
+
+
+class TestWrapperEval(ModelWrapper):
+    def make_dataloader_train(self, run_config: RunConfig):
+        dl = [torch.full((100,), 4.0) for i in range(100)]
+        return dl
+
+    def make_dataloader_val(self, run_config: RunConfig):
+        dl = [torch.full((100,), 3.0) for i in range(100)]
+        return dl
+    
+    def make_dataloader_test(self, run_config: RunConfig):
+        dl = [torch.full((100,), 3.0) for i in range(100)]
+        return dl
+    
+def test_mp_evaluate(tmp_path: Path):
+    train_config = TrainConfig(
+    dataset="test",
+    batch_size=128,
+    epochs=2,
+    optimizer_config=OptimizerConfig(name="sgd", arguments={"lr": 0.1}),
+    scheduler_config=None,
+    )
+
+    config = ParallelConfig(
+        train_config=train_config,
+        model_config=ModelConfig(),
+        verbose="silent",
+        device="cpu",
+        amp=False,
+        search_space={
+        "train_config.optimizer_config.arguments.lr": SearchSpace(
+            value_range=[0.01, 0.1], value_type="float"
+            ),
+        },
+        optim_metrics={"val_loss": "min"},
+        total_trials=3,
+        concurrent_trials=3,
+        gpu_mb_per_experiment=100,
+        cpus_per_experiment=2,
+        experiment_dir = "/tmp/"
+    )
+
+    wrapper = TestWrapperEval(MyCustomModelEval)
+    config.experiment_dir = tmp_path
+
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    ablator = ParallelTrainer(wrapper=wrapper, run_config = config)
+    ablator.launch(working_directory = Path(__file__).parent.as_posix(), ray_head_address=None)
+    
+    # breaking down [ParallelTrainer] ablator.evaluate() to verify metrics
+
+    eval_configs = []
+    trial_uids = ablator.experiment_state.complete_trials
+    for config in trial_uids:
+        model_config = type(ablator.run_config).load(
+            ablator.experiment_dir.joinpath(config.uid, "config.yaml")
+        )
+        eval_configs.append(model_config)
+
+        
+    for model_config in eval_configs:
+        metrics = ablator.wrapper.evaluate(model_config)
+        
+        # To check whether metrics are produced for all the dataloaders provided.
+        assert all(key in metrics.keys() for key in ["val","test"])
+
+        # The val_loss of validation dataloader should be same as val_loss during last epoch.
+        assert metrics['val'].to_dict()["val_loss"] == ablator.wrapper.metrics.to_dict()["val_loss"]
+        # test and val dataloaders are the same and there is not randomization in the model. 
+        # Therefore, val_loss and test_loss must be same.
+        assert metrics['val'].to_dict()["val_loss"] == metrics['test'].to_dict()["test_loss"]
+
+
+def test_mp_cpu(tmp_path: Path):
+    import multiprocessing as mp, math
+    cnt = mp.cpu_count()
+
+    config.cpus_per_experiment = (cnt * 0.5) ## if cnt = 8, cpu should be 4
+    config.concurrent_trials = 3
+    config.experiment_dir = tmp_path
+
+    ablator = ParallelTrainer(wrapper=TestWrapper(MyCustomModel), run_config = config)
+    assert ablator.cpu == math.floor(cnt * 0.5)
+
+class MyCustomErrorModel(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(100))
+
+    def forward(self, x: torch.Tensor):
+        x = self.param + torch.rand_like(x) * 0.01
+        if err is not None:
+            raise err
+        return {"preds": x}, x.sum().abs()
+        
+
+def test_train_main_remote(tmp_path: Path):
+
+    train_config = TrainConfig(
+        dataset="test",
+        batch_size=128,
+        epochs=2,
+        optimizer_config=OptimizerConfig(name="sgd", arguments={"lr": 0.1}),
+        scheduler_config=None,
+    )
+
+    config = ParallelConfig(
+        train_config=train_config,
+        model_config=ModelConfig(),
+        verbose="silent",
+        device="cpu",
+        amp=False,
+        search_space={
+        "train_config.optimizer_config.arguments.lr": SearchSpace(
+            value_range=[0.01, 0.1], value_type="float"
+            ),
+        },
+        optim_metrics={"val_loss": "min"},
+        total_trials=3,
+        concurrent_trials=3,
+        gpu_mb_per_experiment=100,
+        cpus_per_experiment=0.5,
+        experiment_dir = "/tmp/"
+    )
+
+    wrapper = TestWrapper(MyCustomErrorModel)
+    config.experiment_dir = tmp_path
+
+    import shutil, os
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    global err
+    
+    err = LossDivergedError
+    TrialState = train_main_remote(wrapper, config, FileLogger(), tmp_path, True, None, False, False, None)
+    assert str(TrialState[-1]) == "TrialState.PRUNED_POOR_PERFORMANCE"
+
+
+    err = DuplicateRunError
+    TrialState = train_main_remote(wrapper, config, FileLogger(), tmp_path, True, None, False, False, None)
+    assert str(TrialState[-1]) == "TrialState.RECOVERABLE_ERROR"
+
+
+    config.init_chkpt = "/tmp/" ## incorrect path
+    TrialState = train_main_remote(wrapper, config, FileLogger(), tmp_path, True, None, False, True, None)
+    assert str(TrialState[-1]) == "TrialState.RECOVERABLE_ERROR"
+    config.init_chkpt = None
+
+
 if __name__ == "__main__":
     import shutil
 
     tmp_path = Path("/tmp/experiment_dir")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir()
+    # test_mp(tmp_path)
+
     # shutil.rmtree(tmp_path, ignore_errors=True)
     # tmp_path.mkdir()
-    # test_mp(tmp_path)
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_path.mkdir()
-    test_resume(tmp_path)
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_path.mkdir()
-    test_relative_path(tmp_path)
+    # test_resume(tmp_path)
+    # shutil.rmtree(tmp_path, ignore_errors=True)
+    # tmp_path.mkdir()
+    # test_relative_path(tmp_path)
+    
+    test_mp_evaluate(tmp_path)
+    # test_mp_cpu(tmp_path)
+    # test_train_main_remote(Path("/tmp/exp/"))
+

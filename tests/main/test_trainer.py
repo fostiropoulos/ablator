@@ -172,8 +172,51 @@ def test_val_loss_is_none(tmp_path: Path):
         "A validation dataset is rquired with StepLR scheduler",
     )
 
+class MyCustomModel4(nn.Module):
+    # for smoke tests
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(100))
+
+    def forward(self, x: torch.Tensor):
+        x = self.param + torch.rand_like(x) * 0.01
+        return {"preds": x}, x.sum().abs()
+
+
+class TestWrapper3(ModelWrapper):
+    # for smoke tests
+    def make_dataloader_train(self, run_config: RunConfig):
+        dl = [torch.rand(10) for i in range(100)]
+        return dl
+
+    def make_dataloader_val(self, run_config: RunConfig):
+        dl = [torch.rand(10) for i in range(100)]
+        return dl
+
+def test_smoke_tests(tmp_path: Path):
+
+    config.experiment_dir = tmp_path.joinpath(f"/smoke/")
+
+    # Runs successfully.
+    wrapper_success = TestWrapper(MyCustomModel)
+
+    ablator_success = ProtoTrainer(wrapper=wrapper_success, run_config= config)
+    ablator_success.smoke_test()
+
+    # Must Fail
+    wrapper = TestWrapper3(MyCustomModel4)
+    ablator = ProtoTrainer(wrapper=wrapper, run_config= config)
+
+
+    assert_error_msg(
+        lambda:  ablator.smoke_test(config = None),
+        "The size of tensor a (100) must match the size of tensor b (10) at non-singleton dimension 0"
+    )
+
+
 
 if __name__ == "__main__":
     test_proto(Path("/tmp/"))
     test_proto_with_scheduler(Path("/tmp/"))
     test_val_loss_is_none(Path("/tmp/"))
+    test_smoke_tests(Path("/tmp/")) 
