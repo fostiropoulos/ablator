@@ -20,6 +20,7 @@ from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
 from ablator.utils.progress_bar import RemoteProgressBar
 
+
 # pylint: disable=too-many-public-methods
 class ModelWrapper(ModelBase):
     """
@@ -362,22 +363,22 @@ class ModelWrapper(ModelBase):
         if val_loss is not None:
             # Use val loss for scheduling or finding best checkpoint
 
-            is_best = val_loss < self.best_loss
-
-            if is_best or self.best_loss == 0:
+            if is_best := val_loss < self.best_loss:
                 self.best_iteration = self.current_iteration
                 self.best_loss = val_loss
 
             divergence_step = (
                 self.current_iteration > self.epoch_len * self.run_config.warm_up_epochs
             )
-            is_diverged = val_loss / self.best_loss > self.run_config.divergence_factor
+            is_diverged = self.run_config.divergence_factor is not None and (
+                val_loss / (self.best_loss + 1e-5) > self.run_config.divergence_factor
+            )
 
             if is_diverged and divergence_step:
                 raise LossDivergedError(
-                    f"Val loss {val_loss:.4e} has diverged by"
-                    f"a factor of {self.run_config.divergence_factor} to "
-                    f"best loss {self.best_loss:.4e}"
+                    f"Val loss {val_loss:.2e} has diverged by "
+                    f"a factor larger than {self.run_config.divergence_factor} to "
+                    f"best loss {self.best_loss:.2e}"
                 )
 
         if (
@@ -391,6 +392,7 @@ class ModelWrapper(ModelBase):
                 )
             self.scheduler.step(val_loss)
 
+        self.update_status()
         self._checkpoint()
         if is_best:
             self._checkpoint(is_best=True)
@@ -477,6 +479,7 @@ class ModelWrapper(ModelBase):
         This method is update the logger with the current metrics and log a status message.
         """
         self.logger.update(self.metrics)
+        self.update_status()
         msg = self.status_message()
         verbose = self.verbose == "console"
         self.logger.info(msg, verbose=verbose)
@@ -629,9 +632,8 @@ class ModelWrapper(ModelBase):
                 raise LossDivergedError(msg)
 
             if not smoke_test:
-                self.update_status()
-                self.log()
                 self.eval()
+                self.log()
 
             if smoke_test and i > self.epoch_len * 0.01:
                 self.eval(smoke_test=True)

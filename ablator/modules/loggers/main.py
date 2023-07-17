@@ -250,7 +250,7 @@ class SummaryLogger:
         """
         if self.result_json_path is not None:
             _metrics = copy.deepcopy(metrics)
-            _metrics["timestamp"] = int(time.time())
+            _metrics["timestamp"] = float(time.time())
             _metrics_str = futils.dict_to_json(_metrics)
             if self.result_json_path.exists():
                 futils.truncate_utf8_chars(self.result_json_path, "]")
@@ -358,7 +358,7 @@ class SummaryLogger:
                 cur_iter = self.checkpoint_iteration[dir_name][file_name]
                 assert (
                     itr > cur_iter
-                ), f"Checkpoint iteration {cur_iter} > training iteration {itr}. Can not save checkpoint."
+                ), f"Checkpoint iteration {cur_iter} >= training iteration {itr}. Can not overwrite checkpoint."
                 self.checkpoint_iteration[dir_name][file_name] = itr
 
             dir_path = self.experiment_dir.joinpath(self.CHKPT_DIRS[dir_name])

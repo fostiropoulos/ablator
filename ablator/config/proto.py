@@ -113,7 +113,7 @@ class RunConfig(ConfigBase):
     log_epoch: Stateless[float] = 1
     init_chkpt: Stateless[Optional[str]] = None
     warm_up_epochs: Stateless[float] = 1
-    divergence_factor: Stateless[float] = 100
+    divergence_factor: Stateless[Optional[float]] = 100
 
     @property
     def uid(self) -> str:

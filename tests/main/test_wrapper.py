@@ -394,16 +394,18 @@ def test_load_save(tmp_path: Path, assert_error_msg):
     wrapper = TestWrapper(MyCustomModel)
 
     wrapper.train(_config)
+    old_stats = copy.deepcopy(wrapper.train_stats)
     old_model = copy.deepcopy(wrapper.model)
     wrapper = TestWrapper(MyCustomModel)
 
     wrapper._init_state(run_config=_config, resume=True)
+    assert old_stats == wrapper.train_stats
     with mock.patch("ablator.ModelWrapper.epochs", return_value=3):
-        # wrapper.epochs = 3
         wrapper._init_state(run_config=_config, resume=True)
+        wrapper.epochs = 3
         assert_error_msg(
             lambda: wrapper.checkpoint(),
-            f"Checkpoint iteration {wrapper.current_iteration} > training iteration {wrapper.current_iteration}. Can not save checkpoint.",
+            f"Checkpoint iteration {wrapper.current_iteration} >= training iteration {wrapper.current_iteration}. Can not overwrite checkpoint.",
         )
         wrapper._inc_iter()
         wrapper.checkpoint()
@@ -457,7 +459,7 @@ if __name__ == "__main__":
     tmp_path = Path("/tmp/")
 
     shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)
-    # test_load_save(tmp_path, _assert_error_msg)
+    test_load_save(tmp_path, _assert_error_msg)
     # test_load_save_errors(tmp_path, _assert_error_msg)
     # test_error_models()
     # test_train_stats()

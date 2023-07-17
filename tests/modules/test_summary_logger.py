@@ -97,7 +97,7 @@ def test_summary_logger(tmp_path: Path):
 
     assert_error_msg(
         lambda: l.checkpoint(save_dict, "b", itr=0),
-        f"Checkpoint iteration 1 > training iteration 0. Can not save checkpoint.",
+        f"Checkpoint iteration 1 >= training iteration 0. Can not overwrite checkpoint.",
     )
     del l.checkpoint_iteration["recent"]["b"]
     assert_error_msg(
