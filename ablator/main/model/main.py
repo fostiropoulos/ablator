@@ -469,11 +469,8 @@ class ModelBase(ABC):
         smoke_test : bool, optional
             Whether to run as a smoke test, by default False.
         """
-        if self.run_config.init_chkpt is not None and resume:
-            self.current_checkpoint = Path(self.run_config.init_chkpt)
-            self._load_model(self.current_checkpoint, model_only=False)
 
-        elif self.run_config.init_chkpt is not None and not resume:
+        if self.run_config.init_chkpt is not None and not resume:
             # Loads only the weights
             self.current_checkpoint = Path(self.run_config.init_chkpt)
             self.logger.info(
@@ -619,12 +616,23 @@ class ModelBase(ABC):
             raise NotImplementedError(
                 "Can not load model on an unitialzed model state. Consider run init_experiment_state function first"
             )
-
-        save_dict = torch.load(checkpoint_path, map_location="cpu")
-
+        try:
+            save_dict = torch.load(checkpoint_path, map_location="cpu")
+        except Exception as e:
+            raise RuntimeError(
+                f"{checkpoint_path} is not a valid checkpoint e.g. a `.pt` file. "
+            ) from e
+        if model_only:
+            self.load_checkpoint(save_dict, model_only=model_only)
+            return
         run_config = type(self.run_config)(**save_dict["run_config"])
-        assert run_config.uid == self.run_config.uid
-
+        if run_config.uid != self.run_config.uid:
+            diffs = "\n\t".join(
+                run_config.diff_str(self.run_config, ignore_stateless=True)
+            )
+            raise RuntimeError(
+                f"Mismatching loaded and current configurations. \n{diffs}"
+            )
         self._load_stats(save_dict)
         self.load_checkpoint(save_dict, model_only=model_only)
         self.current_state = save_dict

@@ -1,3 +1,4 @@
+import shutil
 import copy
 from pathlib import Path
 import pandas as pd
@@ -13,6 +14,7 @@ from ablator import (
     TrainConfig,
 )
 from ablator.analysis.results import Results
+from ablator.utils.base import get_latest_chkpts
 
 # Learning rate of 1 will result in decreasing the model parameter by 1 value each iteration
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 1})
@@ -136,12 +138,35 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg):
     new_res = Results.read_results(new_config, new_config.experiment_dir)
     assert_results_equal(res, new_res)
 
-    # new_config.train_config.optimizer_config.arguments.lr = 1
-    # assert new_config.uid != config.uid
+    # NOTE we test resuming from a checkpoint
+    new_config = copy.deepcopy(config)
+    new_config.experiment_dir = tmp_path.joinpath("test_exp_4")
+    new_config.train_config.epochs = 5
+
+    assert new_config.uid != config.uid
+    new_config.init_chkpt = new_config.experiment_dir.joinpath("checkpoints")
+    msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config))
+    assert "test_exp_4/checkpoints is not a valid checkpoint e.g. a `.pt` file. " in msg
+    chkpt = get_latest_chkpts(config.experiment_dir.joinpath("checkpoints"))[0]
+    assert chkpt.name.endswith("400.pt")
+    new_config.init_chkpt = chkpt
+    shutil.rmtree(new_config.experiment_dir)
+    TestWrapper(MyModel).train(new_config)
+
+    new_res = Results.read_results(new_config, new_config.experiment_dir)
+    # we virtually continue training from when validation loss was 100 on the previous checkpoint.
+    # the validation loss will keep decreasing
+    assert (new_res["current_iteration"] + 100 == new_res["val_loss"]).all()
+    bad_config = copy.deepcopy(new_config)
+    bad_config.train_config.epochs = 6
+
+    assert new_config.uid != bad_config.uid
+
+    msg = assert_error_msg(lambda: TestWrapper(MyModel).train(bad_config, resume=True))
+    assert msg == 'Differences between configurations:\n\tepochs:(int)6->(int)5'
 
 
 if __name__ == "__main__":
-    import shutil
     from tests.conftest import _assert_error_msg
     import shutil
     from tests.conftest import _assert_error_msg
