@@ -597,18 +597,6 @@ def test_relative_path(tmp_path: Path, wrapper):
     )
 
 
-def _mp_test(tmp_path):
-    from tests.conftest import _assert_error_msg, _capture_output
-
-    ray.init(address="auto")
-    ray_cluster = DockerRayCluster()
-    ray_cluster.setUp(WORKING_DIR)
-
-    test_mp_run(tmp_path, _assert_error_msg, ray_cluster)
-
-    pass
-
-
 if __name__ == "__main__":
     from tests.conftest import DockerRayCluster
     from tests.conftest import _assert_error_msg, _capture_output
@@ -621,7 +609,11 @@ if __name__ == "__main__":
     # ray_cluster = DockerRayCluster()
     # ray_cluster.setUp(WORKING_DIR)
     # tmp_path.mkdir()
-    # test_train_main_remote(tmp_path, _assert_error_msg, _capture_output)
+    error_wrapper = TestWrapper(MyErrorCustomModel)
+    wrapper = TestWrapper(MyErrorCustomModel)
+    test_train_main_remote(
+        tmp_path, _assert_error_msg, _capture_output, error_wrapper, wrapper=wrapper
+    )
 
     # test_mp_run(tmp_path, _assert_error_msg, ray_cluster)
     # test_pre_train_setup(tmp_path)

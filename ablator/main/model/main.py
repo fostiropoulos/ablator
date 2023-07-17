@@ -38,6 +38,7 @@ class LogStepError(Exception):
 class CheckpointNotFoundError(FileNotFoundError):
     pass
 
+
 # pylint: disable=too-many-instance-attributes
 class ModelBase(ABC):
     """
