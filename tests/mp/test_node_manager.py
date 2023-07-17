@@ -44,7 +44,7 @@ def test_node_manager(tmp_path: Path, ray_cluster):
 
     # NOTE test restarting ray and NodeManager
 
-    ray_cluster = DockerRayCluster(nodes=0)
+    ray_cluster = type(ray_cluster)(nodes=0)
     ray_cluster.setUp(Path(__file__).parent)
     manager = NodeManager(tmp_path, ray_address=ray_cluster.cluster_ip)
     results = manager.run_cmd("whoami", timeout=timeout)
@@ -89,6 +89,7 @@ def test_resource_utilization(tmp_path: Path, ray_cluster):
 
 if __name__ == "__main__":
     from tests.conftest import DockerRayCluster
+
     tmp_file = Path("/tmp/").joinpath("t")
     shutil.rmtree(tmp_file, ignore_errors=True)
     tmp_file.mkdir(exist_ok=True)
