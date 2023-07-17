@@ -610,6 +610,9 @@ class ModelBase(ABC):
         ------
         NotImplementedError
             If the model's run configuration is not initialized before attempting to load the model.
+        RuntimeError
+            If no valid checkpoint was found, such as invalid path, and when `model_only=True` we check
+            for differences between loaded and current configuration.
         """
 
         if not hasattr(self, "run_config") or self.run_config is None:
