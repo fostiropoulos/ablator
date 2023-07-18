@@ -35,7 +35,7 @@ config = RunConfig(
 class MyCustomModel(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
-        self.param = nn.Parameter(torch.ones(100))
+        self.param = nn.Parameter(torch.ones(100, 1))
 
     def forward(self, x: torch.Tensor):
         x = self.param + torch.rand_like(self.param) * 0.01
@@ -80,11 +80,12 @@ def test_proto(tmp_path: Path):
 class MyCustomModel2(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
-        self.param = nn.Parameter(torch.ones(100))
+        self.param = nn.Parameter(torch.ones(100, 1))
 
     def forward(self, x: torch.Tensor):
         x = self.param + torch.rand_like(self.param) * 0.01
         return {"preds": x}, x.sum().abs()
+
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
 train_config = TrainConfig(
@@ -103,6 +104,7 @@ config = RunConfig(
     amp=False,
 )
 
+
 def test_proto_with_scheduler(tmp_path: Path):
     wrapper = TestWrapper(MyCustomModel2)
     config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
@@ -118,7 +120,7 @@ def test_proto_with_scheduler(tmp_path: Path):
 class MyCustomModel3(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
-        self.param = nn.Parameter(torch.ones(100))
+        self.param = nn.Parameter(torch.ones(100,1))
 
     def forward(self, x: torch.Tensor):
         x = self.param + torch.rand_like(self.param) * 0.01
@@ -174,6 +176,6 @@ def test_val_loss_is_none(tmp_path: Path):
 
 
 if __name__ == "__main__":
-    test_proto(Path("/tmp/"))
+    # test_proto(Path("/tmp/"))
     test_proto_with_scheduler(Path("/tmp/"))
     test_val_loss_is_none(Path("/tmp/"))

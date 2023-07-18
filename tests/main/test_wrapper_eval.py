@@ -43,12 +43,12 @@ BEST_ITER = BEST_EPOCH * ITER_PER_EPOCH
 class MyModel(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
-        self.param = nn.Parameter(torch.tensor([BEST_ITER], dtype=float))
+        self.param = nn.Parameter(torch.tensor([[BEST_ITER]], dtype=float))
 
     def forward(self, x: torch.Tensor):
         x = self.param
         # when we reach 0 we continue to decrement to make the test more challenging
-        if x <= 0 and self.training:
+        if (x <= 0).all() and self.training:
             # we decrement by 2 since the optimizer will do a +1
             self.param.data -= 2
         return {"preds": x}, x.sum().abs()
@@ -163,7 +163,7 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg):
     assert new_config.uid != bad_config.uid
 
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(bad_config, resume=True))
-    assert msg == 'Differences between configurations:\n\tepochs:(int)6->(int)5'
+    assert msg == "Differences between configurations:\n\tepochs:(int)6->(int)5"
 
 
 if __name__ == "__main__":
