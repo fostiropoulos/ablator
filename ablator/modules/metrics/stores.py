@@ -1,15 +1,27 @@
 import inspect
-import sys
+
 import typing as ty
-from collections.abc import (
-    Callable,
-    Sequence,
-)
+from collections.abc import Callable, Sequence
+from functools import cached_property
 
 import numpy as np
 import torch
 
 import ablator.utils.base as butils
+
+
+def _parse_val(val: np.ndarray | torch.Tensor | int | float) -> int | float:
+    if not isinstance(val, (np.ndarray, torch.Tensor, int, float)):
+        raise ValueError(f"Invalid MovingAverage value type {type(val)}")
+    if isinstance(val, (np.ndarray, torch.Tensor)):
+        npval: np.ndarray = butils.iter_to_numpy(val)
+        try:
+            scalar = npval.item()
+        except Exception as exc:
+            raise ValueError(f"MovingAverage value must be scalar. Got {val}") from exc
+    else:
+        scalar = val
+    return scalar
 
 
 class ArrayStore(Sequence):
@@ -20,19 +32,21 @@ class ArrayStore(Sequence):
 
     def __init__(
         self,
-        batch_limit: int = 30,
+        batch_limit: int | None = None,
         # 100 MB memory limit
-        memory_limit: int | None = int(1e8),
+        memory_limit: int | None = None,
     ):
         """
-        Initialize the storage settings.
+        Initialize the storage based on the memory / batch_limits provided.
 
         Parameters
         ----------
         batch_limit : int, optional
-            The maximum number of batches of values to store for this single store. Default is 30.
+            The maximum number of batches of values to store for this single store.
+            If set to None, unlimited number of batches will be stored. Default is None.
         memory_limit : int or None, optional
-            The maximum memory allowed for all values in bytes. Default is 1e8.
+            The maximum memory allowed for the prediction store.
+            If set to None, unlimited number of batches will be stored. Default is None.
 
         Examples
         --------
@@ -43,9 +57,9 @@ class ArrayStore(Sequence):
         ... )
         """
         super().__init__()
-        self.arr: list[np.ndarray | int | float] = []
+        self._arr: list[np.ndarray] = []
         self.limit = batch_limit
-        self.memory_limit = memory_limit
+        self._memory_limit = memory_limit
 
     def append(self, val: np.ndarray | float | int):
         """
@@ -98,21 +112,48 @@ class ArrayStore(Sequence):
         4
         """
         # Appending by batch is faster than converting numpy to list
-        assert isinstance(
-            val, (np.ndarray, int, float)
-        ), f"Invalid ArrayStore value type {type(val)}"
-        self.arr.append(val)
-        if len(self.arr) > self.limit:
-            self.arr = self.arr[-self.limit:]
-        elif (
-            self.memory_limit is not None
-            and sys.getsizeof(self.arr) > self.memory_limit
-        ):
-            self.limit = len(self.arr) - 1
+        if not isinstance(val, (np.ndarray, int, float)):
+            raise RuntimeError(f"Invalid ArrayStore value type {type(val)}")
+        np_val: np.ndarray
+        if isinstance(val, (int, float)) or len(val.shape) == 0:
+            np_val = np.array([val])
+        else:
+            np_val = val
+        if self.store_type is not None and np_val.dtype != self.store_type:
+            raise RuntimeError(
+                f"Inhomogeneous types between stored values {self.store_type} and provided value {np_val.dtype}."
+            )
+        if self.shape is not None and np_val.shape != self.shape:
+            raise RuntimeError(
+                f"Inhomogeneous shapes between stored values  {self.shape} and provided value {np_val.shape}"
+            )
+        if self.store_type is None:
+            # we reset the cached properties
+            del self.store_type
+            del self.shape
+        self._arr.append(np_val)
+        if self.limit is not None and len(self) > self.limit:
+            # pylint throws an error because limit can be None
+            self._arr = self._arr[
+                -self.limit :  # pylint: disable=invalid-unary-operand-type
+            ]
+        elif self._memory_limit is not None and self.memory_size > self._memory_limit:
+            self.limit = max(len(self) - 1, 1)
+        if len(self._arr) % 10 == 0 and hasattr(self, "memory_size"):
+            del self.memory_size
+
+    @cached_property
+    def memory_size(self):
+        arr_size = 0
+        if len(self) > 0:
+            arr = self._arr[0]
+            arr_size = arr.size * arr.itemsize * len(self._arr)
+
+        return arr_size
 
     def get(self) -> np.ndarray:
         """
-        Returns a flatten array of values
+        Returns the stored values as a numpy array.
 
         Examples
         --------
@@ -124,17 +165,30 @@ class ArrayStore(Sequence):
         >>> for i in range(100):
         >>>     array_store.append(np.array([int(i)]))
         >>> array_store.get()
-        [[90 91 92 93 94 95 96 97 98 99]]
+        array([[90], [91], [92], [93], [94], [95], [96], [97], [98], [99]])
         """
-        if len(self.arr) > 0:
-            self.arr = [np.concatenate(self.arr)]
-        return np.array(self.arr)
+        if len(self._arr) == 0:
+            return np.array([])
+        return np.stack(self._arr)
+
+    @cached_property
+    def store_type(self) -> type | None:
+        if len(self._arr) > 0:
+            return self._arr[-1].dtype
+        return None
+
+    @cached_property
+    def shape(self) -> tuple[int, ...] | None:
+        if len(self._arr) > 0:
+            return self._arr[-1].shape
+        return None
 
     def __len__(self):
-        return len(self.arr)
+        size = len(self._arr)
+        return size
 
     def __getitem__(self, i):
-        return self.arr[i]
+        return self._arr[i]
 
     def reset(self):
         """
@@ -155,7 +209,7 @@ class ArrayStore(Sequence):
         >>> array_store.arr
         []
         """
-        self.arr = []
+        self._arr = []
 
 
 class PredictionStore:
@@ -170,7 +224,7 @@ class PredictionStore:
         # 100 MB memory limit
         memory_limit: int = int(1e8),
         moving_average_limit: int = 3000,
-        evaluation_functions: dict[str, Callable] | None = None,
+        evaluation_functions: dict[str, Callable] | list[Callable] | None = None,
     ):
         """
         Initialize the storage settings.
@@ -207,13 +261,28 @@ class PredictionStore:
         super().__init__()
         self.limit = batch_limit
         self.memory_limit = memory_limit
-        self.metrics: dict[str, MovingAverage] = (
-            {k: MovingAverage(moving_average_limit) for k in evaluation_functions}
-            if evaluation_functions is not None
-            else {}
-        )
-        self.__evaluation_functions__ = evaluation_functions
-        self._keys: list[str] | None = None
+        # not all arguments from evaluation functions are required.
+        # we infer the overlapping arguments at run-time and store
+        # as self._keys, a dictionary with keys the function names,
+        # values is a list of infered arguments.
+        self._fn_keys: dict[str, list[str]] | None = None
+        self._batch_keys: set[str] | None = None
+        self.metrics: dict[str, MovingAverage] = {}
+        self.__evaluation_functions__ = None
+        if isinstance(evaluation_functions, list):
+            evaluation_functions_dict = {v.__name__: v for v in evaluation_functions}
+        elif isinstance(evaluation_functions, dict):
+            evaluation_functions_dict = evaluation_functions
+        elif evaluation_functions is None:
+            return
+        else:
+            raise NotImplementedError(
+                f"Unrecognized evaluation functions {evaluation_functions}"
+            )
+        self.metrics = {
+            k: MovingAverage(moving_average_limit) for k in evaluation_functions_dict
+        }
+        self.__evaluation_functions__ = evaluation_functions_dict
 
     def _init_arr(self, tag):
         attr_name = f"__{tag}_arr__"
@@ -226,9 +295,26 @@ class PredictionStore:
         arr = getattr(self, attr_name)
         return arr
 
+    def _init_keys(self, batch_keys: set[str]):
+        missing_keys: list[str] = []
+        self._batch_keys = batch_keys
+        self._fn_keys = {}
+        for k, v in self.evaluation_function_arguments.items():
+            if len(set(batch_keys).intersection(v)) == 0:
+                missing_keys.append(f"{k}: {v}")
+            else:
+                self._fn_keys[k] = list(batch_keys.intersection(v))
+        if len(missing_keys) > 0:
+            err_msg = "\n".join(missing_keys)
+            raise ValueError(
+                f"Batch keys do not match any function arguments: {err_msg}"
+            )
+        for k in batch_keys:
+            self._init_arr(k)
+
     def append(self, **batches: dict[str, np.ndarray]):
         """
-        Appends batches of values, constrained on the limits.
+        Appends batches of values, constrained on the limits in unison.
 
         Parameters
         ----------
@@ -240,7 +326,7 @@ class PredictionStore:
 
         Raises
         ------
-        AssertionError
+        ValueError
             If passed keys do not match arguments in evaluation functions,
             or when batches among the keys are different in size.
 
@@ -256,27 +342,41 @@ class PredictionStore:
         >>> pred_store.append(preds=np.array([4,3,0]), labels=np.array([5,1,1]))
 
         """
-        if self._keys is None:
-            for k in batches:
-                self._init_arr(k)
-            self._keys = sorted(list(batches.keys()))
+        batch_keys = set(batches.keys())
+        if len(batch_keys) == 0:
+            raise ValueError("Must provide keyed batch arguments.")
+        if self._batch_keys is None:
+            self._init_keys(batch_keys=batch_keys)
+            assert self._batch_keys is not None
         sizes = {}
-        limits = []
-        assert self._keys == sorted(
-            list(batches.keys())
-        ), f"Missing keys from the prediction store update. Expected: {self._keys}, received {list(batches.keys())}"
+        assert self._batch_keys == batch_keys, (
+            f"Inhomogeneous keys from the prediction store update. "
+            f"Expected: {sorted(self._batch_keys)}, received {sorted(batch_keys)}"
+        )
         for k, v in batches.items():
             np_arr = butils.iter_to_numpy(v)
             sizes[k] = len(np_arr)
-            self._get_arr(k).append(np_arr)
-            limits.append(self._get_arr(k).limit)
+            if len(np_arr.shape) < 2:
+                raise ValueError(
+                    (
+                        "Missing batch dimension. If supplying a single value array, "
+                        "reshape to [B, 1] or if suppling a single a batch reshape to [1, N]."
+                    )
+                )
+            for row in np_arr:
+                self._get_arr(k).append(row)
         assert (
             len(set(sizes.values())) == 1
-        ), f"Different number of batches between inputs. Sizes: {sizes}"
+        ), f"Inhomegenous batches between inputs. Sizes: {sizes}"
+        limits = []
+        for k in self._batch_keys:
+            if (_limit := self._get_arr(k).limit) is not None:
+                limits.append(_limit)
 
-        new_limit = min(limits)
-        for k in self._keys:
-            self._get_arr(k).limit = new_limit
+        if self.limit is not None or len(limits) > 0:
+            self.limit = min(limits)
+            for k in self._batch_keys:
+                self._get_arr(k).limit = self.limit
 
     def evaluate(self) -> dict[str, float]:
         """
@@ -308,22 +408,23 @@ class PredictionStore:
         >>> pred_store.evaluate()
         {'mean': 5.333333333333334}
         """
-        if self._keys is None:
-            return {}
-        batches = {k: self._get_arr(k).get() for k in self._keys}
 
-        if self.__evaluation_functions__ is None or len(batches) == 0:
-            return {}
-        metrics = {}
+        metrics: dict[str, float] = {}
+        if (
+            self._batch_keys is None
+            or self.__evaluation_functions__ is None
+            or len(self._batch_keys) == 0
+        ):
+            return metrics
+        batches = {k: self._get_arr(k).get() for k in self._batch_keys}
         for k, v in self.__evaluation_functions__.items():
-            fn_args = sorted(list(inspect.getfullargspec(v)[0]))
-
+            fn_args = set(inspect.signature(v).parameters.keys())
+            intersecting_args = set(self._batch_keys).intersection(fn_args)
             assert (
-                self._keys == fn_args
-            ), f"Evaluation function arguments {fn_args} different than stored predictions: {self._keys}"
-            metric = v(**batches)
-            if isinstance(metric, torch.Tensor):
-                metric = metric.item()
+                len(intersecting_args) > 0
+            ), f"Evaluation function arguments {fn_args} different than stored predictions: {self._batch_keys}"
+            metric = v(**{k: v for k, v in batches.items() if k in intersecting_args})
+            metric = _parse_val(metric)
             metrics[k] = metric
             try:
                 self.metrics[k].append(metric)
@@ -332,6 +433,20 @@ class PredictionStore:
                     f"Invalid value {metric} returned by evaluation function {v.__name__}. Must be numeric scalar."
                 ) from exc
         return metrics
+
+    @property
+    def evaluation_function_arguments(self):
+        if self.__evaluation_functions__ is None:
+            return {}
+        return {
+            k: list(inspect.signature(v).parameters.keys())
+            for k, v in self.__evaluation_functions__.items()
+        }
+
+    def get(self) -> dict[str, np.ndarray] | None:
+        if self._batch_keys is None:
+            return None
+        return {k: self._get_arr(k).get() for k in self._batch_keys}
 
     def reset(self):
         """
@@ -349,9 +464,9 @@ class PredictionStore:
         >>> pred_store.append(preds=np.array([4,3,0]), labels=np.array([5,1,3]))
         >>> pred_store.reset()
         """
-        if self._keys is None:
+        if self._batch_keys is None:
             return
-        for k in self._keys:
+        for k in self._batch_keys:
             self._get_arr(k).reset()
 
 
@@ -363,16 +478,19 @@ class MovingAverage(ArrayStore):
 
     @property
     def __mean__(self):
-        return np.mean(self.arr)
+        return np.mean(self._arr)
 
     @property
     def value(self):
-        if len(self.arr) > 0:
+        if len(self._arr) > 0:
             return self.__mean__
         return np.nan
 
     def __lt__(self, __o: float) -> bool:
         return float(self.value).__lt__(__o)
+
+    def __gt__(self, __o: float) -> bool:
+        return float(self.value).__gt__(__o)
 
     def __eq__(self, __o: object) -> bool:
         return float(self.value).__eq__(__o)
@@ -410,14 +528,5 @@ class MovingAverage(ArrayStore):
         [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85,
         86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
         """
-        if not isinstance(val, (np.ndarray, torch.Tensor, int, float)):
-            raise ValueError(f"Invalid MovingAverage value type {type(val)}")
-        if isinstance(val, (np.ndarray, torch.Tensor)):
-            npval = butils.iter_to_numpy(val)
-            try:
-                scalar = npval.item()
-            except Exception as exc:
-                raise ValueError(f"MovingAverage value must be scalar. {val}") from exc
-        else:
-            scalar = val
+        scalar = _parse_val(val)
         super().append(scalar)
