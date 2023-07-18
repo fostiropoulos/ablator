@@ -22,6 +22,8 @@ class AblatorPlugin(Plugin):
             return StatesCallback
         elif fullname == f"{prefix}.Literal":
             return LiteralCallback
+        elif fullname == f"{prefix}.Self":
+            return SelfCallback
 
 
 def Optionalcallback(ctx: AnalyzeTypeContext) -> Type:
@@ -59,6 +61,26 @@ def StatesCallback(ctx: AnalyzeTypeContext) -> Type:
 
 def LiteralCallback(ctx: AnalyzeTypeContext) -> Type:
     return ctx.api.analyze_literal_type(ctx.type)
+
+
+def SelfCallback(ctx: AnalyzeTypeContext) -> Type:
+    t = ctx.type
+    if t.args:
+        ctx.api.fail("Self type cannot have type arguments", t)
+    if ctx.api.prohibit_self_type is not None:
+        ctx.api.fail(f"Self type cannot be used in {ctx.api.prohibit_self_type}", t)
+        return AnyType(TypeOfAny.from_error)
+    if ctx.api.api.type is None:
+        ctx.api.fail("Self type is only allowed in annotations within class definition", t)
+        return AnyType(TypeOfAny.from_error)
+    if ctx.api.api.type.has_base("builtins.type"):
+        ctx.api.fail("Self type cannot be used in a metaclass", t)
+    if ctx.api.api.type.self_type is not None:
+        if ctx.api.api.type.is_final:
+            return ctx.api.fill_typevars(ctx.api.api.type)
+        return ctx.api.api.type.self_type.copy_modified(line=t.line, column=t.column)
+    ctx.api.fail("Unexpected Self type", t)
+    return AnyType(TypeOfAny.from_error)
 
 
 def plugin(version: str):
