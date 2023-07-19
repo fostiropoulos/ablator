@@ -1,7 +1,15 @@
 from contextlib import redirect_stderr, redirect_stdout
 import io
+import os
 from pathlib import Path
 import tempfile
+import unittest
+from unittest.mock import Mock
+from ablator.main.proto import ProtoTrainer
+from ablator.main.state import TrialState
+from ablator.modules.loggers.file import FileLogger
+from ablator.modules.loggers.main import DuplicateRunError
+from ablator.modules.metrics.main import LossDivergedError
 
 import ray
 import torch
@@ -17,7 +25,7 @@ from ablator import (
 from ablator.analysis.results import Results
 from ablator.config.main import configclass
 from ablator.main.configs import ParallelConfig, SearchSpace
-from ablator.main.mp import ParallelTrainer
+from ablator.main.mp import ParallelTrainer, train_main_remote
 from ablator import Derived
 
 
@@ -57,6 +65,20 @@ config = MyParallelConfig(
     gpu_mb_per_experiment=100,
     cpus_per_experiment=0.5,
 )
+
+run_config=MyParallelConfig(
+        train_config=train_config,
+        model_config=CustomModelConfig(),
+        verbose="silent",
+        device="cpu",
+        amp=False,
+        search_space=search_space,
+        optim_metrics={"val_loss": "min"},
+        total_trials=5,
+        concurrent_trials=5,
+        gpu_mb_per_experiment=0.001,
+        cpus_per_experiment=0.001,
+    )
 
 
 class TestWrapper(ModelWrapper):
@@ -107,6 +129,7 @@ def capture_output(fn):
         fn()
 
     return out.getvalue(), err.getvalue()
+
 
 
 def test_mp(tmp_path: Path):
@@ -213,12 +236,71 @@ def test_relative_path(tmp_path:Path):
     relative_path_config.experiment_dir="../dir"
     ablator=ParallelTrainer(wrapper=wrapper,run_config=relative_path_config)
     assert Path(relative_path_config.experiment_dir).absolute() in ablator.experiment_dir.parents
+
+def test_train_main_remote_successful_completion():
+        # Set up necessary inputs for successful completion
+        run_config = config
+        wrapper = TestWrapper(MyCustomModel)
+        logger = FileLogger()
+      
+
+        # Call train_main_remote with the provided inputs
+        result = train_main_remote(wrapper, run_config,logger,root_dir=Path(__file__).parent)
+
+        # Assert that the returned result indicates successful completion
+        assert result[2] == TrialState.COMPLETE
+
+def test_clean_reset():
+    wrapper = TestWrapper(MyCustomModel)
+    # Set model_dir to a non-existent directory
+    wrapper.model_dir = os.path.join(Path(__file__).parent, "nonexistent_dir")
+    logger = FileLogger()
+    # Test execution
+    result = train_main_remote(wrapper,config,logger,root_dir=Path(__file__).parent,fault_tollerant=False,crash_exceptions_types=None,resume=False,clean_reset= True)
+    # Test assertion
+    assert TrialState.RECOVERABLE_ERROR in result, "CheckpointNotFoundError is not triggered with clean reset."
+
+def test_loss_diverged_error(tmp_path):
+        model = Mock()
+        #raise Duplicate Run Error
+        model.train.side_effect = LossDivergedError()
+        model.model_dir = tmp_path / "model_dir"
+         # create the directory
+        model.model_dir.mkdir() 
+        run_config = config
+        mp_logger = FileLogger()
+        root_dir = tmp_path
+         # Test execution
+        result = train_main_remote(model, run_config, mp_logger, root_dir)
+         # Test assertion
+        assert result[2] == TrialState.PRUNED_POOR_PERFORMANCE
+
+def test_duplicate_run_error(tmp_path):
+        model = Mock()
+        #raise Duplicate Run Error
+        model.train.side_effect = DuplicateRunError()
+        model.model_dir = tmp_path / "dup_dir"
+        # create the directory
+        model.model_dir.mkdir() 
+        run_config = config
+        mp_logger = FileLogger()
+        root_dir = tmp_path
+         # Test execution
+        result = train_main_remote(model, run_config, mp_logger, root_dir)
+        # Test assertion
+        assert result[2] == TrialState.RECOVERABLE_ERROR
+
+
+
 if __name__ == "__main__":
     import shutil
 
     tmp_path = Path("/tmp/experiment_dir")
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
-    test_mp(tmp_path)
-    test_resume(tmp_path)
-    test_relative_path(tmp_path)
+    # test_mp(tmp_path)
+    # test_resume(tmp_path)
+    # test_relative_path(tmp_path)
+    test_train_main_remote_successful_completion()
+    test_clean_reset()
+    unittest.main()
