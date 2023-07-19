@@ -40,15 +40,5 @@ class RcloneConfig(ConfigBase):
             if verbose is True:
                 command.append("-vv")
             self.rcloneProcess = self.rcloneWrapper.mount(f"{self.get_remote_path_prefix()}", self.experiment_dir, command, verbose=verbose)
-        for i in range(10, 0, -1):
-            print("wait for rclone mouting", i)
-            time.sleep(1)
-        if self.inspect_mount_status() is not True:
+        if self.rcloneWrapper.get_rclone_status() is not True:
             raise RuntimeError("rclone is not running")
-
-    def inspect_mount_status(self):
-        if self.rcloneProcess is None:
-            return False
-        if self.rcloneProcess.poll() is not None:
-            return False
-        return True
