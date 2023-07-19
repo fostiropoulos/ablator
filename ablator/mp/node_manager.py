@@ -65,14 +65,12 @@ def utilization():
 
 
 @ray.remote
-def update_node(key):
+def update_node(node_ip, key):
     # check if key in authorized keys
     ssh_dir = Path.home().joinpath(".ssh")
     ssh_dir.mkdir(exist_ok=True)
 
     username = getpass.getuser()
-    hostname = socket.gethostname()
-    node_ip = socket.gethostbyname(hostname)
     authorized_keys = ssh_dir.joinpath("authorized_keys")
     if authorized_keys.exists() and key in authorized_keys.read_text(encoding="utf-8"):
         return node_ip, username
@@ -103,7 +101,7 @@ class NodeManager:
             if node_alive and node_ip not in self.nodes:
                 futures.append(
                     update_node.options(resources={f"node:{node_ip}": 0.01}).remote(
-                        self.public_key
+                        node_ip, self.public_key
                     )
                 )
             elif node_alive and node_ip not in nodes:
