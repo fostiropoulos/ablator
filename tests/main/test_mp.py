@@ -2,6 +2,14 @@ from contextlib import redirect_stderr, redirect_stdout
 import io
 from pathlib import Path
 import tempfile
+import unittest
+from unittest.mock import Mock
+from ablator.modules.metrics.main import LossDivergedError
+from ablator.main.model.main import TrainPlateauError, CheckpointNotFoundError
+from ablator.modules.loggers.main import DuplicateRunError
+from ablator.main.mp import TrialState
+from ablator.modules.loggers.file import FileLogger
+from ablator.main.mp import train_main_remote
 
 import ray
 import torch
@@ -213,6 +221,80 @@ def test_relative_path(tmp_path:Path):
     relative_path_config.experiment_dir="../dir"
     ablator=ParallelTrainer(wrapper=wrapper,run_config=relative_path_config)
     assert Path(relative_path_config.experiment_dir).absolute() in ablator.experiment_dir.parents
+
+def test_handle_loss_diverged_error(tmp_path):
+        model = Mock()
+        model.train.side_effect = LossDivergedError()
+        model.model_dir = tmp_path / "model_dir"
+        model.model_dir.mkdir()  # create the directory
+        run_config = ParallelConfig(
+            train_config=train_config,
+            model_config=CustomModelConfig(),
+            verbose="silent",
+            device="cpu",
+            amp=False,
+            search_space=search_space,
+            optim_metrics={"val_loss": "min"},
+            total_trials=5,
+            concurrent_trials=5,
+            gpu_mb_per_experiment=0.001,
+            cpus_per_experiment=0.001,
+        )
+        mp_logger = FileLogger()
+        root_dir = tmp_path
+
+        result = train_main_remote(model, run_config, mp_logger, root_dir)
+        assert result[2] == TrialState.PRUNED_POOR_PERFORMANCE
+
+def test_handle_duplicate_run_error(tmp_path):
+        model = Mock()
+        model.train.side_effect = DuplicateRunError()
+        model.model_dir = tmp_path / "model_dir"
+        model.model_dir.mkdir()  # create the directory
+        run_config = ParallelConfig(
+            train_config=train_config,
+            model_config=CustomModelConfig(),
+            verbose="silent",
+            device="cpu",
+            amp=False,
+            search_space=search_space,
+            optim_metrics={"val_loss": "min"},
+            total_trials=5,
+            concurrent_trials=5,
+            gpu_mb_per_experiment=0.001,
+            cpus_per_experiment=0.001,
+        )
+        mp_logger = FileLogger()
+        root_dir = tmp_path
+
+        result = train_main_remote(model, run_config, mp_logger, root_dir)
+        assert result[2] == TrialState.RECOVERABLE_ERROR
+
+def test_handle_checkpoint_not_found_error(tmp_path):
+        model = Mock()
+        model.model_dir = tmp_path / "model_dir"
+        model.model_dir.mkdir()  # create the directory
+        model.train.side_effect = CheckpointNotFoundError()
+        run_config = ParallelConfig(
+            train_config=train_config,
+            model_config=CustomModelConfig(),
+            verbose="silent",
+            device="cpu",
+            amp=False,
+            search_space=search_space,
+            optim_metrics={"val_loss": "min"},
+            total_trials=5,
+            concurrent_trials=5,
+            gpu_mb_per_experiment=0.001,
+            cpus_per_experiment=0.001,
+        )
+        mp_logger = FileLogger()
+        root_dir = tmp_path
+
+        result = train_main_remote(model, run_config, mp_logger, root_dir, clean_reset=True)
+        assert result[2] == TrialState.RECOVERABLE_ERROR
+    
+
 if __name__ == "__main__":
     import shutil
 
@@ -222,3 +304,4 @@ if __name__ == "__main__":
     test_mp(tmp_path)
     test_resume(tmp_path)
     test_relative_path(tmp_path)
+    unittest.main()
