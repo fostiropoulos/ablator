@@ -31,7 +31,7 @@ jobs:
       - name: Install Docker
         run: |
           brew install docker
-          colima start --cpu 1 --memory 2 --disk 20
+          colima start --cpu 1 --memory 10 --disk 20
       # - name: Setup Docker on macOS
       #   uses: douglascamata/setup-docker-macos-action@v1-alpha
       - name: Build Docker Image
