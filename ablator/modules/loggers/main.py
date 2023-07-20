@@ -366,7 +366,7 @@ class SummaryLogger:
             file_path = dir_path.joinpath(f"{file_name}_{itr:010}.pt")
 
             assert not file_path.exists(), f"Checkpoint exists: {file_path}"
-            futils.save_checkpoint(save_dict, file_path)
+            futils.save_checkpoint(save_dict, file_path.as_posix())
             futils.clean_checkpoints(dir_path, self.keep_n_checkpoints)
             self._update_metadata()
 

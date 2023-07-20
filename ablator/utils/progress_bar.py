@@ -41,7 +41,7 @@ def get_last_line(filename: Path) -> str | None:
     ----------
     filename : Path
         The path of the filename.
-    
+
     Returns
     -------
     str | None

@@ -3,6 +3,7 @@ import json
 import os
 import typing as ty
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -33,15 +34,15 @@ def make_sub_dirs(parent: str | Path, *dir_names: str) -> list[Path]:
     return dirs
 
 
-def save_checkpoint(state: dict, filename: str = "checkpoint.pt"):
+def save_checkpoint(state: object, filename: str = "checkpoint.pt"):
     """
     Save a checkpoint of the given state.
 
     Parameters
     ----------
-    state : dict
+    state : object
         Model State dictionary to save.
-    filename : str, default="checkpoint.pt" 
+    filename : str, optional
         The name of the checkpoint file, by default "checkpoint.pt".
     """
     torch.save(state, filename)
@@ -67,8 +68,9 @@ def clean_checkpoints(checkpoint_folder: Path, n_checkpoints: int):
             Path(_chkpt).unlink(missing_ok=True)
 
 
-def default_val_parser(val: ty.Any) ->  ty.Any:
-    """Converts the input value to a JSON compatible format.
+def default_val_parser(val: ty.Any) -> ty.Any:
+    """
+    Converts the input value to a JSON compatible format.
 
     Parameters
     ----------

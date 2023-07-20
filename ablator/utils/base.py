@@ -34,7 +34,7 @@ class Dummy:
         return self
 
 
-def iter_to_numpy(iterable: Iterable) -> any:
+def iter_to_numpy(iterable: Iterable) -> ty.Any:
     """
     Convert elements of the input iterable to NumPy arrays if they are torch.Tensor objects.
 
@@ -55,7 +55,7 @@ def iter_to_numpy(iterable: Iterable) -> any:
 
 
 def iter_to_device(
-    data_dict: dict | list, device: torch.device | str
+    data_dict: Iterable, device: torch.device | str
 ) -> ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]:
     """
     Moving torch.Tensor elements to the specified device.
@@ -77,7 +77,7 @@ def iter_to_device(
     )
 
 
-def apply_lambda_to_iter(iterable: Iterable, fn: Callable) -> any:
+def apply_lambda_to_iter(iterable: Iterable, fn: Callable) -> ty.Any:
     """
     Applies a given function ``fn`` to each element of an iterable data structure.
 
@@ -187,7 +187,7 @@ def get_latest_chkpts(checkpoint_dir: Path) -> list[Path]:
     return sorted(list(checkpoint_dir.glob("*.pt")))[::-1]
 
 
-def parse_device(device: ty.Union[str, list[str], int]) -> any:
+def parse_device(device: ty.Union[str, list[str], int]) -> ty.Any:
     """
     Parse a device string, an integer, or a list of device strings or integers.
 
