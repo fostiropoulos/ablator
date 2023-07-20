@@ -1,5 +1,6 @@
 import copy
 import multiprocessing as mp
+import time
 import traceback
 import typing as ty
 from abc import abstractmethod
@@ -22,6 +23,7 @@ from ablator.utils.progress_bar import RemoteProgressBar
 
 
 # pylint: disable=too-many-public-methods
+# pylint: disable=too-many-instance-attributes
 class ModelWrapper(ModelBase):
     """
     A wrapper around model_class that removes training boiler-plate code, with over-writable functions
@@ -61,6 +63,7 @@ class ModelWrapper(ModelBase):
         self.optimizer: Optimizer
         self.scaler: GradScaler
         self.scheduler: Scheduler | None
+        self._prev_update_time: float = time.time()
 
     @property
     def train_config(self) -> TrainConfig:
@@ -534,7 +537,7 @@ class ModelWrapper(ModelBase):
         )
 
     @property
-    def metrics(self) -> dict[str | float]:
+    def metrics(self) -> dict[str, float]:
         """
         The metrics of the current training state.
         If ``eval_metrics`` are defined (e.g. a validation dataloader was provided)
@@ -543,7 +546,7 @@ class ModelWrapper(ModelBase):
 
         Returns
         -------
-        dict[str| float]
+        dict[str, float]
             A dictionary with keys the metric name and the value corresponding to the metric.
         """
         metrics = {}
@@ -578,9 +581,16 @@ class ModelWrapper(ModelBase):
         Log if the current iteration is a logging step. It also evaluate training metrics for logging.
         """
         # Log step
+        update_interval = 1
         if self._is_step(self.log_itr):
             self.train_metrics.evaluate(reset=False)
             self.log_step()
+        elif (
+            self.verbose == "progress"
+            and time.time() - self._prev_update_time > update_interval
+        ):
+            self.update_status()
+            self._prev_update_time = 1
 
     @ty.final
     def eval(self, smoke_test=False):
