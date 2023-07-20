@@ -39,23 +39,23 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
     Examples
     --------
     >>> result json file:
+    [{
+    "train_loss": 10.35,
+    "val_loss": NaN,
+    "current_epoch": 1,
+    },
     {
-    "run_id": "run_1",
-    "accuracy": 0.85,
-    "loss": 0.35
-    }
-    {
-    "run_id": "run_2",
-    "accuracy": 0.87,
-    "loss": 0.32
-    }
+    "train_loss": 3.89,
+    "val_loss": 7.04,
+    "current_epoch": 2,
+    }]
     >>> config file
-    experiment_name: "My Experiment"
-    batch_size: 64
+    experiment_dir: "C:\tmp\results\experiment_8925_9991"
+    device: cpu
     >>> return value
-           run_id  accuracy loss experiment_name batch_size     path
-    0       run_1      0.85  0.35    My Experiment    64  path/to/experiment
-    1        run_2      0.87  0.32    My Experiment    64  path/to/experiment
+           current_epoch   train_loss  val_loss        experiment_dir                  device     
+    0            1          10.35        NaN    "C:\tmp\results\experiment_8925_9991"    cpu  
+    1            2           3.89       7.04    "C:\tmp\results\experiment_8925_9991"    cpu 
     """
 
     try:
@@ -109,6 +109,11 @@ class Results:
         The list of all the numerical hyperparameter names
     categorical_attributes: list[str]
         The list of all the categorical hyperparameter names
+
+    Raises
+    ------
+    FileNotFoundError
+        If the experiment directory doesn't exists.
     """
 
     def __init__(
@@ -228,11 +233,10 @@ class Results:
         cls,
         config_type: type[ConfigBase],
         experiment_dir: Path | str,
-        num_cpus=None,
+        num_cpus: int = None,
     ) -> pd.DataFrame:
         """
         Read multiple results from experiment directory with ray to enable parallel processing.
-
         This function calls ``read_result`` many times, refer to ``read_result`` for more details.
 
         Parameters
@@ -248,6 +252,25 @@ class Results:
         -------
         pd.DataFrame
             A dataframe of all the results
+
+        Raises
+        ------
+        RuntimeError
+            If no results are present in the experiment directory.
+
+        Examples
+        --------
+        >>> results.read_results(config_type = ParallelConfig, experiment_dir = "/tmp/results/experiment_8925_9991/")
+        >>> returns dataframe
+
+        train_loss	val_loss	best_iteration	best_loss	current_epoch	current_iteration	epochs ...
+        13.3658738		        0	                inf	            1	            100             5
+        2.277102967	0.277085876	100	            0.277085876	        2	            200	            5
+        2.277154112	0.27619998	200	            0.27619998	        3	            300	            5
+        2.276529543	0.286987235	200	            0.27619998	        4	            400	            5
+        2.279828385	0.274052692	400	            0.274052692	        5	            500	            5
+        11.91869608		        0	                inf	            1	            100	            5
+        ...
         """
         results: list[pd.DataFrame] = []
         futures: list[ray.ObjectRef] = []

@@ -34,7 +34,7 @@ class Dummy:
         return self
 
 
-def iter_to_numpy(iterable):
+def iter_to_numpy(iterable: Iterable) -> any:
     """
     Convert elements of the input iterable to NumPy arrays if they are torch.Tensor objects.
 
@@ -55,14 +55,14 @@ def iter_to_numpy(iterable):
 
 
 def iter_to_device(
-    data_dict, device
+    data_dict: dict | list, device: torch.device | str
 ) -> ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]:
     """
     Moving torch.Tensor elements to the specified device.
 
     Parameters
     ----------
-    data_dict : dict or list
+    data_dict : dict | list
         The input dictionary or list containing torch.Tensor elements.
     device : torch.device | str
         The target device for the tensors.
@@ -77,7 +77,7 @@ def iter_to_device(
     )
 
 
-def apply_lambda_to_iter(iterable, fn: Callable):
+def apply_lambda_to_iter(iterable: Iterable, fn: Callable) -> any:
     """
     Applies a given function ``fn`` to each element of an iterable data structure.
 
@@ -109,7 +109,7 @@ def apply_lambda_to_iter(iterable, fn: Callable):
     return fn(iterable)
 
 
-def set_seed(seed: int):
+def set_seed(seed: int) -> int:
     """
     Set the random seed.
 
@@ -131,13 +131,13 @@ def set_seed(seed: int):
     return seed
 
 
-def get_lr(optimizer):
+def get_lr(optimizer: torch.optim.Optimizer | dict) -> float:
     """
     Get the learning rate from an optimizer.
 
     Parameters
     ----------
-    optimizer : torch.optim.Optimizer or dict
+    optimizer : torch.optim.Optimizer | dict
         The optimizer.
 
     Returns
@@ -187,7 +187,7 @@ def get_latest_chkpts(checkpoint_dir: Path) -> list[Path]:
     return sorted(list(checkpoint_dir.glob("*.pt")))[::-1]
 
 
-def parse_device(device: ty.Union[str, list[str]]):
+def parse_device(device: ty.Union[str, list[str], int]) -> any:
     """
     Parse a device string, an integer, or a list of device strings or integers.
 
@@ -289,7 +289,7 @@ def get_gpu_mem(
 
     Returns
     -------
-    list[int]
+    dict[str, int]
         A list of memory values for each GPU, depending on the specified memory type.
     """
     memory: dict[str, int] = {}
@@ -381,10 +381,10 @@ def num_format(
 
     Parameters
     ----------
-    value : int | float
+    value : str | int | float | np.integer | np.floating
         the value to format
     width : int, optional
-        the width of the decimal places, by default 5
+        the width of the decimal places, by default 8
 
     Returns
     -------

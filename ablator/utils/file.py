@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 
 
-def make_sub_dirs(parent: str | Path, *dir_names) -> list[Path]:
+def make_sub_dirs(parent: str | Path, *dir_names: str) -> list[Path]:
     """
     Create subdirectories under the given parent directory.
 
@@ -33,7 +33,7 @@ def make_sub_dirs(parent: str | Path, *dir_names) -> list[Path]:
     return dirs
 
 
-def save_checkpoint(state, filename="checkpoint.pt"):
+def save_checkpoint(state: dict, filename: str = "checkpoint.pt"):
     """
     Save a checkpoint of the given state.
 
@@ -41,7 +41,7 @@ def save_checkpoint(state, filename="checkpoint.pt"):
     ----------
     state : dict
         Model State dictionary to save.
-    filename : str, optional
+    filename : str, default="checkpoint.pt" 
         The name of the checkpoint file, by default "checkpoint.pt".
     """
     torch.save(state, filename)
@@ -67,7 +67,7 @@ def clean_checkpoints(checkpoint_folder: Path, n_checkpoints: int):
             Path(_chkpt).unlink(missing_ok=True)
 
 
-def default_val_parser(val):
+def default_val_parser(val: ty.Any) ->  ty.Any:
     """Converts the input value to a JSON compatible format.
 
     Parameters
@@ -90,7 +90,7 @@ def default_val_parser(val):
     return str(val)
 
 
-def json_to_dict(json_):
+def json_to_dict(json_: str) -> dict:
     """
     Convert a JSON string into a dictionary.
 
@@ -109,7 +109,7 @@ def json_to_dict(json_):
     return dict_
 
 
-def dict_to_json(dict_):
+def dict_to_json(dict_: dict) -> str:
     """
     Convert a dictionary into a JSON string.
 
@@ -129,7 +129,7 @@ def dict_to_json(dict_):
     return _json
 
 
-def nested_set(dict_, keys: list[str], value: ty.Any):
+def nested_set(dict_: dict, keys: list[str], value: ty.Any) -> dict:
     """
     Set a value in a nested dictionary.
 

@@ -14,6 +14,21 @@ class Analysis:
     """
     A class for analyzing experimental results.
 
+    Parameters
+        ----------
+        results : pd.DataFrame
+            The result dataframe.
+        categorical_attributes : list[str]
+            The list of all the categorical hyperparameter names
+        numerical_attributes : list[str]
+            The list of all the numerical hyperparameter names
+        optim_metrics : dict[str, Optim]
+            A dictionary mapping metric names to optimization directions.
+        save_dir : str | None
+            The directory to save analysis results to.
+        cache : bool
+            Whether to cache results.
+
     Attributes
     ----------
     optim_metrics : dict[str, Optim]
@@ -31,6 +46,10 @@ class Analysis:
     results : pd.DataFrame
         The dataframe extracted from the results file based on given metrics names and hyperparameter names.
 
+    Raises
+    ------
+    FileNotFoundError
+        if the provided `save_dir` to save plots don't exists.
     """
 
     def __init__(
@@ -40,26 +59,8 @@ class Analysis:
         numerical_attributes: list[str],
         optim_metrics: dict[str, Optim],
         save_dir: str | None = None,
-        cache=False,
+        cache: bool = False,
     ) -> None:
-        """
-        Initialize the Analysis class.
-
-        Parameters
-        ----------
-        results : pd.DataFrame
-            The result dataframe.
-        categorical_attributes : list[str]
-            The list of all the categorical hyperparameter names
-        numerical_attributes : list[str]
-            The list of all the numerical hyperparameter names
-        optim_metrics : dict[str, Optim]
-            A dictionary mapping metric names to optimization directions.
-        save_dir : str | None
-            The directory to save analysis results to.
-        cache : bool
-            Whether to cache results.
-        """
         self.optim_metrics = optim_metrics
         self.save_dir: Path | None = None
         self.cache: Memory | None = None
@@ -87,7 +88,24 @@ class Analysis:
         ]
 
     @property
-    def metric_names(self):
+    def metric_names(self) -> list[str]:
+        """
+        Returns
+        -------
+        list[str]
+            list of all the metrics that will be plotted w.r.t hyper parameters.
+        
+        Examples
+        --------
+        >>> Make PlotAnalysis's object
+        plots = Analysis(
+            ...
+            optim_metrics={"val_loss": Optim.min, "train_loss": Optim.min},
+        )
+        metrics = plots.metric_names
+        >>> returns
+        ['val_loss', 'train_loss']
+        """
         return list(self.optim_metrics.keys())
 
     @classmethod

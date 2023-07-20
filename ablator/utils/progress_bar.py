@@ -19,7 +19,7 @@ except ImportError:
     widgets = None
 
 
-def in_notebook():
+def in_notebook() -> bool:
     try:
         # pylint: disable=import-outside-toplevel
         from IPython import get_ipython
@@ -33,7 +33,20 @@ def in_notebook():
     return True
 
 
-def get_last_line(filename: Path):
+def get_last_line(filename: Path) -> str | None:
+    """
+    This functions gets the last line from the file.
+
+    Parameters
+    ----------
+    filename : Path
+        The path of the filename.
+    
+    Returns
+    -------
+    str | None
+        None if file doesn't exists or the last line of the file as a string.
+    """
     if filename is None or not filename.exists():
         return None
     with open(filename, "rb") as f:
