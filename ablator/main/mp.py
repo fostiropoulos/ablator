@@ -413,7 +413,7 @@ class ParallelTrainer(ProtoTrainer):
     def _init_state(
         self,
         working_dir: str = "",
-        address: str | None = "auto",
+        address: str | None = None,
         modules: list[tys.ModuleType] | None = None,
         resume: bool = False,
         excluding_files: list[str] | None = None,
@@ -484,7 +484,7 @@ class ParallelTrainer(ProtoTrainer):
         self,
         working_directory: str,
         auxilary_modules: list[tys.ModuleType] | None = None,
-        ray_head_address: str | None = "auto",
+        ray_head_address: str | None = None,
         resume: bool = False,
         excluding_files: list[str] | None = None,
     ):
@@ -509,7 +509,7 @@ class ParallelTrainer(ProtoTrainer):
             The working directory that stores codes, modules that will be used by ray.
         auxilary_modules : list[tys.ModuleType], None
             A list of modules to be used as ray clusters' working environment.
-        ray_head_address : str, default='auto'
+        ray_head_address : str, None
             Ray cluster address.
         resume : bool, default=False
             Whether to resume training the model from existing checkpoints and existing experiment state.

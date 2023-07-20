@@ -290,7 +290,7 @@ def test_mp_run(tmp_path: Path, assert_error_msg, mp_ray_cluster, error_wrapper)
     config.experiment_dir = tmp_path
     config.total_trials = n_trials
     ablator = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-    ablator.launch(WORKING_DIR, ray_head_address=None)
+    ablator.launch(WORKING_DIR)
 
     complete_configs = ablator.experiment_state.get_trial_configs_by_state(
         TrialState.COMPLETE
@@ -306,7 +306,7 @@ def test_mp_run(tmp_path: Path, assert_error_msg, mp_ray_cluster, error_wrapper)
         == n_trials - n_complete
     )
     msg = assert_error_msg(
-        lambda: ablator._init_state(WORKING_DIR, address=None),
+        lambda: ablator._init_state(WORKING_DIR),
     )
     assert (
         f"Experiment Directory " in msg
@@ -315,10 +315,10 @@ def test_mp_run(tmp_path: Path, assert_error_msg, mp_ray_cluster, error_wrapper)
     )
 
     prev_trials = len(ablator.experiment_state.valid_trials())
-    ablator.launch(WORKING_DIR, ray_head_address=None, resume=True)
+    ablator.launch(WORKING_DIR, resume=True)
     assert len(ablator.experiment_state.valid_trials()) == prev_trials
     ablator.run_config.total_trials = 20
-    ablator.launch(WORKING_DIR, ray_head_address=None, resume=True)
+    ablator.launch(WORKING_DIR, resume=True)
     assert (len(ablator.experiment_state.valid_trials()) != prev_trials) and (
         len(ablator.experiment_state.valid_trials()) == ablator.total_trials
     )
@@ -328,7 +328,7 @@ def test_mp_run(tmp_path: Path, assert_error_msg, mp_ray_cluster, error_wrapper)
 def test_ray_init(tmp_path: Path, capture_output, error_wrapper):
     config = make_config(tmp_path, search_space_limit=None)
     trainer = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-    trainer._init_state(WORKING_DIR, address=None)
+    trainer._init_state(WORKING_DIR)
 
     out, err = capture_output(lambda: trainer._init_state(WORKING_DIR, resume=True))
     assert "Ray is already initialized." in out
@@ -341,7 +341,7 @@ def test_resource_util(tmp_path: Path, capture_output, error_wrapper):
     config.concurrent_trials = None
     config.total_trials = None
     trainer = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-    trainer._init_state(WORKING_DIR, address=None)
+    trainer._init_state(WORKING_DIR)
     del trainer._cpu
     out, err = capture_output(lambda: trainer._cpu)
     assert "Consider adjusting `concurrent_trials`." in out
@@ -416,7 +416,7 @@ def test_zombie_remotes(tmp_path: Path, wrapper):
     config.device = "cuda"
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
     prev_memory_allocated = torch.cuda.memory_allocated()
-    ablator._init_state(WORKING_DIR, address=None)
+    ablator._init_state(WORKING_DIR)
     assert prev_memory_allocated == torch.cuda.memory_allocated()
 
 
