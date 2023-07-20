@@ -50,12 +50,12 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
     "current_epoch": 2,
     }]
     >>> config file
-    experiment_dir: "C:\tmp\results\experiment_8925_9991"
+    experiment_dir: "\tmp\results\experiment_8925_9991\"
     device: cpu
     >>> return value
            current_epoch   train_loss  val_loss        experiment_dir                  device     
-    0            1          10.35        NaN    "C:\tmp\results\experiment_8925_9991"    cpu  
-    1            2           3.89       7.04    "C:\tmp\results\experiment_8925_9991"    cpu 
+    0            1          10.35        NaN    "\tmp\results\experiment_8925_9991\"    cpu  
+    1            2           3.89       7.04    "\tmp\results\experiment_8925_9991\"    cpu 
     """
 
     try:
