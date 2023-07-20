@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 import ablator.utils.base as butils
 from ablator.config.proto import RunConfig
 from ablator.modules.loggers.main import SummaryLogger
-from ablator.modules.metrics.main import TrainMetrics
+from ablator.modules.metrics.main import Metrics
 from ablator.utils.base import Dummy
 from ablator.utils.progress_bar import ProgressBar, RemoteProgressBar
 
@@ -81,8 +81,10 @@ class ModelBase(ABC):
         e.g. time remaining. Only applied for the master process.
     current_checkpoint : Optional[Path]
         Directory for the current checkpoint file, by default None.
-    metrics : Metrics
+    train_metrics : Metrics
         Training metrics including model information. i.e. learning rate and loss value.
+    eval_metrics : Metrics | None
+        Evaluation metrics for when a ``val_dataloader`` is provided.
     current_state : dict
         The currrent state of the model, including run_config, metrics and other necessary states.
     learning_rate : float
@@ -141,7 +143,8 @@ class ModelBase(ABC):
 
         self.current_checkpoint: Path | None = None
         # Runtime metrics
-        self.metrics: TrainMetrics
+        self.train_metrics: Metrics
+        self.eval_metrics: Metrics | None = None
         self.current_state: dict = {}
 
         # stats
@@ -426,6 +429,14 @@ class ModelBase(ABC):
             )
             self.amp = False
 
+        if (batch_lim := run_config.metrics_n_batches) > len(
+            self.train_dataloader
+        ) * 0.2:
+            self.logger.warn(
+                f"Metrics batch-limit {batch_lim} is larger than "
+                f"20% of the train dataloader length {len(self.train_dataloader)}. "
+                "You might experience slow-down during training. Consider decreasing `metrics_n_batches`."
+            )
         self.autocast = torch.autocast(
             enabled=self.amp,
             device_type="cuda" if "cuda" in self.device else "cpu",
@@ -444,18 +455,22 @@ class ModelBase(ABC):
                 self.val_dataloader is not None
             ), "dataloader function has to return validation set when setting early stopping to True"
 
-        self.metrics = TrainMetrics(
+        self.train_metrics = Metrics(
             batch_limit=run_config.metrics_n_batches,
             memory_limit=int(run_config.metrics_mb_limit * 1e6),
             moving_average_limit=self.epoch_len,
             evaluation_functions=self.evaluation_functions(),
-            tags=["train"] + (["val"] if self.val_dataloader is not None else []),
             static_aux_metrics=self.train_stats,
-            moving_aux_metrics=["loss"] + getattr(self, "aux_metric_names", []),
+            moving_aux_metrics=["loss"],
         )
-        if self.run_config.experiment_dir is not None:
-            self.experiment_dir = Path(self.run_config.experiment_dir)
-
+        if self.val_dataloader is not None:
+            self.eval_metrics = Metrics(
+                batch_limit=None,
+                memory_limit=int(run_config.metrics_mb_limit * 1e6),
+                moving_average_limit=self.epoch_len,
+                evaluation_functions=self.evaluation_functions(),
+                moving_aux_metrics=["loss"],
+            )
         setproctitle.setproctitle(self.uid)
 
     def _init_model_state(self, resume: bool = False, smoke_test: bool = False):
@@ -527,13 +542,17 @@ class ModelBase(ABC):
             self._make_dataloaders(self.run_config)
 
         self.run_config = self.config_parser(run_config)
-        self._init_class_attributes()
+
+        if self.run_config.experiment_dir is not None:
+            self.experiment_dir = Path(self.run_config.experiment_dir)
+
         # Does not create log artifacts during smoke test
         if not smoke_test:
             self._init_logger(resume=resume, debug=debug)
         else:
             self.logger = butils.Dummy()
 
+        self._init_class_attributes()
         if debug and self.experiment_dir is not None:
             self.logger.warn(
                 f"Experiment Directory specified {self.experiment_dir} while running on debug mode. "
@@ -545,7 +564,8 @@ class ModelBase(ABC):
         # TODO freeze config here
         if self.verbose == "progress" and not smoke_test:
             self.progress_bar = ProgressBar(
-                total=self.epoch_len,
+                epoch_len=self.epoch_len,
+                total_steps=self.total_steps,
                 logfile=self.logger.log_file_path,
                 remote_display=remote_progress_bar,
                 uid=self.uid,
@@ -701,7 +721,7 @@ class ModelBase(ABC):
         save_dict : dict
             A dictionary containing the saved model state, metrics, and other necessary information.
         """
-        metrics = copy.deepcopy(save_dict["metrics"])
+        metrics = copy.deepcopy(save_dict["train_metrics"])
 
         for k in self.train_stats:
             if (
@@ -720,14 +740,12 @@ class ModelBase(ABC):
                 setattr(self, k, metrics[k])
                 del metrics[k]
 
-        self.metrics.update_static_metrics(self.train_stats)
-        tags = {m.split("_")[0] for m in metrics}
-        metric_names = {m.split("_")[1] for m in metrics}
+        self.train_metrics.update_static_metrics(self.train_stats)
+        self.train_metrics.update_ma_metrics(metrics)
 
-        for tag in tags:
-            self.metrics.update_ma_metrics(
-                {m: metrics[f"{tag}_{m}"] for m in metric_names}, tag=tag
-            )
+        if "eval_metrics" in save_dict and self.eval_metrics is not None:
+            metrics = copy.deepcopy(save_dict["eval_metrics"])
+            self.eval_metrics.update_ma_metrics(metrics)
 
     def _update_save_dict(self, user_save_dict: dict[str, ty.Any] | None = None):
         """
@@ -741,8 +759,10 @@ class ModelBase(ABC):
         """
         self.current_state = {
             "run_config": self.run_config.to_dict(),
-            "metrics": self.metrics.to_dict(),
+            "train_metrics": self.train_metrics.to_dict(),
         }
+        if self.eval_metrics is not None:
+            self.current_state["eval_metrics"] = self.eval_metrics.to_dict()
         if user_save_dict is not None:
             self.current_state.update(**user_save_dict)
 

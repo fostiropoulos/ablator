@@ -122,14 +122,14 @@ def train_main_remote(
     try:
         res = model.train(run_config, resume=resume, remote_progress_bar=progress_bar)
         mp_logger.info(f"Finished training - {run_config.uid}")
-        return uid, res.to_dict(), TrialState.COMPLETE
+        return uid, res, TrialState.COMPLETE
     except (LossDivergedError, TrainPlateauError) as e:
         mp_logger.warn(
             f"Trial {run_config.uid} was pruned for poor performance. {str(e)}"
         )
         return (
             uid,
-            model.metrics.to_dict(),
+            model.metrics,
             TrialState.PRUNED_POOR_PERFORMANCE,
         )
     except CheckpointNotFoundError as e:
