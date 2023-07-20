@@ -28,6 +28,15 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e .[dev] -v
+      - name: Install Docker
+        run: |
+          brew install docker
+          colima start
+      # - name: Setup Docker on macOS
+      #   uses: douglascamata/setup-docker-macos-action@v1-alpha
+      - name: Build Docker Image
+        run: |
+          docker build --build-arg="PY_VERSION=3.10" --tag ablator .
       - name: Test with pytest
         run: |
           pip install pytest
