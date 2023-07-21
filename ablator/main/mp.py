@@ -426,7 +426,8 @@ class ParallelTrainer(ProtoTrainer):
         self.experiment_state = ExperimentState(
             self.experiment_dir, self.run_config, self.logger, resume=resume
         )
-            def _rsync_nodes(self):
+
+    def _rsync_nodes(self):
         if self.run_config.gcp_config is None:
             return
         node_hostnames = [
@@ -469,6 +470,7 @@ class ParallelTrainer(ProtoTrainer):
         self.logger.info(f"Making {len(trials)} trials.")
         futures = self._make_remotes(trials)
         return futures
+
     def sync_down(self):
         """
         Synchronize content of Google cloud storage to current working directory and to all GCP nodes.
