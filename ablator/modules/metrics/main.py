@@ -9,7 +9,7 @@ class LossDivergedError(Exception):
     pass
 
 
-class TrainMetrics:
+class Metrics:
     """
     Stores and manages predictions and calculates metrics given some custom evaluation functions.
     Makes batch-updates
@@ -25,7 +25,6 @@ class TrainMetrics:
         memory_limit=1e8,
         evaluation_functions: dict[str, Callable] | None = None,
         moving_average_limit=3000,
-        tags: list[str] | None = None,
         # metrics with their initial value that are updated manually, i.e. learning rate
         static_aux_metrics: dict[str, ty.Any] | None = None,
         # metrics for which we update with their moving average, i.e. loss
@@ -51,13 +50,6 @@ class TrainMetrics:
             {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
         moving_average_limit : int, optional
             The maximum number of values allowed to store moving average metrics. Default is 3000.
-        tags : list[str], optional
-            A list of tags to specify predictions results from different categories, a sample use case is to
-            categorize different sets of data (train, evaluation, test sets), e.g: ``tags=["train", "val"]``
-            This will be combined with evaluation function names and moving auxiliary metrics names to create metrics.
-            For example, if ``evaluation_functions.keys() = ["mean"]``, ``moving_aux_metrics = ["loss"]``, then metrics
-            that will be tracked are: ``train_mean``, ``train_loss``, ``val_mean``, ``val_loss``.
-            Default is ``["train"]``.
         static_aux_metrics : dict[str, ty.Any], optional
             A dictionary of static metrics, those with their initial value that are updated manually,
             such as learning rate, best loss, total steps, etc. Keys of this dictionary are static metric names,
@@ -67,27 +59,23 @@ class TrainMetrics:
 
         Examples
         --------
-        Initialize an object of TrainMetrics:
+        Initialize an object of Metrics:
 
-        >>> from ablator.modules.metrics.main import TrainMetrics
-        >>> train_metrics = TrainMetrics(
+        >>> from ablator.modules.metrics.main import Metrics
+        >>> train_metrics = Metrics(
         ...     batch_limit=30,
         ...     memory_limit=None,
         ...     evaluation_functions={"mean": lambda x: np.mean(x)},
         ...     moving_average_limit=100,
-        ...     tags=["train", "val"],
         ...     static_aux_metrics={"lr": 1.0},
         ...     moving_aux_metrics={"loss"},
         ... )
         >>> train_metrics.to_dict() # metrics are set to np.nan if it's not updated yet
         {
-            "train_mean": np.nan, "train_loss": np.nan,
-            "val_mean": np.nan, "val_loss": np.nan,
-            "lr": 1.0
+            "mean": np.nan, "loss": np.nan, "lr": 1.0
         }
         """
-        if tags is None:
-            tags = ["train"]
+
         assert len(args) == 0, "Metrics takes no positional arguments."
 
         _static_aux_metrics = {} if static_aux_metrics is None else static_aux_metrics
@@ -105,20 +93,11 @@ class TrainMetrics:
         self.__static_aux_attributes__: list[str] = sorted(
             list(_static_aux_metrics.keys())
         )
-        self.__tags__: list[str] = sorted(list(tags))
         self.__moving_aux_attributes__: list[str] = sorted(
-            list(
-                f"{tag}_{eval_metric}"
-                for tag in self.__tags__
-                for eval_metric in list(set(_moving_aux_metrics))
-            )
+            list(set(_moving_aux_metrics))
         )
         self.__moving_eval_attributes__: list[str] = sorted(
-            list(
-                f"{tag}_{eval_fn}"
-                for tag in self.__tags__
-                for eval_fn in self.__evaluation_functions__
-            )
+            list(self.__evaluation_functions__)
         )
         _all_attr_names = (
             self.__moving_aux_attributes__
@@ -127,19 +106,25 @@ class TrainMetrics:
         )
         duplicates = {x for x in _all_attr_names if _all_attr_names.count(x) > 1}
 
-        assert (
-            len(duplicates) == 0
-        ), f"Duplicate metric names with built-ins {duplicates}"
+        assert len(duplicates) == 0, (
+            f"Duplicate metric names {duplicates}, for \n"
+            f"`evaluation_functions`={self.__moving_eval_attributes__}, \n"
+            f"`moving_aux_metrics`={self.__moving_aux_attributes__}, \n"
+            f"`static_aux_metrics`={self.__static_aux_attributes__}."
+        )
 
-        for tag, v in _static_aux_metrics.items():
-            setattr(self, tag, v)
-        for tag in set(self.__moving_aux_attributes__).union(
+        for name, v in _static_aux_metrics.items():
+            setattr(self, name, v)
+        for name in set(self.__moving_aux_attributes__).union(
             self.__moving_eval_attributes__
         ):
-            self._init_ma(tag)
+            self._init_ma(name)
 
-        for tag in tags:
-            self._init_preds(tag)
+        self._preds = PredictionStore(
+            batch_limit=self.__batch_limit__,
+            memory_limit=self.__memory_limit__,
+            evaluation_functions=self.__evaluation_functions__,
+        )
 
     def update_static_metrics(self, metric_dict: dict[str, ty.Any]):
         """
@@ -162,13 +147,12 @@ class TrainMetrics:
 
         Examples
         --------
-        >>> from ablator.modules.metrics.main import TrainMetrics
-        >>> train_metrics = TrainMetrics(
+        >>> from ablator.modules.metrics.main import Metrics
+        >>> train_metrics = Metrics(
         ...     batch_limit=30,
         ...     memory_limit=None,
         ...     evaluation_functions={"mean": lambda x: np.mean(x)},
         ...     moving_average_limit=100,
-        ...     tags=["train"],
         ...     static_aux_metrics={"lr": 1.0},
         ...     moving_aux_metrics={"loss"},
         ... )
@@ -197,20 +181,17 @@ class TrainMetrics:
         for k, v in metric_dict.items():
             setattr(self, k, v)
 
-    def update_ma_metrics(self, metric_dict: dict[str, ty.Any], tag: str):
+    def update_ma_metrics(self, metric_dict: dict[str, ty.Any]):
         """
         Keep the moving average aux metrics updated with new values from metric_dict.
         This method will append the new metric values to its collection of metric results.
         A sample use case for this method is when we finish a training iteration, we
-        can add the training loss to ``loss`` moving average metric collection on tag ``train``,
-        aka the train set.
+        can add the training loss to ``loss`` moving average metric collection.
 
         Parameters
         ----------
         metric_dict : dict[str, ty.Any]
             A dictionary containing the moving average metric values to update.
-        tag : str
-            A tag that specifies which set of predictions to update metric values.
 
         Raises
         ------
@@ -219,13 +200,12 @@ class TrainMetrics:
 
         Examples
         --------
-        >>> from ablator.modules.metrics.main import TrainMetrics
-        >>> train_metrics = TrainMetrics(
+        >>> from ablator.modules.metrics.main import Metrics
+        >>> train_metrics = Metrics(
         ...     batch_limit=30,
         ...     memory_limit=None,
         ...     evaluation_functions={"sum": lambda x: np.mean(x)},
         ...     moving_average_limit=100,
-        ...     tags=["train", "val"],
         ...     static_aux_metrics={"lr": 1.0},
         ...     moving_aux_metrics={"loss"},
         ... )
@@ -235,7 +215,7 @@ class TrainMetrics:
             "val_sum": np.nan, "val_loss": np.nan,
             "lr": 1.0
         }
-        >>> train_metrics.update_ma_metrics({"loss": 0.35}, tag="val")
+        >>> train_metrics.update_ma_metrics({"loss": 0.35})
         >>> train_metrics.to_dict()
         {
             "train_sum": np.nan, "train_loss": np.nan,
@@ -243,58 +223,47 @@ class TrainMetrics:
             "lr": 1.0
         }
         """
-        metric_keys = {f"{tag}_{k}" for k in metric_dict}
+        metric_keys = set(metric_dict)
         diff_metrics = metric_keys.difference(set(self.__moving_aux_attributes__))
         assert len(diff_metrics) == 0, (
             "There are difference in the class metrics: "
             f"{self.__moving_aux_attributes__} and parsed metrics {sorted(list(metric_keys))}"
         )
-        self._update_ma_metrics(metric_dict, tag)
+        self._update_ma_metrics(metric_dict)
 
-    def _update_ma_metrics(self, metric_dict: dict[str, ty.Any], tag=None):
+    def _update_ma_metrics(self, metric_dict: dict[str, ty.Any]):
         # metric dict should contain scalars
         metric_dict = butils.iter_to_numpy(metric_dict)
         for k, v in metric_dict.items():
-            attr_name = f"{tag}_{k}" if tag is not None else k
-            self._get_ma(attr_name).append(v)
+            self._get_ma(k).append(v)
 
-    def reset(self, tag: str):
+    def reset(self):
         """
-        Reset to empty all prediction sequences (e.g predictions, labels)
-        in a set of predictions specified by ``tag`` argument.
-
-        Parameters
-        ----------
-        tag : str
-            A tag that specifies which set of predictions to be reset.
+        Reset to empty all prediction sequences (e.g predictions, labels).
 
         Examples
         --------
-        >>> train_metrics = TrainMetrics(
+        >>> train_metrics = Metrics(
         ...     batch_limit=30,
         ...     memory_limit=None,
         ...     evaluation_functions={"sum": lambda pred: np.mean(pred)},
         ...     moving_average_limit=100,
-        ...     tags=["train", "val"],
         ...     static_aux_metrics={"lr": 1.0},
         ...     moving_aux_metrics={"loss"},
         ... )
-        >>> train_metrics.append_batch(pred=np.array([1] * 3), tag="train")    # e.g add 3 predictions all of class 1
-        >>> train_metrics.reset(tag="train")
+        >>> train_metrics.append_batch(pred=np.array([1] * 3))    # e.g add 3 predictions all of class 1
+        >>> train_metrics.reset()
         """
-        preds = self._get_preds(tag)
-        preds.reset()
+        self._preds.reset()
 
-    def evaluate(self, tag, reset=True, update_ma=True):
+    def evaluate(self, reset=True, update_ma=True):
         """
-        Apply evaluation_functions to a set of predictions specified by ``tag`` argument. Possibly update the
+        Apply evaluation_functions to the set of predictions. Possibly update the
         moving averages (only those associated with evaluation functions, not moving auxiliary metrics) with
         the evaluated results, or reset the predictions.
 
         Parameters
         ----------
-        tag : str
-            A tag that specifies which set of predictions to evaluate.
         reset : bool, optional
             A flag that indicates whether to reset the predictions to empty after evaluation. Default is True.
         update_ma : bool, optional
@@ -307,20 +276,19 @@ class TrainMetrics:
 
         Examples
         --------
-        >>> from ablator.modules.metrics.main import TrainMetrics
-        >>> train_metrics = TrainMetrics(
+        >>> from ablator.modules.metrics.main import Metrics
+        >>> train_metrics = Metrics(
         ...     batch_limit=30,
         ...     memory_limit=None,
         ...     evaluation_functions={"mean": lambda pred: np.mean(pred)},
         ...     moving_average_limit=100,
-        ...     tags=["train", "val"],
         ...     static_aux_metrics={"lr": 1.0},
         ...     moving_aux_metrics={"loss"},
         ... )
-        >>> train_metrics.append_batch(pred=np.array([100]), tag="val")
+        >>> train_metrics.append_batch(pred=np.array([100]))
         >>> train_metrics.evaluate("val", reset=False, update=True) # val_mean is updated to
             mean among batch mean values: (100 / 1) / 1 = 100.0
-        >>> train_metrics.append_batch(pred=np.array([0] * 3), tag="val")
+        >>> train_metrics.append_batch(pred=np.array([0] * 3))
 
         For the following examples, the current evaluation result is: ``(100 + 0 + 0 + 0) / 4 = 25`` (which is returned
         by evaluate() function), and since update=True, val_mean is updated to: ``(100.0 + 25) / 2 = 62.5`` (we can
@@ -331,32 +299,29 @@ class TrainMetrics:
         >>> train_metrics.to_dict()
         {'val_mean': 62.5}
         """
-        preds = self._get_preds(tag)
-        metrics = preds.evaluate()
+        metrics = self._preds.evaluate()
         if update_ma:
-            self._update_ma_metrics(metrics, tag)
+            self._update_ma_metrics(metrics)
         if reset:
-            preds.reset()
+            self._preds.reset()
         return metrics
 
     # pylint: disable=missing-param-doc
-    def append_batch(self, *args, tag, **kwargs):
+    def append_batch(self, *args, **kwargs):
         """
         Appends a batch of predictions to a specific set.
 
         Parameters
         ----------
-        tag : str
-            A tag that specifies which set of predictions to evaluate.
         **kwargs : dict
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
             and value is a batch of prediction values. Note that the passed keys in ``**kwrags`` must match arguments in
-            evaluation functions arguments in Callable in evaluation_functions when we initialize TrainMetrics object.
+            evaluation functions arguments in Callable in evaluation_functions when we initialize Metrics object.
 
         Raises
         ------
-        AssertionError
-            If any positional arguments are passed, or if the provided tag is not a defined metric category.
+        ValueError
+            If any positional arguments are passed.
 
         Notes
         -----
@@ -364,45 +329,27 @@ class TrainMetrics:
 
         Examples
         --------
-        >>> from ablator.modules.metrics.main import TrainMetrics
-        >>> train_metrics = TrainMetrics(
+        >>> from ablator.modules.metrics.main import Metrics
+        >>> train_metrics = Metrics(
         ...     batch_limit=30,
         ...     memory_limit=None,
         ...     evaluation_functions={"mean": lambda labels: np.mean(labels)},
         ...     moving_average_limit=100,
-        ...     tags=["train", "val"],
         ...     static_aux_metrics={"lr": 1.0},
         ...     moving_aux_metrics={"loss"},
         ... )
-        >>> train_metrics.append_batch(labels=np.array([100]), tag="train")
-        >>> train_metrics.append_batch(labels=np.array([0] * 3), tag="train")
-        >>> train_metrics.append_batch(labels=np.array([50]), tag="val")
+        >>> train_metrics.append_batch(labels=np.array([100]))
+        >>> train_metrics.append_batch(labels=np.array([0] * 3))
+        >>> train_metrics.append_batch(labels=np.array([50]))
 
         """
         # NOTE this is because it is easy to mix up the order of pred, labels and tags
-        assert len(args) == 0, "Metrics.append_batch takes no positional arguments."
-        assert (
-            tag in self.__tags__
-        ), f"Undefined tag '{tag}'. Metric tags {self.__tags__}"
-        self._get_preds(tag).append(**kwargs)
+        if len(args) > 0:
+            raise ValueError("Metrics.append_batch takes no positional arguments.")
+        self._preds.append(**kwargs)
 
-    def _init_preds(self, tag) -> PredictionStore:
-        attr_name = f"__{tag}_preds__"
-        _preds = PredictionStore(
-            batch_limit=self.__batch_limit__,
-            memory_limit=self.__memory_limit__,
-            evaluation_functions=self.__evaluation_functions__,
-        )
-        setattr(self, attr_name, _preds)
-        return getattr(self, attr_name)
-
-    def _get_preds(self, tag) -> PredictionStore:
-        attr_name = f"__{tag}_preds__"
-        preds = getattr(self, attr_name)
-        return preds
-
-    def _init_ma(self, tag) -> MovingAverage:
-        attr_name = f"__{tag}_ma__"
+    def _init_ma(self, name) -> MovingAverage:
+        attr_name = f"__{name}_ma__"
         _ma = MovingAverage(
             batch_limit=self.__moving_average_limit__,
             memory_limit=self.__memory_limit__,
@@ -410,8 +357,8 @@ class TrainMetrics:
         setattr(self, attr_name, _ma)
         return getattr(self, attr_name)
 
-    def _get_ma(self, tag) -> MovingAverage:
-        attr_name = f"__{tag}_ma__"
+    def _get_ma(self, name) -> MovingAverage:
+        attr_name = f"__{name}_ma__"
         preds = getattr(self, attr_name)
         return preds
 
@@ -423,26 +370,25 @@ class TrainMetrics:
 
         Examples
         --------
-        >>> from ablator.modules.metrics.main import TrainMetrics
-        >>> train_metrics = TrainMetrics(
+        >>> from ablator.modules.metrics.main import Metrics
+        >>> train_metrics = Metrics(
         ...     batch_limit=30,
         ...     memory_limit=None,
         ...     evaluation_functions={"mean": lambda preds: np.mean(preds)},
         ...     moving_average_limit=100,
-        ...     tags=["train", "val"],
         ...     static_aux_metrics={"lr": 0.75},
         ...     moving_aux_metrics={"loss"},
         ... )
-        >>> train_metrics.append_batch(preds=np.array([100]), tag="val")
-        >>> train_metrics.evaluate("val", reset=False, update=True)
+        >>> train_metrics.append_batch(preds=np.array([100]))
+        >>> train_metrics.evaluate(reset=False, update=True)
         >>> train_metrics.to_dict()
         {
             'train_mean': np.nan, 'train_loss': np.nan,
             'val_mean': 100.0, 'val_loss': np.nan,
             'lr': 0.75
         }
-        >>> train_metrics.append_batch(preds=np.array([0] * 3), tag="val")
-        >>> train_metrics.evaluate("val", reset=True, update=True)
+        >>> train_metrics.append_batch(preds=np.array([0] * 3))
+        >>> train_metrics.evaluate(reset=True, update=True)
         >>> train_metrics.to_dict()
         {
             'train_mean': np.nan, 'train_loss': np.nan,

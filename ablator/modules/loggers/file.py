@@ -194,7 +194,7 @@ class RemoteFileLogger(FileLogger):
             address, _ = ray.get_runtime_context().gcs_address.split(":")
         self._file_logger = (
             ray.remote(FileLogger)
-            .options(resources={f"node:{address}": 0.001}) # type: ignore
+            .options(resources={f"node:{address}": 0.001})  # type: ignore
             .remote(
                 self.path,
                 self.verbose,

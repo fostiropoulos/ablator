@@ -79,7 +79,7 @@ class ProtoTrainer:
 
         Returns
         -------
-        metrics : TrainMetrics
+        metrics : Metrics
             Metrics returned after training.
         """
         self._init_state()
@@ -93,7 +93,7 @@ class ProtoTrainer:
 
         Returns
         -------
-        metrics : TrainMetrics
+        metrics : Metrics
             Metrics returned after evaluation.
         """
         self._init_state()

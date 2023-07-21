@@ -1,5 +1,6 @@
 import copy
 import multiprocessing as mp
+import time
 import traceback
 import typing as ty
 from abc import abstractmethod
@@ -15,13 +16,14 @@ from torch.utils.data import DataLoader
 import ablator.utils.base as butils
 from ablator.config.proto import ModelConfig, RunConfig, TrainConfig
 from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauError
-from ablator.modules.metrics.main import LossDivergedError, TrainMetrics
+from ablator.modules.metrics.main import LossDivergedError, Metrics
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
 from ablator.utils.progress_bar import RemoteProgressBar
 
 
 # pylint: disable=too-many-public-methods
+# pylint: disable=too-many-instance-attributes
 class ModelWrapper(ModelBase):
     """
     A wrapper around model_class that removes training boiler-plate code, with over-writable functions
@@ -61,6 +63,7 @@ class ModelWrapper(ModelBase):
         self.optimizer: Optimizer
         self.scaler: GradScaler
         self.scheduler: Scheduler | None
+        self._prev_update_time: float = time.time()
 
     @property
     def train_config(self) -> TrainConfig:
@@ -348,18 +351,17 @@ class ModelWrapper(ModelBase):
             self.current_iteration % self.epoch_len > 0.1 * self.epoch_len
             and self.current_iteration % self.epoch_len < 0.9 * self.epoch_len
         ):
-            self.metrics.evaluate("train", reset=False)
+            self.train_metrics.evaluate(reset=False)
 
         if self.val_dataloader is not None:
             metrics = self._validation_loop(
                 model=self.model,
                 dataloader=self.val_dataloader,
-                tag="val",
-                metrics=self.metrics,
+                metrics=self.eval_metrics,
                 subsample=self.run_config.eval_subsample,
                 smoke_test=smoke_test,
             )
-            val_loss = metrics["val_loss"] if "val_loss" in metrics else None
+            val_loss = metrics["loss"] if "loss" in metrics else None
         if val_loss is not None:
             # Use val loss for scheduling or finding best checkpoint
 
@@ -388,7 +390,7 @@ class ModelWrapper(ModelBase):
         ):
             if val_loss is None:
                 raise EvaluationError(
-                    f"A validation dataset is rquired with {self.scheduler.__class__.__name__} scheduler"
+                    f"A validation dataset is required with {self.scheduler.__class__.__name__} scheduler"
                 )
             self.scheduler.step(val_loss)
 
@@ -490,7 +492,7 @@ class ModelWrapper(ModelBase):
         run_config: ty.Optional[RunConfig] = None,
         run_async=True,
         block: bool = True,
-    ) -> mp.Process | TrainMetrics:
+    ) -> mp.Process | dict[str, float]:
         """
         Mock train the model as a smoke test
 
@@ -507,7 +509,7 @@ class ModelWrapper(ModelBase):
         -------
         p: mp.Process
             The process running the mock train.
-        metrics: TrainMetrics
+        metrics: dict[str, float]
             The metrics from the mock train.
         """
         mock_model = copy.deepcopy(self)
@@ -527,12 +529,35 @@ class ModelWrapper(ModelBase):
         Update the metrics with current training stats,
         and then all metrics (static and moving average) will be set as description for the ``tqdm`` progress.
         """
-        self.metrics.update_static_metrics(self.train_stats)
+        self.train_metrics.update_static_metrics(self.train_stats)
         if self.verbose != "progress":
             return
         self.progress_bar.update_metrics(
-            self.metrics.to_dict(), self.current_iteration % self.epoch_len
+            self.metrics, self.current_iteration % self.epoch_len
         )
+
+    @property
+    def metrics(self) -> dict[str, float]:
+        """
+        The metrics of the current training state.
+        If ``eval_metrics`` are defined (e.g. a validation dataloader was provided)
+        then they are combined and a `val_` and `train_` label is prepended.
+        The current training statistics are also combined
+
+        Returns
+        -------
+        dict[str, float]
+            A dictionary with keys the metric name and the value corresponding to the metric.
+        """
+        metrics = {}
+
+        if self.eval_metrics is not None:
+            for k, v in self.eval_metrics.to_dict().items():
+                metrics[f"val_{k}"] = v
+        for k, v in self.train_metrics.to_dict().items():
+            _k = f"train_{k}" if f"val_{k}" in metrics else k
+            metrics[_k] = v
+        return metrics
 
     def status_message(self) -> str:
         """
@@ -546,7 +571,7 @@ class ModelWrapper(ModelBase):
         """
         # must return current epoch, iter, losses and metrics
         msg_str = ""
-        for k, v in self.metrics.to_dict().items():
+        for k, v in self.metrics.items():
             msg_str += f"{k}: {butils.num_format(v)} "
 
         return msg_str.strip()
@@ -556,9 +581,16 @@ class ModelWrapper(ModelBase):
         Log if the current iteration is a logging step. It also evaluate training metrics for logging.
         """
         # Log step
+        update_interval = 1
         if self._is_step(self.log_itr):
-            self.metrics.evaluate("train", reset=False)
+            self.train_metrics.evaluate(reset=False)
             self.log_step()
+        elif (
+            self.verbose == "progress"
+            and time.time() - self._prev_update_time > update_interval
+        ):
+            self.update_status()
+            self._prev_update_time = 1
 
     @ty.final
     def eval(self, smoke_test=False):
@@ -619,15 +651,21 @@ class ModelWrapper(ModelBase):
                 # restart the generator if the previous generator is exhausted.
                 generator = iter(train_dataloader)
                 batch = next(generator)
-                self.metrics.evaluate("train")
+                self.train_metrics.evaluate()
                 self.progress_bar.reset()
-            outputs, train_metrics = self.train_step(batch)
+            outputs, moving_metrics = self.train_step(batch)
             if outputs is not None:
-                self.metrics.append_batch(**outputs, tag="train")
-            self.metrics.update_ma_metrics(train_metrics, tag="train")
+                try:
+                    self.train_metrics.append_batch(**outputs)
+                except ValueError as e:
+                    raise ValueError(
+                        "Can not store model outputs to metrics. "
+                        "Make sure that the model outputs are formatted correctly. "
+                    ) from e
+            self.train_metrics.update_ma_metrics(moving_metrics)
 
-            if "loss" in train_metrics and not np.isfinite(train_metrics["loss"]):
-                msg = f"Loss Diverged. Terminating. loss: {train_metrics['loss']}"
+            if "loss" in moving_metrics and not np.isfinite(moving_metrics["loss"]):
+                msg = f"Loss Diverged. Terminating. loss: {moving_metrics['loss']}"
                 self.logger.error(msg)
                 raise LossDivergedError(msg)
 
@@ -648,7 +686,7 @@ class ModelWrapper(ModelBase):
         debug: bool = False,
         resume: bool = False,
         remote_progress_bar: ty.Optional[RemoteProgressBar] = None,
-    ) -> TrainMetrics:
+    ) -> dict[str, float]:
         """
         Initialize states and train the model.
         When keyboard interrupts, saves a checkpoint
@@ -668,7 +706,7 @@ class ModelWrapper(ModelBase):
 
         Returns
         -------
-        TrainMetrics
+        Metrics
             The metrics from the training.
         """
         self._init_state(
@@ -689,7 +727,7 @@ class ModelWrapper(ModelBase):
             msgs = (
                 []
                 if isinstance(self.progress_bar, butils.Dummy)
-                else self.progress_bar.make_metrics_message(self.metrics.to_dict())
+                else self.progress_bar.make_metrics_message(self.metrics)
             )
             for msg in msgs:
                 self.logger.info(msg, verbose=True)
@@ -712,7 +750,7 @@ class ModelWrapper(ModelBase):
         self._init_state(run_config, resume=True)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
 
-        msg = self.metrics.to_dict()
+        msg = self.train_metrics.to_dict()
         self.logger.info(f"Current metrics: {msg}")
         metrics = {}
         for loader, tag in zip(
@@ -721,24 +759,22 @@ class ModelWrapper(ModelBase):
             if loader is not None:
                 # NOTE we set max memory limit and let it crash because we do not want
                 # inaccurate metrics calculation. Possibly smarter ways to go about it.
-                eval_metrics = TrainMetrics(
+                eval_metrics = Metrics(
                     batch_limit=len(loader) + 1,
                     memory_limit=int(1e9),
                     moving_average_limit=len(loader),
                     evaluation_functions=self.evaluation_functions(),
-                    tags=[tag],
-                    moving_aux_metrics=["loss"] + getattr(self, "aux_metric_names", []),
+                    moving_aux_metrics=["loss"],
                 )
                 self._validation_loop(
                     model=self.model,
                     dataloader=loader,
-                    tag=tag,  # type: ignore
                     metrics=eval_metrics,
                     subsample=1,
                 )
-                metrics[tag] = eval_metrics
-                msg = self.metrics.to_dict()
-                self.logger.info(f"Evaluation: {msg}")
+                metrics[tag] = eval_metrics.to_dict()
+                msg = eval_metrics.to_dict()
+                self.logger.info(f"Evaluating {tag}: {msg}")
         return metrics
 
     def apply_loss(
@@ -799,21 +835,14 @@ class ModelWrapper(ModelBase):
         self,
         model: nn.Module,
         dataloader: DataLoader,
-        metrics: TrainMetrics,
-        tag: ty.Literal["train", "test", "val"],
+        metrics: Metrics,
         subsample: float = 1.0,
         smoke_test: bool = False,
     ) -> dict[str, float]:
         was_training = model.training
         model.eval()
-        if (batch_lim := metrics.__batch_limit__) < len(dataloader):
-            self.logger.warn(
-                f"Metrics batch-limit {batch_lim} is smaller than "
-                f"the validation dataloader length {len(dataloader)}. "
-                "Consider increasing `metrics_n_batches`."
-            )
         metrics_dict = self.validation_loop(
-            model, dataloader, metrics, tag, subsample, smoke_test
+            model, dataloader, metrics, subsample, smoke_test
         )
         if was_training:
             model.train()
@@ -823,14 +852,12 @@ class ModelWrapper(ModelBase):
         self,
         model: nn.Module,
         dataloader: DataLoader,
-        metrics: TrainMetrics,
-        tag: ty.Literal["train", "test", "val"],
+        metrics: Metrics,
         subsample: float = 1.0,
         smoke_test: bool = False,
     ) -> dict[str, float]:
         """
-        Validate the model on data in dataloader (which can either be val dataloader
-        - so tag is ``val``, or test dataloader - so tag is ``test``)
+        Validate the model on data on dataloader and store results on metrics.
 
         Parameters
         ----------
@@ -838,10 +865,8 @@ class ModelWrapper(ModelBase):
             The model to validate.
         dataloader: DataLoader
             The dataloader to use for validation.
-        metrics: TrainMetrics
+        metrics: Metrics
             The metrics to use for validation.
-        tag: ty.Literal["train", "test", "val"]
-            The tag to use for validation. Also see ``TrainMetrics`` for details.
         subsample: float
             The fraction of the dataloader to use for validation.
         smoke_test: bool
@@ -863,19 +888,16 @@ class ModelWrapper(ModelBase):
                 outputs, loss = self._model_step(model=model, batch=batch)
                 val_metrics = {}
                 if outputs is not None:
-                    metrics.append_batch(tag=tag, **outputs)
+                    metrics.append_batch(**outputs)
                 if loss is not None:
                     # pylint: disable=no-member
                     val_metrics["loss"] = torch.mean(loss).item()
 
-                metrics.update_ma_metrics(val_metrics, tag=tag)
+                metrics.update_ma_metrics(val_metrics)
                 if i > cutoff_itr or smoke_test:
                     break
-        metrics.evaluate(tag)
-        metrics_dict = {
-            k: v for k, v in metrics.to_dict().items() if k.startswith(f"{tag}_")
-        }
-        return metrics_dict
+        metrics.evaluate()
+        return metrics.to_dict()
 
     @abstractmethod
     def make_dataloader_train(self, run_config: RunConfig) -> DataLoader:
@@ -898,7 +920,7 @@ class ModelWrapper(ModelBase):
         Returns
         -------
         dict[str, Callable]
-            The evaluation functions to use.Also see ``TrainMetrics`` for details.
+            The evaluation functions to use.Also see ``Metrics`` for details.
         """
 
     # Functions that can be optionally over-written.

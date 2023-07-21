@@ -124,7 +124,6 @@ ablator = ParallelTrainer(
 )
 
 ablator.launch(
-    working_directory=WORKING_DIRECTORY,
-    ray_head_address=None,
+    working_directory=WORKING_DIRECTORY
 )
 ```

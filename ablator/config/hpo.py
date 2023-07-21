@@ -167,8 +167,7 @@ class SearchSpace(ConfigBase):
         if self.categorical_values is not None:
             return str(value) in self.categorical_values
         if self.subspaces is not None:
-            # TODO remove type: ignore once Self types are implemented for mypy
-            return any(s.contains(value) for s in self.subspaces)  # type: ignore
+            return any(s.contains(value) for s in self.subspaces)
         if self.sub_configuration is not None and isinstance(value, dict):
             return self.sub_configuration.contains(value)
 

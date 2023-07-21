@@ -30,7 +30,6 @@ def mp_train(mp_config):
     # NOTE to run on a cluster you will need to start ray with `ray start --head` and pass ray_head_address="auto"
     ablator.launch(
         working_directory=WORKING_DIRECTORY,
-        ray_head_address=None,
     )
     ablator.evaluate()
 
