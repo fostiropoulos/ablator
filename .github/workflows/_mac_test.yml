@@ -28,6 +28,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e .[dev] -v
+      - name: Install Docker
+        run: |
+          brew install docker
+          colima start --cpu 1 --memory 6 --disk 20
+      - name: Build Docker Image
+        run: |
+          docker build --build-arg="PY_VERSION=3.10" --tag ablator .
       - name: Test with pytest
         run: |
           pip install pytest
