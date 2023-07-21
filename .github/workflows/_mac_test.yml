@@ -32,7 +32,6 @@ jobs:
         run: |
           brew install docker
           colima start --cpu 1 --memory 6 --disk 20
-        # colima start --cpu 1 --memory 10 --disk 20
       - name: Build Docker Image
         run: |
           docker build --build-arg="PY_VERSION=3.10" --tag ablator .
