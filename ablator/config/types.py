@@ -29,7 +29,6 @@ class Optional(ty.Generic[T]):
 
 
 # Support for nested objects
-# TODO mypy support for Self types
 class Self:
     pass
 

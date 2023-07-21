@@ -14,8 +14,8 @@ try:
     # pylint: disable=unspecified-encoding
     with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
         from pynvml.smi import nvidia_smi as smi
-        instance = smi.getInstance()
-        device = instance.DeviceQuery()
+        _instance = smi.getInstance()
+        _instance.DeviceQuery()
         # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
 # pylint: disable=broad-exception-caught
 except Exception:
@@ -299,7 +299,8 @@ def get_gpu_mem(
         try:
             instance = smi.getInstance()
             device = instance.DeviceQuery()
-        except:
+        # pylint: disable=broad-exception-caught
+        except Exception:
             pass
     else:
         return memory
