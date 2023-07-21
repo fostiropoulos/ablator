@@ -17,6 +17,7 @@ from xdist.scheduler.loadscope import LoadScopeScheduling
 from ablator import package_dir
 
 DOCKER_TAG = "ablator"
+pytest_plugins = ["ray_models.model"]
 
 
 def _assert_error_msg(fn, error_msg=None):

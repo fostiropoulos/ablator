@@ -18,7 +18,6 @@ from ablator import (
     RunConfig,
     TrainConfig,
 )
-from ablator.modules.metrics.main import Metrics
 from ablator.utils.base import Dummy
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
@@ -380,8 +379,6 @@ def test_load_save_errors(tmp_path: Path, assert_error_msg):
         f"Could not find a valid checkpoint in {tmp_path.joinpath('checkpoints')}",
     )
 
-    # wrapper =
-    # wrapper.
     pass
 
 
@@ -430,7 +427,9 @@ def test_validation_loop():
     wrapper._init_state(_config)
     val_dataloder = wrapper.make_dataloader_val(_config)
     metrics_dict = wrapper.validation_loop(
-        MyBadModel(_config), val_dataloder, wrapper.eval_metrics,
+        MyBadModel(_config),
+        val_dataloder,
+        wrapper.eval_metrics,
     )
     assert len(metrics_dict) == 1 and "loss" in metrics_dict.keys()
 
