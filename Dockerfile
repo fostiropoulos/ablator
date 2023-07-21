@@ -1,4 +1,3 @@
-FROM nvidia/cuda:11.5.2-base-ubuntu20.04
 FROM continuumio/miniconda3:4.10.3
 WORKDIR /usr/src/app
 

@@ -24,6 +24,24 @@ jobs:
         ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
         cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
         sudo apt-get install -y rsync
+    - name: Install Docker
+      run: |
+        sudo apt-get update
+        sudo apt-get install \
+            apt-transport-https \
+            ca-certificates \
+            curl \
+            gnupg \
+            lsb-release
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install docker-ce docker-ce-cli containerd.io
+    - name: Build Docker Image
+      run: |
+        docker build --build-arg="PY_VERSION=$(python --version | grep -Eo '[0-9]\.[0-9]+\.[0-9]+')" --tag ablator .
     - name: Test with pytest
       run: |
         pip install pytest
