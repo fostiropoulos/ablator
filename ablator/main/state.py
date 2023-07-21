@@ -548,7 +548,7 @@ class ExperimentState:
         ]:
             trials_to_sample = self.n_trials_remaining
         else:
-            trials_to_sample = min(max_trials_conc, self.n_trials_remaining)
+            trials_to_sample = max_trials_conc
 
         # if there are currently running trials, return those first and is resume. Otherwise
         # ERROR
@@ -557,18 +557,17 @@ class ExperimentState:
             raise RuntimeError(
                 "Experiment exists. You need to use `resume = True` or use a different path."
             )
-        self.logger.info(
-            f"{len(self.all_trials)} from previous expriment,{len(self.running_trials)} previous running trials"
-        )
         running_trials = []
         for trial in self.running_trials:
             self.update_trial_state(trial.uid, None, TrialState.RESUME)
             running_trials.append(trial)
+
         trials = self.__sample_trials(
             trials_to_sample,
-            None,
+            running_trials + self.pending_trials,
             ignore_errors=self.config.ignore_invalid_params,
         )[:max_trials_conc]
+
         assert len(trials) > 0, "No trials could be scheduled."
         return trials
 

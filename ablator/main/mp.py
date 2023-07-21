@@ -56,16 +56,6 @@ def parse_metrics(optim_direction: list[str], metrics: dict[str, float] | None):
     )
 
 
-def evaluate_remote(model: ModelWrapper, eval_config: ParallelConfig, logger: FileLogger):
-    metrics = model.evaluate(eval_config)
-    metrics_dict = {k: v.to_dict() for k, v in metrics.items()}
-    logger.info(f"Evaluation: {butils.parse_dict_to_str(metrics_dict)}")
-    with open(eval_config.experiment_dir/"metrics.json", "w", encoding="utf-8") as f:
-        formatter_str = json.dumps(metrics_dict, indent=4)
-        f.write(formatter_str)
-    return metrics_dict, eval_config
-
-
 def train_main_remote(
     model: ModelWrapper,
     run_config: ParallelConfig,
@@ -406,51 +396,24 @@ class ParallelTrainer(ProtoTrainer):
         futures = self._make_remotes(trials)
         return futures
 
-    def evaluate(self, parallel=False, working_directory: str = "", ray_head_address: str | None = "auto", auxilary_modules: list[tys.ModuleType] | None = None):
+    def evaluate(self):
         """
         Evaluate model performance in trials that are completed, using evaluation functions defined
         in the model wrapper. Evaluation results will be logged to the console and log files in the
         experiment directory. This method also synchronizes the experiment directory to Google cloud
         storage and remote servers.
         """
-        self._init_state(
-            working_dir=working_directory,
-            address=ray_head_address,
-            modules=auxilary_modules,
-            resume=True,
-        )
         eval_configs = []
         trial_uids = self.experiment_state.complete_trials
         for config in trial_uids:
-            config_path = self.experiment_dir.joinpath(config.uid, "config.yaml")
-            if os.path.exists(
-                config_path
-            ):
-                model_config = type(self.run_config).load(
-                    config_path
-                )
+            model_config = type(self.run_config).load(
+                self.experiment_dir.joinpath(config.uid, "config.yaml")
+            )
             eval_configs.append(model_config)
-            self.logger.info(f"Evaluating trials...uid: {config.uid}")
 
         # TODO evaluate in parallel
-        futures = []
-        all_config_metrics = {}
         for model_config in eval_configs:
-            if ray.is_initialized() and parallel:
-                self.logger.info("Evaluating in parallel...")
-                futures.append(
-                    ray.remote(num_gpus=self.gpu, num_cpus=self.cpu)(
-                        evaluate_remote
-                    ).remote(self.wrapper, model_config, self.logger)
-                )
-            else:
-                metrics_dict = self.wrapper.evaluate(model_config)
-                all_config_metrics[model_config.uid] = metrics_dict
-        while len(futures) > 0:
-            done_id, futures = ray.wait(futures, num_returns=1)
-            metrics_dict, eval_config = ray.get(done_id[0])
-            all_config_metrics[eval_config.uid] = metrics_dict
-        return all_config_metrics
+            self.wrapper.evaluate(model_config)
 
     def launch(  # type: ignore
         self,
