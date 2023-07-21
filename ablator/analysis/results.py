@@ -11,6 +11,7 @@ from joblib import Memory
 
 from ablator.config.main import ConfigBase
 from ablator.config.mp import Optim, ParallelConfig, SearchSpace
+from ablator.config.proto import RunConfig
 
 
 def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame | None:
@@ -113,12 +114,26 @@ class Results:
 
     def __init__(
         self,
-        config: type[ParallelConfig],
+        config: type[ParallelConfig] | ParallelConfig,
         experiment_dir: str | Path,
         cache: bool = False,
         use_ray: bool = False,
     ) -> None:
-        assert issubclass(config, ParallelConfig), "Configuration must be of type. "
+        if not isinstance(config, type):
+            config_type = type(config)
+        else:
+            config_type = config
+        if issubclass(config_type, RunConfig) and not issubclass(
+            config_type, ParallelConfig
+        ):
+            raise ValueError(
+                "Provided a ``RunConfig`` used for a single-trial. Analysis "
+                "is not meaningful for a single trial. Please provide a ``ParallelConfig``."
+            )
+        if not issubclass(config_type, ParallelConfig):
+            raise ValueError(
+                "Configuration must be subclassed from ``ParallelConfig``. "
+            )
         # TODO parse results from experiment directory as opposed to configuration.
         # Need a way to derived MPConfig implementation from a pickled file.
         # We need the types of the configuration, metric map.
@@ -126,7 +141,7 @@ class Results:
         run_config_path = self.experiment_dir.joinpath("default_config.yaml")
         if not run_config_path.exists():
             raise FileNotFoundError(f"{run_config_path}")
-        self.config = config.load(run_config_path)
+        self.config = config_type.load(run_config_path)
         self.metric_map: dict[str, Optim] = self.config.optim_metrics
         self._make_cache(clean=not cache)
         self.data: pd.DataFrame = self._parse_results(
