@@ -284,7 +284,9 @@ class ParallelTrainer(ProtoTrainer):
             num_cpus=self._cpu,
             max_calls=1,
             max_retries=max_error_retries,
-        )(train_main_remote).options( # type: ignore
+        )(
+            train_main_remote
+        ).options(  # type: ignore
             resources={f"node:{node_ip}": 0.001}, name=trial_uuid
         )
         run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
@@ -460,6 +462,7 @@ class ParallelTrainer(ProtoTrainer):
             }
             # pylint: disable=cyclic-import,import-outside-toplevel
             import ablator as ablator_module
+
             if modules is None:
                 modules = [ablator_module]
             if ablator_module not in modules:
@@ -540,7 +543,6 @@ class ParallelTrainer(ProtoTrainer):
         trial_state: TrialState
         heart_beat_interval = 1
         while len(futures) > 0:
-
             # pylint: disable=broad-exception-caught
             try:
                 done_id, futures = ray.wait(
