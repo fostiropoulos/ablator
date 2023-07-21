@@ -77,7 +77,7 @@ class Display:
             self.html_widget.value = self.html_value
             self.html_value = ""
 
-    def _display(self, text, pos):
+    def _display(self, text, pos, is_last=False):
         if self.ncols is None or self.nrows is None:
             return
 
@@ -86,7 +86,8 @@ class Display:
 
         if self.is_terminal:
             try:
-                self.stdscr.addstr(pos, 0, text[: self.ncols - 1])
+                _text = text[: self.ncols - 1] if is_last else text
+                self.stdscr.addstr(pos, 0, _text)
             except _curses.error:
                 pass
         else:
@@ -140,6 +141,7 @@ class RemoteProgressBar:
             current_iteration=self.current_iteration,
             start_time=self.start_time,
             total_steps=self.total_trials,
+            epoch_len=self.total_trials,
             ncols=100,
         )
 
@@ -147,8 +149,8 @@ class RemoteProgressBar:
     def current_iteration(self):
         return sum(self.closed.values())
 
-    def make_print_texts(self):
-        def _concat_texts(texts):
+    def make_print_texts(self) -> list[str]:
+        def _concat_texts(texts) -> list[str]:
             _texts = [f"{texts[1]}{SEPERATOR}{texts[0]}"]
             if len(texts) > 2:
                 padding = " " * (len(texts[1].split(":")[0]) + 2)
@@ -173,7 +175,7 @@ class RemoteProgressBar:
 
 class RemoteDisplay(Display):
     def __init__(
-        self, remote_progress_bar: RemoteProgressBar, update_interval=1
+        self, remote_progress_bar: RemoteProgressBar, update_interval: int = 1
     ) -> None:
         super().__init__()
         self._prev_update_time = time.time()
@@ -191,13 +193,18 @@ class RemoteDisplay(Display):
 class ProgressBar:
     def __init__(
         self,
-        total,
+        total_steps,
+        epoch_len: int | None = None,
         logfile: Path | None = None,
         update_interval: int = 1,
         remote_display: ty.Optional[RemoteProgressBar] = None,
         uid: str | None = None,
     ):
-        self.total = total
+        if epoch_len is None:
+            self.epoch_len = total_steps
+        else:
+            self.epoch_len = epoch_len
+        self.total_steps = total_steps
         self.update_interval = update_interval
         self.start_time = time.time()
         self._prev_update_time = time.time()
@@ -214,7 +221,7 @@ class ProgressBar:
         self._update()
 
     def __iter__(self):
-        for obj in range(self.total):
+        for obj in range(self.epoch_len):
             yield obj
 
     def reset(self) -> None:
@@ -230,17 +237,24 @@ class ProgressBar:
         self.close()
 
     @classmethod
-    def make_bar(cls, current_iteration, start_time, total_steps, ncols=None):
+    def make_bar(
+        cls,
+        current_iteration: int,
+        start_time: float,
+        epoch_len: int,
+        total_steps: int,
+        ncols: int | None = None,
+    ):
         if current_iteration > 0:
             rate = current_iteration / (time.time() - start_time)
             time_remaining = (total_steps - current_iteration) / rate
-            time_remaining = tqdm.format_interval(time_remaining)
+            ftime = tqdm.format_interval(time_remaining)
         else:
-            time_remaining = "??"
-        post_fix = f"Remaining: {time_remaining}"
+            ftime = "??"
+        post_fix = f"Remaining: {ftime}"
         return tqdm.format_meter(
             current_iteration,
-            total_steps,
+            epoch_len,
             elapsed=time.time() - start_time,
             bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}",
             postfix=post_fix,
@@ -294,7 +308,8 @@ class ProgressBar:
         pbar = self.make_bar(
             current_iteration=self.current_iteration,
             start_time=self.start_time,
-            total_steps=self.total,
+            total_steps=self.total_steps,
+            epoch_len=self.epoch_len,
         )
         if self.uid is not None:
             texts.append(f"{self.uid}: {pbar}")
@@ -311,7 +326,7 @@ class ProgressBar:
             self.display.print_texts(texts)
         else:
             ray.get(self.remote_display.update_status.remote(self.uid, texts))
-            if self.current_iteration + 1 == self.total:
+            if self.current_iteration + 1 == self.epoch_len:
                 self.close()
 
     def update_metrics(self, metrics: dict[str, ty.Any], current_iteration: int):
@@ -320,7 +335,7 @@ class ProgressBar:
         if (
             current_iteration == 0
             or time.time() - self._prev_update_time > self.update_interval
-            or current_iteration + 1 == self.total
+            or current_iteration + 1 == self.epoch_len
         ):
             self._prev_update_time = time.time()
             self._update()

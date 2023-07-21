@@ -3,14 +3,16 @@ import inspect
 import typing as ty
 from collections.abc import Callable, Sequence
 from functools import cached_property
-
+import bisect
 import numpy as np
 import torch
 
 import ablator.utils.base as butils
 
 
-def _parse_val(val: np.ndarray | torch.Tensor | int | float) -> int | float:
+def _parse_moving_average_val(
+    val: np.ndarray | torch.Tensor | int | float,
+) -> int | float:
     if not isinstance(val, (np.ndarray, torch.Tensor, int, float)):
         raise ValueError(f"Invalid MovingAverage value type {type(val)}")
     if isinstance(val, (np.ndarray, torch.Tensor)):
@@ -22,6 +24,38 @@ def _parse_val(val: np.ndarray | torch.Tensor | int | float) -> int | float:
     else:
         scalar = val
     return scalar
+
+
+def _parse_array_store_val(
+    val: np.ndarray | int | float,
+    store_type: None | type = None,
+    shape: None | tuple[int, ...] = None,
+):
+    if not isinstance(val, (np.ndarray, int, float)):
+        raise RuntimeError(f"Invalid ArrayStore value type {type(val)}")
+    np_val: np.ndarray
+    if isinstance(val, (int, float)) or len(val.shape) == 0:
+        np_val = np.array([[val]])
+    else:
+        np_val = val
+    if len(np_val.shape) < 2:
+        raise ValueError(
+            (
+                "Missing batch dimension. If supplying a single value array, "
+                "reshape to [B, 1] or if suppling a single a batch reshape to [1, N]."
+            )
+        )
+    if store_type is not None and np_val.dtype != store_type:
+        raise RuntimeError(
+            f"Inhomogeneous types between stored values {store_type} and provided value {np_val.dtype}."
+        )
+    # skipping batch dim
+    data_shape = np_val.shape[1:]
+    if shape is not None and data_shape != shape:
+        raise RuntimeError(
+            f"Inhomogeneous shapes between stored values  {shape} and provided value {data_shape}"
+        )
+    return np_val
 
 
 class ArrayStore(Sequence):
@@ -58,8 +92,12 @@ class ArrayStore(Sequence):
         """
         super().__init__()
         self._arr: list[np.ndarray] = []
-        self.limit = batch_limit
+        self.limit = int(batch_limit) if batch_limit is not None else None
         self._memory_limit = memory_limit
+        self._arr_len: list[int] = []
+        self._len = 0
+        # initialize memory_size as it is a cached property.
+        getattr(self, "memory_size")
 
     def append(self, val: np.ndarray | float | int):
         """
@@ -112,44 +150,59 @@ class ArrayStore(Sequence):
         4
         """
         # Appending by batch is faster than converting numpy to list
-        if not isinstance(val, (np.ndarray, int, float)):
-            raise RuntimeError(f"Invalid ArrayStore value type {type(val)}")
-        np_val: np.ndarray
-        if isinstance(val, (int, float)) or len(val.shape) == 0:
-            np_val = np.array([val])
-        else:
-            np_val = val
-        if self.store_type is not None and np_val.dtype != self.store_type:
-            raise RuntimeError(
-                f"Inhomogeneous types between stored values {self.store_type} and provided value {np_val.dtype}."
-            )
-        if self.shape is not None and np_val.shape != self.shape:
-            raise RuntimeError(
-                f"Inhomogeneous shapes between stored values  {self.shape} and provided value {np_val.shape}"
-            )
+        np_val = _parse_array_store_val(
+            val, shape=self.shape, store_type=self.store_type
+        )
+        self._arr.append(np_val)
         if self.store_type is None:
             # we reset the cached properties
             del self.store_type
             del self.shape
-        self._arr.append(np_val)
-        if self.limit is not None and len(self) > self.limit:
-            # pylint throws an error because limit can be None
-            self._arr = self._arr[
-                -self.limit :  # pylint: disable=invalid-unary-operand-type
-            ]
-        elif self._memory_limit is not None and self.memory_size > self._memory_limit:
-            self.limit = max(len(self) - 1, 1)
-        if len(self._arr) % 10 == 0 and hasattr(self, "memory_size"):
             del self.memory_size
+        np_val_len = len(np_val)
+        self._arr_len.append(np_val_len)
+        self._len += np_val_len
+        if (
+            self._memory_limit is not None
+            and self.memory_size * (self._len + 1) > self._memory_limit
+        ):
+            memory_limit = int(max(self._memory_limit // self.memory_size, 1))
+            limit: int = (
+                min(memory_limit, self.limit)
+                if self.limit is not None
+                else memory_limit
+            )
+            self.limit = limit
+            self._prune(limit)
+        elif self.limit is not None and self._len > self.limit:
+            self._prune(self.limit)
 
     @cached_property
     def memory_size(self):
         arr_size = 0
         if len(self) > 0:
             arr = self._arr[0]
-            arr_size = arr.size * arr.itemsize * len(self._arr)
+            arr_size = arr.size * arr.itemsize
 
         return arr_size
+
+    def _prune(self, limit: int):
+        limit = int(limit)
+        lens = np.cumsum(self._arr_len[::-1])
+        idx = np.argmax(lens > limit)
+        underflow = lens[idx - 1] - limit
+        if underflow > 0:
+            # overflow!
+            underflow = -limit
+        if underflow < 0:
+            idx += 1
+            self._arr[-idx] = self._arr[-idx][underflow:]
+            self._arr_len[-idx] = -1 * underflow
+
+        self._arr = self._arr[-idx:]
+        self._arr_len = self._arr_len[-idx:]
+        self._len = limit
+        assert sum(self._arr_len) == limit
 
     def get(self) -> np.ndarray:
         """
@@ -168,8 +221,8 @@ class ArrayStore(Sequence):
         array([[90], [91], [92], [93], [94], [95], [96], [97], [98], [99]])
         """
         if len(self._arr) == 0:
-            return np.array([])
-        return np.stack(self._arr)
+            return np.array([[]])
+        return np.concatenate(self._arr)
 
     @cached_property
     def store_type(self) -> type | None:
@@ -180,15 +233,23 @@ class ArrayStore(Sequence):
     @cached_property
     def shape(self) -> tuple[int, ...] | None:
         if len(self._arr) > 0:
-            return self._arr[-1].shape
+            return self._arr[-1].shape[1:]
         return None
 
     def __len__(self):
-        size = len(self._arr)
-        return size
+        return self._len
 
-    def __getitem__(self, i):
-        return self._arr[i]
+    def __getitem__(self, idx):
+        idx = self._len + idx if idx < 0 else idx
+
+        if idx < 0 or idx >= self._len:
+            raise IndexError("list index out of range")
+
+        cum_sum = np.cumsum(self._arr_len)
+
+        if (arr_idx := bisect.bisect_right(cum_sum, idx)) > 0:
+            idx -= cum_sum[arr_idx - 1]
+        return self._arr[arr_idx][idx]
 
     def reset(self):
         """
@@ -210,6 +271,8 @@ class ArrayStore(Sequence):
         []
         """
         self._arr = []
+        self._arr_len = []
+        self._len = 0
 
 
 class PredictionStore:
@@ -356,15 +419,7 @@ class PredictionStore:
         for k, v in batches.items():
             np_arr = butils.iter_to_numpy(v)
             sizes[k] = len(np_arr)
-            if len(np_arr.shape) < 2:
-                raise ValueError(
-                    (
-                        "Missing batch dimension. If supplying a single value array, "
-                        "reshape to [B, 1] or if suppling a single a batch reshape to [1, N]."
-                    )
-                )
-            for row in np_arr:
-                self._get_arr(k).append(row)
+            self._get_arr(k).append(np_arr)
         assert (
             len(set(sizes.values())) == 1
         ), f"Inhomegenous batches between inputs. Sizes: {sizes}"
@@ -424,7 +479,7 @@ class PredictionStore:
                 len(intersecting_args) > 0
             ), f"Evaluation function arguments {fn_args} different than stored predictions: {self._batch_keys}"
             metric = v(**{k: v for k, v in batches.items() if k in intersecting_args})
-            metric = _parse_val(metric)
+            metric = _parse_moving_average_val(metric)
             metrics[k] = metric
             try:
                 self.metrics[k].append(metric)
@@ -528,5 +583,5 @@ class MovingAverage(ArrayStore):
         [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85,
         86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
         """
-        scalar = _parse_val(val)
+        scalar = _parse_moving_average_val(val)
         super().append(scalar)

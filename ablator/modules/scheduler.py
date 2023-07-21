@@ -184,8 +184,6 @@ class PlateuaConfig(SchedulerArgs):
     factor: float = 0.0  # TODO {fixme} this is error prone -> new_lr = 0
     threshold: float = 1e-4
     verbose: bool = False
-    # TODO fix mypy errors for custom types
-    # type: ignore
     step_when: StepType = "val"
 
     def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
@@ -237,8 +235,6 @@ class StepLRConfig(SchedulerArgs):
 
     step_size: int = 1
     gamma: float = 0.99
-    # TODO fix mypy errors for custom types
-    # type: ignore
     step_when: StepType = "epoch"
 
     def init_scheduler(self, model: nn.Module, optimizer: Optimizer):

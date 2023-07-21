@@ -18,7 +18,6 @@ from ablator import (
     RunConfig,
     TrainConfig,
 )
-from ablator.modules.metrics.main import TrainMetrics
 from ablator.utils.base import Dummy
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
@@ -244,7 +243,7 @@ def test_verbosity():
             any(
                 [
                     out.strip().split("\n")[i].endswith("?it/s, Remaining: ??]")
-                    for i in range(3)
+                    for i in range(5)
                 ]
             )
             and len(err) == 0
@@ -261,7 +260,7 @@ def test_verbosity():
             lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
         )
         assert (
-            "Metrics batch-limit 32 is smaller than the validation dataloader length 100."
+            "Metrics batch-limit 32 is larger than 20% of the train dataloader length 100. You might experience slow-down during training. Consider decreasing `metrics_n_batches`."
             in out
         )
         console_config = RunConfig(
@@ -280,8 +279,7 @@ def test_verbosity():
 
 
 def test_train_stats():
-    m = TestWrapper(MyCustomModel).train(config)
-    res = m.to_dict()
+    res = TestWrapper(MyCustomModel).train(config)
     assert res["train_loss"] < 2e-05
     del res["train_loss"]
 
@@ -340,12 +338,12 @@ def test_state(assert_error_msg):
         "best_loss": float("inf"),
     }
     assert dict(wrapper.train_stats) == train_stats
-    assert wrapper.current_state[
-        "run_config"
-    ] == _config.to_dict() and wrapper.current_state["metrics"] == {
-        **train_stats,
-        **{"train_loss": np.nan, "val_loss": np.nan},
-    }
+    assert (
+        wrapper.current_state["run_config"] == _config.to_dict()
+        and wrapper.current_state["train_metrics"]
+        == {**train_stats, **{"loss": np.nan}}
+        and wrapper.current_state["eval_metrics"] == {"loss": np.nan}
+    )
     assert str(wrapper.model.param.device) == "cpu"
     assert wrapper.model.param.requires_grad == True
     assert wrapper.current_checkpoint is None
@@ -381,8 +379,6 @@ def test_load_save_errors(tmp_path: Path, assert_error_msg):
         f"Could not find a valid checkpoint in {tmp_path.joinpath('checkpoints')}",
     )
 
-    # wrapper =
-    # wrapper.
     pass
 
 
@@ -431,9 +427,11 @@ def test_validation_loop():
     wrapper._init_state(_config)
     val_dataloder = wrapper.make_dataloader_val(_config)
     metrics_dict = wrapper.validation_loop(
-        MyBadModel(_config), val_dataloder, wrapper.metrics, "val"
+        MyBadModel(_config),
+        val_dataloder,
+        wrapper.eval_metrics,
     )
-    assert len(metrics_dict) == 1 and "val_loss" in metrics_dict.keys()
+    assert len(metrics_dict) == 1 and "loss" in metrics_dict.keys()
 
 
 def test_train_resume(tmp_path: Path, assert_error_msg):
@@ -460,12 +458,13 @@ if __name__ == "__main__":
 
     shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)
     test_load_save(tmp_path, _assert_error_msg)
-    # test_load_save_errors(tmp_path, _assert_error_msg)
+    shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)
+    test_load_save_errors(tmp_path, _assert_error_msg)
     test_error_models(_assert_error_msg)
     test_train_stats()
-    # test_state()
+    test_state(_assert_error_msg)
 
     test_verbosity()
-    # test_train_resume(tmp_path, _assert_error_msg)
-    # test_train_loop()
-    # test_validation_loop()
+    test_train_resume(tmp_path, _assert_error_msg)
+    test_train_loop(_assert_error_msg)
+    test_validation_loop()

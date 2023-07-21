@@ -1,4 +1,3 @@
-from multiprocessing import Process
 import shutil
 import uuid
 from pathlib import Path
@@ -6,171 +5,17 @@ from pathlib import Path
 import mock
 import numpy as np
 import pytest
-import ray
 import torch
-from torch import nn
 
-from ablator import (
-    Derived,
-    ModelConfig,
-    ModelWrapper,
-    OptimizerConfig,
-    RunConfig,
-    Stateless,
-    TrainConfig,
-)
-from ablator.config.main import configclass
-from ablator.config.mp import ParallelConfig, SearchAlgo, SearchSpace
 from ablator.main.mp import ParallelTrainer, train_main_remote
 from ablator.main.state.store import TrialState
 from ablator.modules.loggers.file import FileLogger
 from ablator.mp.node_manager import NodeManager, Resource
-from ablator.utils.base import Dummy
 
-LR_ERROR_LIMIT = 5
-
-GPU_UTIL = 100  # mb
 
 N_MOCK_NODES = 10
 
-N_BATCHES = 100
-DEVICE = "cpu"
-WORKING_DIR = Path(__file__).parent.as_posix()
-
-
-@pytest.fixture(scope="function")
-def mp_ray_cluster(docker_ray_cluster):
-    if ray.is_initialized():
-        ray.shutdown()
-    cluster = docker_ray_cluster()
-    cluster.setUp(WORKING_DIR)
-    yield cluster
-    cluster.tearDown()
-    ray.shutdown()
-
-
-class MyCustomException(Exception):
-    pass
-
-
-class CustomModelConfig(ModelConfig):
-    lr: Derived[int]
-
-
-class CustomTrainConfig(TrainConfig):
-    epochs: Stateless[int]
-
-
-@configclass
-class MyParallelConfig(ParallelConfig):
-    model_config: CustomModelConfig
-    train_config: CustomTrainConfig
-
-
-class TestWrapper(ModelWrapper):
-    def make_dataloader_train(self, run_config: RunConfig):
-        dl = [torch.rand(100) for i in range(N_BATCHES)]
-        return dl
-
-    def make_dataloader_val(self, run_config: RunConfig):
-        dl = [torch.rand(100) for i in range(N_BATCHES)]
-        return dl
-
-    def config_parser(self, run_config: MyParallelConfig):
-        run_config.model_config.lr = (
-            run_config.train_config.optimizer_config.arguments.lr
-        )
-        return super().config_parser(run_config)
-
-
-class MyErrorCustomModel(nn.Module):
-    def __init__(self, config: CustomModelConfig) -> None:
-        super().__init__()
-        self.lr = config.lr
-        self.param = nn.Parameter(torch.ones(100, 1))
-        self.itr = 0
-
-    def forward(self, x: torch.Tensor):
-        x = self.param + torch.rand_like(self.param) * 0.01
-        self.itr += 1
-        if self.itr > 10 and self.lr >= LR_ERROR_LIMIT:
-            raise MyCustomException("large lr.")
-        return {"preds": x}, x.sum().abs()
-
-
-class MyDivCustomModel(nn.Module):
-    def __init__(self, config: CustomModelConfig) -> None:
-        super().__init__()
-        self.lr = config.lr
-        self.param = nn.Parameter(torch.ones(100, 1))
-        self.itr = 0
-
-    def forward(self, x: torch.Tensor):
-        x = self.param + torch.rand_like(self.param) * 0.01
-        self.itr += 1
-        if self.itr > 10 and self.lr >= LR_ERROR_LIMIT:
-            return {"preds": x}, x.sum().abs() + torch.nan
-        return {"preds": x}, x.sum().abs()
-
-
-class MyCustomModel(nn.Module):
-    def __init__(self, config: CustomModelConfig) -> None:
-        super().__init__()
-        self.lr = config.lr
-        self.param = nn.Parameter(torch.ones(100, 1))
-        self.itr = 0
-
-    def forward(self, x: torch.Tensor):
-        x = self.param + torch.rand_like(self.param) * 0.01
-        self.itr += 1
-        return {"preds": x}, x.sum().abs()
-
-
-@pytest.fixture()
-def error_wrapper():
-    return TestWrapper(MyErrorCustomModel)
-
-
-@pytest.fixture()
-def wrapper():
-    return TestWrapper(MyCustomModel)
-
-
-def make_config(
-    tmp_path: Path,
-    search_space_limit: int | None = None,
-):
-    optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
-    train_config = CustomTrainConfig(
-        dataset="test",
-        batch_size=128,
-        epochs=2,
-        optimizer_config=optimizer_config,
-        scheduler_config=None,
-    )
-    search_space = {
-        "train_config.optimizer_config.arguments.lr": SearchSpace(
-            value_range=[0, 19],
-            value_type="float",
-            n_bins=search_space_limit,
-        ),
-    }
-
-    config = MyParallelConfig(
-        experiment_dir=tmp_path,
-        train_config=train_config,
-        model_config=CustomModelConfig(),
-        verbose="silent",
-        device="cuda" if torch.cuda.is_available() else "cpu",
-        amp=False,
-        search_space=search_space,
-        optim_metrics={"val_loss": "min"} if search_space_limit is None else None,
-        total_trials=10,
-        search_algo="tpe" if search_space_limit is None else "grid",
-        concurrent_trials=10,
-        gpu_mb_per_experiment=GPU_UTIL,
-    )
-    return config
+GPU_UTIL = 100  # mb
 
 
 def available_resources(
@@ -222,10 +67,12 @@ def _test_bottleneck(trainer: ParallelTrainer, fn, bottleneck_step, soft_limit=1
         assert len(futures) == 0
 
 
-def test_mp_sampling_limits(tmp_path: Path, error_wrapper):
+def test_mp_sampling_limits(tmp_path: Path, error_wrapper, make_config, working_dir):
     search_space_limit = 20
     # -1 because it is zero indexed
-    config = make_config(tmp_path, search_space_limit=search_space_limit - 1)
+    config = make_config(
+        tmp_path, search_space_limit=search_space_limit - 1, gpu_util=GPU_UTIL
+    )
     n_nodes = 3
     config.optim_metrics = None
     # Starts a head-node for the cluster.
@@ -252,7 +99,7 @@ def test_mp_sampling_limits(tmp_path: Path, error_wrapper):
         ),
     ):
         trainer = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-        trainer._init_state(WORKING_DIR)
+        trainer._init_state(working_dir)
 
         futures = trainer._make_futures()
         # should have sampled 0,1,2,0,1,2 ...
@@ -284,13 +131,20 @@ def test_mp_sampling_limits(tmp_path: Path, error_wrapper):
 
 
 @pytest.mark.order(-1)
-def test_mp_run(tmp_path: Path, assert_error_msg, mp_ray_cluster, error_wrapper):
+def test_mp_run(
+    tmp_path: Path,
+    assert_error_msg,
+    ray_cluster,
+    error_wrapper,
+    make_config,
+    working_dir,
+):
     n_trials = 10
     config = make_config(tmp_path, search_space_limit=n_trials)
     config.experiment_dir = tmp_path
     config.total_trials = n_trials
     ablator = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-    ablator.launch(WORKING_DIR, ray_head_address=None)
+    ablator.launch(working_dir)
 
     complete_configs = ablator.experiment_state.get_trial_configs_by_state(
         TrialState.COMPLETE
@@ -298,6 +152,7 @@ def test_mp_run(tmp_path: Path, assert_error_msg, mp_ray_cluster, error_wrapper)
     lrs = np.array(
         [c.train_config.optimizer_config.arguments.lr for c in complete_configs]
     )
+    LR_ERROR_LIMIT = config.model_config.lr_error_limit
     n_complete = np.sum(np.linspace(0, 19, 10) < LR_ERROR_LIMIT)
     assert len(complete_configs) == n_complete
     assert (lrs < LR_ERROR_LIMIT).all()
@@ -306,7 +161,7 @@ def test_mp_run(tmp_path: Path, assert_error_msg, mp_ray_cluster, error_wrapper)
         == n_trials - n_complete
     )
     msg = assert_error_msg(
-        lambda: ablator._init_state(WORKING_DIR, address=None),
+        lambda: ablator._init_state(working_dir),
     )
     assert (
         f"Experiment Directory " in msg
@@ -315,33 +170,37 @@ def test_mp_run(tmp_path: Path, assert_error_msg, mp_ray_cluster, error_wrapper)
     )
 
     prev_trials = len(ablator.experiment_state.valid_trials())
-    ablator.launch(WORKING_DIR, ray_head_address=None, resume=True)
+    ablator.launch(working_dir, resume=True)
     assert len(ablator.experiment_state.valid_trials()) == prev_trials
     ablator.run_config.total_trials = 20
-    ablator.launch(WORKING_DIR, ray_head_address=None, resume=True)
+    ablator.launch(working_dir, resume=True)
     assert (len(ablator.experiment_state.valid_trials()) != prev_trials) and (
         len(ablator.experiment_state.valid_trials()) == ablator.total_trials
     )
 
 
 @pytest.mark.order(1)
-def test_ray_init(tmp_path: Path, capture_output, error_wrapper):
+def test_ray_init(
+    tmp_path: Path, capture_output, error_wrapper, make_config, working_dir
+):
     config = make_config(tmp_path, search_space_limit=None)
     trainer = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-    trainer._init_state(WORKING_DIR, address=None)
+    trainer._init_state(working_dir)
 
-    out, err = capture_output(lambda: trainer._init_state(WORKING_DIR, resume=True))
+    out, err = capture_output(lambda: trainer._init_state(working_dir, resume=True))
     assert "Ray is already initialized." in out
 
 
-def test_resource_util(tmp_path: Path, capture_output, error_wrapper):
+def test_resource_util(
+    tmp_path: Path, capture_output, error_wrapper, make_config, working_dir
+):
     config = make_config(tmp_path)
     # We remove sampling limits to test the limits in sampling
     # imposed by the resource allocation.
     config.concurrent_trials = None
     config.total_trials = None
     trainer = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-    trainer._init_state(WORKING_DIR, address=None)
+    trainer._init_state(working_dir)
     del trainer._cpu
     out, err = capture_output(lambda: trainer._cpu)
     assert "Consider adjusting `concurrent_trials`." in out
@@ -411,17 +270,23 @@ def test_resource_util(tmp_path: Path, capture_output, error_wrapper):
     not torch.cuda.is_available(),
     reason="The test is meant for left-over cuda memory. Not possible to evaluate without cuda support.",
 )
-def test_zombie_remotes(tmp_path: Path, wrapper):
+def test_zombie_remotes(tmp_path: Path, wrapper, make_config, working_dir):
     config = make_config(tmp_path)
     config.device = "cuda"
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
     prev_memory_allocated = torch.cuda.memory_allocated()
-    ablator._init_state(WORKING_DIR, address=None)
+    ablator._init_state(working_dir)
     assert prev_memory_allocated == torch.cuda.memory_allocated()
 
 
 def test_train_main_remote(
-    tmp_path: Path, assert_error_msg, capture_output, error_wrapper, wrapper
+    tmp_path: Path,
+    assert_error_msg,
+    capture_output,
+    error_wrapper,
+    wrapper,
+    make_config,
+    divergent_wrapper,
 ):
     config = make_config(tmp_path)
     config.experiment_dir = tmp_path.joinpath("mock_dir")
@@ -524,7 +389,7 @@ def test_train_main_remote(
             mp_logger,
             uid,
             True,
-            [MyCustomException],
+            [error_wrapper.model.exception_class],
             False,
             clean_reset,
             progress_bar,
@@ -539,7 +404,7 @@ def test_train_main_remote(
             mp_logger,
             uid,
             False,
-            [MyCustomException],
+            [error_wrapper.model.exception_class],
             True,
             clean_reset,
             progress_bar,
@@ -553,7 +418,7 @@ def test_train_main_remote(
         mp_logger,
         uid,
         False,
-        [MyCustomException],
+        [error_wrapper.model.exception_class],
         True,
         True,
         progress_bar,
@@ -566,7 +431,7 @@ def test_train_main_remote(
         mp_logger,
         uid,
         False,
-        [MyCustomException],
+        [error_wrapper.model.exception_class],
         False,
         clean_reset,
         progress_bar,
@@ -575,12 +440,12 @@ def test_train_main_remote(
 
     shutil.rmtree(config.experiment_dir)
     _new_uid, metrics, state = train_main_remote(
-        TestWrapper(MyDivCustomModel),
+        divergent_wrapper,
         config,
         mp_logger,
         uid,
         False,
-        [MyCustomException],
+        [error_wrapper.model.exception_class],
         False,
         clean_reset,
         progress_bar,
@@ -588,7 +453,7 @@ def test_train_main_remote(
     assert state == TrialState.PRUNED_POOR_PERFORMANCE
 
 
-def test_relative_path(tmp_path: Path, wrapper):
+def test_relative_path(tmp_path: Path, wrapper, make_config):
     config = make_config(tmp_path)
     config.experiment_dir = "../dir/../dir2/."
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
@@ -600,6 +465,13 @@ def test_relative_path(tmp_path: Path, wrapper):
 if __name__ == "__main__":
     from tests.conftest import DockerRayCluster
     from tests.conftest import _assert_error_msg, _capture_output
+    from tests.ray_models.model import (
+        WORKING_DIR,
+        TestWrapper,
+        MyCustomModel,
+        MyErrorCustomModel,
+        _make_config,
+    )
 
     tmp_path = Path("/tmp/experiment_dir")
     shutil.rmtree(tmp_path, ignore_errors=True)

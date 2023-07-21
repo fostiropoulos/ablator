@@ -29,7 +29,6 @@ class ParentTestConfig(ConfigBase):
 
 @configclass
 class ParentTestTestConfig(ConfigBase):
-    # TODO fix mypy issue
     a1: Derived[int] = 10
     c: ParentTestConfig
 
@@ -198,7 +197,7 @@ def test_iterable(assert_error_msg):
     assert_error_msg(lambda:ErrorConfigList(a4=(11,)),"Invalid type <class 'tuple'> for type List")
     assert_error_msg(lambda:ErrorConfigList(a4=11),"Invalid type <class 'int'> for type List")
     assert_error_msg(lambda:ErrorConfigList(a4="11"),"Invalid type <class 'str'> for type List")
-    
+
 
 if __name__ == "__main__":
     # TODO tests for iterable Type

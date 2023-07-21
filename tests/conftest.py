@@ -17,6 +17,7 @@ from xdist.scheduler.loadscope import LoadScopeScheduling
 from ablator import package_dir
 
 DOCKER_TAG = "ablator"
+pytest_plugins = ["ray_models.model"]
 
 
 def _assert_error_msg(fn, error_msg=None):
@@ -65,7 +66,7 @@ def make_node(docker_client: docker.DockerClient, img, cluster_address):
             ],
         )
     c = docker_client.containers.run(
-        img, entrypoint="/bin/bash", detach=True, tty=True, stdin_open=True, **cuda_args
+        img, command="/bin/bash", detach=True, tty=True, stdin_open=True, **cuda_args
     )
     res = c.exec_run(f"service ssh start")
     assert "Starting OpenBSD Secure Shell server" in res.output.decode()
@@ -188,7 +189,7 @@ class MPScheduler(LoadScopeScheduling):
     # NOTE must schedule all tests that use ray in the same node because of concurrency problems
     # when having interacting ray instances.
     def _split_scope(self, nodeid):
-        file_names = ["test_node_manager.py", "test_mp.py", "test_file_logger.py"]
+        file_names = ["test_node_manager.py", "test_mp.py", "test_file_logger.py", "test_analysis.py"]
         if any(f in nodeid for f in file_names):
             self.log(f"Scheduling {nodeid} with mp-tests.")
             return "mp-tests"

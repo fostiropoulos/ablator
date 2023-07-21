@@ -122,14 +122,14 @@ def train_main_remote(
     try:
         res = model.train(run_config, resume=resume, remote_progress_bar=progress_bar)
         mp_logger.info(f"Finished training - {run_config.uid}")
-        return uid, res.to_dict(), TrialState.COMPLETE
+        return uid, res, TrialState.COMPLETE
     except (LossDivergedError, TrainPlateauError) as e:
         mp_logger.warn(
             f"Trial {run_config.uid} was pruned for poor performance. {str(e)}"
         )
         return (
             uid,
-            model.metrics.to_dict(),
+            model.metrics,
             TrialState.PRUNED_POOR_PERFORMANCE,
         )
     except CheckpointNotFoundError as e:
@@ -284,7 +284,9 @@ class ParallelTrainer(ProtoTrainer):
             num_cpus=self._cpu,
             max_calls=1,
             max_retries=max_error_retries,
-        )(train_main_remote).options( # type: ignore
+        )(
+            train_main_remote
+        ).options(  # type: ignore
             resources={f"node:{node_ip}": 0.001}, name=trial_uuid
         )
         run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
@@ -413,7 +415,7 @@ class ParallelTrainer(ProtoTrainer):
     def _init_state(
         self,
         working_dir: str = "",
-        address: str | None = "auto",
+        address: str | None = None,
         modules: list[tys.ModuleType] | None = None,
         resume: bool = False,
         excluding_files: list[str] | None = None,
@@ -460,6 +462,7 @@ class ParallelTrainer(ProtoTrainer):
             }
             # pylint: disable=cyclic-import,import-outside-toplevel
             import ablator as ablator_module
+
             if modules is None:
                 modules = [ablator_module]
             if ablator_module not in modules:
@@ -484,7 +487,7 @@ class ParallelTrainer(ProtoTrainer):
         self,
         working_directory: str,
         auxilary_modules: list[tys.ModuleType] | None = None,
-        ray_head_address: str | None = "auto",
+        ray_head_address: str | None = None,
         resume: bool = False,
         excluding_files: list[str] | None = None,
     ):
@@ -509,7 +512,7 @@ class ParallelTrainer(ProtoTrainer):
             The working directory that stores codes, modules that will be used by ray.
         auxilary_modules : list[tys.ModuleType], None
             A list of modules to be used as ray clusters' working environment.
-        ray_head_address : str, default='auto'
+        ray_head_address : str, None
             Ray cluster address.
         resume : bool, default=False
             Whether to resume training the model from existing checkpoints and existing experiment state.
@@ -540,7 +543,6 @@ class ParallelTrainer(ProtoTrainer):
         trial_state: TrialState
         heart_beat_interval = 1
         while len(futures) > 0:
-
             # pylint: disable=broad-exception-caught
             try:
                 done_id, futures = ray.wait(

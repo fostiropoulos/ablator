@@ -264,6 +264,7 @@ def mock_train_optuna(trial: optuna.Trial):
     return lr**2
 
 
+@pytest.fixture()
 def search_space():
     return {
         "train_config.optimizer_config": SearchSpace(
@@ -320,12 +321,11 @@ def _get_top_n(df: pd.DataFrame):
     return df.sort_values("acc")[::-1].iloc[:top_n].mean()["acc"].item()
 
 
-def test_mock_run(tmp_path: Path):
-    space = search_space()
+def test_mock_run(tmp_path: Path, search_space):
     dfs = []
     for i in range(10):
         _clean_path(tmp_path)
-        config = make_config(space, "tpe")
+        config = make_config(search_space, "tpe")
         s = ExperimentState(tmp_path, config)
         dfs.append(_run_search_algo(s))
     tpe_df = pd.concat(dfs)
@@ -333,7 +333,7 @@ def test_mock_run(tmp_path: Path):
     dfs = []
     for i in range(10):
         _clean_path(tmp_path)
-        config = make_config(space, "random")
+        config = make_config(search_space, "random")
         s = ExperimentState(tmp_path, config)
         dfs.append(_run_search_algo(s))
     rand_df = pd.concat(dfs)

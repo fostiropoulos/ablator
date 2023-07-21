@@ -5,9 +5,50 @@ import pandas as pd
 from joblib import Memory
 
 from ablator.analysis.plot.utils import parse_name_remap
+from ablator.analysis.results import Results
 from ablator.config.mp import Optim
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_results(
+    results: pd.DataFrame | Results,
+    categorical_attributes: list[str] | None = None,
+    numerical_attributes: list[str] | None = None,
+    optim_metrics: dict[str, Optim] | None = None,
+) -> tuple[pd.DataFrame, list[str], list[str], dict[str, Optim]]:
+    _categorical_attributes = None
+    _numerical_attributes = None
+    _optim_metrics = None
+    if isinstance(results, Results):
+        df = results.data
+        _categorical_attributes = results.categorical_attributes
+        _numerical_attributes = results.numerical_attributes
+        _optim_metrics = results.metric_map
+    elif isinstance(results, pd.DataFrame):
+        df = results
+    else:
+        raise ValueError(f"Invalid value {type(results)}")
+    if categorical_attributes is not None:
+        _categorical_attributes = categorical_attributes
+    if numerical_attributes is not None:
+        _numerical_attributes = numerical_attributes
+    if optim_metrics is not None:
+        _optim_metrics = optim_metrics
+
+    if _categorical_attributes is None:
+        raise ValueError(
+            "Must provide `categorical_attributes` when supplying a DataFrame. Otherwise provide a ``Results`` object. "
+        )
+    if _numerical_attributes is None:
+        raise ValueError(
+            "Must provide `_numerical_attributes` when supplying a DataFrame. Otherwise provide a ``Results`` object. "
+        )
+    if _optim_metrics is None:
+        raise ValueError(
+            "Missing `optim_metrics` or unable to derive from supplied results."
+        )
+    return df, _categorical_attributes, _numerical_attributes, _optim_metrics
 
 
 class Analysis:
@@ -35,10 +76,10 @@ class Analysis:
 
     def __init__(
         self,
-        results: pd.DataFrame,
-        categorical_attributes: list[str],
-        numerical_attributes: list[str],
-        optim_metrics: dict[str, Optim],
+        results: pd.DataFrame | Results,
+        categorical_attributes: list[str] | None = None,
+        numerical_attributes: list[str] | None = None,
+        optim_metrics: dict[str, Optim] | None = None,
         save_dir: str | None = None,
         cache=False,
     ) -> None:
@@ -47,19 +88,33 @@ class Analysis:
 
         Parameters
         ----------
-        results : pd.DataFrame
+        results : pd.DataFrame | Results
             The result dataframe.
-        categorical_attributes : list[str]
-            The list of all the categorical hyperparameter names
-        numerical_attributes : list[str]
-            The list of all the numerical hyperparameter names
-        optim_metrics : dict[str, Optim]
-            A dictionary mapping metric names to optimization directions.
-        save_dir : str | None
-            The directory to save analysis results to.
+        categorical_attributes : list[str] | None, optional
+            The list of all the categorical hyperparameter names, by default ``None``
+        numerical_attributes : list[str] | None, optional
+            The list of all the numerical hyperparameter names, by default ``None``
+        optim_metrics : dict[str, Optim] | None, optional
+            A dictionary mapping metric names to optimization directions, by default ``None``
+        save_dir : str | None, optional
+            The directory to save analysis results to, by default ``None``
         cache : bool
             Whether to cache results.
         """
+        (
+            df,
+            categorical_attributes,
+            numerical_attributes,
+            optim_metrics,
+        ) = _parse_results(
+            results,
+            categorical_attributes=categorical_attributes,
+            numerical_attributes=numerical_attributes,
+            optim_metrics=optim_metrics,
+        )
+
+        self.categorical_attributes: list[str] = categorical_attributes
+        self.numerical_attributes: list[str] = numerical_attributes
         self.optim_metrics = optim_metrics
         self.save_dir: Path | None = None
         self.cache: Memory | None = None
@@ -74,16 +129,12 @@ class Analysis:
             if not cache:
                 self.cache.clear()
                 self.cache = None
-        self.categorical_attributes: list[str] = categorical_attributes
-        self.numerical_attributes: list[str] = numerical_attributes
         self.experiment_attributes: list[str] = (
             self.categorical_attributes + self.numerical_attributes
         )
 
-        self.results: pd.DataFrame = results[
-            self.experiment_attributes
-            + list(self.optim_metrics.keys())
-            + ["path", "index"]
+        self.results: pd.DataFrame = df[
+            self.experiment_attributes + list(self.optim_metrics.keys())
         ]
 
     @property
@@ -104,7 +155,7 @@ class Analysis:
         _ress = []
         for name, obj_fn in metric_map.items():
             res = (
-                raw_results.groupby("path")
+                raw_results.groupby("trial_uid")
                 .apply(lambda x, name=name, obj_fn=obj_fn: _best_perf(x, name, obj_fn))
                 .reset_index(drop=True)
             )

@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Union
-
+import logging
 import numpy as np
 import pandas as pd
 from omegaconf import OmegaConf
@@ -9,6 +9,8 @@ from tensorboardX import SummaryWriter
 from ablator.config.main import ConfigBase
 from ablator.config.utils import flatten_nested_dict
 from ablator.modules.loggers import LoggerBase
+
+logging.getLogger("tensorboardX").setLevel(logging.ERROR)
 
 
 class TensorboardLogger(LoggerBase):
@@ -22,6 +24,7 @@ class TensorboardLogger(LoggerBase):
     backend_logger : SummaryWriter
         The PyTorch Tensorboard SummaryWriter object used to log data.
     """
+
     def __init__(self, summary_dir: Union[str, Path]):
         """
         Initialize the TensorboardLogger with a summary directory.

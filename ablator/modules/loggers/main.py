@@ -13,7 +13,7 @@ from ablator.config.proto import RunConfig
 from ablator.modules.loggers import LoggerBase
 from ablator.modules.loggers.file import FileLogger
 from ablator.modules.loggers.tensor import TensorboardLogger
-from ablator.modules.metrics.main import TrainMetrics
+from ablator.modules.metrics.main import Metrics
 from ablator.modules.metrics.stores import MovingAverage
 
 
@@ -261,7 +261,7 @@ class SummaryLogger:
 
     def update(
         self,
-        metrics: Union[TrainMetrics, dict],
+        metrics: Union[Metrics, dict],
         itr: Optional[int] = None,
     ):
         """Update the dashboard with the given metrics.
@@ -269,7 +269,7 @@ class SummaryLogger:
 
         Parameters
         ----------
-        metrics : Union[TrainMetrics, dict]
+        metrics : Union[Metrics, dict]
             The metrics to update.
         itr : Optional[int], optional
             The iteration, by default ``None``.
@@ -292,7 +292,7 @@ class SummaryLogger:
                 itr > self.log_iteration
             ), f"Current iteration > {itr}. Can not add metrics."
             self.log_iteration = itr
-        if isinstance(metrics, TrainMetrics):
+        if isinstance(metrics, Metrics):
             dict_metrics = metrics.to_dict()
         else:
             dict_metrics = metrics
