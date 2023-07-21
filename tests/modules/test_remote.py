@@ -3,8 +3,9 @@ from ablator.modules.storage.remote import RemoteConfig
 import os
 import getpass
 import time
-
+import sys
 import torch
+import pytest
 
 
 def write_rand_tensors(tmp_path: Path, n=2):
@@ -27,7 +28,7 @@ def load_rand_tensors(tmp_path: Path, n=2):
 def assert_tensor_list_eq(a, b):
     assert all([all(_a == _b) for _a, _b in zip(a, b)])
 
-
+@pytest.mark.skipif(sys.platform == 'win32', reason="Rysnc does not support by Windows")
 def test_remote(tmp_path: Path):
     username = getpass.getuser()
     hostname = "localhost"
@@ -38,7 +39,7 @@ def test_remote(tmp_path: Path):
     cfg.rsync_up(local_path, "remote_path", run_async=False)
     remote_tensors = load_rand_tensors(tmp_path.joinpath("remote_path", "local_path"))
     assert_tensor_list_eq(tensors, remote_tensors)
-    
+
     time.sleep(0.5)
 
     new_remote_tensors = write_rand_tensors(
