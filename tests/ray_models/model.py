@@ -1,5 +1,7 @@
 from multiprocessing import Process
+import os
 import shutil
+import time
 import uuid
 from pathlib import Path
 
@@ -24,6 +26,7 @@ from ablator.config.mp import ParallelConfig, SearchAlgo, SearchSpace
 from ablator.main.mp import ParallelTrainer, train_main_remote
 from ablator.main.state.store import TrialState
 from ablator.modules.loggers.file import FileLogger
+from ablator.mp.gpu_manager import GPUManager, unlock_gpu, wait_get_gpu
 from ablator.mp.node_manager import NodeManager, Resource
 from ablator.utils.base import Dummy
 
@@ -126,9 +129,23 @@ def make_config():
     return _make_config
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def working_dir():
     return WORKING_DIR
+
+
+def _remote_fn(gpu_manager: GPUManager, gpu_util=100):
+    least_busy_gpu = wait_get_gpu(gpu_manager, gpu_util)
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{least_busy_gpu}"
+    t = torch.randn(300, 100).to(f"cuda")
+    time.sleep(2)
+    unlock_gpu(gpu_manager, least_busy_gpu)
+    return least_busy_gpu
+
+
+@pytest.fixture()
+def remote_fn():
+    return _remote_fn
 
 
 def _make_config(
