@@ -27,6 +27,39 @@ class MockParallelConfig(ParallelConfig):
     model_config: MockModel
 
 
+_search_space = {
+    "train_config.optimizer_config": SearchSpace(
+        subspaces=[
+            {"sub_configuration": {"name": "sgd", "arguments": {"lr": 0.1}}},
+            {
+                "sub_configuration": {
+                    "name": "adam",
+                    "arguments": {
+                        "lr": {"value_range": (0, 1), "value_type": "float"},
+                        "weight_decay": 0.9,
+                    },
+                }
+            },
+            {
+                "sub_configuration": {
+                    "name": "adam",
+                    "arguments": {
+                        "lr": {
+                            "subspaces": [
+                                {"value_range": (0, 1), "value_type": "float"},
+                                {"value_range": (0, 1), "value_type": "float"},
+                            ]
+                        },
+                        "weight_decay": 0.9,
+                    },
+                }
+            },
+        ]
+    ),
+    "model_config.b": SearchSpace(value_range=(-10, 10), value_type="float"),
+}
+
+
 def make_config(search_space, search_algo):
     optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
     train_config = TrainConfig(
@@ -58,6 +91,26 @@ def make_config(search_space, search_algo):
 def test_state(tmp_path: Path, search_algo, assert_error_msg):
     assert_error_msg(
         lambda: SearchSpace(
+            value_range=[0, 2],
+        ),
+        "`value_type` is required for `value_range` of SearchSpace",
+    )
+    assert_error_msg(
+        lambda: SearchSpace(categorical_values=[0, "1", 0.122], value_type="int"),
+        "Can not specify `value_type` without `value_range`.",
+    )
+    assert_error_msg(
+        lambda: SearchSpace(sub_configuration={"test": "test"}, n_bins=10),
+        "Can not specify `n_bins` without `value_range` or `categorical_values`.",
+    )
+    assert_error_msg(
+        lambda: SearchSpace(
+            subspaces=[SearchSpace(value_range=[0, 2], value_type="int")], n_bins=10
+        ),
+        "Can not specify `n_bins` without `value_range` or `categorical_values`.",
+    )
+    assert_error_msg(
+        lambda: SearchSpace(
             value_range=[0, 1, 2], categorical_values=[0, "1", 0.122], value_type="int"
         ),
         "Incompatible lengths for value_range between [0, 1, 2] and type_hint: (<class 'str'>, <class 'str'>)",
@@ -84,9 +137,7 @@ def test_state(tmp_path: Path, search_algo, assert_error_msg):
     )
 
     config.search_space = {
-        "train_config.optimizer_config.name": SearchSpace(
-            categorical_values=[0], value_type="int"
-        )
+        "train_config.optimizer_config.name": SearchSpace(categorical_values=[0])
     }
     config.ignore_invalid_params = False
 
@@ -100,9 +151,7 @@ def test_state(tmp_path: Path, search_algo, assert_error_msg):
 @pytest.mark.parametrize("search_algo", list(SearchAlgo.__members__.keys()))
 def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_output):
     search_space = {
-        "train_config.optimizer_config.name": SearchSpace(
-            categorical_values=[0], value_type="int"
-        )
+        "train_config.optimizer_config.name": SearchSpace(categorical_values=[0])
     }
     config = make_config(search_space, search_algo)
     config.ignore_invalid_params = True
@@ -118,7 +167,7 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_ou
     _clean_path(tmp_path)
     config.search_space = {
         "train_config.optimizer_config.arguments.lr": SearchSpace(
-            categorical_values=[0, 1], value_type="int"
+            categorical_values=[0, 1]
         )
     }
     state = ExperimentState(tmp_path, config, sampler_seed=1)
@@ -129,7 +178,7 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_ou
     _clean_path(tmp_path)
     config.search_space = {
         "train_config.optimizer_config.name": SearchSpace(
-            categorical_values=["sgd", 0], value_type="int"
+            categorical_values=["sgd", 0]
         ),
         "train_config.optimizer_config.arguments.lr": SearchSpace(
             value_range=[0, 1], value_type="float", n_bins=100
@@ -266,37 +315,7 @@ def mock_train_optuna(trial: optuna.Trial):
 
 @pytest.fixture()
 def search_space():
-    return {
-        "train_config.optimizer_config": SearchSpace(
-            subspaces=[
-                {"sub_configuration": {"name": "sgd", "arguments": {"lr": 0.1}}},
-                {
-                    "sub_configuration": {
-                        "name": "adam",
-                        "arguments": {
-                            "lr": {"value_range": (0, 1)},
-                            "weight_decay": 0.9,
-                        },
-                    }
-                },
-                {
-                    "sub_configuration": {
-                        "name": "adam",
-                        "arguments": {
-                            "lr": {
-                                "subspaces": [
-                                    {"value_range": (0, 1)},
-                                    {"value_range": (0, 1)},
-                                ]
-                            },
-                            "weight_decay": 0.9,
-                        },
-                    }
-                },
-            ]
-        ),
-        "model_config.b": SearchSpace(value_range=(-10, 10)),
-    }
+    return _search_space
 
 
 BUDGET = 100
@@ -343,18 +362,17 @@ def test_mock_run(tmp_path: Path, search_space):
 
 
 if __name__ == "__main__":
-    from tests.conftest import _assert_error_msg
+    from tests.conftest import _assert_error_msg, _capture_output
 
     tmp_path = Path("/tmp/state")
-    # _clean_path(tmp_path)
-    # test_mock_run(tmp_path)
-    # for search_algo in list(SearchAlgo.__members__.keys()):
+    test_mock_run(tmp_path, _search_space)
+
     for search_algo in ["random"]:
-        # _clean_path(tmp_path)
-        # test_state(tmp_path, search_algo)
+        _clean_path(tmp_path)
+        test_state(tmp_path, search_algo, _assert_error_msg)
 
         _clean_path(tmp_path)
-        test_sample_limits(tmp_path, search_algo, _assert_error_msg)
+        test_sample_limits(tmp_path, search_algo, _assert_error_msg, _capture_output)
 
-        # _clean_path(tmp_path)
-        # test_state_resume(tmp_path, search_algo, _assert_error_msg)
+        _clean_path(tmp_path)
+        test_state_resume(tmp_path, search_algo, _assert_error_msg)

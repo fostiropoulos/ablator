@@ -1,12 +1,21 @@
 from ablator.config.hpo import SearchSpace
 
 sub_spaces = [
-    {"value_range": (0, 1)},
+    {
+        "value_range": (0, 1),
+        "value_type": "float",
+    },
     {"sub_configuration": {"name": "sgd", "arguments": {"lr": 0.1}}},
     {
         "sub_configuration": {
             "name": "adam",
-            "arguments": {"lr": {"value_range": (0, 1)}, "wd": 0.9},
+            "arguments": {
+                "lr": {
+                    "value_range": (0, 1),
+                    "value_type": "float",
+                },
+                "wd": 0.9,
+            },
         }
     },
     {
@@ -15,8 +24,14 @@ sub_spaces = [
             "arguments": {
                 "lr": {
                     "subspaces": [
-                        {"value_range": (0, 1)},
-                        {"value_range": (0, 1)},
+                        {
+                            "value_range": (0, 1),
+                            "value_type": "float",
+                        },
+                        {
+                            "value_range": (0, 1),
+                            "value_type": "float",
+                        },
                     ]
                 },
                 "wd": 0.9,
@@ -30,7 +45,7 @@ optim_config = SearchSpace(subspaces=sub_spaces)
 def test_search_space():
     space = {
         "train_config.optimizer_config": optim_config,
-        "b": SearchSpace(value_range=(-10, 10)),
+        "b": SearchSpace(value_range=(-10, 10), value_type="float"),
     }
     lr_sp = (
         space["train_config.optimizer_config"]

@@ -53,7 +53,11 @@ def search_space(n_bins=None):
                     "sub_configuration": {
                         "name": "adam",
                         "arguments": {
-                            "lr": {"value_range": (0, 1), "n_bins": n_bins},
+                            "lr": {
+                                "value_range": (0, 1),
+                                "value_type": "float",
+                                "n_bins": n_bins,
+                            },
                             "wd": 0.9,
                         },
                     }
@@ -62,14 +66,18 @@ def search_space(n_bins=None):
                     "sub_configuration": {
                         "name": {"categorical_values": ["adam", "sgd"]},
                         "arguments": {
-                            "lr": {"value_range": (0, 1), "n_bins": n_bins},
+                            "lr": {
+                                "value_range": (0, 1),
+                                "value_type": "float",
+                                "n_bins": n_bins,
+                            },
                             "wd": 0.9,
                         },
                     }
                 },
             ]
         ),
-        "b": SearchSpace(value_range=(-10, 10), n_bins=n_bins),
+        "b": SearchSpace(value_range=(-10, 10), value_type="float", n_bins=n_bins),
     }
 
 
@@ -79,23 +87,39 @@ def grid_search_space(n_bins=10):
             subspaces=[
                 {
                     "sub_configuration": {
-                        "d": {"value_range": (0, 1), "n_bins": n_bins},
+                        "d": {
+                            "value_range": (0, 1),
+                            "value_type": "float",
+                            "n_bins": n_bins,
+                        },
                         "c": 0.9,
                     }
                 },
                 {
                     "sub_configuration": {
-                        "d": {"value_range": (0, 1), "n_bins": n_bins},
+                        "d": {
+                            "value_range": (0, 1),
+                            "value_type": "float",
+                            "n_bins": n_bins,
+                        },
                         "c": {
                             "subspaces": [
                                 {
                                     "sub_configuration": {
-                                        "i": {"value_range": (0, 1), "n_bins": n_bins}
+                                        "i": {
+                                            "value_range": (0, 1),
+                                            "value_type": "float",
+                                            "n_bins": n_bins,
+                                        }
                                     }
                                 },
                                 {
                                     "sub_configuration": {
-                                        "i": {"value_range": (0, 1), "n_bins": n_bins}
+                                        "i": {
+                                            "value_range": (0, 1),
+                                            "value_type": "float",
+                                            "n_bins": n_bins,
+                                        }
                                     }
                                 },
                             ]
@@ -104,8 +128,8 @@ def grid_search_space(n_bins=10):
                 },
             ]
         ),
-        "b": SearchSpace(value_range=(-10, 10), n_bins=n_bins),
-        "c": SearchSpace(value_range=(-10, 10), n_bins=n_bins),
+        "b": SearchSpace(value_range=(-10, 10), value_type="float", n_bins=n_bins),
+        "c": SearchSpace(value_range=(-10, 10), value_type="float", n_bins=n_bins),
     }
 
 
@@ -371,20 +395,30 @@ def test_update_tpe():
 
 
 def test_grid_sampler(assert_error_msg):
-    space = {"b": SearchSpace(value_range=(-10, 10))}
-
-    msg = assert_error_msg(lambda: GridSampler(search_space=space))
+    msg = assert_error_msg(
+        lambda: GridSampler(
+            search_space={"b": SearchSpace(value_range=(-10, 10), value_type="float")}
+        )
+    )
     assert (
         msg
-        == "Invalid search space for b. `n_bins` must be specified for SearchSpace(value_range=(-10.0, 10.0),value_type='float')."
+        == "Invalid search space for b. `n_bins` must be specified for SearchSpace(value_range=(-10.0, 10.0), value_type='float')."
     )
     search_space_size = 10
-    space = {"b": SearchSpace(value_range=(-10, 10), n_bins=search_space_size)}
+    space = {
+        "b": SearchSpace(
+            value_range=(-10, 10), value_type="float", n_bins=search_space_size
+        )
+    }
     sampler = GridSampler(search_space=space)
     n_configs = len(sampler.configs)
     assert n_configs == search_space_size
     search_space_size = 20
-    space = {"b": SearchSpace(value_range=(-10, 10), n_bins=search_space_size)}
+    space = {
+        "b": SearchSpace(
+            value_range=(-10, 10), value_type="float", n_bins=search_space_size
+        )
+    }
     sampler = GridSampler(search_space=space)
     n_configs = len(sampler.configs)
     assert n_configs == search_space_size
@@ -483,7 +517,7 @@ def test_optuna():
 
 
 def test_expand_search_space():
-    space = {"b": SearchSpace(value_range=(-10, 10), n_bins=10)}
+    space = {"b": SearchSpace(value_range=(-10, 10), value_type="float", n_bins=10)}
     vals = np.array([s["b"] for s in _expand_search_space(space)])
 
     assert len(vals) == 10
@@ -511,7 +545,7 @@ if __name__ == "__main__":
     # test_optuna()
     # test_tpe()
     # test_tpe_continue()
-    test_random()
+    # test_random()
     # test_update_tpe()
     # test_optuna_kwargs("tpe")
     # test_sampled_config("tpe")
