@@ -424,7 +424,7 @@ def test_train_main_remote(
         progress_bar,
     )
     assert state == TrialState.FAIL_RECOVERABLE
-    assert not config.experiment_dir.exists()
+    assert not Path(config.experiment_dir).exists()
     _new_uid, metrics, state = train_main_remote(
         wrapper,
         config,
@@ -469,6 +469,7 @@ if __name__ == "__main__":
         WORKING_DIR,
         TestWrapper,
         MyCustomModel,
+        MyDivCustomModel,
         MyErrorCustomModel,
         _make_config,
     )
@@ -483,8 +484,14 @@ if __name__ == "__main__":
     # tmp_path.mkdir()
     error_wrapper = TestWrapper(MyErrorCustomModel)
     wrapper = TestWrapper(MyErrorCustomModel)
+    div_wrapper = TestWrapper(MyErrorCustomModel)
     test_train_main_remote(
-        tmp_path, _assert_error_msg, _capture_output, error_wrapper, wrapper=wrapper
+        tmp_path,
+        _assert_error_msg,
+        _capture_output,
+        error_wrapper,
+        wrapper=wrapper,
+        divergent_wrapper=div_wrapper,
     )
 
     # test_mp_run(tmp_path, _assert_error_msg, ray_cluster)
