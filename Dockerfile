@@ -13,8 +13,7 @@ ARG PY_VERSION=3.10.12
 RUN conda install -y python=$PY_VERSION pip
 
 COPY . .
-RUN --mount=type=cache,target=/root/.cache \
-    pip install -e .[dev]
+RUN pip install -e .[dev]
 
 EXPOSE 22
 RUN chmod a+x ./scripts/docker-entrypoint.sh
