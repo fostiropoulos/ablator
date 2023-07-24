@@ -226,9 +226,10 @@ def main_ray_cluster(working_dir):
 @pytest.fixture(scope="function")
 def gpu_lock(tmp_path):
     if not torch.cuda.is_available():
-        return False
-    with FileLock(tmp_path.joinpath(".gpu")):
-        yield True
+        yield False
+    else:
+        with FileLock(tmp_path.joinpath(".gpu")):
+            yield True
 
 
 @pytest.fixture(scope="function")
