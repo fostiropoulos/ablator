@@ -1,5 +1,7 @@
 import copy
 import io
+import logging
+import os
 import platform
 import random
 import re
@@ -8,13 +10,18 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 import docker
+import mock
 import numpy as np
 import pytest
 import ray
 import torch
+from filelock import FileLock
+from ray.util.state import list_nodes
 from xdist.scheduler.loadscope import LoadScopeScheduling
 
 from ablator import package_dir
+from ablator.mp.gpu_manager import GPUManager
+from ablator.utils.base import _get_gpu_info
 
 DOCKER_TAG = "ablator"
 pytest_plugins = ["ray_models.model"]
@@ -106,76 +113,147 @@ def get_docker_image(docker_client):
 
 
 class DockerRayCluster:
-    def __init__(self, nodes=2, build=False) -> None:
+    def __init__(self, nodes=1, working_dir=Path(__file__).parent) -> None:
         self.nodes = nodes
-        self.build = build
-
-    def tearDown(self):
-        self.kill_all()
-
-    def setUp(self, working_dir):
-        self.ray_was_init = False
-        self.client = docker.from_env()
-        if not ray.is_initialized():
-            ray_cluster = ray.init(
-                address="local", runtime_env={"working_dir": working_dir}
-            )
-            self.cluster_ip = ray_cluster.address_info["node_ip_address"]
-            self.cluster_address = ray_cluster.address_info["address"]
-            self.ray_was_init = True
-        else:
-            ray_cluster = ray.get_runtime_context()
-            self.cluster_address = ray_cluster.gcs_address
-            self.cluster_ip, _ = self.cluster_address.split(":")
-        self.img = get_docker_image(self.client)
-        self.cs = {}
-        self.append_nodes(self.nodes)
-        time.sleep(1)
-
-    @classmethod
-    def system_clean(cls, clean_ray: bool):
+        self.working_dir = working_dir
         try:
-            api_client = docker.APIClient()
+            self.api_client = docker.APIClient()
+            self.client = docker.from_env()
         except Exception as e:
             raise RuntimeError(
                 "Could not find a docker installation. Please make sure docker is in Path and can run be run by the current system user (non-root) e.g. `docker run hello-world`. Please refer to https://github.com/fostiropoulos/ablator/blob/main/DEVELOPER.md for detailed instructions."
             ) from e
-        for c in api_client.containers(filters={"ancestor": DOCKER_TAG}):
-            api_client.kill(c)
-        if clean_ray and ray.is_initialized():
-            ray.shutdown()
+
+    def tearDown(self):
+        self.kill_nodes()
+
+    def setUp(self):
+        if not ray.is_initialized():
+            # Borrowed from ray.tests.test_gcs_fault_tolerance.py
+            timeout_config = dict(
+                gcs_failover_worker_reconnect_timeout=2,
+                gcs_rpc_server_reconnect_timeout_s=2,
+                health_check_initial_delay_ms=0,
+                health_check_period_ms=1000,
+                health_check_timeout_ms=1000,
+                health_check_failure_threshold=2,
+            )
+            ray_cluster = ray.init(
+                address="local",
+                runtime_env={"working_dir": self.working_dir},
+                _system_config=timeout_config,
+            )
+            self.cluster_ip = ray_cluster.address_info["node_ip_address"]
+            self.cluster_address = ray_cluster.address_info["address"]
+        else:
+            ray_cluster = ray.get_runtime_context()
+            self.cluster_address = ray_cluster.gcs_address
+            self.cluster_ip, _ = self.cluster_address.split(":")
+
+        self.img = get_docker_image(self.client)
+        containers = self._active_containers()
+        if self.nodes > 0:
+            node_diff = self.nodes - len(containers)  # + 1 for the head.
+            if node_diff > 0:
+                self.append_nodes(node_diff)
+            elif node_diff < 0:
+                self.kill_nodes(int(node_diff * -1))
+
+    def _active_containers(self):
+        containers = {}
+        node_ips = self.node_ips()
+        for c in self.api_client.containers(filters={"ancestor": DOCKER_TAG}):
+            ip = c["NetworkSettings"]["Networks"]["bridge"]["IPAddress"]
+            if ip in node_ips and ip not in self.cluster_address:
+                containers[ip] = c
+        return containers
 
     def node_ips(self):
-        return copy.deepcopy(list(self.cs.keys()) + [self.cluster_ip])
+        try:
+            return list(
+                set(
+                    [
+                        n.node_ip
+                        for n in list_nodes(
+                            self.cluster_address,
+                            limit=5,
+                            timeout=5,
+                            raise_on_missing_output=False,
+                        )
+                        if n.state == "ALIVE"
+                    ]
+                )
+            )
+        except:
+            return []
 
-    def append_nodes(self, n=2):
+    def append_nodes(self, n):
+        # NOTE Github actions imposes a limit on running Docker containers.
+        # It would not be a good idea to exceed that limit.
+        prev_nodes = len(self.node_ips())
         for _ in range(n):
-            c, ip = make_node(self.client, self.img, self.cluster_address)
-            self.cs[ip] = c
+            make_node(self.client, self.img, self.cluster_address)
+        self._wait_nodes(prev_nodes, n)
 
-    def kill_node(self, idx):
-        ip = list(self.cs.keys())[idx]
-        self.cs[ip].kill()
-        del self.cs[ip]
+    def _wait_nodes(self, prev_nodes, added_nodes):
+        for _ in range(120):
+            current_nodes = len(self.node_ips())
+            if current_nodes - prev_nodes == added_nodes:
+                return True
+            time.sleep(1)
+        raise RuntimeError("Could not update nodes to the cluster.")
 
-    def kill_all(self):
-        for v in self.cs.values():
-            v.kill()
-        self.cs = {}
+    def kill_nodes(self, n_nodes: int | None = None):
+        active_containers = self._active_containers()
 
-@pytest.fixture(scope="function")
-def docker_ray_cluster():
-    return DockerRayCluster
+        prev_nodes = len(self.node_ips())
+        if n_nodes is None:
+            n_nodes = len(active_containers)
+        for i in list(active_containers.keys())[:n_nodes]:
+            self.api_client.kill(active_containers[i])
+        self._wait_nodes(prev_nodes, -1 * n_nodes)
 
-@pytest.fixture(scope="function")
-def ray_cluster():
-    if ray.is_initialized():
-        ray.shutdown()
-    cluster = DockerRayCluster()
-    cluster.setUp(Path(__file__).parent)
+
+@pytest.fixture(scope="session", autouse=True)
+def main_ray_cluster(working_dir):
+    assert not ray.is_initialized(), "Can not run tests with ray initialized."
+    cluster = DockerRayCluster(working_dir=working_dir)
+    cluster.setUp()
     yield cluster
     cluster.tearDown()
-    ray.shutdown()
+
+
+@pytest.fixture(scope="function")
+def gpu_lock(tmp_path):
+    if not torch.cuda.is_available():
+        return False
+    with FileLock(tmp_path.joinpath(".gpu")):
+        yield True
+
+
+@pytest.fixture(scope="function")
+def gpu_manager(gpu_lock):
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        devices = copy.deepcopy(os.environ["CUDA_VISIBLE_DEVICES"])
+    else:
+        devices = ""
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+    with mock.patch("ablator.utils.base._get_gpu_info", lambda: _get_gpu_info()[:2]):
+        yield GPUManager.remote([0, 1])
+    os.environ["CUDA_VISIBLE_DEVICES"] = devices
+
+
+@pytest.fixture(scope="function")
+def ray_cluster(tmp_path: Path, main_ray_cluster: DockerRayCluster, gpu_lock):
+    with FileLock(tmp_path.joinpath(".ray_cluster")):
+        main_ray_cluster.setUp()
+        assert len(main_ray_cluster.node_ips()) == main_ray_cluster.nodes + 1
+        yield main_ray_cluster
+        if not ray.is_initialized():
+            logging.warn(
+                "Shutting down ray during a test, can cause slow-down to set-up the cluster again. "
+            )
+            main_ray_cluster.tearDown()
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -189,7 +267,16 @@ class MPScheduler(LoadScopeScheduling):
     # NOTE must schedule all tests that use ray in the same node because of concurrency problems
     # when having interacting ray instances.
     def _split_scope(self, nodeid):
-        file_names = ["test_node_manager.py", "test_mp.py", "test_file_logger.py", "test_analysis.py"]
+        # Since these tests depend on DockerRayCluster we schedule
+        # them together. They all perform a `FileLock` and
+        # can not run concurrently.
+        file_names = [
+            "mp/test_node_manager.py",
+            "mp/test_main.py",
+            "modules/test_file_logger.py",
+            "analysis/test_analysis.py",
+            "mp/test_gpu_manager.py",
+        ]
         if any(f in nodeid for f in file_names):
             self.log(f"Scheduling {nodeid} with mp-tests.")
             return "mp-tests"

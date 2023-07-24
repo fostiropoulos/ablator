@@ -3,6 +3,7 @@ import os
 import random
 import sys
 import typing as ty
+from collections import namedtuple
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 
@@ -14,12 +15,15 @@ try:
     # pylint: disable=unspecified-encoding
     with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
         from pynvml.smi import nvidia_smi as smi
+
         _instance = smi.getInstance()
         _instance.DeviceQuery()
         # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
 # pylint: disable=broad-exception-caught
 except Exception:
     smi = None
+
+CUDA_PROCESS = namedtuple("CUDA_PROCESS", ["process_name", "pid", "memory"])
 
 
 class Dummy:
@@ -278,9 +282,49 @@ def init_weights(module: nn.Module):
         module.weight.data.fill_(1.0)
 
 
+def _get_gpu_info() -> list[dict[str, ty.Any]]:
+    if smi is not None:
+        try:
+            instance = smi.getInstance()
+            device = instance.DeviceQuery()
+        # pylint: disable=broad-exception-caught
+        except Exception:
+            return []
+    else:
+        return []
+    if "gpu" not in device:
+        return []
+    return sorted(device["gpu"], key=lambda x: x["minor_number"])
+
+
+def get_cuda_processes() -> dict[int, list[CUDA_PROCESS]]:
+    """
+    Finds the currently running cuda processes on the system. Each process is a
+    ``CUDA_PROCESS`` object that contains information on the process name, `pid` and
+    the memory utilization.
+
+    Returns
+    -------
+    dict[int, list[CUDA_PROCESS]]
+        The key of each dictionary is the device-id, corresponding to a list of running CUDA processes.
+    """
+    gpus = _get_gpu_info()
+    cuda_processes: dict[int, list[CUDA_PROCESS]] = {}
+    for gpu in gpus:
+        device_id = int(gpu["minor_number"])
+        if gpu["processes"] is None:
+            cuda_processes[device_id] = []
+            continue
+        cuda_processes[device_id] = [
+            CUDA_PROCESS(p["process_name"], p["pid"], p["used_memory"])
+            for p in gpu["processes"]
+        ]
+    return cuda_processes
+
+
 def get_gpu_mem(
     mem_type: ty.Literal["used", "total", "free"] = "total"
-) -> dict[str, int]:
+) -> dict[int, int]:
     """
     Get the memory information of all available GPUs.
 
@@ -291,23 +335,13 @@ def get_gpu_mem(
 
     Returns
     -------
-    list[int]
+    dict[int, int]
         A list of memory values for each GPU, depending on the specified memory type.
     """
-    memory: dict[str, int] = {}
-    if smi is not None:
-        try:
-            instance = smi.getInstance()
-            device = instance.DeviceQuery()
-        # pylint: disable=broad-exception-caught
-        except Exception:
-            pass
-    else:
-        return memory
-    if "gpu" not in device:
-        return memory
-    for gpu in device["gpu"]:
-        device_id = f"{gpu['product_name']}_{gpu['id']}"
+    memory: dict[int, int] = {}
+    gpus = _get_gpu_info()
+    for gpu in gpus:
+        device_id = int(gpu["minor_number"])
         memory[device_id] = int(gpu["fb_memory_usage"][mem_type])
     return memory
 

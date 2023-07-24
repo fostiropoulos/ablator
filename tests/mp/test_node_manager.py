@@ -1,16 +1,15 @@
 import shutil
 from pathlib import Path
-import unittest
 
 import ray
+
 from ablator.mp.node_manager import NodeManager, Resource
 
 
 def test_node_manager(tmp_path: Path, ray_cluster):
-    # TODO py-test clean-ups
-    timeout = 15
-    n_nodes = 2
-    manager = NodeManager(tmp_path)
+    timeout = 5
+    n_nodes = ray_cluster.nodes
+    manager = NodeManager(tmp_path, ray_address=ray_cluster.cluster_address)
     results = manager.run_cmd("whoami", timeout=timeout)
     test_ips = ray_cluster.node_ips()
     for node, result in results.items():
@@ -18,44 +17,64 @@ def test_node_manager(tmp_path: Path, ray_cluster):
         test_ips.remove(node_ip)
         assert result.strip() == node_username
     assert len(test_ips) == 0
-    ray_cluster.append_nodes(2)
-    n_nodes += 2
-    results = manager.run_cmd("whoami", timeout=timeout)
 
-    assert (
-        len(results) == len(ray_cluster.node_ips()) and len(results) == n_nodes + 1
-    )  # +1 for the head node
-    ray_cluster.kill_node(0)
+    ray_cluster.kill_nodes(1)
     n_nodes -= 1
     results = manager.run_cmd("whoami", timeout=timeout)
+
+    assert len(results) == n_nodes + 1
+    ray_cluster.append_nodes(1)
+    n_nodes += 1
+    results = manager.run_cmd("whoami", timeout=timeout)
+
+    assert len(results) == n_nodes + 1
+    ray_cluster.kill_nodes(1)
+    n_nodes -= 1
+    results = manager.run_cmd("whoami", timeout=timeout)
+    assert len(results) == n_nodes + 1
+    ray_cluster.kill_nodes()
+
+    results = manager.run_cmd("whoami", timeout=timeout)
+    assert len(results) == 1  # the head node
+    ray_cluster.setUp()
+
+
+def test_shutdown(tmp_path: Path, ray_cluster, assert_error_msg):
+    msg = assert_error_msg(
+        lambda: NodeManager(tmp_path, ray_address=ray_cluster.cluster_ip)
+    )
     assert (
-        len(results) == len(ray_cluster.node_ips()) and len(results) == n_nodes + 1
-    )  # +1 for the head node
-    ray_cluster.kill_all()
-
-    results = manager.run_cmd("whoami", timeout=timeout)
-    assert len(results) == 1  # the head node
-
-    ray.shutdown()
-    try:
-        results = manager.run_cmd("whoami", timeout=5)
-    except Exception as e:
-        assert "Ray has not been started yet." in str(e)
-
+        msg
+        == "`ray_address` does not match currently running ray instance. Can not initialize ray twice."
+    )
+    manager = NodeManager(tmp_path, ray_cluster.cluster_address)
+    results = manager.run_cmd(
+        "whoami",
+    )
+    assert len(results) == ray_cluster.nodes + 1
     # NOTE test restarting ray and NodeManager
-
-    ray_cluster = type(ray_cluster)(nodes=0)
-    ray_cluster.setUp(Path(__file__).parent)
-    manager = NodeManager(tmp_path, ray_address=ray_cluster.cluster_ip)
-    results = manager.run_cmd("whoami", timeout=timeout)
+    ray_cluster.tearDown()
+    ray.shutdown()
+    new_ray_cluster = type(ray_cluster)(nodes=0)
+    new_ray_cluster.setUp()
+    manager = NodeManager(tmp_path, ray_address=new_ray_cluster.cluster_address)
+    results = manager.run_cmd(
+        "whoami",
+    )
     assert len(results) == 1  # the head node
-    ray_cluster.append_nodes(2)
-    results = manager.run_cmd("whoami", timeout=timeout)
+    new_ray_cluster.append_nodes(1)
+    results = manager.run_cmd(
+        "whoami",
+    )
 
-    assert len(results) == len(ray_cluster.node_ips())
-    ray_cluster.kill_all()
-    results = manager.run_cmd("whoami", timeout=timeout)
+    assert len(results) == len(new_ray_cluster.node_ips())
+    new_ray_cluster.kill_nodes()
+    results = manager.run_cmd(
+        "whoami",
+    )
     assert len(results) == 1  # the head node
+    new_ray_cluster.tearDown()
+    ray_cluster.setUp()
 
 
 def assert_resources_equal(
@@ -75,28 +94,39 @@ def assert_resources_equal(
 
 
 def test_resource_utilization(tmp_path: Path, ray_cluster):
-    manager = NodeManager(tmp_path)
+    manager = NodeManager(tmp_path, ray_address=ray_cluster.cluster_address)
 
     init_resources = manager.utilization()
     for i in range(3):
         resources = manager.utilization()
         assert_resources_equal(resources, init_resources)
         assert_resources_equal(resources, resources)
-        assert len(resources) == 3  # 2 nodes +1 head
+        assert len(resources) == ray_cluster.nodes + 1  #  +1 head
         assert set(ray_cluster.node_ips()) == set(resources)
         init_resources = resources
 
 
 if __name__ == "__main__":
-    from tests.conftest import DockerRayCluster
+    from tests.conftest import DockerRayCluster, _assert_error_msg
 
-    tmp_file = Path("/tmp/").joinpath("t")
-    shutil.rmtree(tmp_file, ignore_errors=True)
-    tmp_file.mkdir(exist_ok=True)
+    tmp_path = Path("/tmp/").joinpath("t")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir(exist_ok=True)
     ray_cluster = DockerRayCluster()
-    ray_cluster.setUp(Path(__file__).parent)
-    test_node_manager(tmp_file, ray_cluster)
-    test_resource_utilization(tmp_file, ray_cluster)
+    ray_cluster.setUp()
+    assert len(ray_cluster.node_ips()) == ray_cluster.nodes + 1
+    ray_cluster.tearDown()
+    assert len(ray_cluster.node_ips()) == 1
+    ray_cluster.setUp()
+    assert len(ray_cluster.node_ips()) == ray_cluster.nodes + 1
+
+    test_node_manager(tmp_path, ray_cluster)
+    test_shutdown(tmp_path, ray_cluster, _assert_error_msg)
+
+    test_resource_utilization(
+        tmp_path,
+        ray_cluster,
+    )
     breakpoint()
     print()
     pass
