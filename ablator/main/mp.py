@@ -28,7 +28,7 @@ from ablator.mp.node_manager import NodeManager, Resource
 from ablator.mp.utils import _sorted_nodes_by_util
 from ablator.utils.base import get_gpu_mem
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
-
+from ablator.config.types import Optional
 
 # TODO refactor into a seperate file and reduce complexity
 # pylint: disable=too-complex,broad-exception-caught
@@ -178,10 +178,6 @@ class ParallelTrainer(ProtoTrainer):
         Number of trials to run.
     gpu_mem_bottleneck : int
         The minimum memory capacity of all available gpus.
-    cpu : float
-        The number of cpu used per trial.
-    gpu : float
-        The number of gpu used per trial.
 
     """
 
@@ -243,7 +239,7 @@ class ParallelTrainer(ProtoTrainer):
         return 0.001
 
     @cached_property
-    def _cpu(self) -> float:
+    def _cpu(self) -> int | float:
         """
         _cpu expected to be run AFTER _init_state as it requires the cluser to be initialized.
         it is used as a virtual number of `num_cpus` for ray while we handle resource allocation
@@ -290,8 +286,8 @@ class ParallelTrainer(ProtoTrainer):
             resources={f"node:{node_ip}": 0.001}, name=trial_uuid
         )
         run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
-        diffs = self.run_config.diff_str(run_config)
-        diffs = "\n\t".join(diffs)
+        list_diffs = self.run_config.diff_str(run_config)
+        diffs = "\n\t".join(list_diffs)
         action = "Scheduling" if resume is False else "Resuming"
         msg = f"{action} uid: {trial_uuid}\nParameters: \n\t{diffs}\n-----"
         self.logger.info(msg)
@@ -405,7 +401,7 @@ class ParallelTrainer(ProtoTrainer):
         ray.get(future)
 
     @property
-    def total_trials(self):
+    def total_trials(self) -> Optional[int]:
         return self.run_config.total_trials
 
     @total_trials.setter

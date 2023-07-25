@@ -66,7 +66,7 @@ class ProtoTrainer:
         self._mount()
         self.pre_train_setup()
 
-    def launch(self, debug: bool = False):
+    def launch(self, debug: bool = False) -> dict[str, float]:
         """
         Initialize the data state of the wrapper and train the model inside the wrapper, then sync training
         results (logged to experiment directory while training) with external logging services (e.g Google
@@ -79,21 +79,21 @@ class ProtoTrainer:
 
         Returns
         -------
-        metrics : Metrics
+        metrics : dict[str, float]
             Metrics returned after training.
         """
         self._init_state()
         metrics = self.wrapper.train(run_config=self.run_config, debug=debug)
         return metrics
 
-    def evaluate(self):
+    def evaluate(self) -> dict[str, float]:
         """
         Run model evaluation on the training results, sync evaluation results to external logging services
         (e.g Google cloud storage, other remote servers).
 
         Returns
         -------
-        metrics : Metrics
+        metrics : dict[str, float]
             Metrics returned after evaluation.
         """
         self._init_state()
@@ -101,7 +101,7 @@ class ProtoTrainer:
         metrics = self.wrapper.evaluate(self.run_config)
         return metrics
 
-    def smoke_test(self, config=None):
+    def smoke_test(self, config: RunConfig | None = None):
         """
         Run a smoke test training process on the model.
 

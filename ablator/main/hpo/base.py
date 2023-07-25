@@ -31,6 +31,11 @@ class BaseSampler(ABC):
             a metric dictionary corresponding to the updated metrics.
         state : TrialState
             the updated trial state
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
@@ -51,6 +56,11 @@ class BaseSampler(ABC):
             ``None`` when there is no internal representation maintained by the sampler.
             Otherwise a dictionary with keys as the internal configuration names and values, the
             corresponding values.
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented by the subclasses.
 
         """
         raise NotImplementedError

@@ -406,9 +406,21 @@ class ExperimentState:
         return trials
 
     def valid_trials_id(self) -> list[int]:
+        """
+        Returns
+        --------
+        list[int]
+            trial ids of all the valid trials. 
+        """
         return [c.id for c in self.valid_trials()]
 
     def valid_trials(self) -> list[Trial]:
+        """
+        Returns
+        --------
+        list[Trial]
+            All the valid trials (the are not pruned [Duplicated or Invalid]).
+        """
         stmt = select(Trial).where(
             (Trial.state != TrialState.PRUNED_DUPLICATE)
             & (Trial.state != TrialState.PRUNED_INVALID)
@@ -417,6 +429,19 @@ class ExperimentState:
         return trials
 
     def get_trials_by_state(self, state: TrialState) -> list[Trial]:
+        """
+        To get all the trials in the given state. 
+
+        Parameters
+        ----------
+        state: TrialState
+            Represents the state of a trial.
+        
+        Returns
+        -------
+        list[Trial]
+            List of all the trials in that given state.
+        """
         assert state in {
             TrialState.PRUNED,
             TrialState.COMPLETE,
@@ -433,6 +458,19 @@ class ExperimentState:
         return trials
 
     def get_trial_configs_by_state(self, state: TrialState) -> list[ParallelConfig]:
+        """
+        To get all the trial's configuration in the given state. 
+        
+        Parameters
+        ----------
+        state: TrialState
+            The state of a trial.
+
+        Returns
+        -------
+        list[ParallelConfig]
+            List of configurations of all the trials in that state.
+        """
         assert (
             state != TrialState.PRUNED_INVALID
         ), "Can not return configuration for invalid trials due to configuration errors."

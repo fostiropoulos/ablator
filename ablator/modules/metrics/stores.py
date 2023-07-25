@@ -178,7 +178,7 @@ class ArrayStore(Sequence):
             self._prune(self.limit)
 
     @cached_property
-    def memory_size(self):
+    def memory_size(self) -> int:
         arr_size = 0
         if len(self) > 0:
             arr = self._arr[0]
@@ -236,7 +236,7 @@ class ArrayStore(Sequence):
             return self._arr[-1].shape[1:]
         return None
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._len
 
     def __getitem__(self, idx):
@@ -439,7 +439,7 @@ class PredictionStore:
 
         Returns
         -------
-        metrics : dict
+        dict[str, float]
             A dictionary of metric values calculated from different sets of predictions.
 
 
@@ -490,7 +490,7 @@ class PredictionStore:
         return metrics
 
     @property
-    def evaluation_function_arguments(self):
+    def evaluation_function_arguments(self) -> dict[str, list[str]]:
         if self.__evaluation_functions__ is None:
             return {}
         return {
@@ -550,10 +550,10 @@ class MovingAverage(ArrayStore):
     def __eq__(self, __o: object) -> bool:
         return float(self.value).__eq__(__o)
 
-    def __float__(self):
+    def __float__(self) -> float:
         return float(self.value)
 
-    def __format__(self, format_spec=".2e"):
+    def __format__(self, format_spec=".2e") -> str:
         return format(self.value, format_spec)
 
     def __repr__(self) -> str:

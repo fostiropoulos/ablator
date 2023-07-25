@@ -30,15 +30,20 @@ def augment_trial_kwargs(
 
     Parameters
     ----------
-    trial_kwargs : dict
+    trial_kwargs :  dict[str, ty.Any]
         The dictionary containing the key-value pairs to be augmented.
-    augmentation : dict
+    augmentation :  dict[str, ty.Any]
         The dictionary containing the additional key-value pairs.
 
     Returns
     -------
-    dict
+    dict[str, ty.Any]
         The augmented dictionary.
+
+    Raises
+    ------
+    AssertionError
+        If duplicates are found in the augmentation dict's keys.
 
     Examples
     --------

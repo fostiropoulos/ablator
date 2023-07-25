@@ -209,7 +209,7 @@ class ModelBase(ABC):
         return 0
 
     @cached_property
-    def epoch_len(self):
+    def epoch_len(self) -> int:
         """
         Returns the length of an epoch, which is the number of batches in the ``train_dataloader``.
 
@@ -229,7 +229,7 @@ class ModelBase(ABC):
         return len(self.train_dataloader)
 
     @cached_property
-    def eval_itr(self):
+    def eval_itr(self) -> int:
         """
         Calculate the interval between evaluations.
 
@@ -241,7 +241,7 @@ class ModelBase(ABC):
         return math.ceil(self.run_config.eval_epoch * self.epoch_len)
 
     @cached_property
-    def log_itr(self):
+    def log_itr(self) -> int:
         """
         Calculate the interval between logging steps.
 
@@ -253,7 +253,7 @@ class ModelBase(ABC):
         return math.ceil(self.run_config.log_epoch * self.epoch_len)
 
     @property
-    def uid(self):
+    def uid(self) -> str:
         """
         Returns a unique identifier (UID) for the current run configuration.
 

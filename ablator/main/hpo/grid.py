@@ -43,7 +43,7 @@ def _expand_configs(configs, value: dict[str, SearchSpace] | SearchSpace | ty.An
 
 def _expand_search_space(
     search_space: dict[str, SearchSpace]
-) -> list[dict[str, str | int | float | dict]]:
+) -> list[dict[str, str | int | float | dict]]: 
     configs: list[dict[str, str | int | float | dict]] = [{}]
 
     for k, v in search_space.items():

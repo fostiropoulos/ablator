@@ -16,6 +16,7 @@ from ablator.modules.loggers.tensor import TensorboardLogger
 from ablator.modules.metrics.main import Metrics
 from ablator.modules.metrics.stores import MovingAverage
 
+import typing as ty
 
 class SummaryLogger:
     """
@@ -194,7 +195,7 @@ class SummaryLogger:
             self.dashboard.write_config(run_config)
 
     # pylint: disable=too-complex
-    def _add_metric(self, k, v, itr):
+    def _add_metric(self, k :str, v: ty.Any, itr: int):
         """
         Add a metric to the dashboard.
 

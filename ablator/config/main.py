@@ -228,7 +228,7 @@ class ConfigBase:
         val = self.get_val_with_dot_path(dot_path)
         return type(val)
 
-    def get_annot_type_with_dot_path(self, dot_path: str):
+    def get_annot_type_with_dot_path(self, dot_path: str) -> Type:
         """
         Get the type of a configuration object annotation using dot notation.
 
@@ -253,7 +253,7 @@ class ConfigBase:
         annotations: dict[str, Annotation],
         ignore_stateless: bool = False,
         flatten: bool = False,
-    ):
+    ) -> dict:
         """
         Create a dictionary representation of the configuration object.
 
@@ -331,7 +331,7 @@ class ConfigBase:
         """
         Path(path).write_text(str(self), encoding="utf-8")
 
-    def to_str(self):
+    def to_str(self) -> str:
         """
         Convert the configuration object to a string.
 
@@ -399,7 +399,7 @@ class ConfigBase:
 
         return left_config
 
-    def diff_str(self, config: "ConfigBase", ignore_stateless: bool = False):
+    def diff_str(self, config: "ConfigBase", ignore_stateless: bool = False) -> list[str]:
         """
         Get the differences between the current configuration object and another configuration object as strings.
 
@@ -496,7 +496,7 @@ class ConfigBase:
                 diffs.append((k, (left_type, left_v), (right_type, right_v)))
         return diffs
 
-    def to_dict(self, ignore_stateless: bool = False):
+    def to_dict(self, ignore_stateless: bool = False) -> dict:
         """
         Convert the configuration object to a dictionary.
 
@@ -513,7 +513,7 @@ class ConfigBase:
         """
         return self.make_dict(self.annotations, ignore_stateless=ignore_stateless)
 
-    def to_yaml(self):
+    def to_yaml(self) -> str:
         """
         Convert the configuration object to YAML format.
 
@@ -525,7 +525,7 @@ class ConfigBase:
         """
         return str(self)
 
-    def to_dot_path(self, ignore_stateless: bool = False):
+    def to_dot_path(self, ignore_stateless: bool = False) -> str:
         """
         Convert the configuration object to a dictionary with dot notation paths as keys.
 
@@ -558,7 +558,7 @@ class ConfigBase:
         return self.to_str()
 
     @property
-    def uid(self):
+    def uid(self) -> str:
         """
         Get the unique identifier for the configuration object.
 

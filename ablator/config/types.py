@@ -177,7 +177,7 @@ def _val2bool(val: str | bool) -> bool:
     raise ValueError(f"Cannot parse {val} as bool.")
 
 
-def _strip_hint_state(type_hint):
+def _strip_hint_state(type_hint) -> tuple:
     """
     Strips the hint state from a type hint.
 
@@ -206,7 +206,7 @@ def _strip_hint_state(type_hint):
     return Stateful, type_hint
 
 
-def _strip_hint_optional(type_hint):
+def _strip_hint_optional(type_hint) -> tuple:
     """
     Strips the optional part of a type hint.
 
@@ -232,7 +232,7 @@ def _strip_hint_optional(type_hint):
     return False, type_hint
 
 
-def _strip_hint_collection(type_hint):
+def _strip_hint_collection(type_hint) -> tuple:
     """
     Strips the collection from a type hint.
 
@@ -286,7 +286,7 @@ def _strip_hint_collection(type_hint):
     )
 
 
-def parse_type_hint(cls, type_hint):
+def parse_type_hint(cls, type_hint) -> Annotation:
     """
     Parses a type hint and returns a parsed annotation.
 
@@ -322,7 +322,7 @@ def parse_type_hint(cls, type_hint):
     )
 
 
-def _parse_class(cls, kwargs):
+def _parse_class(cls, kwargs) -> object:
     """
     Parse values whose types are not  a collection or in ALLOWED_TYPES
     eg. bool, added dict(tune configs)
@@ -358,7 +358,7 @@ def _parse_class(cls, kwargs):
 
 
 # pylint: disable=too-complex
-def parse_value(val, annot: Annotation, name=None):
+def parse_value(val, annot: Annotation, name=None) -> ty.Any:
     """
     Parses a value based on the given annotation.
 
@@ -373,7 +373,7 @@ def parse_value(val, annot: Annotation, name=None):
 
     Returns
     -------
-    Any
+    ty.Any
         The parsed value.
 
     Raises

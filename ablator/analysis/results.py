@@ -249,7 +249,7 @@ class Results:
         cls,
         config_type: type[ConfigBase],
         experiment_dir: Path | str,
-        num_cpus: int | None = None,
+        num_cpus: int | float | None = None,
     ) -> pd.DataFrame:
         """
         Read multiple results from experiment directory with ray to enable parallel processing.
@@ -261,7 +261,7 @@ class Results:
             The configuration class
         experiment_dir : Path | str
             The experiment directory
-        num_cpus : int | None, optional
+        num_cpus : int | float | None, optional
             Number of CPUs to use for ray processing, by default ``None``
 
         Returns
@@ -295,7 +295,7 @@ class Results:
             raise RuntimeError(f"No results found in {experiment_dir}")
         cpu_count = mp.cpu_count()
         if num_cpus is None:
-            num_cpus = len(json_paths) // (cpu_count * 4)
+            num_cpus = len(json_paths) / (cpu_count * 4)
         json_path = None
         for json_path in json_paths:
             if ray.is_initialized():

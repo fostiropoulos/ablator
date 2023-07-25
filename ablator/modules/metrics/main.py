@@ -21,10 +21,10 @@ class Metrics:
     def __init__(
         self,
         *args,
-        batch_limit=30,
-        memory_limit=1e8,
+        batch_limit: int = 30,
+        memory_limit: int = int(1e8),
         evaluation_functions: dict[str, Callable] | None = None,
-        moving_average_limit=3000,
+        moving_average_limit: int = 3000,
         # metrics with their initial value that are updated manually, i.e. learning rate
         static_aux_metrics: dict[str, ty.Any] | None = None,
         # metrics for which we update with their moving average, i.e. loss
@@ -256,7 +256,7 @@ class Metrics:
         """
         self._preds.reset()
 
-    def evaluate(self, reset=True, update_ma=True):
+    def evaluate(self, reset: ty.Optional[bool] = True, update_ma: ty.Optional[bool] = True):
         """
         Apply evaluation_functions to the set of predictions. Possibly update the
         moving averages (only those associated with evaluation functions, not moving auxiliary metrics) with

@@ -5,6 +5,14 @@ from ablator.config.types import Annotation, Enum, List, Optional, Self, Tuple, 
 
 
 class SubConfiguration:
+    """
+        SubConfiguration for a searchSpace.
+
+        Parameters
+        ----------
+        arguments: dict[str, ty.Any]
+            arguments for the subconfigurations.
+    """
     def __init__(self, **kwargs) -> None:
         _search_space_annotations = list(SearchSpace.__annotations__.keys())
 
@@ -38,7 +46,7 @@ class SubConfiguration:
 
         return {k: _parse_nested_value(v) for k, v in self.arguments.items()}
 
-    def contains(self, value: dict[str, ty.Any]):
+    def contains(self, value: dict[str, ty.Any]) -> bool:
         def _contains_value(arguments, v):
             if isinstance(arguments, SearchSpace):
                 return arguments.contains(v)
@@ -67,6 +75,23 @@ class FieldType(Enum):
 class SearchSpace(ConfigBase):
     """
     Search space configuration.
+
+    Attributes
+    ----------
+    value_range: Optional[Tuple[str, str]]
+        value range of the parameter.
+    categorical_values: Optional[List[str]]
+        categorical values for the parameter.
+    subspaces: Optional[List[Self]]
+        Nested SearchSpace, optional
+    sub_configuration: Optional[SubConfiguration]
+    value_type: FieldType = FieldType.continuous
+        value type of the parameter's values (continous or discrete).
+    n_bins: Optional[int]
+        Total bins for grid sampling, optional
+    log: bool = False
+        To log. by default, False.
+
     """
 
     value_range: Optional[Tuple[str, str]]
@@ -107,14 +132,14 @@ class SearchSpace(ConfigBase):
         annotations: dict[str, Annotation],
         ignore_stateless: bool = False,
         flatten: bool = False,
-    ):
+    ) -> dict:
         return_dict = super().make_dict(
             annotations=annotations, ignore_stateless=ignore_stateless, flatten=flatten
         )
 
         return return_dict
 
-    def make_paths(self):
+    def make_paths(self) -> list[str]:
         paths = []
 
         def _traverse_dict(_dict, prefix):
@@ -136,7 +161,7 @@ class SearchSpace(ConfigBase):
         _traverse_dict(self.to_dict(), [])
         return list({".".join(p) for p in paths})
 
-    def to_str(self):
+    def to_str(self) ->  str:
         # TODO make me pretty (e.g. print in an indented format.)
         if self.value_range is not None:
             str_repr = (
@@ -156,9 +181,9 @@ class SearchSpace(ConfigBase):
             str_repr = f"SearchSpace(sub_configuration={sub_config})"
             return str_repr
 
-        return None
+        raise RuntimeError("Sub Configuration can't be converted to str.")
 
-    def contains(self, value: float | int | str | dict[str, ty.Any]):
+    def contains(self, value: float | int | str | dict[str, ty.Any]) -> bool:
         if self.value_range is not None and isinstance(value, (int, float, str)):
             min_val, max_val = self.parsed_value_range()
             return float(value) >= min_val and float(value) <= max_val

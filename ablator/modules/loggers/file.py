@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 import ray
-
+import typing as ty
 
 class FileLogger:
     """
@@ -75,7 +75,7 @@ class FileLogger:
         if self.verbose or verbose:
             print(msg)
 
-    def info(self, msg: str, verbose=False) -> str:
+    def info(self, msg: str, verbose: ty.Optional[bool] = False) -> str:
         """Log an info message.
 
         Parameters
@@ -92,7 +92,7 @@ class FileLogger:
         """
         return self(msg, verbose)
 
-    def warn(self, msg: str, verbose=True) -> str:
+    def warn(self, msg: str, verbose: ty.Optional[bool] = True) -> str:
         """Log a warning message.
 
         Parameters
@@ -202,7 +202,7 @@ class RemoteFileLogger(FileLogger):
             )
         )
 
-    def __call__(self, msg: str, verbose=True):
+    def __call__(self, msg: str, verbose: bool = True):
         if hasattr(self, "_file_logger"):
             msg = ray.get(self._file_logger.__call__.remote(msg, False))
             self._print(msg, verbose)
