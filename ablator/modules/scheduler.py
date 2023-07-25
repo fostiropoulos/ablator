@@ -124,7 +124,7 @@ class OneCycleConfig(SchedulerArgs):
     total_steps: Derived[int]
     step_when: StepType = "train"
 
-    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer) -> OneCycleLR:
         """
         Initializes the OneCycleLR scheduler.
         Creates and returns a OneCycleLR scheduler that monitors optimizer's learning rate.
@@ -186,7 +186,7 @@ class PlateuaConfig(SchedulerArgs):
     verbose: bool = False
     step_when: StepType = "val"
 
-    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer) -> ReduceLROnPlateau:
         """
         Initialize the ReduceLROnPlateau scheduler.
 
@@ -237,7 +237,7 @@ class StepLRConfig(SchedulerArgs):
     gamma: float = 0.99
     step_when: StepType = "epoch"
 
-    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer) -> StepLR:
         """
         Initialize the StepLR scheduler for a given model and optimizer.
 

@@ -9,7 +9,7 @@ from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Tuple
 
 
-def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type]):
+def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type]) -> list[str]:
     """
     Recurse into the module and return parameter names of all submodules, excluding
     modules that are of any type defined in ``forbidden_layer_types``.
@@ -61,7 +61,7 @@ def get_optim_parameters(
     model: torch.nn.Module,
     weight_decay: float | None = None,
     only_requires_grad: bool = True,
-):
+) -> dict | list:
     """
     Setup the optimizer. Get model parameters to be optimized. If ``weight_decay`` is a ``float``,
     apply weight decaying to the parameters too (except for bias and parameters from layer
@@ -270,7 +270,7 @@ class SGDConfig(OptimizerArgs):
     weight_decay: float = 0.0
     momentum: float = 0.0
 
-    def init_optimizer(self, model: nn.Module):
+    def init_optimizer(self, model: nn.Module) -> Optimizer:
         """
         Creates and returns an SGD optimizer that optimizes the model's parameters. These parameters
         will be processed via ``get_optim_parameters`` before used to initalized the optimizer.
@@ -341,7 +341,7 @@ class AdamWConfig(OptimizerArgs):
     eps: float = 1e-8
     weight_decay: float = 0.0
 
-    def init_optimizer(self, model: nn.Module):
+    def init_optimizer(self, model: nn.Module) -> Optimizer:
         """
         Creates and returns an ``AdamW`` optimizer that optimizes the model's parameters. These parameters
         will be processed via ``get_optim_parameters`` before used to initalized the optimizer.
@@ -406,7 +406,7 @@ class AdamConfig(OptimizerArgs):
     betas: Tuple[float, float] = (0.5, 0.9)
     weight_decay: float = 0.0
 
-    def init_optimizer(self, model: nn.Module):
+    def init_optimizer(self, model: nn.Module) -> Optimizer:
         """
         Creates and returns an ``Adam`` optimizer that optimizes the model's parameters. These parameters
         will be processed via ``get_optim_parameters`` before used to initalized the optimizer.
