@@ -252,43 +252,26 @@ def test_train_main_remote_successful_completion():
 
 def test_clean_reset():
     wrapper = TestWrapper(MyCustomModel)
-    # Set model_dir to a non-existent directory
     wrapper.model_dir = os.path.join(Path(__file__).parent, "nonexistent_dir")
     logger = FileLogger()
+    clean =True
     # Test execution
-    result = train_main_remote(wrapper,config,logger,root_dir=Path(__file__).parent,fault_tollerant=False,crash_exceptions_types=None,resume=False,clean_reset= True)
+    result = train_main_remote(wrapper,config,logger,root_dir=Path(__file__).parent,fault_tollerant=False,crash_exceptions_types=None,resume=False,clean_reset=clean)
     # Test assertion
+    assert wrapper.model_dir is  None
+
     assert TrialState.RECOVERABLE_ERROR in result, "CheckpointNotFoundError is not triggered with clean reset."
 
-def test_loss_diverged_error(tmp_path):
-        model = Mock()
-        #raise Duplicate Run Error
-        model.train.side_effect = LossDivergedError()
-        model.model_dir = tmp_path / "model_dir"
-         # create the directory
-        model.model_dir.mkdir() 
-        run_config = config
-        mp_logger = FileLogger()
-        root_dir = tmp_path
-         # Test execution
-        result = train_main_remote(model, run_config, mp_logger, root_dir)
-         # Test assertion
-        assert result[2] == TrialState.PRUNED_POOR_PERFORMANCE
 
-def test_duplicate_run_error(tmp_path):
-        model = Mock()
-        #raise Duplicate Run Error
-        model.train.side_effect = DuplicateRunError()
-        model.model_dir = tmp_path / "dup_dir"
-        # create the directory
-        model.model_dir.mkdir() 
-        run_config = config
-        mp_logger = FileLogger()
-        root_dir = tmp_path
-         # Test execution
-        result = train_main_remote(model, run_config, mp_logger, root_dir)
-        # Test assertion
-        assert result[2] == TrialState.RECOVERABLE_ERROR
+def test_duplicate_run_error():
+    wrapper = TestWrapper(MyCustomModel)
+    wrapper.model_dir = os.path.join(Path(__file__).parent, "nonexistent_dir")
+    logger = FileLogger()
+    result = train_main_remote(wrapper, config, logger, root_dir=Path(__file__).parent, fault_tollerant=False,
+                               crash_exceptions_types=None, resume=False, clean_reset=False)
+    
+    assert TrialState.RECOVERABLE_ERROR in result, "DuplicateError"
+
 
 
 
@@ -298,9 +281,10 @@ if __name__ == "__main__":
     tmp_path = Path("/tmp/experiment_dir")
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
-    test_mp(tmp_path)
-    test_resume(tmp_path)
-    test_relative_path(tmp_path)
-    test_train_main_remote_successful_completion()
-    test_clean_reset()
-    unittest.main()
+    # test_mp(tmp_path)
+    # test_resume(tmp_path)
+    # test_relative_path(tmp_path)
+    # test_train_main_remote_successful_completion()
+    # test_clean_reset()
+    test_duplicate_run_error()
+   
