@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Union
 import logging
+import typing as ty
 import numpy as np
 import pandas as pd
 from omegaconf import OmegaConf
@@ -9,7 +10,7 @@ from tensorboardX import SummaryWriter
 from ablator.config.main import ConfigBase
 from ablator.config.utils import flatten_nested_dict
 from ablator.modules.loggers import LoggerBase
-import typing as ty
+
 
 logging.getLogger("tensorboardX").setLevel(logging.ERROR)
 

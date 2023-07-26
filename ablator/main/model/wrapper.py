@@ -282,7 +282,7 @@ class ModelWrapper(ModelBase):
             strict_load=True,
         )
 
-    def to_device(self, data: Iterable, device: ty.Optional[ty.Union[torch.device, str]] = None) -> Iterable:
+    def to_device(self, data: Iterable, device: ty.Optional[str] = None) -> Iterable:
         """
         Moves the data to the specified device.
 
@@ -290,7 +290,7 @@ class ModelWrapper(ModelBase):
         ----------
         data: Iterable
             The data to move to the device.
-        device: ty.Optional[ty.Union[torch.device, str]]
+        device: ty.Optional[str]
             The device to move the data to. If ``None``, the device specified in the config is used.
 
         Returns
@@ -627,7 +627,7 @@ class ModelWrapper(ModelBase):
                 self.logger.info(f"Evaluation Step [{eval_step}] {msg}", verbose=False)
 
     @property
-    def total_steps(self): 
+    def total_steps(self):
         """
         The total number of steps for training.
 

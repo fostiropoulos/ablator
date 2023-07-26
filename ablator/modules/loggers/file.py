@@ -2,8 +2,8 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-import ray
 import typing as ty
+import ray
 
 class FileLogger:
     """

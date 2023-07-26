@@ -57,7 +57,7 @@ def iter_to_numpy(iterable: Iterable) -> ty.Any:
 
 
 def iter_to_device(
-    data_dict: Iterable, device: torch.device | str
+    data_dict: Iterable, device: str
 ) -> ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]:
     """
     Moving torch.Tensor elements to the specified device.
@@ -66,7 +66,7 @@ def iter_to_device(
     ----------
     data_dict : dict | list
         The input dictionary or list containing torch.Tensor elements.
-    device : torch.device | str
+    device : str
         The target device for the tensors.
 
     Returns

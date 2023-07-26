@@ -189,7 +189,7 @@ class PlotAnalysis(Analysis):
         metrics: list[str],
         save_dir: ty.Union[Path, str],
         **plt_kwargs,
-    ) -> None:
+    ):
         """
         To make violinplots for the given attribute names (data type: discrete) v.s. the metrics
         and saving the plots to the `save_dir` directory.
@@ -203,10 +203,7 @@ class PlotAnalysis(Analysis):
         save_dir : ty.Union[Path, str]
             directory to save results.
         **plt_kwargs
-
-        Returns
-        -------
-        None
+            Additional keyword arguments to pass to the plot.
         """
         save_path = Path(save_dir).joinpath("violinplot")
         metric_map = {k: v for k, v in self.optim_metrics.items() if k in metrics}
@@ -239,6 +236,7 @@ class PlotAnalysis(Analysis):
         save_dir : ty.Union[Path, str]
             directory to save results.
         **plt_kwargs
+            Additional keyword arguments to pass to the plot method.
 
         Returns
         -------
@@ -261,7 +259,7 @@ class PlotAnalysis(Analysis):
         metric_name_remap: dict[str, str] | None = None,
         attribute_name_remap: dict[str, str] | None = None,
         **plt_kwargs: dict,
-    ) -> None:
+    ):
         """
         The function to generate violinplots for categorical values and linear plots for numerical values.
         Plots are created as metrics vs. attributes.
@@ -273,10 +271,6 @@ class PlotAnalysis(Analysis):
         attribute_name_remap : dict[str, str] | None
             mappings for config's searchspace names to user defined names for attributes. By default, None
         **plt_kwargs : dict, optional
-
-        Returns
-        -------
-        None
         """
         cat_attrs = list(self.categorical_attributes)
         num_attrs = list(self.numerical_attributes)

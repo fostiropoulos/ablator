@@ -2,6 +2,7 @@ import copy
 import json
 import time
 from pathlib import Path
+import typing as ty
 from typing import Optional, Union
 
 import numpy as np
@@ -16,7 +17,6 @@ from ablator.modules.loggers.tensor import TensorboardLogger
 from ablator.modules.metrics.main import Metrics
 from ablator.modules.metrics.stores import MovingAverage
 
-import typing as ty
 
 class SummaryLogger:
     """
