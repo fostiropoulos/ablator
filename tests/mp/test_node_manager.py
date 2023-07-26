@@ -1,11 +1,12 @@
 import shutil
 from pathlib import Path
-
+import pytest
 import ray
 
 from ablator.mp.node_manager import NodeManager, Resource
 
 
+@pytest.mark.skipif(platform.system() != 'Linux', reason="Runs on Linux only")
 def test_node_manager(tmp_path: Path, ray_cluster):
     timeout = 5
     n_nodes = ray_cluster.nodes
@@ -39,6 +40,7 @@ def test_node_manager(tmp_path: Path, ray_cluster):
     ray_cluster.setUp()
 
 
+@pytest.mark.skipif(platform.system() != 'Linux', reason="Runs on Linux only")
 def test_shutdown(tmp_path: Path, ray_cluster, assert_error_msg):
     msg = assert_error_msg(
         lambda: NodeManager(tmp_path, ray_address=ray_cluster.cluster_ip)
@@ -77,6 +79,7 @@ def test_shutdown(tmp_path: Path, ray_cluster, assert_error_msg):
     ray_cluster.setUp()
 
 
+@pytest.mark.skipif(platform.system() != 'Linux', reason="Runs on Linux only")
 def assert_resources_equal(
     resource_one: dict[str, Resource], resource_two: dict[str, Resource]
 ):
@@ -93,6 +96,7 @@ def assert_resources_equal(
     )
 
 
+@pytest.mark.skipif(platform.system() != 'Linux', reason="Runs on Linux only")
 def test_resource_utilization(tmp_path: Path, ray_cluster):
     manager = NodeManager(tmp_path, ray_address=ray_cluster.cluster_address)
 
@@ -101,7 +105,7 @@ def test_resource_utilization(tmp_path: Path, ray_cluster):
         resources = manager.utilization()
         assert_resources_equal(resources, init_resources)
         assert_resources_equal(resources, resources)
-        assert len(resources) == ray_cluster.nodes + 1  #  +1 head
+        assert len(resources) == ray_cluster.nodes + 1  # +1 head
         assert set(ray_cluster.node_ips()) == set(resources)
         init_resources = resources
 
