@@ -22,7 +22,7 @@ def parse_name_remap(
 
     Returns
     -------
-    dict of str to str
+    dict[str, str]
         A dictionary mapping input attribute names to output attribute names.
 
     Raises

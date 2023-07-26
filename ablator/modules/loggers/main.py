@@ -310,7 +310,8 @@ class SummaryLogger:
         itr: int | None = None,
         is_best: bool = False,
     ):
-        """Save a checkpoint and update the checkpoint iteration
+        """
+        Save a checkpoint and update the checkpoint iteration
 
         Saves the model checkpoint in the appropriate directory based on the ``is_best`` parameter.
         If ``is_best==True``, the checkpoint is saved in the ``"best"`` directory, indicating the best

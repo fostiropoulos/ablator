@@ -14,7 +14,24 @@ logger = logging.getLogger(__name__)
 
 
 class Categorical(Plot):
-    DATA_TYPE = "categorical"
+    """
+    Class for categorical plots
+
+    Attributes
+    ----------
+    DATA_TYPE : str
+        The type of data
+    figsize: tuple
+        A tuple represent size of figure in terms of axes (x, y).
+
+    Parameters
+    ----------
+    *args : tuple
+        To pass any arguments to Plot.
+    **kwargs : dict
+        To pass any key-value args to Plot
+    """
+    DATA_TYPE: str = "categorical"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -57,6 +74,16 @@ class Categorical(Plot):
 
 
 class ViolinPlot(Categorical):
+    """
+    Class for constructing violinplots.
+
+    Parameters
+    ----------
+    *args : tuple
+        To pass any arguments to Categorical.
+    **kwargs : dict
+        To pass any key-value args to Categorical
+    """
     def __init__(self, *args, **kwargs) -> None:
         sns.set()
         sns.set_style("whitegrid")

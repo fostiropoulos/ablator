@@ -9,7 +9,7 @@ from ablator.config.hpo import SearchSpace
 from ablator.main.hpo.base import BaseSampler
 
 
-def _parse_search_space(space: SearchSpace):
+def _parse_search_space(space: SearchSpace) -> list:
     if space.sub_configuration is not None:
         return _expand_search_space(space.sub_configuration.arguments)
     if space.value_range is not None:
@@ -26,7 +26,7 @@ def _parse_search_space(space: SearchSpace):
     raise ValueError(f"Invalid SearchSpace: {space}")
 
 
-def _expand_configs(configs, value: dict[str, SearchSpace] | SearchSpace | ty.Any, key):
+def _expand_configs(configs, value: dict[str, SearchSpace] | SearchSpace | ty.Any, key) -> list:
     _configs = []
     if isinstance(value, dict):
         expanded_space = _expand_search_space(value)

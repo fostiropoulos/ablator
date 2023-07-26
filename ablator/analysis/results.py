@@ -8,12 +8,10 @@ import numpy as np
 import pandas as pd
 import ray
 from joblib import Memory
-from typing import Optional
 
 from ablator.config.main import ConfigBase
 from ablator.config.mp import Optim, ParallelConfig, SearchSpace
 from ablator.config.proto import RunConfig
-
 
 def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame | None:
     """
@@ -52,12 +50,12 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
     "current_epoch": 2,
     }]
     >>> config file
-    experiment_dir: "\tmp\results\experiment_8925_9991\"
+    experiment_dir: "\\tmp\\results\\experiment_8925_9991\"
     device: cpu
     >>> return value
-           current_epoch   train_loss  val_loss        experiment_dir                  device     
-    0            1          10.35        NaN    "\tmp\results\experiment_8925_9991\"    cpu  
-    1            2           3.89       7.04    "\tmp\results\experiment_8925_9991\"    cpu 
+    #   current_epoch   train_loss  val_loss            experiment_dir               device
+    0            1          10.35      NaN     "\\tmp\\results\\experiment_8925_9991\"    cpu
+    1            2          3.89       7.04    "\\tmp\\results\\experiment_8925_9991\"    cpu
     """
 
     try:
@@ -84,7 +82,7 @@ class Results:
 
     Parameters
     ----------
-    config : type[ParallelConfig]
+    config : type[ParallelConfig] | ParallelConfig
         The configuration class used
     experiment_dir : str | Path
         The path to the experiment directory.
@@ -110,12 +108,14 @@ class Results:
     numerical_attributes: list[str]
         The list of all the numerical hyperparameter names
     categorical_attributes: list[str]
-        The list of all the categorical hyperparameter names
+        The list of all the categorical hyperparameter names.
 
     Raises
     ------
     FileNotFoundError
         If the experiment directory doesn't exists.
+    ValueError
+        If run-config is provided instead of parallel-config.
     """
 
     def __init__(
@@ -185,11 +185,6 @@ class Results:
         categorical_attributes : list[str]
             list of categorical attributes
 
-        Raises
-        ------
-        AssertionError
-            if the categorical attributes are imbalanced
-
         Examples
         --------
         >>> [X,X,Y,Z]imbalanced
@@ -217,6 +212,11 @@ class Results:
         -------
         list[str]
             list of optimize metric names
+
+        Examples
+        --------
+        >>> results.metric_names
+        ["val_loss", "train_loss", "val_acc", "train_acc"]
         """
         return [str(v) for v in self.metric_map.values()]
 
@@ -226,7 +226,7 @@ class Results:
         self,
         experiment_dir: Path,
         init_ray: bool,
-    ):
+    ) -> pd.DataFrame:
         """
         Read multiple results from experiment directory with ray to enable parallel processing.
 
@@ -236,6 +236,11 @@ class Results:
             The experiment directory
         init_ray : bool
             Whether to use ray for parallel processing
+
+        Returns
+        -------
+        pd.DataFrame
+            Pandas Dataframe from read_results.
         """
         assert (
             experiment_dir.exists()
@@ -261,7 +266,7 @@ class Results:
             The configuration class
         experiment_dir : Path | str
             The experiment directory
-        num_cpus : int | float | None, optional
+        num_cpus : int | float | None
             Number of CPUs to use for ray processing, by default ``None``
 
         Returns

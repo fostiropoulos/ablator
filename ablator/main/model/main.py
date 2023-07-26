@@ -100,6 +100,11 @@ class ModelBase(ABC):
     best_loss : float
         The lowest loss value encountered during training.
 
+    Parameters
+    ----------
+    model_class : type[nn.Module]
+        The base class for user's model, which defines the neural network.
+
     Notes
     -----
     1. Class properties are simply listed by name. Please check out property docstring for more information.
@@ -119,14 +124,6 @@ class ModelBase(ABC):
         self,
         model_class: type[nn.Module],
     ):
-        """Initializes the ModelBase class with the required ``model_class`` and optional configurations.
-
-        Parameters
-        ----------
-        model_class : type[nn.Module]
-            The base class for user's model, which defines the neural network.
-        """
-
         self.model_class = model_class
         self.run_config: RunConfig
         self.train_dataloader: DataLoader

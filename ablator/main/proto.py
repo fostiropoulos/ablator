@@ -109,6 +109,13 @@ class ProtoTrainer:
         ----------
         config : RunConfig
             Running configuration for the model.
+        
+        Examples
+        --------
+        try:
+            ablator.smoke_test(run_config)
+        except err:
+            raise err
         """
         if config is None:
             config = self.run_config

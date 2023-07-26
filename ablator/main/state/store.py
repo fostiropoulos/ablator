@@ -47,6 +47,23 @@ class TrialState(enum.IntEnum):
 
 
 class Trial(Base):
+    """
+    Class to store adata about trial.
+
+    Attributes
+    ----------
+    id: Mapped[int]
+        the trial Id
+    config_uid: Mapped[str]
+        the uid associated with the trial
+    metrics: Mapped[PickleType]
+    config_param: Mapped[PickleType]
+    aug_config_param: Mapped[PickleType]
+    trial_num: Mapped[Integer]
+    state: Mapped[PickleType]
+    runtime_errors: Mapped[int]
+        total runtime errors in the trial
+    """
     __tablename__ = "trial"
     id: Mapped[int] = mapped_column(primary_key=True)
     config_uid: Mapped[str] = mapped_column(String(30))

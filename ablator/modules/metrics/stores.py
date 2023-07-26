@@ -403,7 +403,6 @@ class PredictionStore:
         ...     evaluation_functions={"mean": lambda preds, labels: np.mean(preds) + np.mean(labels)}
         ... )
         >>> pred_store.append(preds=np.array([4,3,0]), labels=np.array([5,1,1]))
-
         """
         batch_keys = set(batches.keys())
         if len(batch_keys) == 0:

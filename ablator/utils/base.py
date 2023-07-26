@@ -96,7 +96,7 @@ def apply_lambda_to_iter(iterable: Iterable, fn: Callable) -> ty.Any:
 
     Returns
     -------
-    any
+    ty.Any
         The resulting data structure after applying ``fn`` to each element of the input ``iterable``.
         The type of the returned object matches the type of the input ``iterable``.
     """
@@ -396,6 +396,19 @@ def num_format(
     -------
     str
         The formatted string representation of the `value`
+    
+    Examples
+    --------
+    >>> num_format(123456, width=8) 
+    123456
+    >>> num_format(123456789, width=8)
+    1.23e+08
+    >>> num_format(1234.5678, width=8)
+    1.23e+03
+    >>> num_format(0.000012345, width=8)
+    1.23e-05
+    >>> num_format(np.float64(12345678.12345678), width=8)
+    1.23e+07
     """
     assert width >= 8
     if isinstance(value, (int, np.integer)):

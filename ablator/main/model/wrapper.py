@@ -41,24 +41,21 @@ class ModelWrapper(ModelBase):
         The scaler created from the scaler config or checkpoint
     scheduler: Scheduler
         The scheduler created from the scheduler config or checkpoint
+
+    Parameters
+    ----------
+    model_class: torch.nn.Module
+        The model class to wrap.
+    model: nn.module
+    optimizer: Optimizer
+    scaler: GradScaler
+    scheduler: Scheduler
     """
 
     def __init__(
         self,
         model_class: type[nn.Module],
     ):
-        """
-        Initializes the model wrapper.
-
-        Parameters
-        ----------
-        model_class: torch.nn.Module
-            The model class to wrap.
-        model: nn.module
-        optimizer: Optimizer
-        scaler: GradScaler
-        scheduler: Scheduler
-        """
         super().__init__(
             model_class=model_class,
         )
@@ -134,7 +131,7 @@ class ModelWrapper(ModelBase):
         optimizer: Optimizer,
         scheduler_config: SchedulerConfig | None = None,
         scheduler_state: dict[str, ty.Any] | None = None,
-    ) -> Scheduler | None:
+    ) -> ty.Optional[Scheduler]:
         """
         Creates the scheduler from the saved state or from config.
 
@@ -236,6 +233,11 @@ class ModelWrapper(ModelBase):
     def reset_optimizer_scheduler(self) -> None:
         """
         Resets the optimizer and scheduler by recreating them.
+
+        Examples
+        --------
+        >>> wrapper.reset_optimizer_scheduler()
+        ## resets the optimizers_scheduler to the provided config settings.
 
         """
         optimizer_config = self.train_config.optimizer_config
@@ -774,7 +776,7 @@ class ModelWrapper(ModelBase):
         Returns
         -------
         dict[str, float]
-            Metrics
+            Metrics        
         """
         self._init_state(run_config, resume=True)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
@@ -942,6 +944,21 @@ class ModelWrapper(ModelBase):
         -------
         DataLoader
             The training dataloader.
+
+        Examples
+        --------
+        Override the method while using modelWrapper.
+
+        class MyModelWrapper(ModelWrapper):
+            ...
+
+            def make_dataloader_train(self, run_config: CustomRunConfig):
+                return torch.utils.data.DataLoader(
+                    train_dataset,
+                    batch_size=32,
+                    shuffle=True
+                )
+            ...
         """
 
     def evaluation_functions(self) -> dict[str, Callable] | None:
@@ -950,6 +967,20 @@ class ModelWrapper(ModelBase):
         -------
         dict[str, Callable] | None
             The evaluation functions to use.Also see ``Metrics`` for details.
+
+        Examples
+        --------
+        Override the method while using modelWrapper.
+
+        class MyModelWrapper(ModelWrapper):
+            ...
+
+            def evaluation_functions(self):
+                return {
+                    "accuracy": accuracy_score(y_true.flatten(), y_pred.flatten()),
+                    "f1": f1_score(y_true.flatten(), y_pred.flatten(), average='weighted')
+                }
+            ...
         """
 
     # Functions that can be optionally over-written.
@@ -966,6 +997,21 @@ class ModelWrapper(ModelBase):
         -------
         DataLoader | None
             The test dataloader.
+
+        Examples
+        --------
+        Override the method while using modelWrapper.
+
+        class MyModelWrapper(ModelWrapper):
+            ...
+
+            def make_dataloader_test(self, run_config: CustomRunConfig):
+                return torch.utils.data.DataLoader(
+                    test_dataset,
+                    batch_size=32,
+                    shuffle=True
+                )
+            ...
         """
 
     def make_dataloader_val(self, run_config: RunConfig) -> DataLoader | None:
@@ -981,6 +1027,21 @@ class ModelWrapper(ModelBase):
         -------
         DataLoader | None
             The validation dataloader.
+
+        Examples
+        --------
+        Override the method while using modelWrapper.
+
+        class MyModelWrapper(ModelWrapper):
+            ...
+
+            def make_dataloader_val(self, run_config: CustomRunConfig):
+                return torch.utils.data.DataLoader(
+                    validation_dataset,
+                    batch_size=32,
+                    shuffle=True
+                )
+            ...
         """
 
     def config_parser(self, run_config: RunConfig) -> RunConfig:
@@ -997,6 +1058,10 @@ class ModelWrapper(ModelBase):
         """
         This function is done post-initialization because otherwise the
         dataloaders are pickled with the object when running distributed.
+
+        Parameters
+        ----------
+        run_config: RunConfig
         """
         self.train_dataloader = self.make_dataloader_train(run_config)
         # pylint: disable=assignment-from-no-return

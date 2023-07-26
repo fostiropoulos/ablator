@@ -25,6 +25,16 @@ def make_sub_dirs(parent: str | Path, *dir_names: str) -> list[Path]:
     -------
     list[Path]
         A list of created subdirectory paths.
+
+     Examples
+    --------
+    >>> parent_directory = "C:/example_parent_directory"
+    >>> subdirectory_names = ["subdir1", "subdir2", "subdir3"]
+    >>> created_subdirectories = make_sub_dirs(parent_directory, *subdirectory_names)
+    >>> created_subdirectories
+    [Path('C:/example_parent_directory/subdir1'),
+     Path('C:/example_parent_directory/subdir2'),
+     Path('C:/example_parent_directory/subdir3')]
     """
     dirs = []
     for dir_name in dir_names:

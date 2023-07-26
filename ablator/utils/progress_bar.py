@@ -64,6 +64,24 @@ SEPERATOR = " | "
 
 
 class Display:
+    """
+    Class for handling display for terminal and notebook.
+
+    Parameters
+    ----------
+    _curses : curses
+        curses object
+    stdscr :  curses.initscr()
+        To initialize the curses library and create a window object stdscr.
+    nrows : int 
+        height of stdscr window.
+    nrows : int 
+        width of stdscr window.
+    html_widget : widget.HTML
+        html_widget with empty value
+    html_value : str
+        html value for widget
+    """
     def __init__(self) -> None:
         self.is_terminal = not in_notebook()
         if self.is_terminal:
@@ -204,9 +222,25 @@ class RemoteDisplay(Display):
 
 
 class ProgressBar:
+    """
+    Class for using progress bar. [config.verbose = "progress"]
+
+    Parameters
+    ----------
+    total_steps: int | None
+        total_steps for making bar.
+    epoch_len: int | None
+        to make `epoch_len` iterations using tqdm.
+    logfile: Path | None
+        Path of logfile
+    update_interval: int
+        interval to update metrics
+    remote_display: ty.Optional[RemoteProgressBar]
+    uid: str | None
+    """
     def __init__(
         self,
-        total_steps,
+        total_steps: int | None,
         epoch_len: int | None = None,
         logfile: Path | None = None,
         update_interval: int = 1,

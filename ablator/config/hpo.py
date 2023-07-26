@@ -8,10 +8,15 @@ class SubConfiguration:
     """
         SubConfiguration for a searchSpace.
 
-        Parameters
+        Attributes
         ----------
         arguments: dict[str, ty.Any]
             arguments for the subconfigurations.
+   
+        Parameters
+        ----------
+        **kwargs
+
     """
     def __init__(self, **kwargs) -> None:
         _search_space_annotations = list(SearchSpace.__annotations__.keys())
@@ -118,6 +123,19 @@ class SearchSpace(ConfigBase):
         )
 
     def parsed_value_range(self) -> tuple[int, int] | tuple[float, float]:
+        """
+        Returns
+        -------
+        tuple[int, int] | tuple[float, float]
+            tuple representing range of SearchSpace's value_range
+
+        Examples
+        --------
+        >>> ss = SearchSpace(value_range=[0.05, 0.1], value_type="float")
+        >>> range = ss.parsed_value_range()
+        >>> range
+        (0.05, 0.1)
+        """
         assert self.value_range is not None
         fn = float if self.value_type == FieldType.continuous else int
 
@@ -162,6 +180,12 @@ class SearchSpace(ConfigBase):
         return list({".".join(p) for p in paths})
 
     def to_str(self) ->  str:
+        """
+        Returns
+        -------
+        str
+            Searchspace in string format.
+        """
         # TODO make me pretty (e.g. print in an indented format.)
         if self.value_range is not None:
             str_repr = (
@@ -184,6 +208,24 @@ class SearchSpace(ConfigBase):
         raise RuntimeError("Sub Configuration can't be converted to str.")
 
     def contains(self, value: float | int | str | dict[str, ty.Any]) -> bool:
+        """
+        Checks whether the value is in the search-space.
+
+        Parameters
+        ----------
+        value : float | int | str | dict[str, ty.Any]
+            value to search
+
+        Returns
+        -------
+        bool
+            whether searchspace contains the value
+    
+        Raises
+        ------
+        ValueError
+            For invalid value.
+        """
         if self.value_range is not None and isinstance(value, (int, float, str)):
             min_val, max_val = self.parsed_value_range()
             return float(value) >= min_val and float(value) <= max_val
