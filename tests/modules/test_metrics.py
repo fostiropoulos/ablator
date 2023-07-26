@@ -2,9 +2,8 @@ from pathlib import Path
 from ablator.modules.metrics.main import Metrics
 from ablator.modules.metrics.stores import PredictionStore
 import numpy as np
-
-import sys
-
+from ablator.modules.metrics.stores import MovingAverage
+import math
 
 moving_average_limit = 100
 memory_limit = 100
@@ -118,7 +117,7 @@ def test_metrics(assert_error_msg):
     for i in range(1000):
         m.update_ma_metrics({"ma_some": int(i)})
     assert m.to_dict() == {
-        "ma_some": np.arange(1000)[-m._get_ma("ma_some").limit :].mean(),
+        "ma_some": np.arange(1000)[-m._get_ma("ma_some").limit:].mean(),
         "mean": np.nan,
         "some": 0,
     }
@@ -190,6 +189,12 @@ def test_metrics(assert_error_msg):
     assert m3.to_dict() == {"mean": 62.5}
     m3.evaluate(reset=False, update_ma=True)
     assert np.isclose(m3.to_dict()["mean"], 46.42857142857142)
+
+    # Test if reset function works
+    m3.reset()
+    m3.evaluate(reset=False, update_ma=True)
+    value = m3.to_dict()["mean"]
+    assert math.isnan(value)
 
 
 def test_prediction_store_reset(assert_error_msg):
