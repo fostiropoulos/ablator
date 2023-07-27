@@ -1,21 +1,25 @@
 import copy
+import functools
 import gc
 import os
-from pathlib import Path
+import shutil
 import time
 import uuid
-import mock
+from pathlib import Path
 
+import mock
 import numpy as np
 import pytest
 import ray
 import torch
 
-from ablator.mp.gpu_manager import GPUManager, _get_gpus, unlock_gpu, wait_get_gpu
+from ablator.modules.loggers.file import FileLogger
+from ablator.mp import gpu_manager
+from ablator.mp.gpu_manager import GPUManager, unlock_gpu, wait_get_gpu
+from ablator.mp.train_remote import _apply_unlock_hook, train_main_remote
 from ablator.utils.base import _get_gpu_info, get_cuda_processes, get_gpu_mem
 
-GPU_MEM_UTIL = 100
-
+wait_get_gpu = functools.partial(wait_get_gpu, expected_util_mb=100, max_timeouts=2)
 
 n_gpus = min(torch.cuda.device_count(), 2)
 
@@ -59,37 +63,52 @@ def monitor_gpu_usage(
     return cuda_ps
 
 
-def _make_futures(n_gpus: int, manager: GPUManager, remote_fn, process_prefix):
-    futures = [
+def _make_remote(remote_fn, name, gpu_manager, kwargs):
+    kwargs = copy.deepcopy(kwargs)
+    if "gpu_id" not in kwargs:
+        kwargs["gpu_id"] = wait_get_gpu(gpu_manager, process_name=name)
+    return (
         ray.remote(
             num_gpus=0.001,
             num_cpus=0.001,
             max_calls=1,
             max_retries=0,
         )(remote_fn)
-        .options(name=f"{process_prefix}_{i}")
-        .remote(manager)
+        .options(name=name)
+        .remote(**kwargs)
+    )
+
+
+def _make_futures(n_gpus: int, manager: GPUManager, remote_fn, process_prefix):
+    kwargs = dict(gpu_manager=manager)
+    futures = [
+        _make_remote(remote_fn, f"{process_prefix}_{i}", manager, kwargs)
         for i in range(n_gpus)
     ]
     return futures
+
+
+def _make_future_gpu(remote_fn, name, gpu_manager, kwargs):
+    return ray.get(_make_remote(remote_fn, name, gpu_manager, kwargs))
 
 
 @pytest.mark.skipif(
     not torch.cuda.is_available(),
     reason="The test is meant to evaluate allocation of cuda memory.",
 )
-def test_gpu_alignment(gpu_manager: GPUManager):
+def test_gpu_alignment(very_patient_gpu_manager: GPUManager):
     """
     test that the GPU index numbers are aligned between torch to device and
     get_gpu_mem and get_cuda_processes.
     """
 
     init_cuda_ps = get_cuda_processes()
-    least_busy_gpu = wait_get_gpu(gpu_manager, GPU_MEM_UTIL)
-    unlock_gpu(gpu_manager, least_busy_gpu)
+    fn_name = "test_gpu_alignment"
+    least_busy_gpu = wait_get_gpu(very_patient_gpu_manager, process_name=fn_name)
+    unlock_gpu(very_patient_gpu_manager, least_busy_gpu)
     t = torch.ones(10000, 10000).to(f"cuda:{least_busy_gpu}")
-    new_lbgpu = wait_get_gpu(gpu_manager, GPU_MEM_UTIL)
-    unlock_gpu(gpu_manager, new_lbgpu)
+    new_lbgpu = wait_get_gpu(very_patient_gpu_manager, process_name=fn_name)
+    unlock_gpu(very_patient_gpu_manager, new_lbgpu)
     assert (
         new_lbgpu != least_busy_gpu
     ), "Can not run test robustly when several processess are also running on cuda."
@@ -106,26 +125,77 @@ def test_gpu_alignment(gpu_manager: GPUManager):
     n_gpus < 2,
     reason="The test is meant to evaluate allocation of cuda memory.",
 )
-def test_lock_unlock(assert_error_msg, gpu_manager):
+def test_lock_unlock(assert_error_msg, very_patient_gpu_manager, remote_fn):
     """
     test that requesting and unlocking resources works
     as expected.
     """
 
-    [unlock_gpu(gpu_manager, i) for i in range(n_gpus)]
-    gpus = [wait_get_gpu(gpu_manager, 100, 2) for i in range(n_gpus)]
+    fn_name = "test_lock_unlock"
 
+    gpus = [
+        wait_get_gpu(very_patient_gpu_manager, process_name=fn_name)
+        for i in range(n_gpus)
+    ]
     assert sorted(gpus) == list(range(n_gpus))
-    msg = assert_error_msg(lambda: wait_get_gpu(gpu_manager, 100, 2))
+    msg = assert_error_msg(
+        lambda: wait_get_gpu(very_patient_gpu_manager, process_name=fn_name)
+    )
     assert "No available GPU." in msg
-    unlock_gpu(gpu_manager, 0)
-    assert wait_get_gpu(gpu_manager, 100, 2) == 0
-    msg = assert_error_msg(lambda: wait_get_gpu(gpu_manager, 100, 2))
+    unlock_gpu(very_patient_gpu_manager, 0)
+    assert wait_get_gpu(very_patient_gpu_manager, process_name=fn_name) == 0
+    msg = assert_error_msg(
+        lambda: wait_get_gpu(very_patient_gpu_manager, process_name=fn_name)
+    )
     assert msg == "No available GPU."
     rand_unlock = np.random.choice(n_gpus)
-    unlock_gpu(gpu_manager, rand_unlock)
-    assert wait_get_gpu(gpu_manager, 100, 2) == rand_unlock
-    [unlock_gpu(gpu_manager, i) for i in range(n_gpus)]
+    unlock_gpu(very_patient_gpu_manager, rand_unlock)
+    assert wait_get_gpu(very_patient_gpu_manager, process_name=fn_name) == rand_unlock
+    [unlock_gpu(very_patient_gpu_manager, i) for i in range(n_gpus)]
+
+
+@pytest.mark.skipif(
+    n_gpus < 2,
+    reason="The test is meant to evaluate allocation of cuda memory.",
+)
+def test_lock_unlock_by_id(very_patient_gpu_manager, remote_fn):
+    # test unlocked by process name
+    fn_name = "test_lock_unlock_by_process_name"
+    gpu = wait_get_gpu(very_patient_gpu_manager, process_name=f"{fn_name}_0")
+    gpu_two = wait_get_gpu(very_patient_gpu_manager, process_name=f"{fn_name}_1")
+    assert gpu != gpu_two
+    _make_future_gpu(
+        remote_fn,
+        f"{fn_name}_0",
+        very_patient_gpu_manager,
+        dict(gpu_id=gpu, gpu_manager=very_patient_gpu_manager),
+    )
+    gpus = ray.get(very_patient_gpu_manager._gpus.remote())
+
+    assert gpus[gpu]._locking_process == None
+    gpu_three = wait_get_gpu(very_patient_gpu_manager, process_name=f"{fn_name}_0")
+    assert gpu == gpu_three
+
+    gpus = ray.get(very_patient_gpu_manager._gpus.remote())
+    assert gpus[gpu]._locking_process == f"{fn_name}_0"
+    assert gpus[gpu_two]._locking_process == f"{fn_name}_1"
+    assert gpus[gpu].lock_timeout == 10000000
+    assert gpus[gpu_two].lock_timeout == 10000000
+
+
+@pytest.mark.skipif(
+    n_gpus < 2,
+    reason="The test is meant to evaluate allocation of cuda memory.",
+)
+def test_lock_unlock_by_time_limit(gpu_manager):
+    # impatient gpu manager
+    fn_name = "test_lock_unlock_by_time_limit"
+    gpu_one = wait_get_gpu(gpu_manager, process_name=fn_name)
+    time.sleep(5)
+    gpu_two = wait_get_gpu(gpu_manager, process_name=fn_name)
+    gpu_three = wait_get_gpu(gpu_manager, process_name=fn_name)
+    assert gpu_one == gpu_two
+    assert gpu_two != gpu_three
 
 
 @pytest.mark.skipif(
@@ -139,7 +209,7 @@ def test_allocation(gpu_manager, remote_fn, n_remotes=n_gpus * 2):
     assert n_remotes > n_gpus, "The test is only valid for n_remotes > n_gpus."
     process_prefix = str(uuid.uuid4())[:4]
     n_remotes = n_remotes // n_gpus
-
+    a = torch.randn(100).to("cuda")
     current_cuda_ps = get_cuda_processes()
     futures = _make_futures(n_remotes, gpu_manager, remote_fn, process_prefix)
     cuda_ps = monitor_gpu_usage(current_cuda_ps, process_prefix)
@@ -153,16 +223,118 @@ def test_allocation(gpu_manager, remote_fn, n_remotes=n_gpus * 2):
     assert sorted(gpus) == list(range(n_gpus))
 
 
+@pytest.mark.skipif(
+    not torch.cuda.is_available(),
+    reason="Cuda is required to perform this test.",
+)
+def test_lock_unlock_hook(
+    tmp_path: Path, wrapper, make_config, very_patient_gpu_manager
+):
+    # test unlocked by process name
+
+    config = make_config(tmp_path.joinpath("mock_model"))
+    uid = "some_uid"
+    fault_tollerant = True
+    crash_exceptions_types = None
+    resume = False
+    clean_reset = False
+    progress_bar = None
+    logger_path = tmp_path.joinpath("log.log")
+    mp_logger = FileLogger(logger_path, verbose=True)
+    gpu = wait_get_gpu(very_patient_gpu_manager)
+    config.device = f"cuda:{gpu}"
+    args = (
+        wrapper,
+        config,
+        mp_logger,
+        very_patient_gpu_manager,
+        uid,
+        fault_tollerant,
+        crash_exceptions_types,
+        resume,
+        clean_reset,
+        progress_bar,
+    )
+    _apply_unlock_hook(wrapper, very_patient_gpu_manager, gpu)
+    wrapper.train(config, resume=resume, remote_progress_bar=progress_bar)
+    assert wrapper._is_locked == False
+
+
+@pytest.mark.skipif(
+    not torch.cuda.is_available(),
+    reason="Cuda is required to perform this test.",
+)
+def test_lock_unlock_train_main_remote(
+    tmp_path: Path, wrapper, make_config, very_patient_gpu_manager
+):
+    # test unlocked from within the train_main_remote
+
+    config = make_config(tmp_path.joinpath("mock_model"))
+    uid = "some_uid"
+    logger_path = tmp_path.joinpath("log.log")
+    mp_logger = FileLogger(logger_path, verbose=True)
+    wrapper._uid = "train_main_remote_test"
+    kwargs = dict(
+        model=wrapper,
+        run_config=config,
+        mp_logger=mp_logger,
+        gpu_manager=very_patient_gpu_manager,
+        uid=uid,
+        fault_tollerant=False,
+    )
+
+    gpu = wait_get_gpu(very_patient_gpu_manager, process_name="mock_lock")
+    gpu = wait_get_gpu(very_patient_gpu_manager, process_name="mock_lock")
+    # we unlock GPU 1 so that it is off-by one and the test
+    # is challenging.
+    unlock_gpu(very_patient_gpu_manager, 1)
+
+    _make_future_gpu(
+        train_main_remote, "train_main_remote_test", very_patient_gpu_manager, kwargs
+    )
+    gpus = ray.get(very_patient_gpu_manager._gpus.remote())
+    gpu_two = wait_get_gpu(
+        very_patient_gpu_manager, process_name="test_lock_unlock_train_main_remote"
+    )
+    assert 0 != gpu_two
+    assert gpus[gpu_two]._locking_process == None
+    assert gpus[0]._locking_process == "mock_lock"
+
+
 if __name__ == "__main__":
     from tests.conftest import _assert_error_msg
-    from tests.ray_models.model import _remote_fn
+    from tests.ray_models.model import (
+        WORKING_DIR,
+        MyCustomModel,
+        MyDivCustomModel,
+        MyErrorCustomModel,
+        TestWrapper,
+        _make_config,
+        _remote_fn,
+    )
 
+    tmp_path = Path("/tmp/test_gpu_manager")
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    wrapper = TestWrapper(MyErrorCustomModel)
     with mock.patch("ablator.utils.base._get_gpu_info", lambda: _get_gpu_info()[:2]):
         os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
-        gpu_manager = GPUManager.remote([0, 1])
-        test_allocation(gpu_manager, _remote_fn)
-        # gpu_manager = GPUManager.remote([0, 1])
-        # test_lock_unlock(_assert_error_msg, gpu_manager)
-        gpu_manager = GPUManager.remote([0, 1])
+        gpu_manager = GPUManager.remote(60, [0, 1])
         test_gpu_alignment(gpu_manager)
+        gpu_manager = GPUManager.remote(60, [0, 1])
+        test_allocation(gpu_manager, _remote_fn)
+
+        gpu_manager = GPUManager.remote(60, [0, 1])
+        test_lock_unlock(_assert_error_msg, gpu_manager, _remote_fn)
+        gpu_manager = GPUManager.remote(60, [0, 1])
+        test_lock_unlock_by_id(gpu_manager, _remote_fn)
+        gpu_manager = GPUManager.remote(60, [0, 1])
+        test_lock_unlock_by_time_limit(gpu_manager)
+
+        gpu_manager = GPUManager.remote(60, [0, 1])
+        test_lock_unlock_train_main_remote(
+            tmp_path,
+            wrapper=wrapper,
+            make_config=_make_config,
+            gpu_manager=gpu_manager,
+        )
