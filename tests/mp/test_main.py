@@ -1,3 +1,4 @@
+import functools
 import shutil
 import uuid
 from pathlib import Path
@@ -7,11 +8,11 @@ import numpy as np
 import pytest
 import torch
 
-from ablator.main.mp import ParallelTrainer, train_main_remote
+from ablator.main.mp import ParallelTrainer
 from ablator.main.state.store import TrialState
 from ablator.modules.loggers.file import FileLogger
 from ablator.mp.node_manager import NodeManager, Resource
-
+from ablator.mp.train_remote import train_main_remote
 
 N_MOCK_NODES = 10
 
@@ -130,56 +131,53 @@ def test_mp_sampling_limits(tmp_path: Path, error_wrapper, make_config, working_
         assert len(trainer.experiment_state.valid_trials()) == 80
 
 
-@pytest.mark.order(-1)
-def test_mp_run(
-    tmp_path: Path,
-    assert_error_msg,
-    ray_cluster,
-    error_wrapper,
-    make_config,
-    working_dir,
-):
-    n_trials = 10
-    config = make_config(tmp_path, search_space_limit=n_trials)
-    config.experiment_dir = tmp_path
-    config.total_trials = n_trials
-    ablator = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-    ablator.launch(working_dir)
-
+@pytest.mark.order(0)
+def test_mp_run(assert_error_msg, working_dir, ablator, ray_cluster):
     complete_configs = ablator.experiment_state.get_trial_configs_by_state(
         TrialState.COMPLETE
+    )
+    failed_configs = ablator.experiment_state.get_trial_configs_by_state(
+        TrialState.FAIL
     )
     lrs = np.array(
         [c.train_config.optimizer_config.arguments.lr for c in complete_configs]
     )
-    LR_ERROR_LIMIT = config.model_config.lr_error_limit
-    n_complete = np.sum(np.linspace(0, 19, 10) < LR_ERROR_LIMIT)
-    assert len(complete_configs) == n_complete
-    assert (lrs < LR_ERROR_LIMIT).all()
-    assert (
-        len(ablator.experiment_state.get_trial_configs_by_state(TrialState.FAIL))
-        == n_trials - n_complete
+    bad_lrs = np.array(
+        [c.train_config.optimizer_config.arguments.lr for c in failed_configs]
     )
+    config = ablator.run_config
+    n_trials = config.total_trials
+    LR_ERROR_LIMIT = config.model_config.lr_error_limit
+    n_complete = np.sum(
+        np.linspace(0, 19, int(n_trials**0.5)) < LR_ERROR_LIMIT
+    ) * int(n_trials**0.5)
+    n_failed = np.sum(np.linspace(0, 19, int(n_trials**0.5)) > LR_ERROR_LIMIT) * int(
+        n_trials**0.5
+    )
+    assert len(complete_configs) == n_complete
+    assert len(failed_configs) == n_failed
+    assert (lrs < LR_ERROR_LIMIT).all()
+    assert (bad_lrs > LR_ERROR_LIMIT).all()
+    assert len(failed_configs) == n_trials - n_complete
     msg = assert_error_msg(
         lambda: ablator._init_state(working_dir),
     )
     assert (
         f"Experiment Directory " in msg
-        and tmp_path.as_posix() in msg
+        and config.experiment_dir in msg
         and "exists" in msg
     )
 
     prev_trials = len(ablator.experiment_state.valid_trials())
     ablator.launch(working_dir, resume=True)
     assert len(ablator.experiment_state.valid_trials()) == prev_trials
-    ablator.run_config.total_trials = 20
+    ablator.run_config.total_trials += 4
     ablator.launch(working_dir, resume=True)
     assert (len(ablator.experiment_state.valid_trials()) != prev_trials) and (
         len(ablator.experiment_state.valid_trials()) == ablator.total_trials
     )
 
 
-@pytest.mark.order(1)
 def test_ray_init(
     tmp_path: Path, capture_output, error_wrapper, make_config, working_dir
 ):
@@ -191,6 +189,9 @@ def test_ray_init(
     assert "Ray is already initialized." in out
 
 
+@mock.patch(
+    "ablator.ParallelTrainer._make_remote", lambda *args, **kwargs: (args, kwargs)
+)
 def test_resource_util(
     tmp_path: Path, capture_output, error_wrapper, make_config, working_dir
 ):
@@ -206,6 +207,7 @@ def test_resource_util(
     assert "Consider adjusting `concurrent_trials`." in out
     out, err = capture_output(lambda: trainer._cpu)
     assert len(out) == 0
+
     futures = trainer._make_futures()
     assert len(futures) == 10
 
@@ -291,7 +293,7 @@ def test_train_main_remote(
     config = make_config(tmp_path)
     config.experiment_dir = tmp_path.joinpath("mock_dir")
 
-    uid = "some_uid"
+    uid = 1029
     fault_tollerant = True
     crash_exceptions_types = None
     resume = False
@@ -299,49 +301,37 @@ def test_train_main_remote(
     progress_bar = None
     logger_path = tmp_path.joinpath("log.log")
     mp_logger = FileLogger(logger_path, verbose=True)
-
-    _new_uid, metrics, state = train_main_remote(
-        wrapper,
-        config,
-        mp_logger,
-        uid,
-        fault_tollerant,
-        crash_exceptions_types,
-        resume,
-        clean_reset,
-        progress_bar,
+    gpu_manager = None
+    gpu_id = None
+    remote_fn = functools.partial(
+        train_main_remote,
+        model=wrapper,
+        run_config=config,
+        mp_logger=mp_logger,
+        gpu_manager=gpu_manager,
+        gpu_id=gpu_id,
+        uid=uid,
+        fault_tollerant=fault_tollerant,
+        crash_exceptions_types=crash_exceptions_types,
+        resume=resume,
+        clean_reset=clean_reset,
+        progress_bar=progress_bar,
+    )
+    _new_uid, metrics, state = remote_fn(
+        model=wrapper,
+        run_config=config,
     )
     assert _new_uid == uid and state == TrialState.COMPLETE
     assert (
         "val_loss" in metrics and metrics["current_epoch"] == config.train_config.epochs
     )
-    out, err = capture_output(
-        lambda: train_main_remote(
-            wrapper,
-            config,
-            mp_logger,
-            uid,
-            fault_tollerant,
-            crash_exceptions_types,
-            resume,
-            clean_reset,
-            progress_bar,
-        )
-    )
+    out, err = capture_output(remote_fn)
     assert "Resume is set to False" in out
     config.train_config.epochs = 10
     resume = True
     uid = "xxxx"
-    _new_uid, metrics, state = train_main_remote(
-        wrapper,
-        config,
-        mp_logger,
-        uid,
-        fault_tollerant,
-        crash_exceptions_types,
-        resume,
-        clean_reset,
-        progress_bar,
+    _new_uid, metrics, state = remote_fn(
+        model=wrapper, run_config=config, uid=uid, resume=resume
     )
     assert _new_uid == uid and state == TrialState.COMPLETE
     assert (
@@ -352,103 +342,68 @@ def test_train_main_remote(
     # this lr causes an error
     config.train_config.optimizer_config.arguments.lr = 11.0
     uid = str(uuid.uuid4())
-    _new_uid, metrics, state = train_main_remote(
-        error_wrapper,
-        config,
-        mp_logger,
-        uid,
-        fault_tollerant,
-        crash_exceptions_types,
-        False,
-        clean_reset,
-        progress_bar,
+    _new_uid, metrics, state = remote_fn(
+        model=error_wrapper, run_config=config, uid=uid
     )
     assert state == TrialState.FAIL and metrics is None and _new_uid == uid
 
     shutil.rmtree(config.experiment_dir)
     msg = assert_error_msg(
-        lambda: train_main_remote(
-            error_wrapper,
-            config,
-            mp_logger,
-            uid,
-            False,
-            crash_exceptions_types,
-            False,
-            clean_reset,
-            progress_bar,
+        lambda: remote_fn(
+            model=error_wrapper, run_config=config, uid=uid, fault_tollerant=False
         )
     )
     assert msg == "large lr."
 
     shutil.rmtree(config.experiment_dir)
     msg = assert_error_msg(
-        lambda: train_main_remote(
-            error_wrapper,
-            config,
-            mp_logger,
-            uid,
-            True,
-            [error_wrapper.model.exception_class],
-            False,
-            clean_reset,
-            progress_bar,
+        lambda: remote_fn(
+            model=error_wrapper,
+            run_config=config,
+            uid=uid,
+            crash_exceptions_types=[error_wrapper.model.exception_class],
         )
     )
     assert "large lr." in msg and "MyCustomException" in msg
 
     msg = assert_error_msg(
-        lambda: train_main_remote(
-            error_wrapper,
-            config,
-            mp_logger,
-            uid,
-            False,
-            [error_wrapper.model.exception_class],
-            True,
-            clean_reset,
-            progress_bar,
+        lambda: remote_fn(
+            model=error_wrapper,
+            run_config=config,
+            uid=uid,
+            fault_tollerant=False,
+            crash_exceptions_types=[error_wrapper.model.exception_class],
+            resume=True,
         )
     )
     assert "Could not find a valid checkpoint in" in msg
 
-    _new_uid, metrics, state = train_main_remote(
-        wrapper,
-        config,
-        mp_logger,
-        uid,
-        False,
-        [error_wrapper.model.exception_class],
-        True,
-        True,
-        progress_bar,
+    _new_uid, metrics, state = remote_fn(
+        model=error_wrapper,
+        run_config=config,
+        uid=uid,
+        fault_tollerant=False,
+        crash_exceptions_types=[error_wrapper.model.exception_class],
+        resume=True,
+        clean_reset=True,
     )
     assert state == TrialState.FAIL_RECOVERABLE
     assert not Path(config.experiment_dir).exists()
-    _new_uid, metrics, state = train_main_remote(
-        wrapper,
-        config,
-        mp_logger,
-        uid,
-        False,
-        [error_wrapper.model.exception_class],
-        False,
-        clean_reset,
-        progress_bar,
+    _new_uid, metrics, state = remote_fn(
+        model=wrapper,
+        run_config=config,
+        uid=uid,
+        fault_tollerant=False,
+        crash_exceptions_types=[error_wrapper.model.exception_class],
     )
     assert state == TrialState.COMPLETE
 
     shutil.rmtree(config.experiment_dir)
-    _new_uid, metrics, state = train_main_remote(
-        divergent_wrapper,
-        config,
-        mp_logger,
-        uid,
-        False,
-        [error_wrapper.model.exception_class],
-        False,
-        clean_reset,
-        progress_bar,
+    _new_uid, metrics, state = remote_fn(
+        model=divergent_wrapper,
+        run_config=config,
+        fault_tollerant=False,
+        crash_exceptions_types=[error_wrapper.model.exception_class],
     )
     assert state == TrialState.PRUNED_POOR_PERFORMANCE
 
@@ -463,55 +418,76 @@ def test_relative_path(tmp_path: Path, wrapper, make_config):
 
 
 if __name__ == "__main__":
-    from tests.conftest import DockerRayCluster
-    from tests.conftest import _assert_error_msg, _capture_output
+    from tests.conftest import DockerRayCluster, _assert_error_msg, _capture_output
     from tests.ray_models.model import (
         WORKING_DIR,
-        TestWrapper,
         MyCustomModel,
         MyDivCustomModel,
         MyErrorCustomModel,
+        TestWrapper,
         _make_config,
     )
 
     tmp_path = Path("/tmp/experiment_dir")
     shutil.rmtree(tmp_path, ignore_errors=True)
-    # p = Process(target=_mp_test, args=(tmp_path,))
-    # p.start()
-    # p.join()
-    # ray_cluster = DockerRayCluster()
-    # ray_cluster.setUp(WORKING_DIR)
-    # tmp_path.mkdir()
+
+    ray_cluster = DockerRayCluster(working_dir=WORKING_DIR)
+    ray_cluster.setUp()
     error_wrapper = TestWrapper(MyErrorCustomModel)
-    wrapper = TestWrapper(MyErrorCustomModel)
-    div_wrapper = TestWrapper(MyErrorCustomModel)
-    test_train_main_remote(
+    wrapper = TestWrapper(MyCustomModel)
+    div_wrapper = TestWrapper(MyDivCustomModel)
+
+    # shutil.rmtree(tmp_path, ignore_errors=True)
+    # test_train_main_remote(
+    #     tmp_path,
+    #     _assert_error_msg,
+    #     _capture_output,
+    #     error_wrapper,
+    #     make_config=_make_config,
+    #     wrapper=wrapper,
+    #     divergent_wrapper=div_wrapper,
+    # )
+
+    # shutil.rmtree(tmp_path, ignore_errors=True)
+    # test_resource_util(
+    #     tmp_path,
+    #     _capture_output,
+    #     error_wrapper=error_wrapper,
+    #     make_config=_make_config,
+    #     working_dir=WORKING_DIR,
+    # )
+
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    error_wrapper = TestWrapper(MyErrorCustomModel)
+    test_mp_run(
         tmp_path,
         _assert_error_msg,
-        _capture_output,
-        error_wrapper,
-        wrapper=wrapper,
-        divergent_wrapper=div_wrapper,
+        ray_cluster,
+        error_wrapper=error_wrapper,
+        make_config=_make_config,
+        working_dir=WORKING_DIR,
     )
 
-    # test_mp_run(tmp_path, _assert_error_msg, ray_cluster)
-    # test_pre_train_setup(tmp_path)
-
-    # breakpoint()
     # shutil.rmtree(tmp_path, ignore_errors=True)
-    # tmp_path.mkdir()
-    # test_resource_util(tmp_path, _capture_output)
 
-    # shutil.rmtree(tmp_path, ignore_errors=True)
-    # tmp_path.mkdir()
-
-    test_ray_init(tmp_path, _capture_output)
-    # test_mp_sampling_limits(tmp_path)
-    # test_zombie_remotes(tmp_path)
+    # test_ray_init(
+    #     tmp_path,
+    #     _capture_output,
+    #     error_wrapper=error_wrapper,
+    #     make_config=_make_config,
+    #     working_dir=WORKING_DIR,
+    # )
 
     # shutil.rmtree(tmp_path, ignore_errors=True)
-    # tmp_path.mkdir()
-    # test_resume(tmp_path)
+    # test_mp_sampling_limits(
+    #     tmp_path,
+    #     error_wrapper=error_wrapper,
+    #     make_config=_make_config,
+    #     working_dir=WORKING_DIR,
+    # )
     # shutil.rmtree(tmp_path, ignore_errors=True)
-    # tmp_path.mkdir()
-    # test_relative_path(tmp_path)
+    # test_zombie_remotes(
+    #     tmp_path, wrapper=wrapper, make_config=_make_config, working_dir=WORKING_DIR
+    # )
+    # shutil.rmtree(tmp_path, ignore_errors=True)
+    # test_relative_path(tmp_path, wrapper=wrapper, make_config=_make_config)
