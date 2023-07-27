@@ -32,6 +32,7 @@ Hyperparameter Optimization Configuration module
 .. automodule:: ablator.config.hpo
    :members:
    :show-inheritance:
+   :exclude-members: FieldType
 
 Parallel Configuration module
 -----------------------------
@@ -39,10 +40,11 @@ Parallel Configuration module
 .. automodule:: ablator.config.mp
    :members:
    :show-inheritance:
+   :exclude-members: Optim, SearchAlgo
 
-Configuration Utils module
----------------------------
+.. Configuration Utils module
+.. ---------------------------
 
-.. automodule:: ablator.config.utils
-   :members:
-   :show-inheritance:
+.. .. automodule:: ablator.config.utils
+..    :members:
+..    :show-inheritance:

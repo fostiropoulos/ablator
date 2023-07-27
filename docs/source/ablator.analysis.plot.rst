@@ -1,12 +1,9 @@
 Plot package
 =============================
 
-Submodules
-----------
-
-Plotting utilities module
+Plotting analysis main module
 ----------------------------------
 
-.. automodule:: ablator.analysis.plot.utils
+.. automodule:: ablator.analysis.plot.main
    :members:
    :show-inheritance:

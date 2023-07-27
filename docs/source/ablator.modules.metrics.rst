@@ -7,14 +7,14 @@ Submodules
 Main Metrics module
 -----------------------------------
 
-.. automodule:: ablator.modules.metrics.main
+.. autoclass:: ablator.modules.metrics.main.Metrics
    :members:
    :show-inheritance:
-   :exclude-members: LossDivergedError
+   :exclude-members: append_batch, evaluate, reset, update_ma_metrics, update_static_metrics
 
-Metric Stores module
--------------------------------------
+.. Metric Stores module
+.. -------------------------------------
 
-.. automodule:: ablator.modules.metrics.stores
-   :members:
-   :show-inheritance:
+.. .. automodule:: ablator.modules.metrics.stores
+..    :members:
+..    :show-inheritance:

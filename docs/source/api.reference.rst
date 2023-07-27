@@ -86,7 +86,7 @@ Parallel Config classes
    config.mp.SearchAlgo
 
 Config Utils functions
----------------------
+----------------------
 
 .. currentmodule:: ablator
 

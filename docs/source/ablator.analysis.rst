@@ -9,9 +9,6 @@ Subpackages
 
    ablator.analysis.plot
 
-Submodules
-----------
-
 Analysis main module
 ----------------------------
 
