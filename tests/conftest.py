@@ -73,7 +73,13 @@ def make_node(docker_client: docker.DockerClient, img, cluster_address):
             ],
         )
     c = docker_client.containers.run(
-        img, command="/bin/bash", detach=True, tty=True, stdin_open=True, **cuda_args
+        img,
+        command="/bin/bash",
+        detach=True,
+        tty=True,
+        stdin_open=True,
+        pid_mode="host",
+        **cuda_args,
     )
     res = c.exec_run(f"service ssh start")
     assert "Starting OpenBSD Secure Shell server" in res.output.decode()
@@ -224,7 +230,8 @@ def main_ray_cluster(working_dir):
 
 
 @pytest.fixture(scope="function")
-def gpu_lock(tmp_path):
+def gpu_lock(tmpdir_factory):
+    tmp_path = Path(tmpdir_factory.getbasetemp())
     if not torch.cuda.is_available():
         yield False
     else:
@@ -232,20 +239,30 @@ def gpu_lock(tmp_path):
             yield True
 
 
-@pytest.fixture(scope="function")
-def gpu_manager(gpu_lock):
+def _gpu_manager(gpu_lock, ray_cluster, timeout=5):
     if "CUDA_VISIBLE_DEVICES" in os.environ:
         devices = copy.deepcopy(os.environ["CUDA_VISIBLE_DEVICES"])
     else:
         devices = ""
     os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
     with mock.patch("ablator.utils.base._get_gpu_info", lambda: _get_gpu_info()[:2]):
-        yield GPUManager.remote([0, 1])
+        yield GPUManager.remote(timeout, [0, 1])
     os.environ["CUDA_VISIBLE_DEVICES"] = devices
 
 
 @pytest.fixture(scope="function")
-def ray_cluster(tmp_path: Path, main_ray_cluster: DockerRayCluster, gpu_lock):
+def gpu_manager(gpu_lock, ray_cluster):
+    yield from _gpu_manager(gpu_lock, ray_cluster)
+
+
+@pytest.fixture(scope="function")
+def very_patient_gpu_manager(gpu_lock, ray_cluster):
+    yield from _gpu_manager(gpu_lock, ray_cluster, 10000000)
+
+
+@pytest.fixture(scope="function")
+def ray_cluster(tmpdir_factory, main_ray_cluster: DockerRayCluster, gpu_lock):
+    tmp_path = Path(tmpdir_factory.getbasetemp())
     with FileLock(tmp_path.joinpath(".ray_cluster")):
         main_ray_cluster.setUp()
         assert len(main_ray_cluster.node_ips()) == main_ray_cluster.nodes + 1

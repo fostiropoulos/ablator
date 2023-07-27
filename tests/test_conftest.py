@@ -32,10 +32,10 @@ def test_conftest_order():
     _assert_np_random()
 
 
-def test_ray_cluster(tmp_path: Path, main_ray_cluster):
-    main_ray_cluster.setUp()
-    assert len(main_ray_cluster.node_ips()) == main_ray_cluster.nodes + 1
-    main_ray_cluster.tearDown()
+def test_ray_cluster(ray_cluster):
+    ray_cluster.setUp()
+    assert len(ray_cluster.node_ips()) == ray_cluster.nodes + 1
+    ray_cluster.tearDown()
 
 
 

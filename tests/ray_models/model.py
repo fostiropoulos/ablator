@@ -1,8 +1,10 @@
 import os
 import time
 from pathlib import Path
+from filelock import FileLock
 
 import pytest
+import ray
 import torch
 from torch import nn
 
@@ -15,10 +17,10 @@ from ablator import (
     Stateless,
     TrainConfig,
 )
+from ablator.analysis.results import Results
 from ablator.config.main import configclass
 from ablator.config.mp import ParallelConfig, SearchSpace
-from ablator.mp.gpu_manager import GPUManager, unlock_gpu, wait_get_gpu
-
+from ablator.main.mp import ParallelTrainer
 
 N_MOCK_NODES = 10
 
@@ -123,13 +125,39 @@ def working_dir():
     return WORKING_DIR
 
 
-def _remote_fn(gpu_manager: GPUManager, gpu_util=100):
-    least_busy_gpu = wait_get_gpu(gpu_manager, gpu_util)
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{least_busy_gpu}"
-    t = torch.randn(300, 100).to(f"cuda")
+def _remote_fn(gpu_id: int, gpu_manager=None):
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}"
+    t = torch.randn(300, 100, 300).to(f"cuda")
     time.sleep(2)
-    unlock_gpu(gpu_manager, least_busy_gpu)
-    return least_busy_gpu
+    if gpu_manager is not None:
+        ray.get(gpu_manager.unlock.remote(gpu_id))
+    return gpu_id
+
+
+@pytest.fixture(scope="session")
+def ablator(
+    tmpdir_factory,
+    working_dir,
+    main_ray_cluster,
+):
+    tmp_path = Path(tmpdir_factory.getbasetemp())
+    with FileLock(tmp_path.joinpath(".ray_cluster")):
+        main_ray_cluster.setUp()
+        assert len(main_ray_cluster.node_ips()) == main_ray_cluster.nodes + 1
+        n_trials = 9
+        error_wrapper = TestWrapper(MyErrorCustomModel)
+        config = _make_config(tmp_path, search_space_limit=n_trials)
+        config.experiment_dir = tmp_path
+        config.total_trials = n_trials
+        ablator = ParallelTrainer(wrapper=error_wrapper, run_config=config)
+        ablator.launch(working_dir)
+        return ablator
+
+
+@pytest.fixture(scope="session")
+def ablator_results(ablator):
+    config = ablator.run_config
+    return Results(config, ablator.experiment_dir)
 
 
 @pytest.fixture()
@@ -152,11 +180,20 @@ def _make_config(
         scheduler_config=None,
     )
     if search_space is None:
+        n_bins = None
+        if search_space_limit is not None:
+            n_vals = int((search_space_limit) ** 0.5)
+            n_bins = n_vals
+        else:
+            n_vals = 10
         search_space = {
             "train_config.optimizer_config.arguments.lr": SearchSpace(
                 value_range=[0, 19],
                 value_type="float",
-                n_bins=search_space_limit,
+                n_bins=n_bins,
+            ),
+            "model_config.mock_param": SearchSpace(
+                categorical_values=list(range(n_vals)),
             ),
         }
 
