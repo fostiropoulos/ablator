@@ -4,6 +4,13 @@ Loggers package
 Submodules
 ----------
 
+Main Logger module
+-----------------------------------
+
+.. automodule:: ablator.modules.loggers.main
+   :members:
+   :show-inheritance:
+   
 File Logger module
 -----------------------------------
 
@@ -11,23 +18,9 @@ File Logger module
    :members:
    :show-inheritance:
 
-Main Logger module
------------------------------------
-
-.. automodule:: ablator.modules.loggers.main
-   :members:
-   :show-inheritance:
-
 Tensorboard Logger module
 -------------------------------------
 
 .. automodule:: ablator.modules.loggers.tensor
-   :members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: ablator.modules.loggers
    :members:
    :show-inheritance:

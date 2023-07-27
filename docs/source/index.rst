@@ -15,6 +15,7 @@ Welcome to ablator's documentation!
    ablator.main
    ablator.modules
    ablator.utils
+   api.reference
 
 Indices and tables
 ==================

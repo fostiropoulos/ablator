@@ -17,10 +17,3 @@ File Utils module
 .. automodule:: ablator.utils.file
    :members:
    :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: ablator.utils
-   :members:
-   :show-inheritance:

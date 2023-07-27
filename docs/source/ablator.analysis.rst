@@ -12,7 +12,7 @@ Subpackages
 Submodules
 ----------
 
-Analysis module module
+Analysis main module
 ----------------------------
 
 .. automodule:: ablator.analysis.main
@@ -23,12 +23,5 @@ Analysis results module
 -------------------------------
 
 .. automodule:: ablator.analysis.results
-   :members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: ablator.analysis
    :members:
    :show-inheritance:
