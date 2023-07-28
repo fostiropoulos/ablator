@@ -6,7 +6,9 @@ import subprocess
 from pyrclone import RCloneWrapper
 from ablator.config.mp import ParallelConfig
 from ablator.config.main import ConfigBase, configclass
-from ablator.config.rclone import allowed_rclone_remote_configs
+
+
+allowed_rclone_remote_configs = ("gcs_rclone_config", "remote_rclone_config")
 
 
 def make_rclone_config(run_config: ParallelConfig):
@@ -36,7 +38,7 @@ class RcloneConfig(ConfigBase):
 
     def startMount(self, expriement_dir: Path, verbose=False):
         self.rcloneWrapper.run_cmd("lsd", [self.get_remote_path_prefix()])
-        self.experiment_dir = str(expriement_dir)
+        self.experiment_dir = expriement_dir
         if sys.platform == "win32":
             command = ["--rc",
                        "--gcs-bucket-policy-only",
