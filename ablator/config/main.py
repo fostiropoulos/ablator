@@ -75,9 +75,9 @@ class ConfigBase:
     KeyError
         If unexpected arguments are provided.
 
-    Notes
-    -----
-    All config class must be decorated with ``@configclass``
+    .. note::
+       All config class must be decorated with ``@configclass``
+
     """
     config_class = type(None)
 
