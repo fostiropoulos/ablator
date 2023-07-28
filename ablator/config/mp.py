@@ -1,6 +1,7 @@
 from ablator.config.hpo import SearchSpace
 from ablator.config.main import configclass
 from ablator.config.proto import RunConfig
+from ablator.config.rclone import GcsRcloneConfig, RemoteRcloneConfig
 from ablator.config.types import Dict, Enum, Optional, Stateless
 from ablator.modules.storage.remote import RemoteConfig
 
@@ -76,3 +77,5 @@ class ParallelConfig(RunConfig):
     search_algo: Stateless[SearchAlgo] = SearchAlgo.tpe
     ignore_invalid_params: Stateless[bool] = False
     remote_config: Stateless[Optional[RemoteConfig]] = None
+    gcs_rclone_config: Stateless[Optional[GcsRcloneConfig]] = None
+    remote_rclone_config: Stateless[Optional[RemoteRcloneConfig]] = None
