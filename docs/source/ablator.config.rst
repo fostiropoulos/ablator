@@ -1,8 +1,8 @@
 Config package
 ==============
 
-Modules
------------
+Submodules
+----------
 
 .. toctree::
    :maxdepth: 4

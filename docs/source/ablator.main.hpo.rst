@@ -10,7 +10,6 @@ Base Sampler module
 .. automodule:: ablator.main.hpo.base
    :members:
    :show-inheritance:
-   :exclude-members: __init__, 
 
 Grid Sampler module
 ----------------------------

@@ -1,5 +1,5 @@
 Main package
-====================
+============
 
 Subpackages
 -----------
@@ -15,18 +15,8 @@ Subpackages
 Submodules
 ----------
 
-Prototype Trainer module
--------------------------
-
-.. automodule:: ablator.main.proto
-   :members:
-   :show-inheritance:
-   :exclude-members: pre_train_setup
-
-Multi-process Trainer module
-----------------------------
-
-.. automodule:: ablator.main.mp
-   :members:
-   :show-inheritance:
-   :exclude-members: pre_train_setup
+.. toctree::
+   :maxdepth: 4
+   
+   ablator.main.prototrainer
+   ablator.main.mptrainer

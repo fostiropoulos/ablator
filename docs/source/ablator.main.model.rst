@@ -1,5 +1,5 @@
 Main model package
-==========================
+==================
 
 Submodules
 ----------
@@ -13,7 +13,7 @@ Submodules
 ..    :exclude-members: CheckpointNotFoundError, EvaluationError, LogStepError, TrainPlateauError
 
 Model Wrapper module
----------------------------------
+--------------------
 
 .. automodule:: ablator.main.model.wrapper
    :members:

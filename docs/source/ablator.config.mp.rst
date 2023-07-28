@@ -1,7 +1,7 @@
 Parallel Configuration module
------------------------------
+=============================
 
-.. automodule:: ablator.config.mp
+.. autoclass:: ablator.config.mp.ParallelConfig
    :members:
    :show-inheritance:
-   :exclude-members: Optim, SearchAlgo
+   :exclude-members: config_class

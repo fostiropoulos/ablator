@@ -1,11 +1,11 @@
 Metrics package
-===============================
+===============
 
 Submodules
 ----------
 
 Main Metrics module
------------------------------------
+-------------------
 
 .. autoclass:: ablator.modules.metrics.main.Metrics
    :members:

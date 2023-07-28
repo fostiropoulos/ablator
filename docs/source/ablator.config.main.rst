@@ -1,7 +1,5 @@
 Base Configuration module
 ==========================
 
-.. automodule:: ablator.config.main
-   :members:
+.. autoclass:: ablator.config.main.ConfigBase
    :show-inheritance:
-   :exclude-members: Missing

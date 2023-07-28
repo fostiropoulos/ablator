@@ -1,5 +1,5 @@
 Analysis package
-========================
+================
 
 Subpackages
 -----------
@@ -9,16 +9,11 @@ Subpackages
 
    ablator.analysis.plot
 
-Analysis main module
-----------------------------
+Submodules
+----------
 
-.. automodule:: ablator.analysis.main
-   :members:
-   :show-inheritance:
+.. toctree::
+   :maxdepth: 4
 
-Analysis results module
--------------------------------
-
-.. automodule:: ablator.analysis.results
-   :members:
-   :show-inheritance:
+   ablator.analysis.main
+   ablator.analysis.results

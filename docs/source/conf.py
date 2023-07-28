@@ -36,10 +36,6 @@ numpydoc_show_class_members = False
 numpydoc_class_members_toctree = False
 numpydoc_show_inherited_class_membersbool = False
 
-autodoc_default_options = {
-    'special-members': '__init__'
-}
-
 html_title = "Ablator Documentation"
 html_favicon = '_static/ablator-logo.svg'
 
