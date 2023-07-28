@@ -115,10 +115,17 @@ def pytest_collection_modifyitems(config, items):
         # --runslow given in cli: do not skip slow tests
         return
     skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+    skip_dist = pytest.mark.skip(reason="distributed tests run only on linux.")
     for item in items:
         argnames = item._fixtureinfo.argnames
-        if "main_ray_cluster" in argnames or "ray_cluster" in argnames:
+        if (
+            "main_ray_cluster" in argnames
+            or "ray_cluster" in argnames
+            or "ablator" in argnames
+        ):
             item.add_marker(skip_slow)
+        elif platform.system().lower() != "linux":
+            item.add_marker(skip_dist)
 
 
 def build_docker_image(docker_client: docker.DockerClient):
@@ -246,7 +253,7 @@ class DockerRayCluster:
         self._wait_nodes(prev_nodes, -1 * n_nodes)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def main_ray_cluster(working_dir, pytestconfig):
     assert not ray.is_initialized(), "Can not run tests with ray initialized."
     docker_tag = pytestconfig.getoption("--docker-tag")
