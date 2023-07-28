@@ -27,3 +27,6 @@ class RemoteRcloneConfig(RcloneConfig):
     user: Stateless[str]
     port: Stateless[int] = 22
     key_file: Stateless[str]
+
+
+allowed_rclone_remote_configs = ("gcs_rclone_config", "remote_rclone_config")

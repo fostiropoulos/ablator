@@ -1,8 +1,10 @@
 import copy
 
 import numpy as np
+from ablator.config.mp import ParallelConfig
 
 from ablator.mp.node_manager import Resource
+from ablator.config.rclone import allowed_rclone_remote_configs
 
 
 def _sorted_gpu_util(resources: list[Resource]):
@@ -91,3 +93,16 @@ def _sorted_nodes_by_util(
         if _should_sample(node_ip):
             _free_nodes.append(node_ip)
     return _free_nodes
+
+
+def make_rclone_config(run_config: ParallelConfig):
+    count = 0
+    rclone_config = None
+    for rclone_config_name in allowed_rclone_remote_configs:
+        config = getattr(run_config, rclone_config_name)
+        if config:
+            count += 1
+            rclone_config = config
+    assert count <= 1, "You can just have one central remote repository"
+    if rclone_config is not None:
+        run_config.rclone_config = rclone_config

@@ -6,6 +6,9 @@ import pytest
 
 from ablator.config.rclone import RemoteRcloneConfig
 from ablator.modules.storage.rclone import RcloneConfig
+from ablator.mp.utils import make_rclone_config
+import tests.ray_models.model
+
 pytestmark = pytest.mark.skipif(
     sys.platform != 'linux',
     reason="Only runs on Linux"
@@ -43,6 +46,16 @@ def test_rclone(tmp_path: Path):
     os.makedirs(local_path, exist_ok=True)
     assert_error_msg(lambda: remoteRcloneConfig.startMount(local_path, verbose=False),
                      "rclone running with error, please check the config again!"),
+
+
+def test_make_config(tmp_path: Path, make_config):
+    run_config = make_config(tmp_path=tmp_path)
+    run_config.remote_rclone_config = RemoteRcloneConfig(
+        host="localhost",
+        user="",
+        key_file="~/.ssh/id_rsa",
+    )
+    make_rclone_config(run_config)
 
 
 if __name__ == "__main__":

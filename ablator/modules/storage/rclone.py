@@ -4,24 +4,7 @@ import sys
 import subprocess
 
 from pyrclone import RCloneWrapper
-from ablator.config.mp import ParallelConfig
 from ablator.config.main import ConfigBase, configclass
-
-
-allowed_rclone_remote_configs = ("gcs_rclone_config", "remote_rclone_config")
-
-
-def make_rclone_config(run_config: ParallelConfig):
-    count = 0
-    rclone_config = None
-    for rclone_config_name in allowed_rclone_remote_configs:
-        config = getattr(run_config, rclone_config_name)
-        if config:
-            count += 1
-            rclone_config = config
-    assert count <= 1, "You can just have one central remote repository"
-    if rclone_config is not None:
-        run_config.rclone_config = rclone_config
 
 
 @configclass
