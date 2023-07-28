@@ -113,13 +113,10 @@ def pytest_addoption(parser):
 def pytest_collection_modifyitems(config, items):
     skip_slow = pytest.mark.skip(reason="need --runslow option to run")
     skip_dist = pytest.mark.skip(reason="distributed tests run only on linux.")
+    dist_arg_names = ["main_ray_cluster", "ray_cluster", "ablator", "ablator_results"]
     for item in items:
         argnames = item._fixtureinfo.argnames
-        if (
-            "main_ray_cluster" in argnames
-            or "ray_cluster" in argnames
-            or "ablator" in argnames
-        ):
+        if any(name in argnames for name in dist_arg_names):
             if not config.getoption("--runslow"):
                 item.add_marker(skip_slow)
             elif platform.system().lower() != "linux":
