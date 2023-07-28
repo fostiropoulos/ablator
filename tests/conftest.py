@@ -98,6 +98,29 @@ def make_node(docker_client: docker.DockerClient, img, cluster_address):
     return c, node_ip
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--runslow", action="store_true", default=False, help="run slow tests"
+    )
+    parser.addoption(
+        "--docker-tag",
+        action="store",
+        default="ablator",
+        help="the docker tag to use for launching a machine.",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--runslow"):
+        # --runslow given in cli: do not skip slow tests
+        return
+    skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+    for item in items:
+        argnames = item._fixtureinfo.argnames
+        if "main_ray_cluster" in argnames or "ray_cluster" in argnames:
+            item.add_marker(skip_slow)
+
+
 def build_docker_image(docker_client: docker.DockerClient):
     py_version = platform.python_version()
     img, *_ = docker_client.images.build(
@@ -109,19 +132,22 @@ def build_docker_image(docker_client: docker.DockerClient):
     return img
 
 
-def get_docker_image(docker_client):
+def get_docker_image(docker_client, docker_tag):
     # NOTE the ray and python version must match between nodes.
     # try:
     # Currently building the image is too slow, we expect it to have been pre-build
-    return docker_client.images.get(DOCKER_TAG)
+    return docker_client.images.get(docker_tag)
     # except:
     #     return build_docker_image(docker_client)
 
 
 class DockerRayCluster:
-    def __init__(self, nodes=1, working_dir=Path(__file__).parent) -> None:
+    def __init__(
+        self, nodes=1, working_dir=Path(__file__).parent, docker_tag=DOCKER_TAG
+    ) -> None:
         self.nodes = nodes
         self.working_dir = working_dir
+        self.docker_tag = docker_tag
         try:
             self.api_client = docker.APIClient()
             self.client = docker.from_env()
@@ -156,7 +182,7 @@ class DockerRayCluster:
             self.cluster_address = ray_cluster.gcs_address
             self.cluster_ip, _ = self.cluster_address.split(":")
 
-        self.img = get_docker_image(self.client)
+        self.img = get_docker_image(self.client, self.docker_tag)
         containers = self._active_containers()
         if self.nodes > 0:
             node_diff = self.nodes - len(containers)  # + 1 for the head.
@@ -168,7 +194,7 @@ class DockerRayCluster:
     def _active_containers(self):
         containers = {}
         node_ips = self.node_ips()
-        for c in self.api_client.containers(filters={"ancestor": DOCKER_TAG}):
+        for c in self.api_client.containers(filters={"ancestor": self.docker_tag}):
             ip = c["NetworkSettings"]["Networks"]["bridge"]["IPAddress"]
             if ip in node_ips and ip not in self.cluster_address:
                 containers[ip] = c
@@ -221,9 +247,10 @@ class DockerRayCluster:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def main_ray_cluster(working_dir):
+def main_ray_cluster(working_dir, pytestconfig):
     assert not ray.is_initialized(), "Can not run tests with ray initialized."
-    cluster = DockerRayCluster(working_dir=working_dir)
+    docker_tag = pytestconfig.getoption("--docker-tag")
+    cluster = DockerRayCluster(working_dir=working_dir, docker_tag=docker_tag)
     cluster.setUp()
     yield cluster
     cluster.tearDown()
