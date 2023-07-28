@@ -111,9 +111,6 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--runslow"):
-        # --runslow given in cli: do not skip slow tests
-        return
     skip_slow = pytest.mark.skip(reason="need --runslow option to run")
     skip_dist = pytest.mark.skip(reason="distributed tests run only on linux.")
     for item in items:
@@ -123,9 +120,10 @@ def pytest_collection_modifyitems(config, items):
             or "ray_cluster" in argnames
             or "ablator" in argnames
         ):
-            item.add_marker(skip_slow)
-        elif platform.system().lower() != "linux":
-            item.add_marker(skip_dist)
+            if not config.getoption("--runslow"):
+                item.add_marker(skip_slow)
+            elif platform.system().lower() != "linux":
+                item.add_marker(skip_dist)
 
 
 def build_docker_image(docker_client: docker.DockerClient):
