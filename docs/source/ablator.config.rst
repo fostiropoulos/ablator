@@ -1,46 +1,18 @@
 Config package
-======================
+==============
 
-Submodules
-----------
+Modules
+-----------
 
-Base Configuration module
---------------------------
+.. toctree::
+   :maxdepth: 4
+   
+   ablator.config.main
+   ablator.config.proto
+   ablator.config.types
+   ablator.config.hpo
+   ablator.config.mp
 
-.. automodule:: ablator.config.main
-   :members:
-   :show-inheritance:
-   :exclude-members: Missing
-
-Prototype Configuration module
-------------------------------
-
-.. automodule:: ablator.config.proto
-   :members:
-   :show-inheritance:
-
-Configuration Types module
----------------------------
-
-.. autoclass:: ablator.config.types.Derived
-   :members:
-   :show-inheritance:
-
-Hyperparameter Optimization Configuration module
-------------------------------------------------
-
-.. automodule:: ablator.config.hpo
-   :members:
-   :show-inheritance:
-   :exclude-members: FieldType
-
-Parallel Configuration module
------------------------------
-
-.. automodule:: ablator.config.mp
-   :members:
-   :show-inheritance:
-   :exclude-members: Optim, SearchAlgo
 
 .. Configuration Utils module
 .. ---------------------------
