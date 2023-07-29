@@ -214,11 +214,6 @@ class ModelBase(ABC):
         -------
         int
             The length of an epoch, represented as the number of batches in the ``train_dataloader``.
-
-        Raises
-        ------
-        AssertionError
-            If the ``train_dataloader`` is not defined or its length is 0.
         """
         assert (
             hasattr(self, "train_dataloader") and len(self.train_dataloader) > 0
@@ -273,20 +268,23 @@ class ModelBase(ABC):
 
         Parameters
         ----------
-        save_dict : dict[str, ty.Any] | None, optional
+        save_dict : dict[str, ty.Any] | None
             A dictionary containing saved model data, such as weights, optimizer state, etc.,
             to be loaded into the model, by default ``None``.
-        strict_load : bool, optional
+        strict_load : bool
             If True, the model will be loaded strictly, ensuring that the saved state
             matches the model's structure exactly. If False, the model can be loaded
             with a partially matching state, by default ``True``.
 
-
+        Raises
+        ------
+        NotImplementedError
+            If this method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def checkpoint(self, is_best=False):
+    def checkpoint(self, is_best: bool = False):
         """
         Abstract method to save a checkpoint of the model. Must be implemented by subclasses.
         Example implementation: Please see the ``checkpoint`` method in the ``ModelWrapper`` class.
@@ -294,8 +292,13 @@ class ModelBase(ABC):
 
         Parameters
         ----------
-        is_best : bool, optional
+        is_best : bool
             Indicates if the current checkpoint is the best model so far, by default ``False``.
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
@@ -313,8 +316,13 @@ class ModelBase(ABC):
         ----------
         run_config : RunConfig
             An instance of ``RunConfig`` containing configuration details.
-        smoke_test : bool, optional
+        smoke_test : bool
             Whether to run as a smoke test, by default ``False``.
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
@@ -331,6 +339,11 @@ class ModelBase(ABC):
         ----------
         run_config : RunConfig
             An instance of ``RunConfig`` containing configuration details.
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
@@ -349,6 +362,11 @@ class ModelBase(ABC):
         ----------
         run_config : RunConfig
             An instance of ``RunConfig`` containing configuration details.
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
@@ -364,18 +382,23 @@ class ModelBase(ABC):
         ----------
         run_config : RunConfig
             An instance of ``RunConfig`` containing configuration details.
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
-    def _init_logger(self, resume=False, debug=False):
+    def _init_logger(self, resume: bool = False, debug: bool = False):
         """
         Initializes the logger used for recording experiment details and progress.
 
         Parameters
         ----------
-        resume : bool, optional
+        resume : bool
             If True, the logger will resume logging from a previous experiment, by default False.
-        debug : bool, optional
+        debug : bool
             If True, no artifacts will be saved by the ``SummaryLogger``, by default False.
         """
         self.logger = SummaryLogger(
@@ -476,10 +499,15 @@ class ModelBase(ABC):
 
         Parameters
         ----------
-        resume : bool, optional
+        resume : bool
             If True, tries to resume training from a checkpoint, by default False.
-        smoke_test : bool, optional
+        smoke_test : bool
             Whether to run as a smoke test, by default False.
+
+        Raises
+        ------
+        RuntimeError
+            If directory containing checkpoints is not found.
         """
 
         if self.run_config.init_chkpt is not None and not resume:
@@ -519,13 +547,13 @@ class ModelBase(ABC):
         ----------
         run_config : RunConfig
             An instance of ``RunConfig`` containing configuration details.
-        smoke_test : bool, optional
+        smoke_test : bool
             Whether to run as a smoke test, by default False.
-        debug : bool, optional
+        debug : bool
             If True, disables logging and model directory creation, by default False.
-        resume : bool, optional
+        resume : bool
             If True, tries to resume training from a checkpoint, by default False.
-        remote_progress_bar: RemoteProgressBar, optional
+        remote_progress_bar : ty.Optional[RemoteProgressBar]
             A remote progress bar can be used to report metrics from the internal progress bar
         """
         self.run_config = run_config
@@ -570,13 +598,13 @@ class ModelBase(ABC):
         else:
             self.progress_bar = butils.Dummy()
 
-    def _find_load_valid_checkpoint(self, chkpt_dir):
+    def _find_load_valid_checkpoint(self, chkpt_dir: Path):
         """
         Finds and loads the latest valid checkpoint from the given directory.
 
         Parameters
         ----------
-        chkpt_dir : str
+        chkpt_dir : Path
             The directory containing the checkpoints.
 
         Raises
@@ -620,8 +648,8 @@ class ModelBase(ABC):
         ----------
         checkpoint_path : Path
             The path to the checkpoint file containing the model and its state.
-        model_only : bool, optional, default=False
-            If True, only the model's weights will be loaded, ignoring other state information.
+        model_only : bool
+            If True, only the model's weights will be loaded, ignoring other state information, default=False.
 
         Raises
         ------
@@ -630,6 +658,10 @@ class ModelBase(ABC):
         RuntimeError
             If no valid checkpoint was found, such as invalid path, and when `model_only=True` we check
             for differences between loaded and current configuration.
+
+        Returns
+        -------
+        None
         """
 
         if not hasattr(self, "run_config") or self.run_config is None:
@@ -660,7 +692,7 @@ class ModelBase(ABC):
     @abstractmethod
     def load_checkpoint(
         self, save_dict: dict[str, ty.Any], model_only: bool = False
-    ) -> None:
+    ):
         """
         Abstract method to load the model and its state from a given save dictionary.
 
@@ -671,8 +703,13 @@ class ModelBase(ABC):
         ----------
         save_dict : dict[str, ty.Any]
             A dictionary containing the saved model state and other necessary information.
-        model_only : bool, optional, default=False
-            If ``True``, only the model's weights will be loaded, ignoring other state information.
+        model_only : bool
+            If ``True``, only the model's weights will be loaded, ignoring other state information. BY default=False.
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
@@ -689,6 +726,11 @@ class ModelBase(ABC):
         -------
         dict[str, ty.Any] | None
             A dictionary containing the saved model state and other necessary information.
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
@@ -705,10 +747,15 @@ class ModelBase(ABC):
         -------
         dict[str, Callable] | None
             A dictionary containing evaluation functions as values and their names as keys.
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
-    def _load_stats(self, save_dict) -> None:
+    def _load_stats(self, save_dict: dict):
         """
         Loads the saved training and validation metrics from the save_dict and updates
         the model's internal metrics with the loaded values.
@@ -751,7 +798,7 @@ class ModelBase(ABC):
 
         Parameters
         ----------
-        user_save_dict : dict[str, ty.Any] | None, optional
+        user_save_dict : dict[str, ty.Any] | None
             A dictionary containing user-defined information to be saved, by default None.
         """
         self.current_state = {
@@ -763,13 +810,13 @@ class ModelBase(ABC):
         if user_save_dict is not None:
             self.current_state.update(**user_save_dict)
 
-    def _checkpoint(self, is_best=False):
+    def _checkpoint(self, is_best: bool = False):
         """
         Updates the current state dictionary with user-defined save_dict and calls the checkpoint method.
 
         Parameters
         ----------
-        is_best : bool, optional
+        is_best : bool
             Indicates if the current checkpoint is the best model so far, by default False.
         """
         user_save_dict = self.save_dict()

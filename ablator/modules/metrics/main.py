@@ -16,13 +16,57 @@ class Metrics:
     Manages memory limits
     applies evaluation functions.
     provides cached or online updates on the train loss
+
+    Parameters
+    ----------
+    *args : ty.Any
+        Arguments for constructor.
+    batch_limit : int
+        Maximum number of batches to keep for every category of data (specified by ``tags``), so only `batch_limit`
+        number of latest batches is stored for each of the categories. Default is 30.
+    memory_limit : int | None
+        Maximum memory (in bytes) of batches to keep for every category of data (specified by ``tags``). Every time
+        this limit is exceeded, ``batch_limit`` will be reduced by 1. Default is 1e8.
+    evaluation_functions : dict[str, Callable] | None
+        A dictionary of key-value pairs, keys are evaluation function names, values are
+        callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
+        must match with names of prediction batches that the model returns. So if model prediction over
+        a batch looks like this: {"preds": <batch of predictions>, "labels": <batch of predicted labels>},
+        then callable's arguments should be ``preds`` and ``labels``, e.g ``evaluation_functions=
+        {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
+    moving_average_limit : int
+        The maximum number of values allowed to store moving average metrics. Default is 3000.
+    static_aux_metrics : dict[str, ty.Any] | None
+        A dictionary of static metrics, those with their initial value that are updated manually,
+        such as learning rate, best loss, total steps, etc. Keys of this dictionary are static metric names,
+        while values is a proper initial value. Default is None.
+    moving_aux_metrics : Iterable[str] | None
+        A list of metrics, those we update with their moving average, such as loss. Default is None.
+
+    Examples
+    --------
+    Initialize an object of Metrics:
+
+    >>> from ablator.modules.metrics.main import Metrics
+    >>> train_metrics = Metrics(
+    ...     batch_limit=30,
+    ...     memory_limit=None,
+    ...     evaluation_functions={"mean": lambda x: np.mean(x)},
+    ...     moving_average_limit=100,
+    ...     static_aux_metrics={"lr": 1.0},
+    ...     moving_aux_metrics={"loss"},
+    ... )
+    >>> train_metrics.to_dict() # metrics are set to np.nan if it's not updated yet
+    {
+        "mean": np.nan, "loss": np.nan, "lr": 1.0
+    }
     """
 
     def __init__(
         self,
-        *args,
+        *args: ty.Any,
         batch_limit: int = 30,
-        memory_limit: int = int(1e8),
+        memory_limit: int | None = int(1e8),
         evaluation_functions: dict[str, Callable] | None = None,
         moving_average_limit: int = 3000,
         # metrics with their initial value that are updated manually, i.e. learning rate
@@ -30,52 +74,7 @@ class Metrics:
         # metrics for which we update with their moving average, i.e. loss
         moving_aux_metrics: Iterable[str] | None = None,
     ):
-        """
-        Initialize the train metrics settings
-
-        Parameters
-        ----------
-        batch_limit : int, optional
-            Maximum number of batches to keep for every category of data (specified by ``tags``), so only `batch_limit`
-            number of latest batches is stored for each of the categories. Default is 30.
-        memory_limit : int, optional
-            Maximum memory (in bytes) of batches to keep for every category of data (specified by ``tags``). Every time
-            this limit is exceeded, ``batch_limit`` will be reduced by 1. Default is 1e8.
-        evaluation_functions : dict[str, Callable], optional
-            A dictionary of key-value pairs, keys are evaluation function names, values are
-            callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
-            must match with names of prediction batches that the model returns. So if model prediction over
-            a batch looks like this: {"preds": <batch of predictions>, "labels": <batch of predicted labels>},
-            then callable's arguments should be ``preds`` and ``labels``, e.g ``evaluation_functions=
-            {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
-        moving_average_limit : int, optional
-            The maximum number of values allowed to store moving average metrics. Default is 3000.
-        static_aux_metrics : dict[str, ty.Any], optional
-            A dictionary of static metrics, those with their initial value that are updated manually,
-            such as learning rate, best loss, total steps, etc. Keys of this dictionary are static metric names,
-            while values is a proper initial value. Default is None.
-        moving_aux_metrics : Iterable[str], optional
-            A list of metrics, those we update with their moving average, such as loss. Default is None.
-
-        Examples
-        --------
-        Initialize an object of Metrics:
-
-        >>> from ablator.modules.metrics.main import Metrics
-        >>> train_metrics = Metrics(
-        ...     batch_limit=30,
-        ...     memory_limit=None,
-        ...     evaluation_functions={"mean": lambda x: np.mean(x)},
-        ...     moving_average_limit=100,
-        ...     static_aux_metrics={"lr": 1.0},
-        ...     moving_aux_metrics={"loss"},
-        ... )
-        >>> train_metrics.to_dict() # metrics are set to np.nan if it's not updated yet
-        {
-            "mean": np.nan, "loss": np.nan, "lr": 1.0
-        }
-        """
-
+        # Initialize the train metrics settings
         assert len(args) == 0, "Metrics takes no positional arguments."
 
         _static_aux_metrics = {} if static_aux_metrics is None else static_aux_metrics
@@ -135,11 +134,6 @@ class Metrics:
         metric_dict : dict[str, ty.Any]
             A dictionary containing the static metrics values to update.
 
-        Raises
-        ------
-        AssertionError:
-            If metric_dict has metrics that are not in static_aux_attributes.
-
         Notes
         -----
         Not all metric_dict items must be preset from static_aux_attributes.
@@ -192,11 +186,6 @@ class Metrics:
         ----------
         metric_dict : dict[str, ty.Any]
             A dictionary containing the moving average metric values to update.
-
-        Raises
-        ------
-        AssertionError:
-            If metric_dict has metrics that are not in moving_aux_metrics.
 
         Examples
         --------
@@ -256,7 +245,7 @@ class Metrics:
         """
         self._preds.reset()
 
-    def evaluate(self, reset: ty.Optional[bool] = True, update_ma: ty.Optional[bool] = True):
+    def evaluate(self, reset: ty.Optional[bool] = True, update_ma: ty.Optional[bool] = True) -> dict:
         """
         Apply evaluation_functions to the set of predictions. Possibly update the
         moving averages (only those associated with evaluation functions, not moving auxiliary metrics) with
@@ -264,9 +253,9 @@ class Metrics:
 
         Parameters
         ----------
-        reset : bool, optional
+        reset : ty.Optional[bool]
             A flag that indicates whether to reset the predictions to empty after evaluation. Default is True.
-        update_ma : bool, optional
+        update_ma : ty.Optional[bool]
             A flag that indicates whether to update the moving averages after evaluation. Default is True.
 
         Returns
@@ -307,13 +296,15 @@ class Metrics:
         return metrics
 
     # pylint: disable=missing-param-doc
-    def append_batch(self, *args, **kwargs):
+    def append_batch(self, *args: ty.Any, **kwargs: ty.Any):
         """
         Appends a batch of predictions to a specific set.
 
         Parameters
         ----------
-        **kwargs : dict
+        *args : ty.Any
+            To catch any positional arguments. If caught then, raise an error.
+        **kwargs : ty.Any
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
             and value is a batch of prediction values. Note that the passed keys in ``**kwrags`` must match arguments in
             evaluation functions arguments in Callable in evaluation_functions when we initialize Metrics object.
@@ -362,11 +353,16 @@ class Metrics:
         preds = getattr(self, attr_name)
         return preds
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, ty.Any]:
         """
         Get all metrics, i.e moving aux metrics, moving evaluation metrics, and static aux metrics.
         Note that moving attributes will be an averaged value of all previous batches. Metrics are
-        set to np.nan if it's never updated before
+        set to np.nan if it's never updated before.
+
+        Returns
+        -------
+        dict[str, ty.Any]
+            Contains key-value pairs for metric's name and it's value.
 
         Examples
         --------

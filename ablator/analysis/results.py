@@ -13,6 +13,7 @@ from ablator.config.main import ConfigBase
 from ablator.config.mp import Optim, ParallelConfig, SearchSpace
 from ablator.config.proto import RunConfig
 
+
 def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame | None:
     """
     Read the results of an experiment and return them as a pandas DataFrame.
@@ -86,9 +87,9 @@ class Results:
         The configuration class used
     experiment_dir : str | Path
         The path to the experiment directory.
-    cache : bool, optional
+    cache : bool
         Whether to cache the results, by default ``False``
-    use_ray : bool, optional
+    use_ray : bool
         Whether to use ray for parallel processing, by default ``False``
 
     Attributes
@@ -254,7 +255,7 @@ class Results:
         cls,
         config_type: type[ConfigBase],
         experiment_dir: Path | str,
-        num_cpus: int | float | None = None,
+        num_cpus: float | None = None,
     ) -> pd.DataFrame:
         """
         Read multiple results from experiment directory with ray to enable parallel processing.
@@ -266,7 +267,7 @@ class Results:
             The configuration class
         experiment_dir : Path | str
             The experiment directory
-        num_cpus : int | float | None
+        num_cpus : float | None
             Number of CPUs to use for ray processing, by default ``None``
 
         Returns
@@ -282,16 +283,13 @@ class Results:
         Examples
         --------
         >>> results.read_results(config_type = ParallelConfig, experiment_dir = "/tmp/results/experiment_8925_9991/")
-        >>> returns dataframe
-
-        train_loss	val_loss	best_iteration	best_loss	current_epoch	current_iteration	epochs ...
+        train_loss	val_loss	best_iteration	best_loss	current_epoch	current_iteration	epochs
         13.3658738		        0	                inf	            1	            100             5
         2.277102967	0.277085876	100	            0.277085876	        2	            200	            5
         2.277154112	0.27619998	200	            0.27619998	        3	            300	            5
         2.276529543	0.286987235	200	            0.27619998	        4	            400	            5
         2.279828385	0.274052692	400	            0.274052692	        5	            500	            5
         11.91869608		        0	                inf	            1	            100	            5
-        ...
         """
         results: list[pd.DataFrame] = []
         futures: list[ray.ObjectRef] = []

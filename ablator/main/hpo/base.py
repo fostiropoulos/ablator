@@ -27,7 +27,7 @@ class BaseSampler(ABC):
         ----------
         trial_id : int
             the trial_id which was returned when running ``eager_sampler``
-        metrics : dict[str, float]
+        metrics : dict[str, float] | None
             a metric dictionary corresponding to the updated metrics.
         state : TrialState
             the updated trial state
@@ -72,14 +72,14 @@ class BaseSampler(ABC):
         """
         raise NotImplementedError
 
-    def eager_sample(self) -> tuple[int, dict[str, ty.Any], None | dict[str, ty.Any]]:
+    def eager_sample(self) -> tuple[int, dict[str, ty.Any], None | dict[str, ty.Any]]:  # noqa
         """
         eager_sample A sampled trial can be erroneous, for this reason we eagerly sample
         and lock the sampler until the user can verify the sampled configuration.
 
         Returns
         -------
-        tuple[int | dict[str, ty.Any]]
+        tuple[int, dict[str, ty.Any], None | dict[str, ty.Any]]
             a tuple that contains the trial id and the sampled configuration from the search space.
 
         Raises

@@ -51,7 +51,7 @@ def save_checkpoint(state: object, filename: str = "checkpoint.pt"):
     ----------
     state : object
         Model State dictionary to save.
-    filename : str, optional
+    filename : str
         The name of the checkpoint file, by default "checkpoint.pt".
     """
     torch.save(state, filename)

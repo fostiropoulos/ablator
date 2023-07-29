@@ -1,4 +1,5 @@
 import logging
+import typing as ty
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,14 +27,14 @@ class Categorical(Plot):
 
     Parameters
     ----------
-    *args : tuple
+    *args : ty.Any
         To pass any arguments to Plot.
-    **kwargs : dict
+    **kwargs : ty.Any
         To pass any key-value args to Plot
     """
     DATA_TYPE: str = "categorical"
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: ty.Any, **kwargs: ty.Any) -> None:
         super().__init__(*args, **kwargs)
         self.attribute_metric_map = self._make_attribute_metric_map(
             self.metric, self.attributes
@@ -79,12 +80,12 @@ class ViolinPlot(Categorical):
 
     Parameters
     ----------
-    *args : tuple
+    *args : ty.Any
         To pass any arguments to Categorical.
-    **kwargs : dict
+    **kwargs : ty.Any
         To pass any key-value args to Categorical
     """
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: ty.Any, **kwargs: ty.Any) -> None:
         sns.set()
         sns.set_style("whitegrid")
         self.figsize = (8, 4)

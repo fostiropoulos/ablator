@@ -2,8 +2,8 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-import typing as ty
 import ray
+
 
 class FileLogger:
     """
@@ -17,11 +17,20 @@ class FileLogger:
         ANSI escape code for the error text color.
     ENDC : str
         ANSI escape code for resetting the text color.
+
+    Parameters
+    ----------
+    path : str | Path | None
+        Path to the log file, by default ``None``.
+    verbose : bool
+        Whether to print messages to the console, by default ``True``.
+    prefix : str | None
+        A prefix to add to each logged message, by default ``None``.
     """
 
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
+    WARNING: str = "\033[93m"
+    FAIL: str = "\033[91m"
+    ENDC: str = "\033[0m"
 
     def __init__(
         self,
@@ -29,18 +38,7 @@ class FileLogger:
         verbose: bool = True,
         prefix: str | None = None,
     ):
-        """
-        Initialize a FileLogger.
-
-        Parameters
-        ----------
-        path : str | Path | None, optional
-            Path to the log file, by default ``None``.
-        verbose : bool, optional
-            Whether to print messages to the console, by default ``True``.
-        prefix : str | None, optional
-            A prefix to add to each logged message, by default ``None``.
-        """
+        # Initialize a FileLogger.
         self.path = path
         if path is not None:
             self.set_path(path)
@@ -61,28 +59,29 @@ class FileLogger:
             with open(self.path, "a", encoding="utf-8") as f:
                 f.write(f"{msg}\n")
 
-    def _print(self, msg: str, verbose=False):
-        """Print a message to the console.
+    def _print(self, msg: str, verbose: bool = False):
+        """
+        Print a message to the console.
 
         Parameters
         ----------
         msg : str
             The message to print.
-        verbose : bool, optional
+        verbose : bool
             Whether to print messages to the console, by default True.
         """
 
         if self.verbose or verbose:
             print(msg)
 
-    def info(self, msg: str, verbose: ty.Optional[bool] = False) -> str:
+    def info(self, msg: str, verbose: bool = False) -> str:
         """Log an info message.
 
         Parameters
         ----------
         msg : str
             The message to log.
-        verbose : bool, optional
+        verbose : bool
             Whether to print messages to the console, by default ``False``.
 
         Returns
@@ -92,14 +91,14 @@ class FileLogger:
         """
         return self(msg, verbose)
 
-    def warn(self, msg: str, verbose: ty.Optional[bool] = True) -> str:
+    def warn(self, msg: str, verbose: bool = True) -> str:
         """Log a warning message.
 
         Parameters
         ----------
         msg : str
             The message to log.
-        verbose : bool, optional
+        verbose : bool
             Whether to print messages to the console, by default ``True``.
 
         Returns
@@ -126,14 +125,14 @@ class FileLogger:
         msg = f"{FileLogger.FAIL}{msg}{FileLogger.ENDC}"
         return self(msg, True)
 
-    def __call__(self, msg: str, verbose=True) -> str:
+    def __call__(self, msg: str, verbose: bool = True) -> str:
         """Log a message.
 
         Parameters
         ----------
         msg : str
             The message to log.
-        verbose : bool, optional
+        verbose : bool
             Whether to print messages to the console, by default True.
 
 
@@ -153,7 +152,7 @@ class FileLogger:
 
         Parameters
         ----------
-        prefix : str | None, optional
+        prefix : str | None
             The prefix to add to each logged message, by default ``None``.
         """
         if prefix is not None:

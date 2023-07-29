@@ -2,7 +2,10 @@
 Custom types for runtime checking
 """
 
+# flake8: noqa
+
 import typing as ty
+from typing import Any
 from collections import namedtuple
 from enum import Enum as _Enum
 
@@ -91,7 +94,7 @@ class Enum(_Enum):
             val = type(self)(val)
         return super().__eq__(val)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """
         Calculates the hash of the Enum instance.
 
@@ -286,7 +289,7 @@ def _strip_hint_collection(type_hint) -> tuple:
     )
 
 
-def parse_type_hint(cls, type_hint) -> Annotation:
+def parse_type_hint(cls: Any, type_hint) -> Annotation:
     """
     Parses a type hint and returns a parsed annotation.
 
@@ -322,7 +325,7 @@ def parse_type_hint(cls, type_hint) -> Annotation:
     )
 
 
-def _parse_class(cls, kwargs) -> object:
+def _parse_class(cls, kwargs: dict | object) -> object:
     """
     Parse values whose types are not  a collection or in ALLOWED_TYPES
     eg. bool, added dict(tune configs)
@@ -331,7 +334,7 @@ def _parse_class(cls, kwargs) -> object:
     ----------
     cls : Type
         The input Type
-    kwargs : dict or object
+    kwargs : dict | object
         The keyword arguments or object to parse with the given type
 
     Returns
@@ -358,7 +361,7 @@ def _parse_class(cls, kwargs) -> object:
 
 
 # pylint: disable=too-complex
-def parse_value(val, annot: Annotation, name=None) -> ty.Any:
+def parse_value(val: Any, annot: Annotation, name: str | None = None) -> ty.Any:
     """
     Parses a value based on the given annotation.
 
@@ -368,7 +371,7 @@ def parse_value(val, annot: Annotation, name=None) -> ty.Any:
         The input value to parse.
     annot : Annotation
         The annotation namedtuple to guide the parsing.
-    name : str, optional
+    name : str | None
         The name of the value, by default ``None``.
 
     Returns

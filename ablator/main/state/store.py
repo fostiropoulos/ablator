@@ -53,16 +53,23 @@ class Trial(Base):
     Attributes
     ----------
     id: Mapped[int]
-        the trial Id
+        The trial Id used for internal purposes
     config_uid: Mapped[str]
-        the uid associated with the trial
+        The configuration identifier associated with the trial's unique attributes
     metrics: Mapped[PickleType]
+        The performance metrics dictionary associated as reported by the trial.
+        Dict[str,float] where str is the metric name and float is the metric value.
     config_param: Mapped[PickleType]
+        The configuration parameters for the specific trial including the defaults.
     aug_config_param: Mapped[PickleType]
+        The augmenting configuration as picked by the config sampler.
+        It is the values only different from the default config (excl. Derived properties)
     trial_num: Mapped[Integer]
+        The trial_num corresponding to the internal HPO sampler, used to communicate with the sampler.
     state: Mapped[PickleType]
+        The ``TrialState``
     runtime_errors: Mapped[int]
-        total runtime errors in the trial
+        Total runtime errors that the trial encountered and are incremented every time the trial faces a recoverable error.
     """
     __tablename__ = "trial"
     id: Mapped[int] = mapped_column(primary_key=True)

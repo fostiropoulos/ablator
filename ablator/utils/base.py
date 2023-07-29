@@ -47,7 +47,7 @@ def iter_to_numpy(iterable: Iterable) -> ty.Any:
 
     Returns
     -------
-    any
+    ty.Any
         The iterable with torch.Tensor elements replaced with their NumPy array equivalents.
     """
     return apply_lambda_to_iter(
@@ -64,7 +64,7 @@ def iter_to_device(
 
     Parameters
     ----------
-    data_dict : dict | list
+    data_dict : Iterable
         The input dictionary or list containing torch.Tensor elements.
     device : str
         The target device for the tensors.
@@ -200,7 +200,7 @@ def parse_device(device: ty.Union[str, list[str], int]) -> ty.Any:
 
     Returns
     -------
-    any
+    ty.Any
         The parsed device string, integer, or list of device strings or integers.
 
     Raises
@@ -286,7 +286,7 @@ def get_gpu_mem(
 
     Parameters
     ----------
-    mem_type : ty.Literal["used", "total", "free"], optional
+    mem_type : ty.Literal["used", "total", "free"]
         The type of memory information to retrieve, by default "total".
 
     Returns
@@ -389,17 +389,17 @@ def num_format(
     ----------
     value : str | int | float | np.integer | np.floating
         the value to format
-    width : int, optional
+    width : int
         the width of the decimal places, by default 8
 
     Returns
     -------
     str
         The formatted string representation of the `value`
-    
+
     Examples
     --------
-    >>> num_format(123456, width=8) 
+    >>> num_format(123456, width=8)
     123456
     >>> num_format(123456789, width=8)
     1.23e+08

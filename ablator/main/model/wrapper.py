@@ -31,25 +31,21 @@ class ModelWrapper(ModelBase):
 
     Attributes
     ----------
-    model_class: torch.nn.Module
+    model_class : torch.nn.Module
         The model class to wrap.
-    model: torch.nn.Module
+    model : torch.nn.Module
         The model created from the model class or checkpoint
-    optimizer: Optimizer
+    optimizer : Optimizer
         The optimizer created from the optimizer config or checkpoint
-    scaler: GradScaler
+    scaler : GradScaler
         The scaler created from the scaler config or checkpoint
-    scheduler: Scheduler
+    scheduler : Scheduler
         The scheduler created from the scheduler config or checkpoint
 
     Parameters
     ----------
-    model_class: torch.nn.Module
+    model_class : type[nn.Module]
         The model class to wrap.
-    model: nn.module
-    optimizer: Optimizer
-    scaler: GradScaler
-    scheduler: Scheduler
     """
 
     def __init__(
@@ -78,16 +74,16 @@ class ModelWrapper(ModelBase):
         self,
         save_dict: dict[str, ty.Any] | None = None,
         strict_load: bool = True,
-    ) -> None:
+    ):
         """
         Creates the model, optimizer, scheduler and scaler from the save dict or from config.
 
         Parameters
         ----------
-        save_dict: dict[str, ty.Any]
-            The save dict to load from.
-        strict_load: bool
-            Whether to load the model strictly or not.
+        save_dict : dict[str, ty.Any] | None
+            The save dict to load from. By default ``None``.
+        strict_load : bool
+            Whether to load the model strictly or not. By default ``True``
         """
         save_dict = {} if save_dict is None else save_dict
         scheduler_state = save_dict["scheduler"] if "scheduler" in save_dict else None
@@ -137,18 +133,18 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        model: nn.Module
+        model : nn.Module
             The model to create the scheduler for.
-        optimizer: Optimizer
+        optimizer : Optimizer
             The optimizer to create the scheduler for.
-        scheduler_config: SchedulerConfig | None
-            The scheduler config to create the scheduler from.
-        scheduler_state: dict[str, ty.Any] | None
-            The scheduler state to load the scheduler from.
+        scheduler_config : SchedulerConfig | None
+            The scheduler config to create the scheduler from. By Default None.
+        scheduler_state : dict[str, ty.Any] | None
+            The scheduler state to load the scheduler from. By Default None.
 
         Returns
         -------
-        scheduler: Scheduler
+        ty.Optional[Scheduler]
             The scheduler.
         """
         scheduler: ty.Optional[Scheduler] = None
@@ -175,16 +171,16 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        model: nn.Module
+        model : nn.Module
             The model to create the optimizer for.
-        optimizer_config: OptimizerConfig
-            The optimizer config to create the optimizer from.
-        optimizer_state: dict[str, ty.Any]
-            The optimizer state to load the optimizer from.
+        optimizer_config : OptimizerConfig | None
+            The optimizer config to create the optimizer from. By Default None.
+        optimizer_state : dict[str, ty.Any] | None
+            The optimizer state to load the optimizer from. By Default None.
 
         Returns
         -------
-        optimizer: Optimizer
+        Optimizer
             The optimizer.
         """
         optimizer: Optimizer
@@ -217,12 +213,12 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        scaler_state: dict[str, ty.Any], optional
-            The scaler state to load the scaler from.
+        scaler_state : ty.Optional[dict[str, ty.Any]]
+            The scaler state to load the scaler from. optional, by default ``None``
 
         Returns
         -------
-        scaler: GradScaler
+        GradScaler
             The scaler.
         """
         scaler = GradScaler(enabled=self.run_config.amp)
@@ -256,17 +252,16 @@ class ModelWrapper(ModelBase):
 
     def load_checkpoint(
         self, save_dict: dict[str, ty.Any], model_only: bool = False
-    ) -> None:
+    ):
         """
         Loads the checkpoint from the save dict.
 
         Parameters
         ----------
-        save_dict: dict[str, ty.Any]
+        save_dict : dict[str, ty.Any]
             The save dict to load the checkpoint from.
-        model_only: bool
-            Whether to load only the model or include scheduler, optimizer and scaler.
-
+        model_only : bool
+            Whether to load only the model or include scheduler, optimizer and scaler. By default False.
 
         Notes
         -----
@@ -288,16 +283,15 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        data: Iterable
+        data : Iterable
             The data to move to the device.
-        device: ty.Optional[str]
+        device : ty.Optional[str]
             The device to move the data to. If ``None``, the device specified in the config is used.
 
         Returns
         -------
-        data: Iterable
+        Iterable
             The data on the device.
-
         """
         if device is None:
             device = self.device
@@ -311,14 +305,14 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        model: nn.Module
+        model : nn.Module
             The model to train.
-        batch: Iterable
+        batch : Iterable
             The batch of input data to pass through the model,it could be a list, dict or a single tensor.
 
         Returns
         -------
-        out: tuple[dict[str, torch.Tensor] | None, torch.Tensor | None]
+        tuple[dict[str, torch.Tensor] | None, torch.Tensor | None]
             The output of the model,contains current predictions and loss of the model
         """
         batch = self.to_device(batch)
@@ -445,15 +439,16 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        batch: Iterable
+        batch : Iterable
             The batch of input data to pass through the model,it could be a list, dict or a single tensor.
 
         Returns
         -------
-        outputs: dict[str, torch.Tensor] | None
-            The output of the model.
-        train_metrics: dict[str, ty.Any]
-            The training metrics.
+        tuple[dict[str, torch.Tensor] | None, dict[str, ty.Any]]
+            - outputs : dict[str, torch.Tensor] | None
+                The output of the model.
+            - train_metrics: dict[str, ty.Any]
+                The training metrics.
         """
         model = self.model
         optimizer = self.optimizer
@@ -478,7 +473,7 @@ class ModelWrapper(ModelBase):
             train_metrics["loss"] = loss_value
         return outputs, train_metrics
 
-    def log_step(self) -> None:
+    def log_step(self):
         """
         A single step for logging.
 
@@ -496,7 +491,7 @@ class ModelWrapper(ModelBase):
     def mock_train(
         self,
         run_config: ty.Optional[RunConfig] = None,
-        run_async: bool=True,
+        run_async: bool = True,
         block: bool = True,
     ) -> mp.Process | dict[str, float]:
         """
@@ -504,19 +499,20 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        run_config: RunConfig, optional
+        run_config : ty.Optional[RunConfig]
             The run config to use for the mock train.
-        run_async: bool
+        run_async : bool
             Whether to run the mock train in a separate process.
-        block: bool
+        block : bool
             Whether to block the current process until the mock train is finished.
 
         Returns
         -------
-        p: mp.Process
-            The process running the mock train.
-        metrics: dict[str, float]
-            The metrics from the mock train.
+        mp.Process | dict[str, float]
+            - p: mp.Process
+                The process running the mock train.
+            - metrics: dict[str, float]
+                The metrics from the mock train.
         """
         mock_model = copy.deepcopy(self)
 
@@ -599,15 +595,22 @@ class ModelWrapper(ModelBase):
             self._prev_update_time = 1
 
     @ty.final
-    def eval(self, smoke_test:bool =False):
+    def eval(self, smoke_test: bool = False):
         """
         Evaluate the model then update scheduler and save checkpoint if the current iteration is an evaluation step.
         It also check if it is early stopping (check Model Configuration module for more details).
 
         Parameters
         ----------
-        smoke_test: bool
+        smoke_test : bool
             If True, for a smoke test. By default, False
+
+        Raises
+        ------
+        LossDivergedError
+            If the loss is diverged during eval.
+        TrainPlateauError
+            If loss begins to slow down dramatically.
         """
         # Evaluation step
         if self._is_step(self.eval_itr):
@@ -627,26 +630,26 @@ class ModelWrapper(ModelBase):
                 self.logger.info(f"Evaluation Step [{eval_step}] {msg}", verbose=False)
 
     @property
-    def total_steps(self):
+    def total_steps(self) -> int:
         """
         The total number of steps for training.
 
         Returns
         -------
         int
-            total steps = epoch's length * number of epochs.    
+            total steps = epoch's length * number of epochs.
         """
         return self.epoch_len * self.epochs
 
     @property
-    def epochs(self):
+    def epochs(self) -> int:
         """
         The total number of epochs.
 
         Returns
         -------
         int
-            Total number of epochs. 
+            Total number of epochs.
         """
         return self._epochs
 
@@ -658,13 +661,20 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        smoke_test: bool
+        smoke_test : bool
             Whether to run a smoke test.
 
         Returns
         -------
         dict[str, float]
             metrics after completion of training.
+
+        Raises
+        ------
+        ValueError
+            If model outputs are not stored in correct format.
+        LossDivergedError
+            If the loss diverged.
         """
         train_dataloader = self.train_dataloader
         generator = iter(train_dataloader)
@@ -721,14 +731,14 @@ class ModelWrapper(ModelBase):
         ----------
         run_config : RunConfig
             The run config to use for training.
-        smoke_test : bool, default=False
-            Whether to run a smoke test.
-        debug : bool, default=False
-            Whether to run in debug mode.
-        resume : bool, default=False
-            Whether to resume training the model from existing checkpoints and existing experiment state.
-        remote_progress_bar : RemoteProgressBar, optional
-            Optionally, we can pass a remote progress bar to report progress of the training.
+        smoke_test : bool
+            Whether to run a smoke test. By default ``False``
+        debug : bool
+            Whether to run in debug mode. By default ``False``
+        resume : bool
+            Whether to resume training the model from existing checkpoints and existing experiment state. By Default ``False``
+        remote_progress_bar : ty.Optional[RemoteProgressBar]
+            Optionally, we can pass a remote progress bar to report progress of the training. By Default ``None``
 
         Returns
         -------
@@ -764,19 +774,19 @@ class ModelWrapper(ModelBase):
     def evaluate(
         self,
         run_config: RunConfig,
-    ) -> dict[str, float]:
+    ) -> dict[str, dict[str, ty.Any]]:
         """
         Evaluate the model after training on the test and validation sets.
 
         Parameters
         ----------
-        run_config: RunConfig
+        run_config : RunConfig
             The run config to use for evaluation.
 
         Returns
         -------
-        dict[str, float]
-            Metrics        
+        dict[str, dict[str, ty.Any]]
+            Metrics
         """
         self._init_state(run_config, resume=True)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
@@ -821,15 +831,15 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        model: nn.Module
+        model : nn.Module
             The model to apply the loss to.
-        loss: torch.Tensor | None
+        loss : torch.Tensor | None
             The loss to apply.
-        optimizer: Optimizer
+        optimizer : Optimizer
             The optimizer to step.
-        scaler: torch.cuda.amp.GradScaler
+        scaler : torch.cuda.amp.GradScaler
             The scaler to use for mixed precision training.
-        scheduler: ty.Optional[Scheduler]
+        scheduler : ty.Optional[Scheduler]
             The scheduler to step.
 
         Returns
@@ -892,15 +902,15 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        model: nn.Module
+        model : nn.Module
             The model to validate.
-        dataloader: DataLoader
+        dataloader : DataLoader
             The dataloader to use for validation.
-        metrics: Metrics
+        metrics : Metrics
             The metrics to use for validation.
-        subsample: float
-            The fraction of the dataloader to use for validation.
-        smoke_test: bool
+        subsample : float
+            The fraction of the dataloader to use for validation. By default = 1.0.
+        smoke_test : bool
             Whether to execute this function as a smoke test. If ``True``, only one iteration will be performed,
             which is useful for quickly checking if the code runs without errors. Default is ``False``.
 
@@ -937,7 +947,7 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        run_config: RunConfig
+        run_config : RunConfig
             The run configuration.
 
         Returns
@@ -947,18 +957,15 @@ class ModelWrapper(ModelBase):
 
         Examples
         --------
-        Override the method while using modelWrapper.
-
-        class MyModelWrapper(ModelWrapper):
-            ...
-
-            def make_dataloader_train(self, run_config: CustomRunConfig):
-                return torch.utils.data.DataLoader(
-                    train_dataset,
-                    batch_size=32,
-                    shuffle=True
-                )
-            ...
+        >>> class MyModelWrapper(ModelWrapper):
+        ...    ...
+        ...    def make_dataloader_train(self, run_config: CustomRunConfig):
+        ...       return torch.utils.data.DataLoader(
+        ...            train_dataset,
+        ...            batch_size=32,
+        ...            shuffle=True
+        ...        )
+        ...    ...
         """
 
     def evaluation_functions(self) -> dict[str, Callable] | None:
@@ -970,17 +977,15 @@ class ModelWrapper(ModelBase):
 
         Examples
         --------
-        Override the method while using modelWrapper.
-
-        class MyModelWrapper(ModelWrapper):
-            ...
-
-            def evaluation_functions(self):
-                return {
-                    "accuracy": accuracy_score(y_true.flatten(), y_pred.flatten()),
-                    "f1": f1_score(y_true.flatten(), y_pred.flatten(), average='weighted')
-                }
-            ...
+        >>> class MyModelWrapper(ModelWrapper):
+        ... ...
+        ...
+        ...    def evaluation_functions(self):
+        ...        return {
+        ...            "accuracy": accuracy_score(y_true.flatten(), y_pred.flatten()),
+        ...            "f1": f1_score(y_true.flatten(), y_pred.flatten(), average='weighted')
+        ...        }
+        ... ...
         """
 
     # Functions that can be optionally over-written.
@@ -990,7 +995,7 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        run_config: RunConfig
+        run_config : RunConfig
             The run configuration.
 
         Returns
@@ -1000,18 +1005,15 @@ class ModelWrapper(ModelBase):
 
         Examples
         --------
-        Override the method while using modelWrapper.
-
-        class MyModelWrapper(ModelWrapper):
-            ...
-
-            def make_dataloader_test(self, run_config: CustomRunConfig):
-                return torch.utils.data.DataLoader(
-                    test_dataset,
-                    batch_size=32,
-                    shuffle=True
-                )
-            ...
+        >>> class MyModelWrapper(ModelWrapper):
+        ...    ...
+        ...    def make_dataloader_test(self, run_config: CustomRunConfig):
+        ...       return torch.utils.data.DataLoader(
+        ...            test_dataset,
+        ...            batch_size=32,
+        ...            shuffle=True
+        ...        )
+        ...    ...
         """
 
     def make_dataloader_val(self, run_config: RunConfig) -> DataLoader | None:
@@ -1020,7 +1022,7 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        run_config: RunConfig
+        run_config : RunConfig
             The run configuration.
 
         Returns
@@ -1030,23 +1032,25 @@ class ModelWrapper(ModelBase):
 
         Examples
         --------
-        Override the method while using modelWrapper.
-
-        class MyModelWrapper(ModelWrapper):
-            ...
-
-            def make_dataloader_val(self, run_config: CustomRunConfig):
-                return torch.utils.data.DataLoader(
-                    validation_dataset,
-                    batch_size=32,
-                    shuffle=True
-                )
-            ...
+        >>> class MyModelWrapper(ModelWrapper):
+        ...    ...
+        ...    def make_dataloader_val(self, run_config: CustomRunConfig):
+        ...       return torch.utils.data.DataLoader(
+        ...            validation_dataset,
+        ...            batch_size=32,
+        ...            shuffle=True
+        ...        )
+        ...    ...
         """
 
     def config_parser(self, run_config: RunConfig) -> RunConfig:
         """
         Used to initialize Derived properties
+
+        Parameters
+        ----------
+        run_config : RunConfig
+            The run config for the experiment.
 
         Returns
         -------
@@ -1061,7 +1065,8 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        run_config: RunConfig
+        run_config : RunConfig
+            The run config for the experiment.
         """
         self.train_dataloader = self.make_dataloader_train(run_config)
         # pylint: disable=assignment-from-no-return
@@ -1076,8 +1081,8 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        is_best: bool
-            Whether this is the best model so far.
+        is_best : bool
+            Whether this is the best model so far. By default ``False``
         """
         self.logger.checkpoint(
             self.current_state,

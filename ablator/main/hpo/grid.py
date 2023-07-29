@@ -55,38 +55,38 @@ def _expand_search_space(
 
 
 class GridSampler(BaseSampler):
+    """
+    GridSampler, expands the grid-space into evenly spaced intervals. For example,
+    a search space over ``SearchSpace(value_range=[1,10], n_bins=10)`` will be discritized to
+    10 intervals [1,..,10]. If the search space is composed of integers, e.g. ``value_type='int'``
+    the search space will be rounded down via the default python `int()` implementation and only the unique subset
+    will be considered. As a result the discritized search-space can be smaller than n_bins. For example:
+    ``SearchSpace(value_range=[1,5], value_type='int', n_bins=1000)`` will produce a SearchSpace of ``{1,2,3,4,5}``.
+    In contrast, ``SearchSpace(value_range=[1,5], value_type='float', n_bins=1000)`` will
+    produce a SearchSpace of 1000 floats,
+    ``[1. , 1.004004  , 1.00800801, ... , 4.98798799, 4.99199199, 4.995996  , 5.]``.
+
+
+    Previous configurations can be supplied via the `configs` argument. If the configurations are not found in
+    the discretized search_space (could be because of numerical stability errors or poor instantiation)
+    they will be stored in memory. Any duplicate configurations will be removed from current sampling
+    memory.
+
+    Parameters
+    ----------
+    search_space : dict[str, SearchSpace]
+        A dictionary with keys the configuration name and the search space to sample from
+    configs : list[dict[str, ty.Any]] | None
+        Previous configurations to resume the state from, by default None
+    seed : int | None
+        A seed to use for the HPO sampler, by default None
+    """
     def __init__(
         self,
         search_space: dict[str, SearchSpace],
         configs: list[dict[str, ty.Any]] | None = None,
         seed: int | None = None,
     ) -> None:
-        """
-        GridSampler, expands the grid-space into evenly spaced intervals. For example,
-        a search space over ``SearchSpace(value_range=[1,10], n_bins=10)`` will be discritized to
-        10 intervals [1,..,10]. If the search space is composed of integers, e.g. ``value_type='int'``
-        the search space will be rounded down via the default python `int()` implementation and only the unique subset
-        will be considered. As a result the discritized search-space can be smaller than n_bins. For example:
-        ``SearchSpace(value_range=[1,5], value_type='int', n_bins=1000)`` will produce a SearchSpace of ``{1,2,3,4,5}``.
-        In contrast, ``SearchSpace(value_range=[1,5], value_type='float', n_bins=1000)`` will
-        produce a SearchSpace of 1000 floats,
-        ``[1. , 1.004004  , 1.00800801, ... , 4.98798799, 4.99199199, 4.995996  , 5.]``.
-
-
-        Previous configurations can be supplied via the `configs` argument. If the configurations are not found in
-        the discretized search_space (could be because of numerical stability errors or poor instantiation)
-        they will be stored in memory. Any duplicate configurations will be removed from current sampling
-        memory.
-
-        Parameters
-        ----------
-        search_space : dict[str, SearchSpace]
-            A dictionary with keys the configuration name and the search space to sample from
-        configs : list[dict[str, ty.Any]] | None, optional
-            Previous configurations to resume the state from, by default None
-        seed : int | None, optional
-            A seed to use for the HPO sampler, by default None
-        """
         super().__init__()
         self.search_space = search_space
         self.configs = _expand_search_space(search_space)

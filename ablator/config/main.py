@@ -2,6 +2,7 @@ import copy
 import inspect
 import operator
 import typing as ty
+from typing import Any, Union, KeysView
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -79,9 +80,9 @@ class ConfigBase:
     -----
     All config class must be decorated with ``@configclass``
     """
-    config_class = type(None)
+    config_class: Type = type(None)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         class_name = type(self).__name__
         added_variables = {
             item[0]
@@ -131,7 +132,7 @@ class ConfigBase:
             unspected_args = ", ".join(kwargs.keys())
             raise KeyError(f"Unexpected arguments: `{unspected_args}`")
 
-    def keys(self):
+    def keys(self) -> KeysView[str]:
         """
         Get the keys of the configuration dictionary.
 
@@ -143,7 +144,7 @@ class ConfigBase:
         return self.to_dict().keys()
 
     @classmethod
-    def load(cls, path: ty.Union[Path, str]):
+    def load(cls, path: Union[Path, str]):
         """
         Load a configuration object from a file.
 
@@ -195,7 +196,7 @@ class ConfigBase:
             }
         return annotations
 
-    def get_val_with_dot_path(self, dot_path: str):
+    def get_val_with_dot_path(self, dot_path: str) -> Any:
         """
         Get the value of a configuration object attribute using dot notation.
 
@@ -211,7 +212,7 @@ class ConfigBase:
         """
         return operator.attrgetter(dot_path)(self)
 
-    def get_type_with_dot_path(self, dot_path: str):
+    def get_type_with_dot_path(self, dot_path: str) -> Type:
         """
         Get the type of a configuration object attribute using dot notation.
 
@@ -261,15 +262,20 @@ class ConfigBase:
         ----------
         annotations : dict[str, Annotation]
             A dictionary of annotations.
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
-        flatten : bool, optional, default=False
-            Whether to flatten nested dictionaries.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default = False
+        flatten : bool
+            Whether to flatten nested dictionaries. By default = False
 
         Returns
         -------
         dict
             The dictionary representation of the configuration object.
+
+        Raises
+        ------
+        NotImplementedError
+            If the type of annot.collection is not supported.
         """
         return_dict = {}
 
@@ -311,7 +317,6 @@ class ConfigBase:
             elif issubclass(type(_val), Enum):
                 # _val: Enum
                 val = _val.value
-
             else:
                 raise NotImplementedError
             return_dict[field_name] = val
@@ -319,7 +324,7 @@ class ConfigBase:
             return_dict = flatten_nested_dict(return_dict)
         return return_dict
 
-    def write(self, path: ty.Union[Path, str]):
+    def write(self, path: Union[Path, str]):
         """
         Write the configuration object to a file.
 
@@ -407,8 +412,8 @@ class ConfigBase:
         ----------
         config : ConfigBase
             The configuration object to compare.
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default ``False``.
 
         Returns
         -------
@@ -425,7 +430,7 @@ class ConfigBase:
 
     def diff(
         self, config: "ConfigBase", ignore_stateless: bool = False
-    ) -> list[tuple[str, tuple[type, ty.Any], tuple[type, ty.Any]]]:
+    ) -> list[tuple[str, tuple[type, Any], tuple[type, Any]]]:
         """
         Get the differences between the current configuration object and another configuration object.
 
@@ -433,8 +438,8 @@ class ConfigBase:
         ----------
         config : ConfigBase
             The configuration object to compare.
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default ``False``
 
         Returns
         -------
@@ -502,8 +507,8 @@ class ConfigBase:
 
         Parameters
         ----------
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default ``False``
 
         Returns
         -------
@@ -531,8 +536,8 @@ class ConfigBase:
 
         Parameters
         ----------
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. by default ``False``
 
         Returns
         -------
@@ -573,12 +578,6 @@ class ConfigBase:
     def assert_unambigious(self):
         """
         Assert that the configuration object is unambiguous and has all the required values.
-
-        Raises
-        ------
-        AssertionError
-            If the configuration object is ambiguous or missing required values.
-
         """
         for k, annot in self.annotations.items():
             if not annot.optional:

@@ -67,15 +67,15 @@ class Display:
     """
     Class for handling display for terminal and notebook.
 
-    Parameters
-    ----------
+    Arguments
+    ---------
     _curses : curses
         curses object
     stdscr :  curses.initscr()
         To initialize the curses library and create a window object stdscr.
-    nrows : int 
+    nrows : int
         height of stdscr window.
-    nrows : int 
+    nrows : int
         width of stdscr window.
     html_widget : widget.HTML
         html_widget with empty value
@@ -152,6 +152,28 @@ class Display:
 
 @ray.remote
 class RemoteProgressBar:
+    """
+    RemoteProgressBar is a ProgressBar that is passed on a training function to report back
+    to a centralized server the metrics.
+
+    Parameters
+    ----------
+    total_trials : int | None
+        The total_trials
+
+    Attributes
+    ----------
+    start_time : float
+        Stores the start time of initializing remote progress bar.
+    total_trials : int | float
+        Stores the total_trials.
+    closed : dict[str, bool]
+        Stores the key-value pairs of trial's ``uid`` and boolean indicated it is closed or not.
+    texts : dict[str, list[str]]
+        Stores the text associated with the ``uid`` of the trial.
+    finished_trials : int
+        Tracks the total finished trials.
+    """
     def __init__(self, total_trials: int | None):
         super().__init__()
         self.start_time: float = time.time()
@@ -227,16 +249,18 @@ class ProgressBar:
 
     Parameters
     ----------
-    total_steps: int | None
-        total_steps for making bar.
-    epoch_len: int | None
-        to make `epoch_len` iterations using tqdm.
-    logfile: Path | None
-        Path of logfile
-    update_interval: int
-        interval to update metrics
-    remote_display: ty.Optional[RemoteProgressBar]
-    uid: str | None
+    total_steps : int | None
+        The total steps the progress bar is expected to iterate
+    epoch_len : int | None
+        The number of iterations for a single epoch that is used to calculate the time it takes per epoch.
+    logfile : Path | None
+        Path of logfile to read from to display on console.
+    update_interval : int
+        The time interval by which the progress bar will update the displayed metrics.
+    remote_display : ty.Optional[RemoteProgressBar]
+        A Remote display that can be used to report the progress to instead of printing it directly on console
+    uid : str | None
+        The trial uid that is used to report the metrics.
     """
     def __init__(
         self,

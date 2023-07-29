@@ -12,13 +12,13 @@ class SubConfiguration:
         ----------
         arguments: dict[str, ty.Any]
             arguments for the subconfigurations.
-   
+
         Parameters
         ----------
-        **kwargs
+        **kwargs : ty.Any
 
     """
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: ty.Any) -> None:
         _search_space_annotations = list(SearchSpace.__annotations__.keys())
 
         def _parse_value(v):
@@ -81,6 +81,11 @@ class SearchSpace(ConfigBase):
     """
     Search space configuration.
 
+    Parameters
+    ----------
+    *args : ty.Any
+    **kwargs : ty.Any
+
     Attributes
     ----------
     value_range: Optional[Tuple[str, str]]
@@ -96,7 +101,6 @@ class SearchSpace(ConfigBase):
         Total bins for grid sampling, optional
     log: bool = False
         To log. by default, False.
-
     """
 
     value_range: Optional[Tuple[str, str]]
@@ -107,7 +111,7 @@ class SearchSpace(ConfigBase):
     n_bins: Optional[int]
     log: bool = False
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: ty.Any, **kwargs: ty.Any) -> None:
         super().__init__(*args, **kwargs)
         nan_values = sum(
             [
@@ -179,12 +183,17 @@ class SearchSpace(ConfigBase):
         _traverse_dict(self.to_dict(), [])
         return list({".".join(p) for p in paths})
 
-    def to_str(self) ->  str:
+    def to_str(self) -> str:
         """
         Returns
         -------
         str
             Searchspace in string format.
+
+        Raises
+        ------
+        RuntimeError
+            If the Searchspace is invalid or can't be converted to str.
         """
         # TODO make me pretty (e.g. print in an indented format.)
         if self.value_range is not None:
@@ -205,7 +214,7 @@ class SearchSpace(ConfigBase):
             str_repr = f"SearchSpace(sub_configuration={sub_config})"
             return str_repr
 
-        raise RuntimeError("Sub Configuration can't be converted to str.")
+        raise RuntimeError("Searchspace can't be converted to str.")
 
     def contains(self, value: float | int | str | dict[str, ty.Any]) -> bool:
         """
@@ -220,7 +229,7 @@ class SearchSpace(ConfigBase):
         -------
         bool
             whether searchspace contains the value
-    
+
         Raises
         ------
         ValueError

@@ -19,6 +19,11 @@ class TensorboardLogger(LoggerBase):
     """
     A logger class for Tensorboard visualization.
 
+    Parameters
+    ----------
+    summary_dir : Union[str, Path]
+        The directory to store the Tensorboard summary files.
+
     Attributes
     ----------
     summary_dir : Union[str, Path]
@@ -28,14 +33,7 @@ class TensorboardLogger(LoggerBase):
     """
 
     def __init__(self, summary_dir: Union[str, Path]):
-        """
-        Initialize the TensorboardLogger with a summary directory.
-
-        Parameters
-        ----------
-        summary_dir : Union[str, Path]
-            The directory to store the Tensorboard summary files.
-        """
+        # Initialize the TensorboardLogger with a summary directory.
         self.summary_dir = Path(summary_dir).as_posix()
         self.backend_logger = SummaryWriter(log_dir=summary_dir)
 
@@ -51,7 +49,7 @@ class TensorboardLogger(LoggerBase):
             The image data.
         itr : int
             The iteration number.
-        dataformats : str, optional
+        dataformats : ty.Optional[str]
             The format of the image data, by default ``"CHW"``.
         """
         self.backend_logger.add_image(k, v, itr, dataformats=dataformats)

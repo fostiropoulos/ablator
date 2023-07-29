@@ -176,33 +176,30 @@ class OptimizerConfig(ConfigBase):
         Name of the optimizer.
     arguments : OptimizerArgs
         Arguments for the optimizer, specific to a certain type of optimizer.
+
+    Parameters
+    ----------
+    name : str
+        Name of the optimizer, this can be any in ``['adamw', 'adam', 'sgd']``.
+    arguments : dict[str, ty.Any]
+        Arguments for the optimizer, specific to a certain type of optimizer. A common argument
+        can be learning rate, e.g ``{'lr': 0.5}``. If ``name`` is ``"adamw"``, can add ``eps`` to ``arguments``,
+        e.g ``{'lr': 0.5, 'eps': 0.001}``.
+
+    Examples
+    --------
+    In the following example, ``optim_config`` will initialize property ``arguments`` of type ``SGDConfig``,
+    setting ``lr=0.5`` as its property. We also have access to ``init_optimizer()`` method of the property,
+    which initalizes an SGD optimizer. This method is actually called in ``make_optimizer()``
+
+    >>> optim_config = OptimizerConfig("sgd", {"lr": 0.5})
     """
 
     name: str
     arguments: OptimizerArgs
 
-    def __init__(self, name, arguments: dict[str, ty.Any]):
-        """
-        Initializes the optimizer configuration. Add any provided settings to the optimizer.
-
-        Parameters
-        ----------
-        name : str
-            Name of the optimizer, this can be any in ``['adamw', 'adam', 'sgd']``.
-        arguments : dict[str, ty.Any]
-            Arguments for the optimizer, specific to a certain type of optimizer. A common argument
-            can be learning rate, e.g ``{'lr': 0.5}``. If ``name`` is ``"adamw"``, can add ``eps`` to ``arguments``,
-            e.g ``{'lr': 0.5, 'eps': 0.001}``.
-
-        Examples
-        --------
-
-        In the following example, ``optim_config`` will initialize property ``arguments`` of type ``SGDConfig``,
-        setting ``lr=0.5`` as its property. We also have access to ``init_optimizer()`` method of the property,
-        which initalizes an SGD optimizer. This method is actually called in ``make_optimizer()``
-
-        >>> optim_config = OptimizerConfig("sgd", {"lr": 0.5})
-        """
+    def __init__(self, name: str, arguments: dict[str, ty.Any]):
+        # Initializes the optimizer configuration. Add any provided settings to the optimizer.
         argument_cls = OPTIMIZER_CONFIG_MAP[name]
         _arguments = argument_cls(**arguments)
         super().__init__(name=name, arguments=_arguments)
@@ -213,12 +210,12 @@ class OptimizerConfig(ConfigBase):
 
         Parameters
         ----------
-        model : torch.nn.Module
+        model : nn.Module
             The model to optimize.
 
         Returns
         -------
-        optimizer : torch.optim.Optimizer
+        optimizer : Optimizer
             The created optimizer.
 
         Examples
@@ -270,19 +267,19 @@ class SGDConfig(OptimizerArgs):
     weight_decay: float = 0.0
     momentum: float = 0.0
 
-    def init_optimizer(self, model: nn.Module) -> Optimizer:
+    def init_optimizer(self, model: nn.Module) -> SGD:
         """
         Creates and returns an SGD optimizer that optimizes the model's parameters. These parameters
         will be processed via ``get_optim_parameters`` before used to initalized the optimizer.
 
         Parameters
         ----------
-        model : torch.nn.Module
+        model : nn.Module
             The model that has parameters that the optimizer will optimize.
 
         Returns
         -------
-        optimizer : torch.optim.SGD
+        optimizer : SGD
             The created SGD optimizer.
 
         Examples
@@ -341,19 +338,19 @@ class AdamWConfig(OptimizerArgs):
     eps: float = 1e-8
     weight_decay: float = 0.0
 
-    def init_optimizer(self, model: nn.Module) -> Optimizer:
+    def init_optimizer(self, model: nn.Module) -> AdamW:
         """
         Creates and returns an ``AdamW`` optimizer that optimizes the model's parameters. These parameters
         will be processed via ``get_optim_parameters`` before used to initalized the optimizer.
 
         Parameters
         ----------
-        model : torch.nn.Module
+        model : nn.Module
             The model that has parameters that the optimizer will optimize.
 
         Returns
         -------
-        Optimizer
+        AdamW
             An instance of the ``AdamW`` optimizer.
 
         Examples
@@ -406,19 +403,19 @@ class AdamConfig(OptimizerArgs):
     betas: Tuple[float, float] = (0.5, 0.9)
     weight_decay: float = 0.0
 
-    def init_optimizer(self, model: nn.Module) -> Optimizer:
+    def init_optimizer(self, model: nn.Module) -> Adam:
         """
         Creates and returns an ``Adam`` optimizer that optimizes the model's parameters. These parameters
         will be processed via ``get_optim_parameters`` before used to initalized the optimizer.
 
         Parameters
         ----------
-        model : torch.nn.Module
+        model : nn.Module
             The model that has parameters that the optimizer will optimize.
 
         Returns
         -------
-        Optimizer
+        Adam
             An instance of the ``Adam`` optimizer.
 
         Examples

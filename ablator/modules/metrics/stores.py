@@ -62,6 +62,22 @@ class ArrayStore(Sequence):
     """
     Base class for manipulations (storing, getting, resetting) of batches of values.
 
+    Parameters
+    ----------
+    batch_limit : int | None
+        The maximum number of batches of values to store for this single store.
+        If set to None, unlimited number of batches will be stored. Default is None.
+    memory_limit : int | None
+        The maximum memory allowed for the prediction store.
+        If set to None, unlimited number of batches will be stored. Default is None.
+
+    Examples
+    --------
+    >>> from ablator.modules.metrics.stores import ArrayStore
+    >>> train_metrics = ArrayStore(
+    ...     batch_limit=50,
+    ...     memory_limit=1000
+    ... )
     """
 
     def __init__(
@@ -70,26 +86,7 @@ class ArrayStore(Sequence):
         # 100 MB memory limit
         memory_limit: int | None = None,
     ):
-        """
-        Initialize the storage based on the memory / batch_limits provided.
-
-        Parameters
-        ----------
-        batch_limit : int, optional
-            The maximum number of batches of values to store for this single store.
-            If set to None, unlimited number of batches will be stored. Default is None.
-        memory_limit : int or None, optional
-            The maximum memory allowed for the prediction store.
-            If set to None, unlimited number of batches will be stored. Default is None.
-
-        Examples
-        --------
-        >>> from ablator.modules.metrics.stores import ArrayStore
-        >>> train_metrics = ArrayStore(
-        ...     batch_limit=50,
-        ...     memory_limit=1000
-        ... )
-        """
+        # Initialize the storage based on the memory / batch_limits provided.
         super().__init__()
         self._arr: list[np.ndarray] = []
         self.limit = int(batch_limit) if batch_limit is not None else None
@@ -107,17 +104,11 @@ class ArrayStore(Sequence):
 
         Parameters
         ----------
-        val : np.ndarray or float or int
+        val : np.ndarray | float | int
             The data, can be a batch of data, or a scalar.
-
-        Raises
-        ------
-        AssertionError:
-            If appended value is not numpy array, an integer, or a float number.
 
         Examples
         --------
-
         The following example shows a case where batch limit is exceeded
         (100 values/batches to be appended while only 10 is allowed)
 
@@ -208,6 +199,11 @@ class ArrayStore(Sequence):
         """
         Returns the stored values as a numpy array.
 
+        Returns
+        -------
+        np.ndarray
+            Returns the stored values.
+
         Examples
         --------
         >>> from ablator.modules.metrics.stores import ArrayStore
@@ -279,48 +275,50 @@ class PredictionStore:
     """
     A class for storing prediction scores. This allows for evaluating prediction results using evaluation functions
 
+    Parameters
+    ----------
+    batch_limit : int
+        Maximum number of batches to keep for each array store corresponding to each category of prediction
+        outputs (e.g preds, labels), so only ``batch_limit`` number of latest batches is stored per set of
+        array store. Default is 30.
+    memory_limit : int | None
+        Maximum memory (in bytes) of batches to keep for each array store corresponding to each category of
+        prediction outputs (e.g preds, labels). Default is 1e8.
+    moving_average_limit : int
+        The maximum number of values allowed to store moving average metrics. Default is 3000.
+    evaluation_functions : dict[str, Callable] | list[Callable] | None
+        A dictionary of key-value pairs, keys are evaluation function names, values are
+        callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
+        must match with names of prediction batches that the model returns. So if model prediction over
+        a batch looks like this: ``{"preds": <batch of predictions>, "labels": <batch of predicted labels>}``,
+        then callable's arguments should be ``preds`` and ``labels``, e.g ``evaluation_functions=
+        {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
+
+    Raises
+    ------
+    NotImplementedError
+        If the evaluation function is unrecognized.
+
+    Examples
+    --------
+    >>> from ablator.modules.metrics.stores import PredictionStore
+    >>> pred_store = PredictionStore(
+    ...     batch_limit=10,
+    ...     memory_limit=1000,
+    ...     moving_average_limit=1000,
+    ...     evaluation_functions={"mean": lambda x: np.mean(x)}
+    ... )
     """
 
     def __init__(
         self,
         batch_limit: int = 30,
         # 100 MB memory limit
-        memory_limit: int = int(1e8),
+        memory_limit: int | None = int(1e8),
         moving_average_limit: int = 3000,
         evaluation_functions: dict[str, Callable] | list[Callable] | None = None,
     ):
-        """
-        Initialize the storage settings.
-
-        Parameters
-        ----------
-        batch_limit : int, optional
-            Maximum number of batches to keep for each array store corresponding to each category of prediction
-            outputs (e.g preds, labels), so only ``batch_limit`` number of latest batches is stored per set of
-            array store. Default is 30.
-        memory_limit : int or None, optional
-            Maximum memory (in bytes) of batches to keep for each array store corresponding to each category of
-            prediction outputs (e.g preds, labels). Default is 1e8.
-        moving_average_limit : int, optional
-            The maximum number of values allowed to store moving average metrics. Default is 3000.
-        evaluation_functions : dict[str, Callable], optional
-            A dictionary of key-value pairs, keys are evaluation function names, values are
-            callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
-            must match with names of prediction batches that the model returns. So if model prediction over
-            a batch looks like this: ``{"preds": <batch of predictions>, "labels": <batch of predicted labels>}``,
-            then callable's arguments should be ``preds`` and ``labels``, e.g ``evaluation_functions=
-            {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
-
-        Examples
-        --------
-        >>> from ablator.modules.metrics.stores import PredictionStore
-        >>> pred_store = PredictionStore(
-        ...     batch_limit=10,
-        ...     memory_limit=1000,
-        ...     moving_average_limit=1000,
-        ...     evaluation_functions={"mean": lambda x: np.mean(x)}
-        ... )
-        """
+        # Initialize the storage settings.
         super().__init__()
         self.limit = batch_limit
         self.memory_limit = memory_limit
@@ -502,9 +500,14 @@ class PredictionStore:
             return None
         return {k: self._get_arr(k).get() for k in self._batch_keys}
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Reset to empty all prediction sequences (e.g predictions, labels).
+
+        Returns
+        -------
+        None
+            If self._batch_key = None
 
         Examples
         --------
@@ -558,7 +561,7 @@ class MovingAverage(ArrayStore):
     def __repr__(self) -> str:
         return f"{self.value:.2e}"
 
-    def append(self, val: ty.Union[np.ndarray, torch.Tensor, float, int]):
+    def append(self, val: ty.Union[np.ndarray, torch.Tensor, float, int]): # noqa
         """
         Appends a batch of values, or a single value, constrained on the limits.
 

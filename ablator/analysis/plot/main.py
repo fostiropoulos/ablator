@@ -258,7 +258,7 @@ class PlotAnalysis(Analysis):
         self,
         metric_name_remap: dict[str, str] | None = None,
         attribute_name_remap: dict[str, str] | None = None,
-        **plt_kwargs: dict,
+        **plt_kwargs: ty.Any,
     ):
         """
         The function to generate violinplots for categorical values and linear plots for numerical values.
@@ -270,7 +270,7 @@ class PlotAnalysis(Analysis):
             mappings for config's metrics keys to user defined names. By default, None
         attribute_name_remap : dict[str, str] | None
             mappings for config's searchspace names to user defined names for attributes. By default, None
-        **plt_kwargs : dict, optional
+        **plt_kwargs : ty.Any
         """
         cat_attrs = list(self.categorical_attributes)
         num_attrs = list(self.numerical_attributes)

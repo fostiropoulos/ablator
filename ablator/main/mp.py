@@ -32,6 +32,8 @@ from ablator.config.types import Optional
 
 # TODO refactor into a seperate file and reduce complexity
 # pylint: disable=too-complex,broad-exception-caught
+
+
 def train_main_remote(
     model: ModelWrapper,
     run_config: ParallelConfig,
@@ -55,40 +57,41 @@ def train_main_remote(
         The ModelWrapper that is used to train a model.
     run_config : ParallelConfig
         Runtime configuration for this trial.
-    mp_logger : FileLogger
+    mp_logger : RemoteFileLogger
         The file logger that's used to log training progress.
     uid : int
         the trial unique identifier.
-    fault_tollerant : bool, optional, default=True
-        Whether to tollerate crashes, aka to cease execution when the ray job crashes.
-    crash_exceptions_types : list[type], None, optional, default=None
-        Types of exceptions that are considered as crashes.
-    resume : bool, default=False
-        Whether to resume training the model from existing checkpoints and existing experiment state.
-    clean_reset : bool, default=False
-        Whether to remove model directory when ``CheckpointNotFoundError`` is raised.
-    progress_bar : RemoteProgressBar, optional
+    fault_tollerant : bool
+        Whether to tollerate crashes, aka to cease execution when the ray job crashes. By default True.
+    crash_exceptions_types : list[type] | None
+        Types of exceptions that are considered as crashes. By default None
+    resume : bool
+        Whether to resume training the model from existing checkpoints and existing experiment state. By default False.
+    clean_reset : bool
+        Whether to remove model directory when ``CheckpointNotFoundError`` is raised. By default False.
+    progress_bar : ty.Optional[RemoteProgressBar]
         Optionally, we can use a remote progress bar to update the results of the trial.
 
     Returns
     -------
-    int
-        The trial uid corresponding to the results.
-    dict[str, float], None
-        If exception raised (Except for LossDivergedError and TrainPlateauError),
-        this will be ``None`` object. Otherwise, this will be a dictionary of metrics.
-    TrialState
-        A TrialState object indicating the state of the trial job
+    tuple[int, dict[str, float] | None, TrialState]
+        - int
+            The trial uid corresponding to the results.
+        - dict[str, float], None
+            If exception raised (Except for LossDivergedError and TrainPlateauError),
+            this will be ``None`` object. Otherwise, this will be a dictionary of metrics.
+        - TrialState
+            A TrialState object indicating the state of the trial job
 
-        - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training,
-          returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
+            - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training,
+            returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
 
-        - If ``RuntimeError`` (with message ``'CUDA out of memory'``),
-          or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training,
-          returned state will be ``TrialState.FAIL_RECOVERABLE``
+            - If ``RuntimeError`` (with message ``'CUDA out of memory'``),
+            or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training,
+            returned state will be ``TrialState.FAIL_RECOVERABLE``
 
-        - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised,
-          returned state will be ``TrialState.FAIL``
+            - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised,
+            returned state will be ``TrialState.FAIL``
 
     """
     if crash_exceptions_types is None:
@@ -162,6 +165,13 @@ class ParallelTrainer(ProtoTrainer):
     A class for parallelizing training of models of different configurations with ray.
     Metrics of these models are for optuna to tune hyperparameters. They are also logged to optuna storage.
 
+    Parameters
+    ----------
+    wrapper : ModelWrapper
+        The model wrapper for the ParallelTrainer
+    run_config : ParallelConfig
+        The runtime configuration for this trainer.
+
     Attributes
     ----------
     run_config : ParallelConfig
@@ -178,20 +188,10 @@ class ParallelTrainer(ProtoTrainer):
         Number of trials to run.
     gpu_mem_bottleneck : int
         The minimum memory capacity of all available gpus.
-
     """
 
     def __init__(self, wrapper: ModelWrapper, run_config: ParallelConfig):
-        """
-        Initialize ``ParallelTrainer`` using config from ``run_config``.
-
-        Parameters
-        ----------
-        wrapper: ModelWrapper
-            The model wrapper for the ParallelTrainer
-        run_config : ParallelConfig
-            The runtime configuration for this trainer.
-        """
+        # Initialize ``ParallelTrainer`` using config from ``run_config``.
 
         self.run_config: ParallelConfig
         super().__init__(wrapper=wrapper, run_config=run_config)
@@ -486,7 +486,7 @@ class ParallelTrainer(ProtoTrainer):
         ray_head_address: str | None = None,
         resume: bool = False,
         excluding_files: list[str] | None = None,
-    ):
+    ) -> None:
         """
         Set up and launch the parallel training and tuning process. This includes:
 
@@ -506,15 +506,19 @@ class ParallelTrainer(ProtoTrainer):
         ----------
         working_directory : str
             The working directory that stores codes, modules that will be used by ray.
-        auxilary_modules : list[tys.ModuleType], None
+        auxilary_modules : list[tys.ModuleType] | None
             A list of modules to be used as ray clusters' working environment.
-        ray_head_address : str, None
+        ray_head_address : str | None
             Ray cluster address.
-        resume : bool, default=False
-            Whether to resume training the model from existing checkpoints and existing experiment state.
-        excluding_files: list[str], None
+        resume : bool
+            Whether to resume training the model from existing checkpoints and existing experiment state. By default False
+        excluding_files : list[str] | None
             A list of files in `.gitignore` format, that will be excluded from being uploaded to the ray cluster.
             If unspecified it ignores `.git/**` folder.
+
+        Returns
+        -------
+        None
         """
         try:
             torch.multiprocessing.set_start_method("spawn")

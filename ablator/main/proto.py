@@ -1,6 +1,6 @@
 import copy
 from copy import deepcopy
-
+import typing as ty
 import torch
 
 from ablator.config.proto import RunConfig
@@ -10,6 +10,13 @@ from ablator.main.model.wrapper import ModelWrapper
 class ProtoTrainer:
     """
     Manages resources for Prototyping.
+
+    Parameters
+    ----------
+    wrapper : ModelWrapper
+        The main model wrapper.
+    run_config : RunConfig
+        Running configuration for the model.
 
     Attributes
     ----------
@@ -29,16 +36,7 @@ class ProtoTrainer:
         wrapper: ModelWrapper,
         run_config: RunConfig,
     ):
-        """
-        Initialize model wrapper and running configuration for the model.
-
-        Parameters
-        ----------
-        wrapper : ModelWrapper
-            The main model wrapper.
-        run_config : RunConfig
-            Running configuration for the model.
-        """
+        # Initialize model wrapper and running configuration for the model.
         super().__init__()
 
         self.wrapper = copy.deepcopy(wrapper)
@@ -74,8 +72,8 @@ class ProtoTrainer:
 
         Parameters
         ----------
-        debug : bool, default=False
-            Whether to train model in debug mode.
+        debug : bool
+            Whether to train model in debug mode. By default False
 
         Returns
         -------
@@ -86,14 +84,14 @@ class ProtoTrainer:
         metrics = self.wrapper.train(run_config=self.run_config, debug=debug)
         return metrics
 
-    def evaluate(self) -> dict[str, float]:
+    def evaluate(self) -> dict[str, dict[str, ty.Any]]:
         """
         Run model evaluation on the training results, sync evaluation results to external logging services
         (e.g Google cloud storage, other remote servers).
 
         Returns
         -------
-        metrics : dict[str, float]
+        metrics : dict[str, dict[str, ty.Any]]
             Metrics returned after evaluation.
         """
         self._init_state()
@@ -107,9 +105,9 @@ class ProtoTrainer:
 
         Parameters
         ----------
-        config : RunConfig
+        config : RunConfig | None
             Running configuration for the model.
-        
+
         Examples
         --------
         try:

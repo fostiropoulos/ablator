@@ -13,10 +13,10 @@ def parse_name_remap(
 
     Parameters
     ----------
-    defaults : list of str or None, optional
+    defaults : list[str] | None
         The default attribute names to use as keys in the output dictionary.
         If ``None``, the output dictionary will be based on ``name_map`` only.
-    name_map : dict of str to str or None, optional
+    name_map : dict[str, str] | None
         A dictionary mapping input attribute names to output attribute names.
         If ``None``, the output dictionary will be based on ``defaults`` only.
 

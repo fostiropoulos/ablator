@@ -48,30 +48,27 @@ class SchedulerConfig(ConfigBase):
     arguments : SchedulerArgs
         The arguments needed to initialize the scheduler.
 
+    Parameters
+    ----------
+    name : str
+        The name of the scheduler, this can be any in ``['None', 'step', 'cycle', 'plateau']``.
+    arguments : dict[str, ty.Any]
+        The arguments for the scheduler, specific to a certain type of scheduler.
+
+    Examples
+    --------
+    In the following example, ``scheduler_config`` will initialize property ``arguments`` of type ``StepLRConfig``,
+    setting ``step_size=1``, ``gamma=0.99`` as its properties. We also have access to ``init_scheduler()`` method
+    of the property, which initalizes an StepLR scheduler. This method is actually called in ``make_scheduler()``
+
+    >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
     """
 
     name: str
     arguments: SchedulerArgs
 
-    def __init__(self, name, arguments: dict[str, ty.Any]):
-        """
-        Initializes the scheduler configuration.
-
-        Parameters
-        ----------
-        name : str
-            The name of the scheduler, this can be any in ``['None', 'step', 'cycle', 'plateau']``.
-        arguments : dict[str, ty.Any]
-            The arguments for the scheduler, specific to a certain type of scheduler.
-
-        Examples
-        --------
-        In the following example, ``scheduler_config`` will initialize property ``arguments`` of type ``StepLRConfig``,
-        setting ``step_size=1``, ``gamma=0.99`` as its properties. We also have access to ``init_scheduler()`` method
-        of the property, which initalizes an StepLR scheduler. This method is actually called in ``make_scheduler()``
-
-        >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
-        """
+    def __init__(self, name: str, arguments: dict[str, ty.Any]):
+        # Initializes the scheduler configuration.
         _arguments: None | StepLRConfig | OneCycleConfig | PlateuaConfig
         if (argument_cls := SCHEDULER_CONFIG_MAP[name]) is None:
             _arguments = StepLRConfig(gamma=1)
@@ -85,9 +82,9 @@ class SchedulerConfig(ConfigBase):
 
         Parameters
         ----------
-        model: nn.Module
+        model : nn.Module
             Some schedulers require information from the model. The model is passed as an argument.
-        optimizer
+        optimizer : Optimizer
             The optimizer used to update the model parameters, whose learning rate we want to monitor.
 
         Returns
