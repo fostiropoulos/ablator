@@ -14,7 +14,7 @@ from ray.util.state import list_nodes, list_tasks
 
 from ablator.utils.base import get_gpu_mem
 
-DEFAULT_TIMEOUT = 15
+DEFAULT_TIMEOUT = 60
 
 
 @dataclass
