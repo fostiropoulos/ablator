@@ -1,5 +1,5 @@
-Schedulers module
-=================
+Schedulers Configuration module
+===============================
 
 .. .. autoclass:: ablator.modules.scheduler.SchedulerArgs
 ..    :members:

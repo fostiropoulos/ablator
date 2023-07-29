@@ -10,11 +10,23 @@ uses.
 :mod:`ablator.analysis`: Analysis module
 ========================================
 
+Plot module
+---------------------
+
+.. currentmodule:: ablator
+.. autosummary::
+   analysis.plot.main.PlotAnalysis
+   analysis.plot.cat_plot.Categorical
+   analysis.plot.cat_plot.ViolinPlot
+   analysis.plot.num_plot.Numerical
+   analysis.plot.num_plot.LinearPlot
+   analysis.plot.utils.parse_name_remap
+
+
 Analysis Main classes
 ---------------------
 
 .. currentmodule:: ablator
-
 .. autosummary::
 
    analysis.main.Analysis

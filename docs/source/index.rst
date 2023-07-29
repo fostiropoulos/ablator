@@ -10,11 +10,24 @@ Welcome to ablator's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   ablator.analysis
-   ablator.config
-   ablator.main
-   ablator.modules
-   ablator.utils
+   ablator.config.main
+   ablator.config.types
+   ablator.modules.optimizer
+   ablator.modules.scheduler
+   ablator.config.proto
+   ablator.config.hpo
+   ablator.config.mp
+
+   ablator.main.model.wrapper
+   ablator.main.prototrainer
+   ablator.main.mptrainer
+
+   ablator.modules.metrics.main
+
+   ablator.analysis.plot.main
+   ablator.analysis.main
+   ablator.analysis.results
+
    api.reference
 
 Indices and tables

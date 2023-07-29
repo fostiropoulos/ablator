@@ -1,14 +1,18 @@
-Optimizers module
-=================
+Optimizers Configuration module
+===============================
+
+.. automodule:: ablator.modules.optimizer
+    :members: OptimizerConfig
+    :show-inheritance:
 
 .. .. autoclass:: ablator.modules.optimizer.OptimizerArgs
 ..    :members:
 ..    :show-inheritance:
 
-.. autoclass:: ablator.modules.optimizer.OptimizerConfig
-   :members:
-   :show-inheritance:
-   :exclude-members: config_class
+.. .. autoclass:: ablator.modules.optimizer.OptimizerConfig
+..    :members:
+..    :show-inheritance:
+..    :exclude-members: config_class
 
 .. .. autoclass:: ablator.modules.optimizer.SGDConfig
 ..    :members:
