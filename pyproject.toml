@@ -78,7 +78,7 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = []
+py-modules = ["ablator"]
 
 [project.urls]
 homepage = "https://ablator.org"
