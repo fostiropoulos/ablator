@@ -23,7 +23,7 @@ from ablator.config.types import (
 from ablator.config.utils import dict_hash, flatten_nested_dict
 
 
-def configclass(cls):
+def configclass(cls): # noqa
     """
     Decorator for ConfigBase subclasses, adds the ``config_class`` attribute to the class.
 
@@ -144,7 +144,7 @@ class ConfigBase:
         return self.to_dict().keys()
 
     @classmethod
-    def load(cls, path: Union[Path, str]):
+    def load(cls, path: Union[Path, str]): # noqa
         """
         Load a configuration object from a file.
 

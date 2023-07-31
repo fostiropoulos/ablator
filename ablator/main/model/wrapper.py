@@ -641,6 +641,10 @@ class ModelWrapper(ModelBase):
         """
         return self.epoch_len * self.epochs
 
+    @total_steps.setter
+    def total_steps(self, value: int):
+        self.total_steps = value
+
     @property
     def epochs(self) -> int:
         """
@@ -652,6 +656,10 @@ class ModelWrapper(ModelBase):
             Total number of epochs.
         """
         return self._epochs
+
+    @epochs.setter
+    def epochs(self, value: int):
+        self.epochs = value
 
     def train_loop(self, smoke_test: bool = False) -> dict[str, float]:
         """
