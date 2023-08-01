@@ -37,6 +37,7 @@ setup(
         "numpydoc==1.5.0",
         "paramiko==3.2.0",
         "gpustat==1.0",  # must stay fixed because https://github.com/ray-project/ray/issues/35384
+        "pyrclone-wrapper==0.0.3"
     ],
     extras_require={
         "dev": [
