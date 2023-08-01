@@ -1,19 +1,29 @@
-Multi-process package
-=====================
+ablator.mp package
+==================
 
 Submodules
 ----------
 
-Node Manager module
+ablator.mp.node\_manager module
 -------------------------------
 
-.. .. automodule:: ablator.mp.node_manager
-..    :members:
-..    :show-inheritance:
+.. automodule:: ablator.mp.node_manager
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 ablator.mp.utils module
 -----------------------
 
-.. .. automodule:: ablator.mp.utils
-..    :members:
-..    :show-inheritance:
+.. automodule:: ablator.mp.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: ablator.mp
+   :members:
+   :undoc-members:
+   :show-inheritance:

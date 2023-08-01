@@ -1,26 +1,35 @@
-HPO Sampler package
+ablator.main.hpo package
 ========================
 
 Submodules
 ----------
 
-Base Sampler module
+ablator.main.hpo.base module
 ----------------------------
 
 .. automodule:: ablator.main.hpo.base
    :members:
+   :undoc-members:
    :show-inheritance:
 
-Grid Sampler module
+ablator.main.hpo.grid module
 ----------------------------
 
 .. automodule:: ablator.main.hpo.grid
    :members:
+   :undoc-members:
    :show-inheritance:
 
-Optuna Sampler Module
+ablator.main.hpo.optuna module
 ------------------------------
 
 .. autoclass:: ablator.main.hpo.optuna.OptunaSampler
+
+
+Module contents
+---------------
+
+.. automodule:: ablator.main.hpo
    :members:
-   :exclude-members: update_trial, internal_repr
+   :undoc-members:
+   :show-inheritance:

@@ -1,17 +1,29 @@
-Experiment State package
-========================
+ablator.main.state package
+==========================
 
 Submodules
 ----------
 
-Experiment State module
------------------------
+ablator.main.state.state module
+-------------------------------
 
-.. autoclass:: ablator.main.state.state.ExperimentState
+.. automodule:: ablator.main.state.state
    :members:
+   :undoc-members:
+   :show-inheritance:
 
-Experiment Trial State module
------------------------------
+ablator.main.state.store module
+-------------------------------
 
-.. autoclass:: ablator.main.state.store.TrialState
+.. automodule:: ablator.main.state.store
    :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: ablator.main.state
+   :members:
+   :undoc-members:
+   :show-inheritance:
