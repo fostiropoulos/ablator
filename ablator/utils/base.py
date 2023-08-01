@@ -362,9 +362,8 @@ def get_gpu_mem(
     """
     memory: dict[int, int] = {}
     gpus = _get_gpu_info()
-    for gpu in gpus:
-        device_id = int(gpu["minor_number"])
-        memory[device_id] = int(gpu["fb_memory_usage"][mem_type])
+    for index, gpu in enumerate(gpus):
+        memory[index] = int(gpu["fb_memory_usage"][mem_type])
     return memory
 
 
