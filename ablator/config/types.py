@@ -11,20 +11,24 @@ T = ty.TypeVar("T")
 
 # pylint: disable=deprecated-typing-alias
 class Dict(ty.Dict[str, T]):
+    """A class for dictionary data type. Keys must be strings."""
     pass
 
 
 # pylint: disable=deprecated-typing-alias
 class List(ty.List[T]):
+    """A class for list data type"""
     pass
 
 
 # pylint: disable=deprecated-typing-alias
 class Tuple(ty.Tuple[T]):
+    """A class for tuple data type"""
     pass
 
 
 class Optional(ty.Generic[T]):
+    """A class for optional data type"""
     pass
 
 

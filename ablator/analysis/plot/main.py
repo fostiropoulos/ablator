@@ -19,7 +19,42 @@ logger = logging.getLogger(__name__)
 
 class PlotAnalysis(Analysis):
     """
-    Class for analyzing plotting
+    Class for plotting experiment results. Plots supported are linear plots for numerical
+    data and violin plots for categorical data.
+
+    Examples
+    --------
+    Assuming that experiment results are properly read and is stored in ```df``` dataframe. We now can plot these results as follows:
+
+    - Creating dictionaries that map the configuration parameters [categorical + numerical] to custom labels for plots:
+
+    >>> categorical_name_remap = {
+    ...        "model_config.activation": "Activation",
+    ...    }
+    >>> numerical_name_remap = {
+    ...        "model_config.num_filter1": "N. Filter 1",
+    ...        "model_config.num_filter2": "N. Filter 2",
+    ...        "train_config.optimizer_config.arguments.lr": "Learning Rate",
+    ...    }
+
+    - Initalize the ```PlotAnalysis``` and plot the figures:
+
+    >>> analysis = PlotAnalysis(
+    ...     df,
+    ...     save_dir="./plots",
+    ...     cache=True,
+    ...     optim_metrics={"val_accuracy": Optim.max},
+    ...     numerical_attributes=list(numerical_name_remap.keys()),
+    ...     categorical_attributes=list(categorical_name_remap.keys()),
+    ... )
+    >>> analysis.make_figures(
+    ...    metric_name_remap={
+    ...        "val_accuracy": "Validation Accuracy",
+    ...    },
+    ...    attribute_name_remap= attribute_name_remap
+    ... )
+
+    The directory “plots” will contain all the plots of the HPO experiments
     """
 
     @classmethod

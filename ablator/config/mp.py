@@ -44,7 +44,8 @@ class Optim(Enum):
 @configclass
 class ParallelConfig(RunConfig):
     """
-    Parallel training configuration.
+    Parallel training configuration, expanding ```RunConfig```, defines settings of a parallel experiment
+    (number of trials to run for, number of concurrent trials, search space for hyperparameter search, etc.).
 
     Attributes
     ----------

@@ -11,7 +11,7 @@ from ablator.modules.scheduler import SchedulerConfig
 @configclass
 class TrainConfig(ConfigBase):
     """
-    Training configuration.
+    Training configuration that defines the training setting, e.g., batch size, number of epochs, the optimizer to be used, etc.
 
     Attributes
     ----------
@@ -41,15 +41,40 @@ class TrainConfig(ConfigBase):
 @configclass
 class ModelConfig(ConfigBase):
     """
-    Model configuration.
-    When initializing a model, the config is passed to the model constructor.
+    A base class for model configuration. This is used for defining model parameters,
+    so when initializing a model, this config is passed to the model constructor.
+
+    Examples
+    --------
+    Define custom model configuration class for your model:
+    
+    >>> @configclass
+    ... class CustomModelConfig(ModelConfig):
+    ...     input_size :int
+    ...     hidden_size :int
+    ...     num_classes :int
+
+    Define your model class, and pass the configuration to the constructor:
+
+    >>> class FashionMNISTModel(nn.Module):
+    ...     def __init__(self, config: CustomModelConfig):
+    ...         super(FashionMNISTModel, self).__init__()
+    ...         self.fc1 = nn.Linear(config.input_size, config.hidden_size)
+    ...         self.relu1 = nn.ReLU()
+    ...         self.fc3 = nn.Linear(config.hidden_size, config.num_classes)
+
+    ...     def forward(self, x):
+    ...         # code for forward pass
+    ...         return x
     """
 
 
 @configclass
 class RunConfig(ConfigBase):
     """
-    Base configuration for running an experiment.
+    The base configuration that defines the setting of an experiment (experiment main directory, number of 
+    checkpoints to maintain, hardware device to use, etc.). You can use this to configure the experiment
+    of running a single prototype model.
 
     Attributes
     ----------

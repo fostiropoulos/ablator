@@ -9,7 +9,7 @@ from ablator.main.model.wrapper import ModelWrapper
 
 class ProtoTrainer:
     """
-    Manages resources for Prototyping.
+    Manages resources for Prototyping. This trainer runs experiment of a single prototype model.
 
     Attributes
     ----------
