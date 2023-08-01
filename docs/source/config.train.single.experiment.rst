@@ -1,5 +1,5 @@
-Single model experiment Configurations
-======================================
+Configurations for single model experiments 
+===========================================
 
 .. autoclass:: ablator.config.proto.RunConfig
    :noindex:

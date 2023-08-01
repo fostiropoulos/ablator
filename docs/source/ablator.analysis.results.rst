@@ -1,8 +1,8 @@
-Analysis results
-================
+Experiment results reader
+=========================
 
-.. automodule:: ablator.analysis.results
+.. autoclass:: ablator.analysis.results.Results
    :noindex:
    :members:
    :show-inheritance:
-   :exclude-members: read_result
+   :exclude-members: metric_names

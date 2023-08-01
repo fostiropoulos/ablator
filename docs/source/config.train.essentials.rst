@@ -1,5 +1,5 @@
-Training Essentials Configurations
-==================================
+Configurations for Training Essentials
+======================================
 
 Main Model Configuration
 ------------------------

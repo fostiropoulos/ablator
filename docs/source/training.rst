@@ -6,4 +6,5 @@ Training module
    :caption: Contents:
 
    training.interface
-   training.trainers
+   training.prototrainer
+   training.mptrainer

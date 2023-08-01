@@ -1,5 +1,5 @@
-Parallel models experiment Configurations
-=========================================
+Configurations for parallel models experiments
+==============================================
 
 .. autoclass:: ablator.config.mp.ParallelConfig
    :noindex:
