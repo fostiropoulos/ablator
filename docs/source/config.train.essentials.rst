@@ -1,6 +1,10 @@
 Configurations for Training Essentials
 ======================================
 
+In the process of training a model, there are essential components that are required. These
+include the model itself, the optimizer, the scheduler, and the training setting (batch
+size, number of epochs, the optimizer to be used, etc.).
+
 Main Model Configuration
 ------------------------
 .. autoclass:: ablator.config.proto.ModelConfig
