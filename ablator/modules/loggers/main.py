@@ -202,7 +202,7 @@ class SummaryLogger:
             self.dashboard.write_config(run_config)
 
     # pylint: disable=too-complex
-    def _add_metric(self, k: str, v: ty.Any, itr: int) -> None:
+    def _add_metric(self, k: str, v: ty.Any, itr: int) -> None:  # flake8: noqa
         """
         Add a metric to the dashboard.
 

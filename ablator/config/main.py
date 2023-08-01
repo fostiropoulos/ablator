@@ -254,7 +254,7 @@ class ConfigBase:
         annotations: dict[str, Annotation],
         ignore_stateless: bool = False,
         flatten: bool = False,
-    ) -> dict:
+    ) -> dict:  # flake8: noqa
         """
         Create a dictionary representation of the configuration object.
 

@@ -38,7 +38,7 @@ class ExperimentState:
         config : ParallelConfig
             The configuration object that defines the experiment settings.
         logger : FileLogger | None
-            The logger to use for outputting experiment logs. If not specified, a dummy logger will be used. By Default ``None``.
+            The logger for outputting experiment logs. If not specified, a dummy logger will be used. By Default ``None``.
         resume : bool
             Whether to resume a previously interrupted experiment. By default ``False``.
         sampler_seed : int | None
