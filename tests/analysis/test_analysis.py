@@ -10,12 +10,8 @@ from ablator import (
     ModelWrapper,
     OptimizerConfig,
     PlotAnalysis,
-    RunConfig,
-    TrainConfig,
 )
 from ablator.analysis.results import Results
-from ablator.config.mp import ParallelConfig, SearchSpace
-from ablator.main.mp import ParallelTrainer
 
 
 def get_best(x: pd.DataFrame, task_type: str):
@@ -25,30 +21,9 @@ def get_best(x: pd.DataFrame, task_type: str):
         return x.sort_values("val_acc", na_position="first").iloc[-1]
 
 
-@pytest.fixture()
-def results(tmp_path: Path, wrapper, make_config, working_dir):
-    return _results(tmp_path, wrapper, make_config, working_dir)
-
-
-def _results(tmp_path: Path, wrapper, make_config, working_dir) -> Results:
-    search_space = {
-        "train_config.optimizer_config.arguments.lr": SearchSpace(
-            value_range=[0, 19],
-            value_type="float",
-            n_bins=10,
-        ),
-        "model_config.mock_param": SearchSpace(
-            categorical_values=list(range(10)),
-        ),
-    }
-    config = make_config(tmp_path.joinpath("test_exp"), search_space=search_space)
-    ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
-    ablator.launch(working_dir)
-    res = Results(config, ablator.experiment_dir)
-    return res
-
-
-def test_analysis(tmp_path: Path, results: Results):
+@pytest.mark.order(1)
+def test_analysis(tmp_path: Path, ablator_results):
+    results: Results = ablator_results
     PlotAnalysis(results, optim_metrics={"val_loss": "min"})
     categorical_name_remap = {
         "model_config.mock_param": "Some Parameter",
@@ -86,12 +61,25 @@ if __name__ == "__main__":
     from tests.ray_models.model import (
         WORKING_DIR,
         TestWrapper,
-        MyCustomModel,
+        MyErrorCustomModel,
         _make_config,
     )
+    from tests.conftest import DockerRayCluster, _assert_error_msg
+    from tests.mp.test_main import test_mp_run
 
+    ray_cluster = DockerRayCluster()
+    ray_cluster.setUp()
     tmp_path = Path("/tmp/save_dir")
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir(exist_ok=True)
-    res = _results(tmp_path, TestWrapper(MyCustomModel), _make_config, WORKING_DIR)
-    test_analysis(tmp_path, res)
+    test_mp_run = test_mp_run(
+        tmp_path,
+        _assert_error_msg,
+        ray_cluster,
+        TestWrapper(MyErrorCustomModel),
+        _make_config,
+        WORKING_DIR,
+    )
+    config = _make_config(tmp_path, search_space_limit=10)
+    test_mp_run = Results(config, f"/tmp/save_dir/experiment_{config.uid}")
+    test_analysis(tmp_path)

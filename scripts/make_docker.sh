@@ -1,1 +1,1 @@
-docker build --build-arg="PY_VERSION=$(python --version | grep -Eo '[0-9]\.[0-9]+\.[0-9]+')" --tag ablator .
+docker build --build-arg="PY_VERSION=$(python --version | grep -Eo '[0-9]\.[0-9]+\.[0-9]+')" --tag ${1:-ablator} .

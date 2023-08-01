@@ -1,16 +1,20 @@
 import getpass
 import logging
 import socket
+import traceback
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import numpy as np
 import paramiko
+import psutil
 import ray
 from ray.util.state import list_nodes, list_tasks
-import numpy as np
-import psutil
+
 from ablator.utils.base import get_gpu_mem
+
+DEFAULT_TIMEOUT = 60
 
 
 @dataclass
@@ -82,42 +86,58 @@ def update_node(node_ip, key):
 class NodeManager:
     def __init__(self, private_key_home: Path, ray_address: str | None = None):
         self.pkey, self.public_key = make_private_key(private_key_home)
+        if (
+            ray.is_initialized()
+            and ray_address is not None
+            and ray_address != ray.get_runtime_context().gcs_address
+        ):
+            raise RuntimeError(
+                "`ray_address` does not match currently running ray instance. Can not initialize ray twice."
+            )
         if not ray.is_initialized():
             ray.init(address=ray_address)
-        elif not ray.is_initialized():
-            raise RuntimeError("No ray cluster was found running.")
 
         self.ray_address = ray.get_runtime_context().gcs_address
 
         self.nodes: dict[str, str] = {}
         self.update()
 
-    def update(self):
-        futures = []
+    def update(self, timeout: int | None = 10):
         nodes = {}
-        for node in ray.nodes():
-            node_ip = node["NodeManagerAddress"]
-            node_alive = node["Alive"]
+        for node in list_nodes(address=self.ray_address, timeout=timeout):
+            node_ip = node.node_ip
+            node_alive = node.state.lower() == "alive"
             if node_alive and node_ip not in self.nodes:
-                futures.append(
-                    update_node.options(resources={f"node:{node_ip}": 0.01}).remote(
-                        node_ip, self.public_key
+                future = update_node.options(  # type: ignore
+                    resources={f"node:{node_ip}": 0.01}
+                ).remote(node_ip, self.public_key)
+                try:
+                    node_ip, username = ray.get(future, timeout=timeout)
+                    nodes[node_ip] = username
+                # pylint: disable=broad-exception-caught
+                except Exception as e:
+                    logging.error(
+                        "Could not update node with %s. %s %s",
+                        node_ip,
+                        str(e),
+                        traceback.format_exc(),
                     )
-                )
             elif node_alive and node_ip not in nodes:
                 nodes[node_ip] = self.nodes[node_ip]
-        nodes.update(dict(ray.get(futures)))
         self.nodes = nodes
 
-    def utilization(self, node_ips: list | str | None = None) -> dict[str, Resource]:
-        return self.run_lambda(utilization, node_ips)
+    def utilization(
+        self, node_ips: list | str | None = None, timeout: int | None = DEFAULT_TIMEOUT
+    ) -> dict[str, Resource]:
+        return self.run_lambda(utilization, node_ips, timeout=timeout)
 
     def available_resources(
-        self, node_ips: list | str | None = None
+        self, node_ips: list | str | None = None, timeout: int | None = DEFAULT_TIMEOUT
     ) -> dict[str, Resource]:
-        results = self.utilization(node_ips)
+        results = self.utilization(node_ips, timeout=timeout)
         node_id_map: dict[str, str] = {
-            n.node_id: n.node_ip for n in list_nodes(address=self.ray_address)
+            n.node_id: n.node_ip
+            for n in list_nodes(address=self.ray_address, timeout=timeout)
         }
         node_ip_tasks: dict[str, list[str]] = defaultdict(lambda: [])
         running_tasks = list_tasks(
@@ -127,13 +147,14 @@ class NodeManager:
                 # exclude the utilization lambda from above
                 ("func_or_class_name", "!=", "utilization"),
             ],
+            timeout=timeout,
         )
         for task in running_tasks:
             if task.node_id in node_id_map:
                 node_ip_tasks[node_id_map[task.node_id]].append(task.name)
 
-        for node_ip in results:
-            results[node_ip].running_tasks = node_ip_tasks[node_ip]
+        for node_ip, resource in results.items():
+            resource.running_tasks = node_ip_tasks[node_ip]
         return results
 
     def _parse_node_ips(self, node_ips: list | str | None = None) -> list[str]:
@@ -152,23 +173,43 @@ class NodeManager:
     def node_ips(self) -> list[str]:
         return list(self.nodes.keys())
 
-    def run_lambda(self, fn, node_ips: list | str | None = None):
+    def run_lambda(
+        self,
+        fn,
+        node_ips: list | str | None = None,
+        timeout: int | None = DEFAULT_TIMEOUT,
+    ):
         self.update()
-        futures = {}
+        results = {}
 
         for node_ip in self._parse_node_ips(node_ips):
-            futures[node_ip] = (
-                ray.remote(fn).options(resources={f"node:{node_ip}": 0.001}).remote()
-            )
-        return {k: ray.get(v) for k, v in futures.items()}
+            try:
+                results[node_ip] = ray.get(
+                    ray.remote(fn)
+                    .options(resources={f"node:{node_ip}": 0.001})
+                    .remote(),
+                    timeout=timeout,
+                )
+            # pylint: disable=broad-exception-caught
+            except Exception as e:
+                logging.error(
+                    "Error in `run_lambda` for node with IP %s %s %s",
+                    node_ip,
+                    str(e),
+                    traceback.format_exc(),
+                )
+        return results
 
     def run_cmd(
-        self, cmd, node_ips: list | str | None = None, timeout: int = 20
+        self, cmd, node_ips: list | str | None = None, timeout: int = DEFAULT_TIMEOUT
     ) -> dict[str, str]:
-        self.update()
+        self.update(timeout=timeout)
         result = {}
-
-        for node_ip in self._parse_node_ips(node_ips):
+        node_ips = self._parse_node_ips(node_ips)
+        errored_ips = []
+        while len(node_ips) > 0:
+            if (node_ip := node_ips.pop()) not in self.nodes:
+                continue
             node_username = self.nodes[node_ip]
             client = paramiko.SSHClient()
             policy = paramiko.AutoAddPolicy()
@@ -176,7 +217,13 @@ class NodeManager:
             node_name = f"{node_username}@{node_ip}"
             try:
                 client.connect(
-                    node_ip, username=node_username, pkey=self.pkey, timeout=timeout
+                    node_ip,
+                    username=node_username,
+                    pkey=self.pkey,
+                    timeout=timeout,
+                    banner_timeout=timeout,
+                    auth_timeout=timeout,
+                    channel_timeout=timeout,
                 )
                 # _stdin, _stdout, _stderr
                 _, _stdout, _ = client.exec_command(cmd)
@@ -191,4 +238,12 @@ class NodeManager:
                     node_name,
                     str(e),
                 )
+                del self.nodes[node_ip]
+                if node_ip not in errored_ips:
+                    # repeat the IP
+                    node_ips.append(node_ip)
+                errored_ips.append(node_ip)
+                if "Authentication failed." in str(e):
+                    self.update(timeout=timeout)
+
         return result

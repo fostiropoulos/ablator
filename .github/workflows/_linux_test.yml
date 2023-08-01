@@ -6,43 +6,11 @@ on:
 
 jobs:
   pytest:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.10'
-    - name: Install dependencies
+    - name: Build Docker
       run: |
-        pip install -e .[dev] -v
-    - name: Install SSH and generate keys
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y openssh-server
-        sudo service ssh start
-        ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
-        cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-        sudo apt-get install -y rsync
-    - name: Install Docker
-      run: |
-        sudo apt-get update
-        sudo apt-get install \
-            apt-transport-https \
-            ca-certificates \
-            curl \
-            gnupg \
-            lsb-release
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-        echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        sudo apt-get update
-        sudo apt-get install docker-ce docker-ce-cli containerd.io
-    - name: Build Docker Image
-      run: |
-        docker build --build-arg="PY_VERSION=$(python --version | grep -Eo '[0-9]\.[0-9]+\.[0-9]+')" --tag ablator .
+        docker build --build-arg="PY_VERSION=3.10" --tag ablator-test .
     - name: Test with pytest
       run: |
-        pip install pytest
-        pytest
+        docker run -v /var/run/docker.sock:/var/run/docker.sock --cpuset-cpus="0-4" --pid host --gpus all ablator pytest . --runslow --docker-tag ablator-test

@@ -1,6 +1,8 @@
+import random
+from pathlib import Path
+
 import numpy as np
 import torch
-import random
 
 
 def _assert_np_random():
@@ -23,10 +25,18 @@ def test_conftest():
     _assert_py_random()
     _assert_torch_random()
 
+
 def test_conftest_order():
     _assert_torch_random()
     _assert_py_random()
     _assert_np_random()
+
+
+def test_ray_cluster(ray_cluster):
+    ray_cluster.setUp()
+    assert len(ray_cluster.node_ips()) == ray_cluster.nodes + 1
+    ray_cluster.tearDown()
+
 
 
 if __name__ == "__main__":
