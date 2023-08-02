@@ -25,6 +25,7 @@ from ablator.mp.node_manager import NodeManager, Resource
 from ablator.mp.utils import _sorted_nodes_by_util
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 from ablator.mp.train_remote import train_main_remote
+from ablator.mp.utils import make_rclone_config
 
 
 def mount_remote(rclone_config: RcloneConfig, experiment_dir: Path):
