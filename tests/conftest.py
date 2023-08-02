@@ -1,5 +1,7 @@
 import copy
 import io
+import logging
+import os
 import platform
 import random
 import re
@@ -76,7 +78,13 @@ def make_node(docker_client: docker.DockerClient, img, cluster_address):
     )
     container_args = {**cuda_args, **fuse_args}
     c = docker_client.containers.run(
-        img, command="/bin/bash", detach=True, tty=True, stdin_open=True, **cuda_args
+        img,
+        command="/bin/bash",
+        detach=True,
+        tty=True,
+        stdin_open=True,
+        pid_mode="host",
+        **container_args,
     )
     res = c.exec_run(f"service ssh start")
     assert "Starting OpenBSD Secure Shell server" in res.output.decode()
@@ -155,9 +163,10 @@ class DockerRayCluster:
             raise RuntimeError(
                 "Could not find a docker installation. Please make sure docker is in Path and can run be run by the current system user (non-root) e.g. `docker run hello-world`. Please refer to https://github.com/fostiropoulos/ablator/blob/main/DEVELOPER.md for detailed instructions."
             ) from e
+        self.client_keys = []
 
     def tearDown(self):
-        self.kill_all()
+        self.kill_nodes()
 
     def setUp(self):
         if not ray.is_initialized():
@@ -181,10 +190,15 @@ class DockerRayCluster:
             ray_cluster = ray.get_runtime_context()
             self.cluster_address = ray_cluster.gcs_address
             self.cluster_ip, _ = self.cluster_address.split(":")
-        self.img = get_docker_image(self.client)
-        self.cs = {}
-        self.append_nodes(self.nodes)
-        time.sleep(1)
+
+        self.img = get_docker_image(self.client, self.docker_tag)
+        containers = self._active_containers()
+        if self.nodes > 0:
+            node_diff = self.nodes - len(containers)  # + 1 for the head.
+            if node_diff > 0:
+                self.append_nodes(node_diff)
+            elif node_diff < 0:
+                self.kill_nodes(int(node_diff * -1))
 
     def _active_containers(self):
         containers = {}
@@ -219,8 +233,58 @@ class DockerRayCluster:
         # It would not be a good idea to exceed that limit.
         prev_nodes = len(self.node_ips())
         for _ in range(n):
-            c, ip = make_node(self.client, self.img, self.cluster_address)
-            self.cs[ip] = c
+            _, _, pubkey = make_node(self.client, self.img, self.cluster_address)
+            self.client_keys.push(pubkey)
+        self._wait_nodes(prev_nodes, n)
+
+    def _wait_nodes(self, prev_nodes, added_nodes):
+        for _ in range(120):
+            current_nodes = len(self.node_ips())
+            if current_nodes - prev_nodes == added_nodes:
+                return True
+            time.sleep(1)
+        raise RuntimeError("Could not update nodes to the cluster.")
+
+    def kill_nodes(self, n_nodes: int | None = None):
+        active_containers = self._active_containers()
+
+        prev_nodes = len(self.node_ips())
+        if n_nodes is None:
+            n_nodes = len(active_containers)
+        for i in list(active_containers.keys())[:n_nodes]:
+            self.api_client.kill(active_containers[i])
+        self._wait_nodes(prev_nodes, -1 * n_nodes)
+
+
+@pytest.fixture(scope="session")
+def main_ray_cluster(working_dir, pytestconfig):
+    assert not ray.is_initialized(), "Can not run tests with ray initialized."
+    docker_tag = pytestconfig.getoption("--docker-tag")
+    cluster = DockerRayCluster(working_dir=working_dir, docker_tag=docker_tag)
+    cluster.setUp()
+    yield cluster
+    cluster.tearDown()
+
+
+@pytest.fixture(scope="function")
+def gpu_lock(tmpdir_factory):
+    tmp_path = Path(tmpdir_factory.getbasetemp())
+    if not torch.cuda.is_available():
+        yield False
+    else:
+        with FileLock(tmp_path.joinpath(".gpu")):
+            yield True
+
+
+def _gpu_manager(gpu_lock, ray_cluster, timeout=5):
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        devices = copy.deepcopy(os.environ["CUDA_VISIBLE_DEVICES"])
+    else:
+        devices = ""
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+    with mock.patch("ablator.utils.base._get_gpu_info", lambda: _get_gpu_info()[:2]):
+        yield GPUManager.remote(timeout, [0, 1])
+    os.environ["CUDA_VISIBLE_DEVICES"] = devices
 
 
 @pytest.fixture(scope="function")
