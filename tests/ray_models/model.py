@@ -128,7 +128,7 @@ def working_dir():
 def _remote_fn(gpu_id: int, gpu_manager=None):
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}"
     t = torch.randn(300, 100, 300).to(f"cuda")
-    time.sleep(2)
+    time.sleep(5)
     if gpu_manager is not None:
         ray.get(gpu_manager.unlock.remote(gpu_id))
     return gpu_id
