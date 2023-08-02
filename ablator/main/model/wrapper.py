@@ -86,7 +86,8 @@ class ModelWrapper(ModelBase):
         save_dict: dict[str, ty.Any]
             The save dict to load from.
         strict_load: bool
-            Whether to load the model strictly or not.
+            Whether to throw an error for mismatched keys.
+
         """
         save_dict = {} if save_dict is None else save_dict
         scheduler_state = save_dict["scheduler"] if "scheduler" in save_dict else None
@@ -454,7 +455,7 @@ class ModelWrapper(ModelBase):
         scaler = self.scaler
         scheduler = self.scheduler
         # Ensure no left-over grads are in the model's parameters from custom evaluation or what-not
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         outputs, loss = self._model_step(model=model, batch=batch)
 
         loss_value = self.apply_loss(model, loss, optimizer, scaler, scheduler)
@@ -808,7 +809,6 @@ class ModelWrapper(ModelBase):
             The loss value.
         """
         if loss is not None:
-            # pylint: disable=no-member
             loss = torch.mean(loss)
             if self.amp:
                 scaler.scale(loss).backward()
@@ -825,7 +825,7 @@ class ModelWrapper(ModelBase):
             scaler.update()
         else:
             optimizer.step()
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
 
         if scheduler is not None and getattr(scheduler, "step_when", None) == "train":
             scheduler.step()  # type: ignore
@@ -891,7 +891,6 @@ class ModelWrapper(ModelBase):
                 if outputs is not None:
                     metrics.append_batch(**outputs)
                 if loss is not None:
-                    # pylint: disable=no-member
                     val_metrics["loss"] = torch.mean(loss).item()
 
                 metrics.update_ma_metrics(val_metrics)

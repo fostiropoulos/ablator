@@ -36,7 +36,7 @@ def run_optimizer(optim_name, scheduler_name):
     optim = optim_config.make_optimizer(model)
     scheduler = scheduler_config.make_scheduler(model, optim)
     for i in range(100):
-        optim.zero_grad()
+        optim.zero_grad(set_to_none=True)
         loss = model()
         loss.backward()
         optim.step()
