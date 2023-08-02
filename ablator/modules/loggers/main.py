@@ -77,13 +77,13 @@ class SummaryLogger:
         If resume is set to ``False`` but the experiment directory already exists.
     """
 
-    SUMMARY_DIR_NAME = "dashboard"
-    RESULTS_JSON_NAME = "results.json"
-    LOG_FILE_NAME = "train.log"
-    CONFIG_FILE_NAME = "config.yaml"
-    METADATA_JSON = "metadata.json"
-    CHKPT_DIR_NAMES = ["best", "recent"]
-    CHKPT_DIR_VALUES = ["best_checkpoints", "checkpoints"]
+    SUMMARY_DIR_NAME: str = "dashboard"
+    RESULTS_JSON_NAME: str = "results.json"
+    LOG_FILE_NAME: str = "train.log"
+    CONFIG_FILE_NAME: str = "config.yaml"
+    METADATA_JSON: str = "metadata.json"
+    CHKPT_DIR_NAMES: list[str] = ["best", "recent"]
+    CHKPT_DIR_VALUES: list[str] = ["best_checkpoints", "checkpoints"]
     CHKPT_DIRS: dict[str, Path]
 
     def __init__(

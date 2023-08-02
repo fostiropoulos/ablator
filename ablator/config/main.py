@@ -5,6 +5,7 @@ import typing as ty
 from typing import Any, Union, KeysView
 from dataclasses import dataclass
 from pathlib import Path
+from typing_extensions import Self
 
 from omegaconf import OmegaConf
 from ablator.config.types import (
@@ -18,12 +19,12 @@ from ablator.config.types import (
     Type,
     Literal,
     parse_type_hint,
-    parse_value,
+    parse_value
 )
 from ablator.config.utils import dict_hash, flatten_nested_dict
 
 
-def configclass(cls): # noqa
+def configclass(cls):  # noqa
     """
     Decorator for ConfigBase subclasses, adds the ``config_class`` attribute to the class.
 
@@ -144,7 +145,7 @@ class ConfigBase:
         return self.to_dict().keys()
 
     @classmethod
-    def load(cls, path: Union[Path, str]): # noqa
+    def load(cls, path: Union[Path, str]) -> Self:
         """
         Load a configuration object from a file.
 
@@ -155,7 +156,7 @@ class ConfigBase:
 
         Returns
         -------
-        ConfigBase
+        Self
             The loaded configuration object.
         """
         kwargs: dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text(encoding="utf-8")))  # type: ignore

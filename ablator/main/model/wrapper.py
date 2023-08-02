@@ -335,7 +335,7 @@ class ModelWrapper(ModelBase):
     def _inc_iter(self):
         self.current_iteration += 1
 
-    def _is_step(self, step_interval):
+    def _is_step(self, step_interval: int) -> bool:
         return (
             step_interval > 0
             and self.current_iteration > 0
@@ -526,7 +526,7 @@ class ModelWrapper(ModelBase):
             return p
         return mock_model.train(run_config=run_config, smoke_test=True)
 
-    def update_status(self):
+    def update_status(self) -> None:
         """
         Update the metrics with current training stats,
         and then all metrics (static and moving average) will be set as description for the ``tqdm`` progress.
@@ -630,7 +630,7 @@ class ModelWrapper(ModelBase):
                 self.logger.info(f"Evaluation Step [{eval_step}] {msg}", verbose=False)
 
     @property
-    def total_steps(self) -> int:
+    def total_steps(self) -> int:  # type: ignore[override] # flake8: noqa
         """
         The total number of steps for training.
 
@@ -641,12 +641,8 @@ class ModelWrapper(ModelBase):
         """
         return self.epoch_len * self.epochs
 
-    @total_steps.setter
-    def total_steps(self, value: int):
-        self.total_steps = value
-
     @property
-    def epochs(self) -> int:
+    def epochs(self) -> int:  # type: ignore[override] # flake8: noqa
         """
         The total number of epochs.
 
@@ -656,10 +652,6 @@ class ModelWrapper(ModelBase):
             Total number of epochs.
         """
         return self._epochs
-
-    @epochs.setter
-    def epochs(self, value: int):
-        self.epochs = value
 
     def train_loop(self, smoke_test: bool = False) -> dict[str, float]:
         """
@@ -966,14 +958,12 @@ class ModelWrapper(ModelBase):
         Examples
         --------
         >>> class MyModelWrapper(ModelWrapper):
-        ...    ...
         ...    def make_dataloader_train(self, run_config: CustomRunConfig):
         ...       return torch.utils.data.DataLoader(
         ...            train_dataset,
         ...            batch_size=32,
         ...            shuffle=True
         ...        )
-        ...    ...
         """
 
     def evaluation_functions(self) -> dict[str, Callable] | None:
@@ -986,14 +976,11 @@ class ModelWrapper(ModelBase):
         Examples
         --------
         >>> class MyModelWrapper(ModelWrapper):
-        ... ...
-        ...
         ...    def evaluation_functions(self):
         ...        return {
         ...            "accuracy": accuracy_score(y_true.flatten(), y_pred.flatten()),
         ...            "f1": f1_score(y_true.flatten(), y_pred.flatten(), average='weighted')
         ...        }
-        ... ...
         """
 
     # Functions that can be optionally over-written.
@@ -1014,14 +1001,12 @@ class ModelWrapper(ModelBase):
         Examples
         --------
         >>> class MyModelWrapper(ModelWrapper):
-        ...    ...
         ...    def make_dataloader_test(self, run_config: CustomRunConfig):
         ...       return torch.utils.data.DataLoader(
         ...            test_dataset,
         ...            batch_size=32,
         ...            shuffle=True
         ...        )
-        ...    ...
         """
 
     def make_dataloader_val(self, run_config: RunConfig) -> DataLoader | None:
@@ -1041,14 +1026,12 @@ class ModelWrapper(ModelBase):
         Examples
         --------
         >>> class MyModelWrapper(ModelWrapper):
-        ...    ...
         ...    def make_dataloader_val(self, run_config: CustomRunConfig):
         ...       return torch.utils.data.DataLoader(
         ...            validation_dataset,
         ...            batch_size=32,
         ...            shuffle=True
         ...        )
-        ...    ...
         """
 
     def config_parser(self, run_config: RunConfig) -> RunConfig:

@@ -339,7 +339,7 @@ class Metrics:
             raise ValueError("Metrics.append_batch takes no positional arguments.")
         self._preds.append(**kwargs)
 
-    def _init_ma(self, name) -> MovingAverage:
+    def _init_ma(self, name: str) -> MovingAverage:
         attr_name = f"__{name}_ma__"
         _ma = MovingAverage(
             batch_limit=self.__moving_average_limit__,
@@ -348,7 +348,7 @@ class Metrics:
         setattr(self, attr_name, _ma)
         return getattr(self, attr_name)
 
-    def _get_ma(self, name) -> MovingAverage:
+    def _get_ma(self, name: str) -> MovingAverage:
         attr_name = f"__{name}_ma__"
         preds = getattr(self, attr_name)
         return preds

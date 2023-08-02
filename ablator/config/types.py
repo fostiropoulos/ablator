@@ -2,8 +2,6 @@
 Custom types for runtime checking
 """
 
-# flake8: noqa
-
 import typing as ty
 from typing import Any
 from collections import namedtuple
@@ -180,13 +178,13 @@ def _val2bool(val: str | bool) -> bool:
     raise ValueError(f"Cannot parse {val} as bool.")
 
 
-def _strip_hint_state(type_hint) -> tuple:
+def _strip_hint_state(type_hint: type[Any]) -> tuple:
     """
     Strips the hint state from a type hint.
 
     Parameters
     ----------
-    type_hint : Type
+    type_hint : type[Any]
         The input type hint to strip the state from.
 
     Returns
@@ -209,13 +207,13 @@ def _strip_hint_state(type_hint) -> tuple:
     return Stateful, type_hint
 
 
-def _strip_hint_optional(type_hint) -> tuple:
+def _strip_hint_optional(type_hint: type[Any]) -> tuple:
     """
     Strips the optional part of a type hint.
 
     Parameters
     ----------
-    type_hint : Type
+    type_hint : type[Any]
         The input type hint to strip the optional part from.
 
     Returns
@@ -235,13 +233,13 @@ def _strip_hint_optional(type_hint) -> tuple:
     return False, type_hint
 
 
-def _strip_hint_collection(type_hint) -> tuple:
+def _strip_hint_collection(type_hint: type[Any]) -> tuple:
     """
     Strips the collection from a type hint.
 
     Parameters
     ----------
-    type_hint : Type
+    type_hint : type[Any]
         The input type hint to strip the collection from.
 
     Returns
@@ -289,7 +287,7 @@ def _strip_hint_collection(type_hint) -> tuple:
     )
 
 
-def parse_type_hint(cls: Any, type_hint) -> Annotation:
+def parse_type_hint(cls: Any, type_hint: type[Any]) -> Annotation:
     """
     Parses a type hint and returns a parsed annotation.
 
@@ -297,7 +295,7 @@ def parse_type_hint(cls: Any, type_hint) -> Annotation:
     ----------
     cls : Any
         The class being annotated.
-    type_hint : Type
+    type_hint : type[Any]
         The input type hint to parse.
 
     Returns
@@ -325,14 +323,14 @@ def parse_type_hint(cls: Any, type_hint) -> Annotation:
     )
 
 
-def _parse_class(cls, kwargs: dict | object) -> object:
+def _parse_class(cls: Any, kwargs: dict | object) -> object:
     """
     Parse values whose types are not  a collection or in ALLOWED_TYPES
     eg. bool, added dict(tune configs)
 
     Parameters
     ----------
-    cls : Type
+    cls : Any
         The input Type
     kwargs : dict | object
         The keyword arguments or object to parse with the given type

@@ -30,12 +30,12 @@ class SubConfiguration:
 
         self.arguments: dict[str, ty.Any] = _parse_value(kwargs)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> ty.Any:
         return self.arguments[item]
 
     @property
     def __dict__(self):
-        def _parse_nested_value(val):
+        def _parse_nested_value(val: ty.Any) -> dict:
             if issubclass(type(val), Type):
                 return _parse_nested_value(val.__dict__)
             if issubclass(type(val), ConfigBase):
@@ -52,7 +52,7 @@ class SubConfiguration:
         return {k: _parse_nested_value(v) for k, v in self.arguments.items()}
 
     def contains(self, value: dict[str, ty.Any]) -> bool:
-        def _contains_value(arguments, v):
+        def _contains_value(arguments: dict[str, ty.Any], v: dict[str, ty.Any]) -> bool:
             if isinstance(arguments, SearchSpace):
                 return arguments.contains(v)
             if isinstance(v, dict) and not isinstance(arguments, dict):

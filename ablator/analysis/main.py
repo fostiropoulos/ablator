@@ -56,19 +56,19 @@ class Analysis:
     A class for analyzing experimental results.
 
     Parameters
-        ----------
-        results : pd.DataFrame | Results
-            The result dataframe.
-        categorical_attributes : list[str] | None
-            The list of all the categorical hyperparameter names
-        numerical_attributes : list[str] | None
-            The list of all the numerical hyperparameter names
-        optim_metrics : dict[str, Optim] | None
-            A dictionary mapping metric names to optimization directions.
-        save_dir : str | None
-            The directory to save analysis results to.
-        cache : bool
-            Whether to cache results.
+    ----------
+    results : pd.DataFrame | Results
+        The result dataframe.
+    categorical_attributes : list[str] | None
+        The list of all the categorical hyperparameter names
+    numerical_attributes : list[str] | None
+        The list of all the numerical hyperparameter names
+    optim_metrics : dict[str, Optim] | None
+        A dictionary mapping metric names to optimization directions.
+    save_dir : str | None
+        The directory to save analysis results to.
+    cache : bool
+        Whether to cache results.
 
     Attributes
     ----------
@@ -164,7 +164,7 @@ class Analysis:
         cls,
         raw_results: pd.DataFrame,
         metric_map: dict[str, Optim],
-    ):
+    ) -> pd.DataFrame:
         def _best_perf(row: pd.DataFrame, name, obj_fn):
             if Optim(obj_fn) == Optim.min:
                 return row.sort_values(name, na_position="last").iloc[0]

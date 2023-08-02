@@ -45,7 +45,7 @@ class Categorical(Plot):
         cls,
         metric: pd.Series,
         attributes: pd.Series,
-    ):
+    ) -> dict[str, pd.Series]:
         unique_values = attributes.unique()
         metrics: dict[str, pd.Series] = {}
 
@@ -100,8 +100,8 @@ class ViolinPlot(Categorical):
 
     def _make(
         self,
-        **kwargs,
-    ):
+        **kwargs: ty.Any,
+    ) -> tuple[Figure, Axes]:
         sns.violinplot(
             [v.values for v in self.attribute_metric_map.values()],
             ax=self.ax,
@@ -137,5 +137,5 @@ class ViolinPlot(Categorical):
         sns.despine(left=True, bottom=True)
         return self.figure, self.ax
 
-    def _parse_legend(self, ax):
+    def _parse_legend(self, ax: Axes):
         pass

@@ -309,7 +309,7 @@ class ParallelTrainer(ProtoTrainer):
         self.available_resources = self.node_manager.available_resources()
         # TODO find which tasks have died from available_resources and update experiment_state
 
-    def _make_futures(self, current_futures: list | None = None, soft_limit: int = 10):
+    def _make_futures(self, current_futures: list | None = None, soft_limit: int = 10) -> list:
         # make enough futures such that there are concurrent_trials running.
         futures = [] if current_futures is None else current_futures
         concurrent_trial_limit: int | None = self.run_config.concurrent_trials

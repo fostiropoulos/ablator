@@ -29,7 +29,7 @@ class SchedulerArgs(ConfigBase):
     step_when: StepType
 
     @abstractmethod
-    def init_scheduler(self, model, optimizer):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
         """
         Abstract method to be implemented by derived classes, which creates and returns a scheduler object.
         """

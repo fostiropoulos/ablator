@@ -108,7 +108,7 @@ class Display:
             self.html_widget.value = self.html_value
             self.html_value = ""
 
-    def _display(self, text, pos, is_last=False):
+    def _display(self, text: str, pos: int, is_last=False):
         if self.ncols is None or self.nrows is None:
             return
 
@@ -143,7 +143,7 @@ class Display:
         if self.is_terminal:
             self.nrows, self.ncols = self.stdscr.getmaxyx()
 
-    def print_texts(self, texts):
+    def print_texts(self, texts: list[str]):
         self._update_screen_dims()
         for i, text in enumerate(texts):
             self._display(text, i)

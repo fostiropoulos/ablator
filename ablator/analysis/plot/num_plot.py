@@ -61,5 +61,5 @@ class LinearPlot(Numerical):
 
         return self.figure, self.ax
 
-    def _parse_legend(self, ax):
+    def _parse_legend(self, ax: Axes):
         pass

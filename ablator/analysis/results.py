@@ -166,7 +166,7 @@ class Results:
         ]
         self._assert_cat_attributes(self.categorical_attributes)
 
-    def _make_cache(self, clean=False):
+    def _make_cache(self, clean: bool = False):
         memory = Memory(self.experiment_dir.joinpath(".cache"), verbose=0)
         self._parse_results = memory.cache(
             self._parse_results, ignore=["self", "init_ray"]
@@ -205,7 +205,7 @@ class Results:
                 )
 
     @property
-    def metric_names(self) -> list[str]:
+    def metric_names(self) -> list[str]:  # type: ignore
         """
         Get the list of all optimize directions
 

@@ -345,13 +345,13 @@ class PredictionStore:
         }
         self.__evaluation_functions__ = evaluation_functions_dict
 
-    def _init_arr(self, tag):
+    def _init_arr(self, tag: str):
         attr_name = f"__{tag}_arr__"
         _arr = ArrayStore(batch_limit=self.limit, memory_limit=self.memory_limit)
         setattr(self, attr_name, _arr)
         return getattr(self, attr_name)
 
-    def _get_arr(self, tag) -> ArrayStore:
+    def _get_arr(self, tag: str) -> ArrayStore:
         attr_name = f"__{tag}_arr__"
         arr = getattr(self, attr_name)
         return arr

@@ -164,14 +164,14 @@ class _Study:
             else:
                 raise ValueError(f"Unrecognized optim. Direction `{v}`")
 
-    def get_trials(self, deepcopy, states):
+    def get_trials(self, deepcopy: bool, states: list["_state_store.TrialState"]):
         assert deepcopy is False
         return [t for t in self.trials if t.state in states]
 
     def _is_multi_objective(self):
         return len(self.directions) > 1
 
-    def drop(self, trial_id):
+    def drop(self, trial_id: int):
         for i, trial in enumerate(self.trials):
             if trial.id_ == trial_id:
                 del self.trials[i]
@@ -187,13 +187,13 @@ class _Study:
             optim_metrics=self.optim_metrics,
         )
 
-    def get_trial(self, trial_id):
+    def get_trial(self, trial_id: int):
         for trial in self.trials:
             if trial.id_ == trial_id:
                 return trial
         raise RuntimeError(f"Trial {trial_id} was not found.")
 
-    def update(self, trial_id, metrics, state):
+    def update(self, trial_id: int, metrics: OrderedDict[str, float] | None, state: "_state_store.TrialState"):
         self.get_trial(trial_id).update(metrics, state)
 
 

@@ -26,7 +26,7 @@ def _parse_search_space(space: SearchSpace) -> list:
     raise ValueError(f"Invalid SearchSpace: {space}")
 
 
-def _expand_configs(configs, value: dict[str, SearchSpace] | SearchSpace | ty.Any, key) -> list:
+def _expand_configs(configs: list[dict[str, str | int | float | dict]], value: dict[str, SearchSpace] | SearchSpace | ty.Any, key) -> list:
     _configs = []
     if isinstance(value, dict):
         expanded_space = _expand_search_space(value)
@@ -119,12 +119,12 @@ class GridSampler(BaseSampler):
     def _drop(self):
         self.sampled_configs.pop()
 
-    def update_trial(self, trial_id, metrics: dict[str, float] | None, state):
+    def update_trial(self, trial_id: int, metrics: dict[str, float] | None, state):
         """
         This function is a no-op for grid sampling as it is entirely random.
         """
 
-    def internal_repr(self, trial_id):
+    def internal_repr(self, trial_id: int):
         """
         This function is a no-op for grid sampling as it does not need a reason
         to maintain an internal representation of trials.
