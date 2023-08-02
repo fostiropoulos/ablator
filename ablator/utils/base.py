@@ -6,38 +6,17 @@ import typing as ty
 from collections import namedtuple
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-
 import numpy as np
 import torch
 from torch import nn
+from ablator.utils._nvml import patch_smi
 
 try:
     # pylint: disable=unspecified-encoding
     with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
-        from ctypes import c_uint, c_ulonglong, c_ssize_t
         from pynvml.smi import nvidia_smi as smi
         from pynvml import nvml
 
-        # This is not a reported bug, but apparently there is a padding
-        # to each process, causes a strange error.
-        # The docs do not report any padding:
-        # https://docs.nvidia.com/deploy/nvml-api/structnvmlProcessInfo__t.html#structnvmlProcessInfo__t
-        # The byte-order also differs (e.g. pid, usedGpuMemory, gpuInstanceId, computeInstanceId)
-        # pylint: disable=protected-access
-
-        class c_nvmlProcessInfo_t(nvml._PrintableStructure):
-            _fields_ = [
-                ("pid", c_uint),
-                ("usedGpuMemory", c_ulonglong),
-                ("gpuInstanceId", c_uint),
-                ("computeInstanceId", c_uint),
-                ("pad", c_ssize_t),
-            ]
-            _fmt_ = {
-                "usedGpuMemory": "%d B",
-            }
-
-        nvml.c_nvmlProcessInfo_t = c_nvmlProcessInfo_t
         _instance = smi.getInstance()
         _instance.DeviceQuery()
         # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
@@ -314,6 +293,8 @@ def _get_gpu_info() -> list[dict[str, ty.Any]]:
             return []
     else:
         return []
+    if not getattr(smi, "_is_id", False):
+        patch_smi(smi, nvml)
     if "gpu" not in device:
         return []
     return sorted(device["gpu"], key=lambda x: x["minor_number"])
