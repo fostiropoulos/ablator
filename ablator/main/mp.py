@@ -23,6 +23,7 @@ from ablator.mp.node_manager import NodeManager, Resource
 from ablator.mp.utils import _sorted_nodes_by_util
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 from ablator.mp.train_remote import train_main_remote
+from ablator.config.types import Optional
 
 
 class ParallelTrainer(ProtoTrainer):

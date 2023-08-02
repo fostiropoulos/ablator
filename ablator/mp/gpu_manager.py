@@ -24,7 +24,7 @@ class GPU:
     ----------
     num : int
         the GPU id number
-    free_mem : int | None
+    free_mem : int
         the free memory for the given GPU in MB
     is_locked : bool
         whether the GPU is currently pending memory allotment.
@@ -80,6 +80,7 @@ def wait_get_gpu(
         the name of the process to use to identify memory utilization, by default ``None``
     max_timeouts : int
         the seconds of timeouts after which to throw an error, by default 60
+
     Returns
     -------
     int
@@ -167,9 +168,9 @@ class GPUManager:
 
         Parameters
         ----------
-        expected_util_mb : int
+        expected_util_mb : int | None
             the expected utilization of the cuda process.
-        process_name : str
+        process_name : str | None
             the name of the process requesting the GPU resources, by default ``None``
 
         Returns
