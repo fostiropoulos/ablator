@@ -467,7 +467,7 @@ class ModelBase(ABC):
             self.eval_metrics = Metrics(
                 batch_limit=None,
                 memory_limit=int(run_config.metrics_mb_limit * 1e6),
-                moving_average_limit=self.epoch_len,
+                moving_average_limit=None,
                 evaluation_functions=self.evaluation_functions(),
                 moving_aux_metrics=["loss"],
             )
@@ -744,11 +744,13 @@ class ModelBase(ABC):
                 del metrics[k]
 
         self.train_metrics.update_static_metrics(self.train_stats)
-        self.train_metrics.update_ma_metrics(metrics)
+        # pylint: disable=protected-access
+        self.train_metrics._update_ma_metrics(metrics)
 
         if "eval_metrics" in save_dict and self.eval_metrics is not None:
             metrics = copy.deepcopy(save_dict["eval_metrics"])
-            self.eval_metrics.update_ma_metrics(metrics)
+            # pylint: disable=protected-access
+            self.eval_metrics._update_ma_metrics(metrics)
 
     def _update_save_dict(self, user_save_dict: dict[str, ty.Any] | None = None):
         """

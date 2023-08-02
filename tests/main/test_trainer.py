@@ -1,5 +1,6 @@
 from pathlib import Path
 import torch
+import numpy as np
 from torch import nn
 from ablator import (
     ModelConfig,
@@ -11,7 +12,6 @@ from ablator import (
     SchedulerConfig,
 )
 import pytest
-from ablator.modules.metrics.main import Metrics
 import random
 
 
@@ -48,8 +48,11 @@ class MyCustomModel(nn.Module):
         self.param = nn.Parameter(torch.ones(100, 1))
 
     def forward(self, x: torch.Tensor):
-        x = self.param + torch.rand_like(self.param) * 0.01
+        x = self.param
+        if self.training:
+            x = x + torch.rand_like(self.param) * 0.01
         return {"preds": x}, x.sum().abs()
+
 
 
 class TestWrapper(ModelWrapper):
@@ -61,15 +64,6 @@ class TestWrapper(ModelWrapper):
         dl = [torch.rand(100) for i in range(100)]
         return dl
 
-
-class MyCustomModel2(nn.Module):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__()
-        self.param = nn.Parameter(torch.ones(100, 1))
-
-    def forward(self, x: torch.Tensor):
-        x = self.param + torch.rand_like(self.param) * 0.01
-        return {"preds": x}, x.sum().abs()
 
 class MyCustomModel3(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
@@ -86,6 +80,7 @@ class TestWrapper2(ModelWrapper):
         dl = [torch.rand(100) for i in range(100)]
         return dl
 
+
 def test_proto(tmp_path: Path, assert_error_msg, config):
     wrapper = TestWrapper(MyCustomModel)
     assert_error_msg(
@@ -96,24 +91,28 @@ def test_proto(tmp_path: Path, assert_error_msg, config):
     ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
     metrics = ablator.launch()
     val_metrics = ablator.evaluate()
-    assert abs((metrics["val_loss"] - val_metrics["val"]["loss"])) < 0.01
+    assert np.isclose(metrics["val_loss"], val_metrics["val"]["loss"])
 
 
 def test_proto_with_scheduler(tmp_path: Path, config):
-    wrapper = TestWrapper(MyCustomModel2)
+    wrapper = TestWrapper(MyCustomModel)
     config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
+    config.train_config.scheduler_config = SchedulerConfig(
+        "step", arguments={"step_when": "val"}
+    )
     ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
     metrics = ablator.launch()
     val_metrics = ablator.evaluate()
-    assert abs((metrics["val_loss"] - val_metrics["val"]["loss"])) < 0.01
-
+    assert np.isclose(metrics["val_loss"], val_metrics["val"]["loss"])
 
 
 
 def test_val_loss_is_none(tmp_path: Path, config, assert_error_msg):
     wrapper = TestWrapper2(MyCustomModel3)
     config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
-    config.train_config.scheduler_config = SchedulerConfig("step", arguments={"step_when": "val"})
+    config.train_config.scheduler_config = SchedulerConfig(
+        "step", arguments={"step_when": "val"}
+    )
 
     ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
     assert_error_msg(

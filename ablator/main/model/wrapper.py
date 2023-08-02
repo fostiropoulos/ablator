@@ -749,7 +749,7 @@ class ModelWrapper(ModelBase):
         """
         self._init_state(run_config, resume=True)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
-
+        self.update_status()
         msg = self.train_metrics.to_dict()
         self.logger.info(f"Current metrics: {msg}")
         metrics = {}
@@ -760,9 +760,9 @@ class ModelWrapper(ModelBase):
                 # NOTE we set max memory limit and let it crash because we do not want
                 # inaccurate metrics calculation. Possibly smarter ways to go about it.
                 eval_metrics = Metrics(
-                    batch_limit=len(loader) + 1,
-                    memory_limit=int(1e9),
-                    moving_average_limit=len(loader),
+                    batch_limit=None,
+                    memory_limit=None,
+                    moving_average_limit=None,
                     evaluation_functions=self.evaluation_functions(),
                     moving_aux_metrics=["loss"],
                 )
@@ -775,6 +775,7 @@ class ModelWrapper(ModelBase):
                 metrics[tag] = eval_metrics.to_dict()
                 msg = eval_metrics.to_dict()
                 self.logger.info(f"Evaluating {tag}: {msg}")
+                self.update_status()
         return metrics
 
     def apply_loss(

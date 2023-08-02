@@ -282,9 +282,10 @@ def test_train_stats():
     res = TestWrapper(MyCustomModel).train(config)
     assert res["train_loss"] < 2e-05
     del res["train_loss"]
+    assert np.isnan(res["val_loss"])
+    del res["val_loss"]
 
     assert res == {
-        "val_loss": np.nan,
         "best_iteration": 0,
         "best_loss": float("inf"),
         "current_epoch": 2,

@@ -283,9 +283,9 @@ class PredictionStore:
 
     def __init__(
         self,
-        batch_limit: int = 30,
+        batch_limit: int | None = 30,
         # 100 MB memory limit
-        memory_limit: int = int(1e8),
+        memory_limit: int | None = int(1e8),
         moving_average_limit: int = 3000,
         evaluation_functions: dict[str, Callable] | list[Callable] | None = None,
     ):
@@ -534,6 +534,12 @@ class MovingAverage(ArrayStore):
     @property
     def __mean__(self):
         return np.mean(self._arr)
+
+    @property
+    def last(self):
+        if len(self._arr) > 0:
+            return self._arr[-1]
+        return np.nan
 
     @property
     def value(self):
