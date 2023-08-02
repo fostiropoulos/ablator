@@ -26,7 +26,8 @@ def _parse_search_space(space: SearchSpace) -> list:
     raise ValueError(f"Invalid SearchSpace: {space}")
 
 
-def _expand_configs(configs: list[dict[str, str | int | float | dict]], value: dict[str, SearchSpace] | SearchSpace | ty.Any, key) -> list:
+def _expand_configs(configs: list[dict[str, str | int | float | dict]],
+                    value: dict[str, SearchSpace] | SearchSpace | ty.Any, key) -> list:
     _configs = []
     if isinstance(value, dict):
         expanded_space = _expand_search_space(value)

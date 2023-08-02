@@ -359,6 +359,7 @@ def _parse_class(cls: Any, kwargs: dict | object) -> object:
 
 
 # pylint: disable=too-complex
+# flake8: noqa: C901
 def parse_value(val: Any, annot: Annotation, name: str | None = None) -> ty.Any:
     """
     Parses a value based on the given annotation.

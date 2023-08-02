@@ -250,12 +250,13 @@ class ConfigBase:
         return annot[element].variable_type
 
     # pylint: disable=too-complex
+    # flake8: noqa: C901
     def make_dict(
         self,
         annotations: dict[str, Annotation],
         ignore_stateless: bool = False,
         flatten: bool = False,
-    ) -> dict:  # flake8: noqa
+    ) -> dict:
         """
         Create a dictionary representation of the configuration object.
 
