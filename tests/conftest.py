@@ -167,6 +167,12 @@ class DockerRayCluster:
 
     def tearDown(self):
         self.kill_nodes()
+        with open(os.path.expanduser("~/.ssh/authorized_keys"), "r+", encoding="utf-8") as file:
+            lines = file.readlines()
+            lines = [line for line in lines if all(key not in line for key in self.client_keys)]
+            file.seek(0)
+            file.writelines(lines)
+            file.truncate()
 
     def setUp(self):
         if not ray.is_initialized():
@@ -199,6 +205,9 @@ class DockerRayCluster:
                 self.append_nodes(node_diff)
             elif node_diff < 0:
                 self.kill_nodes(int(node_diff * -1))
+            with open(os.path.expanduser("~/.ssh/authorized_keys"), "a", encoding="utf-8") as file:
+                for key in self.client_keys:
+                    file.write(key)
 
     def _active_containers(self):
         containers = {}
