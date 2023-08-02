@@ -6,6 +6,7 @@ LABEL description="Running environment for Ablator"
 
 RUN apt-get update
 RUN apt-get install -y openssh-server rsync
+RUN apt-get install fuse3 -y
 RUN ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
 RUN cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 RUN conda update -y conda
@@ -15,7 +16,8 @@ RUN conda install -y python=$PY_VERSION pip
 # This is done to avoid re-installing depedencies on code changes.
 COPY ./setup.py ./setup.py
 COPY ./README.md ./README.md
-RUN pip install -e .[dev]
+RUN pip install -e .[dev]\
+    pip install GPUtil 
 COPY . .
 
 EXPOSE 22

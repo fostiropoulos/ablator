@@ -19,18 +19,6 @@ N_MOCK_NODES = 10
 GPU_UTIL = 100  # mb
 
 
-def get_node_ip_address():
-    """Get the IP address of the current node."""
-    addr = "8.8.8.8"  # You can use any reachable address here
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.connect((addr, 80))  # We only establish a connection, no data is sent
-        ip_address = sock.getsockname()[0]
-    finally:
-        sock.close()
-    return ip_address
-
-
 def available_resources(
     self: NodeManager,
     mem_bottleneck_step=4,

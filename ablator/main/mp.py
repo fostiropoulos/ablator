@@ -353,6 +353,7 @@ class ParallelTrainer(ProtoTrainer):
             )
             self.ray_address = ray_cluster.address_info["address"]
         self.node_manager = NodeManager(private_key_home=Path.home())
+        self.run_config.rclone_config = None
         make_rclone_config(self.run_config)
         if self.run_config.rclone_config is not None:
             for node_ip in self.node_manager.nodes:

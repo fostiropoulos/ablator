@@ -243,7 +243,7 @@ class DockerRayCluster:
         prev_nodes = len(self.node_ips())
         for _ in range(n):
             _, _, pubkey = make_node(self.client, self.img, self.cluster_address)
-            self.client_keys.push(pubkey)
+            self.client_keys.append(pubkey)
         self._wait_nodes(prev_nodes, n)
 
     def _wait_nodes(self, prev_nodes, added_nodes):
