@@ -1,5 +1,4 @@
 import functools
-import os
 import shutil
 import uuid
 from pathlib import Path
@@ -8,14 +7,16 @@ import mock
 import numpy as np
 import pytest
 import torch
-import socket
-from ablator.config.rclone import RemoteRcloneConfig
 
 from ablator.main.mp import ParallelTrainer
 from ablator.main.state.store import TrialState
 from ablator.modules.loggers.file import FileLogger
 from ablator.mp.node_manager import NodeManager, Resource
 from ablator.mp.train_remote import train_main_remote
+
+N_MOCK_NODES = 10
+
+GPU_UTIL = 100  # mb
 
 
 def get_node_ip_address():
@@ -28,11 +29,6 @@ def get_node_ip_address():
     finally:
         sock.close()
     return ip_address
-
-
-N_MOCK_NODES = 10
-
-GPU_UTIL = 100  # mb
 
 
 def available_resources(
@@ -147,30 +143,8 @@ def test_mp_sampling_limits(tmp_path: Path, error_wrapper, make_config, working_
         assert len(trainer.experiment_state.valid_trials()) == 80
 
 
-@pytest.mark.order(-1)
-def test_mp_run(
-    tmp_path: Path,
-    assert_error_msg,
-    ray_cluster,
-    error_wrapper,
-    make_config,
-    working_dir,
-):
-    n_trials = 10
-    config = make_config(tmp_path, search_space_limit=n_trials)
-    config.experiment_dir = tmp_path
-    remote_path = tmp_path / "mntremote"
-    os.makedirs(remote_path, exist_ok=True)
-    config.remote_rclone_config = RemoteRcloneConfig(
-        host=get_node_ip_address(),
-        key_file="~/.ssh/id_rsa",
-        user="",
-        remote_path=str(remote_path),
-    )
-    config.total_trials = n_trials
-    ablator = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-    ablator.launch(working_dir)
-
+@pytest.mark.order(0)
+def test_mp_run(assert_error_msg, working_dir, ablator, ray_cluster):
     complete_configs = ablator.experiment_state.get_trial_configs_by_state(
         TrialState.COMPLETE
     )

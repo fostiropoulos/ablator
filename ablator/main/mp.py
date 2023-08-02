@@ -353,11 +353,8 @@ class ParallelTrainer(ProtoTrainer):
             self.ray_address = ray_cluster.address_info["address"]
         self.node_manager = NodeManager(private_key_home=Path.home())
         make_rclone_config(self.run_config)
-        print("fwefkjwijfwfwejwjwjwjweojiwejwjwjowjfwjwiwe start mountttttt")
         if self.run_config.rclone_config is not None:
-            print("3123124143affw start mountttttt")
             for node_ip in self.node_manager.nodes:
-                print(f"31faewffwwwffeeeee start mounttdddd${node_ip}")
                 rclone_config_copy = copy.deepcopy(self.run_config.rclone_config)
                 experiment_dir = self.experiment_dir
                 self.node_manager.run_lambda(lambda: mount_remote(rclone_config_copy, experiment_dir), node_ip)
