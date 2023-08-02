@@ -107,7 +107,7 @@ class SearchSpace(ConfigBase):
     categorical_values: Optional[List[str]]
     subspaces: Optional[List[Self]]
     sub_configuration: Optional[SubConfiguration]
-    value_type: FieldType = FieldType.continuous
+    value_type: Optional[FieldType]
     n_bins: Optional[int]
     log: bool = False
 
@@ -125,6 +125,18 @@ class SearchSpace(ConfigBase):
             "Must specify only one of 'value_range', 'subspaces', "
             "'categorical_values' and / or 'sub_configurations' for SearchSpace."
         )
+        if self.value_range is not None:
+            assert (
+                self.value_type is not None
+            ), "`value_type` is required for `value_range` of SearchSpace"
+        else:
+            assert (
+                self.value_type is None
+            ), "Can not specify `value_type` without `value_range`."
+        if self.n_bins is not None:
+            assert (
+                self.value_range is not None or self.categorical_values is not None
+            ), "Can not specify `n_bins` without `value_range` or `categorical_values`."
 
     def parsed_value_range(self) -> tuple[int, int] | tuple[float, float]:
         """
@@ -141,7 +153,8 @@ class SearchSpace(ConfigBase):
         (0.05, 0.1)
         """
         assert self.value_range is not None
-        fn = float if self.value_type == FieldType.continuous else int
+        assert self.value_type is not None
+        fn = int if self.value_type == FieldType.discrete else float
 
         low_str, high_str = self.value_range
         low = fn(low_str)
@@ -197,11 +210,12 @@ class SearchSpace(ConfigBase):
         """
         # TODO make me pretty (e.g. print in an indented format.)
         if self.value_range is not None:
-            str_repr = (
-                f"SearchSpace(value_range={self.parsed_value_range()},"
-                f"value_type='{self.value_type.value}'"
-                f"{f', n_bins={self.n_bins}' if self.n_bins is not None else ''})"
-            )
+            str_repr = f"SearchSpace(value_range={self.parsed_value_range()}"
+            if self.value_type is not None:
+                str_repr += f", value_type='{self.value_type.value}'"
+            if self.n_bins is not None:
+                str_repr += f", n_bins='{self.n_bins}'"
+            str_repr += ")"
             return str_repr
         if self.categorical_values is not None:
             return f"SearchSpace(categorical_values={self.categorical_values})"

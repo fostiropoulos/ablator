@@ -1,8 +1,5 @@
-import builtins
 import copy
 import multiprocessing as mp
-import os
-import shutil
 import sys
 import traceback
 import types as tys
@@ -12,152 +9,20 @@ from collections import OrderedDict
 from functools import cached_property
 from pathlib import Path
 
-import numpy as np
 import ray
 import torch
+from ablator.modules.loggers.file import RemoteFileLogger
+from ablator.mp.gpu_manager import GPUError, GPUManager, wait_get_gpu
 
 import ablator.utils.base as butils
 from ablator.config.mp import ParallelConfig
-from ablator.main.model.main import CheckpointNotFoundError, TrainPlateauError
 from ablator.main.model.wrapper import ModelWrapper
 from ablator.main.proto import ProtoTrainer
 from ablator.main.state import ExperimentState, TrialState
-from ablator.modules.loggers.file import RemoteFileLogger
-from ablator.modules.metrics.main import LossDivergedError
 from ablator.mp.node_manager import NodeManager, Resource
 from ablator.mp.utils import _sorted_nodes_by_util
-from ablator.utils.base import get_gpu_mem
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
-from ablator.config.types import Optional
-
-# TODO refactor into a seperate file and reduce complexity
-# pylint: disable=too-complex,broad-exception-caught
-
-
-def train_main_remote(
-    model: ModelWrapper,
-    run_config: ParallelConfig,
-    mp_logger: RemoteFileLogger,
-    uid: int,
-    fault_tollerant: bool = True,
-    crash_exceptions_types: list[type] | None = None,
-    resume: bool = False,
-    clean_reset: bool = False,
-    progress_bar: ty.Optional[RemoteProgressBar] = None,
-) -> tuple[int, dict[str, float] | None, TrialState]:
-    """
-    The trial job that will be executed remotely at a ray node. This is where model training happens.
-    In addition, experiment directory will be synchronized to the Google Cloud storage and remote nodes.
-    Synchronization is done via GcpConfig and RemoteConfig ``rsync_up()`` methods. Refer to documentation of
-    these 2 classes for more details.
-
-    Parameters
-    ----------
-    model : ModelWrapper
-        The ModelWrapper that is used to train a model.
-    run_config : ParallelConfig
-        Runtime configuration for this trial.
-    mp_logger : RemoteFileLogger
-        The file logger that's used to log training progress.
-    uid : int
-        the trial unique identifier.
-    fault_tollerant : bool
-        Whether to tollerate crashes, aka to cease execution when the ray job crashes. By default True.
-    crash_exceptions_types : list[type] | None
-        Types of exceptions that are considered as crashes. By default None
-    resume : bool
-        Whether to resume training the model from existing checkpoints and existing experiment state. By default False.
-    clean_reset : bool
-        Whether to remove model directory when ``CheckpointNotFoundError`` is raised. By default False.
-    progress_bar : ty.Optional[RemoteProgressBar]
-        Optionally, we can use a remote progress bar to update the results of the trial.
-
-    Returns
-    -------
-    tuple[int, dict[str, float] | None, TrialState]
-        - int
-            The trial uid corresponding to the results.
-        - dict[str, float], None
-            If exception raised (Except for LossDivergedError and TrainPlateauError),
-            this will be ``None`` object. Otherwise, this will be a dictionary of metrics.
-        - TrialState
-            A TrialState object indicating the state of the trial job
-
-            - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training,
-            returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
-
-            - If ``RuntimeError`` (with message ``'CUDA out of memory'``),
-            or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training,
-            returned state will be ``TrialState.FAIL_RECOVERABLE``
-
-            - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised,
-            returned state will be ``TrialState.FAIL``
-
-    """
-    if crash_exceptions_types is None:
-        crash_exceptions_types = []
-
-    if torch.cuda.is_available():
-        least_busy_gpu = np.argmax(list(get_gpu_mem("free").values()))
-        # TODO instead of CUDA_VISIBLE_DEVICES, using a context could be cleaner.
-        # with torch.cuda.device(1):
-        os.environ["CUDA_VISIBLE_DEVICES"] = f"{least_busy_gpu}"
-
-    def handle_exception(e):
-        exception_str = traceback.format_exc()
-        if hasattr(model, "logger"):
-            model.logger.error(exception_str)
-        else:
-            mp_logger.error(f"{run_config.uid}:\n{exception_str}")
-        mp_logger.error(f"Error Occured {run_config.uid}: {str(e)}")
-        if not fault_tollerant:
-            raise e
-        if isinstance(e, tuple(crash_exceptions_types)):
-            error_msg = (
-                f"Exception `{str(e)}` of type: `{type(e).__name__}` in crash_exceptions_types="
-                f"{{c.__name__ for c in crash_exceptions_types}}. Exiting."
-            )
-            mp_logger.error(error_msg)
-            raise RuntimeError(error_msg) from e
-
-        return uid, None, TrialState.FAIL
-
-    try:
-        res = model.train(run_config, resume=resume, remote_progress_bar=progress_bar)
-        mp_logger.info(f"Finished training - {run_config.uid}")
-        return uid, res, TrialState.COMPLETE
-    except (LossDivergedError, TrainPlateauError) as e:
-        mp_logger.warn(
-            f"Trial {run_config.uid} was pruned for poor performance. {str(e)}"
-        )
-        return (
-            uid,
-            model.metrics,
-            TrialState.PRUNED_POOR_PERFORMANCE,
-        )
-    except CheckpointNotFoundError as e:
-        # This is the case for corrupt artifacts.
-        if clean_reset:
-            if model.experiment_dir is not None:
-                shutil.rmtree(model.experiment_dir.as_posix())
-            return (
-                uid,
-                None,
-                TrialState.FAIL_RECOVERABLE,
-            )
-
-        return handle_exception(e)
-    except RuntimeError as e:
-        if butils.is_oom_exception(e):
-            mp_logger.warn(f"Cuda out of memory for {run_config.uid}. Restarting...")
-            return (
-                uid,
-                None,
-                TrialState.FAIL_RECOVERABLE,
-            )
-        return handle_exception(e)
-    except builtins.Exception as e:
-        return handle_exception(e)
+from ablator.mp.train_remote import train_main_remote
 
 
 class ParallelTrainer(ProtoTrainer):
@@ -214,6 +79,7 @@ class ParallelTrainer(ProtoTrainer):
         ), f"run_config must be of a type - { ModelWrapper.__name__} received {self.wrapper}"
 
         self.logger: RemoteFileLogger
+        self.gpu_manager: GPUManager
         self.experiment_state: ExperimentState
         self.total_trials: int | None
         self.ray_address: str
@@ -270,6 +136,9 @@ class ParallelTrainer(ProtoTrainer):
         resume: bool = False,
     ):
         trial_uuid = f"{run_config.uid}_{str(uuid.uuid4())[:4]}"
+        gpu_id = wait_get_gpu(
+            self.gpu_manager, run_config.gpu_mb_per_experiment, process_name=trial_uuid
+        )
         wrapper = copy.deepcopy(self.wrapper)
         # pylint: disable=protected-access
         wrapper._uid = trial_uuid
@@ -292,16 +161,19 @@ class ParallelTrainer(ProtoTrainer):
         msg = f"{action} uid: {trial_uuid}\nParameters: \n\t{diffs}\n-----"
         self.logger.info(msg)
         self.experiment_state.update_trial_state(trial_id, None, TrialState.RUNNING)
+
         return remote_fn.remote(
-            model_obj,
-            copy.deepcopy(run_config),
-            self.logger,
-            trial_id,
-            True,
-            None,
-            resume,
-            True,
-            self._progress_bar,
+            model=model_obj,
+            run_config=copy.deepcopy(run_config),
+            mp_logger=self.logger,
+            gpu_manager=self.gpu_manager,
+            gpu_id=gpu_id,
+            uid=trial_id,
+            fault_tollerant=True,
+            crash_exceptions_types=None,
+            resume=resume,
+            clean_reset=True,
+            progress_bar=self._progress_bar,
         )
 
     def _heartbeat(self):
@@ -369,10 +241,12 @@ class ParallelTrainer(ProtoTrainer):
                     f"Received StopIteration signal, trial limit possibly reached {self.total_trials}"
                 )
                 break
-
-            future = self._make_remote(trial_id, trial, node_ip)
-            futures.append(future)
-
+            try:
+                future = self._make_remote(trial_id, trial, node_ip)
+                futures.append(future)
+            except GPUError:
+                self.logger.warn("Not Enough GPU resources.")
+                break
         return futures
 
     def pre_train_setup(self):
@@ -474,6 +348,8 @@ class ParallelTrainer(ProtoTrainer):
             self.ray_address = ray_cluster.address_info["address"]
         self.node_manager = NodeManager(private_key_home=Path.home())
         self.logger.to_remote()
+        # pylint: disable=no-member
+        self.gpu_manager = GPUManager.remote()  # type: ignore
         # first heartbeat <3
         self._heartbeat()
         super()._init_state()

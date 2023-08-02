@@ -569,7 +569,10 @@ class ModelBase(ABC):
         self.run_config = self.config_parser(run_config)
 
         if self.run_config.experiment_dir is not None:
-            self.experiment_dir = Path(self.run_config.experiment_dir)
+            self.experiment_dir = (
+                Path(self.run_config.experiment_dir).resolve().absolute()
+            )
+            self.run_config.experiment_dir = self.experiment_dir.as_posix()
 
         # Does not create log artifacts during smoke test
         if not smoke_test:

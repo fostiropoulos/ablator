@@ -147,7 +147,7 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg):
     new_config.init_chkpt = new_config.experiment_dir.joinpath("checkpoints")
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config))
     assert "test_exp_4/checkpoints is not a valid checkpoint e.g. a `.pt` file. " in msg
-    chkpt = get_latest_chkpts(config.experiment_dir.joinpath("checkpoints"))[0]
+    chkpt = get_latest_chkpts(Path(config.experiment_dir).joinpath("checkpoints"))[0]
     assert chkpt.name.endswith("400.pt")
     new_config.init_chkpt = chkpt
     shutil.rmtree(new_config.experiment_dir)
@@ -169,7 +169,6 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg):
 if __name__ == "__main__":
     from tests.conftest import _assert_error_msg
     import shutil
-    from tests.conftest import _assert_error_msg
 
     tmp_path = Path("/tmp/test_exp")
 
