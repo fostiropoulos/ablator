@@ -342,7 +342,7 @@ class ModelWrapper(ModelBase):
             and self.current_iteration % step_interval == 0
         )
 
-    def _train_evaluation_step(self, smoke_test=False):
+    def _train_evaluation_step(self, smoke_test: bool = False):
         is_best = False
         val_loss = None
         # If we are within 10% of the start or end of an epoch, we skip

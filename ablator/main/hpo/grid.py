@@ -125,7 +125,7 @@ class GridSampler(BaseSampler):
         This function is a no-op for grid sampling as it is entirely random.
         """
 
-    def internal_repr(self, trial_id: int):
+    def internal_repr(self, trial_id: int) -> None:
         """
         This function is a no-op for grid sampling as it does not need a reason
         to maintain an internal representation of trials.

@@ -35,15 +35,15 @@ class TrialState(enum.IntEnum):
 
     """
 
-    RUNNING = 0
-    COMPLETE = 1
-    PRUNED = 2
-    FAIL = 3
-    WAITING = 4
-    PRUNED_INVALID = 5
-    PRUNED_DUPLICATE = 6
-    PRUNED_POOR_PERFORMANCE = 7
-    FAIL_RECOVERABLE = 8
+    RUNNING: int = 0
+    COMPLETE: int = 1
+    PRUNED: int = 2
+    FAIL: int = 3
+    WAITING: int = 4
+    PRUNED_INVALID: int = 5
+    PRUNED_DUPLICATE: int = 6
+    PRUNED_POOR_PERFORMANCE: int = 7
+    FAIL_RECOVERABLE: int = 8
 
 
 class Trial(Base):

@@ -30,7 +30,7 @@ def _parse_array_store_val(
     val: np.ndarray | int | float,
     store_type: None | type = None,
     shape: None | tuple[int, ...] = None,
-):
+) -> np.ndarray:
     if not isinstance(val, (np.ndarray, int, float)):
         raise RuntimeError(f"Invalid ArrayStore value type {type(val)}")
     np_val: np.ndarray

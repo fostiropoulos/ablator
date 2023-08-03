@@ -8,7 +8,7 @@ from ablator.config.mp import Optim
 from ablator.utils.file import nested_set
 
 
-def _verify_metrics(metrics: dict[str, float] | None):
+def _verify_metrics(metrics: dict[str, float] | None) -> None:
     if metrics is None:
         return
     for k, v in metrics.items():

@@ -33,13 +33,13 @@ def in_notebook() -> bool:
     return True
 
 
-def get_last_line(filename: Path) -> str | None:
+def get_last_line(filename: Path | None) -> str | None:
     """
     This functions gets the last line from the file.
 
     Parameters
     ----------
-    filename : Path
+    filename : Path | None
         The path of the filename.
 
     Returns
@@ -108,7 +108,7 @@ class Display:
             self.html_widget.value = self.html_value
             self.html_value = ""
 
-    def _display(self, text: str, pos: int, is_last=False):
+    def _display(self, text: str, pos: int, is_last: bool = False):
         if self.ncols is None or self.nrows is None:
             return
 
@@ -186,7 +186,7 @@ class RemoteProgressBar:
         for obj in range(self.total_trials):
             yield obj
 
-    def close(self, uid):
+    def close(self, uid: str):
         self.closed[uid] = True
 
     def make_bar(self):
@@ -219,7 +219,7 @@ class RemoteProgressBar:
 
         return texts
 
-    def update(self, finished_trials):
+    def update(self, finished_trials: int):
         self.finished_trials = finished_trials
 
     def update_status(self, uid: str, texts: list[str]):
@@ -235,7 +235,7 @@ class RemoteDisplay(Display):
         self.update_interval = update_interval
         self.remote_progress_bar = remote_progress_bar
 
-    def refresh(self, force=False):
+    def refresh(self, force: bool = False):
         if time.time() - self._prev_update_time > self.update_interval or force:
             self._prev_update_time = time.time()
             self.print_texts(
@@ -249,7 +249,7 @@ class ProgressBar:
 
     Parameters
     ----------
-    total_steps : int | None
+    total_steps : int
         The total steps the progress bar is expected to iterate
     epoch_len : int | None
         The number of iterations for a single epoch that is used to calculate the time it takes per epoch.
@@ -264,7 +264,7 @@ class ProgressBar:
     """
     def __init__(
         self,
-        total_steps: int | None,
+        total_steps: int,
         epoch_len: int | None = None,
         logfile: Path | None = None,
         update_interval: int = 1,
@@ -312,7 +312,7 @@ class ProgressBar:
         cls,
         current_iteration: int,
         start_time: float,
-        epoch_len: int,
+        epoch_len: int | None,
         total_steps: int,
         ncols: int | None = None,
     ):
@@ -338,7 +338,7 @@ class ProgressBar:
         metrics: dict[str, ty.Any],
         nrows: int | None = None,
         ncols: int | None = None,
-    ):
+    ) -> list:
         rows = tabulate(
             [[k + ":", f"{num_format(v)}"] for k, v in metrics.items()],
             disable_numparse=True,
@@ -369,12 +369,12 @@ class ProgressBar:
         return None
 
     @property
-    def nrows(self):
+    def nrows(self) -> int | None:
         if self.display is not None:
             return self.display.nrows - 5  # padding
         return None
 
-    def make_print_message(self):
+    def make_print_message(self) -> list:
         texts = self.make_metrics_message(self.metrics, self.nrows, self.ncols)
         pbar = self.make_bar(
             current_iteration=self.current_iteration,
