@@ -538,7 +538,7 @@ class MovingAverage(ArrayStore):
     @property
     def last(self):
         if len(self._arr) > 0:
-            return self._arr[-1]
+            return self._arr[-1].item()
         return np.nan
 
     @property

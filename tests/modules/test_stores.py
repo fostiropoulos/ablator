@@ -148,9 +148,15 @@ def test_moving_average(assert_error_msg):
     assert msg == "MovingAverage value must be scalar. Got [0 1]"
     msg = assert_error_msg(lambda: ma.append("t"))
     assert msg == "Invalid MovingAverage value type <class 'str'>"
+    ma.append(123)
+    assert ma.last == 123
+    ma.append(324)
+    assert ma.last == 324
     ma.reset()
     assert np.isnan(ma.value)
+    assert np.isnan(ma.last)
     assert str(ma) == "nan"
+
 
 
 def my_eval_fn(*args, a1, a2="", **kwargs):
