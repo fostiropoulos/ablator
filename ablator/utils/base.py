@@ -8,7 +8,6 @@ from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 import numpy as np
 import torch
-from torch import nn
 from ablator.utils._nvml import patch_smi
 
 try:
@@ -248,39 +247,6 @@ def parse_device(device: ty.Union[str, list[str]]):
         return [parse_device(_device) for _device in device]
 
     return "cuda" if torch.cuda.is_available() else "cpu"
-
-
-# TODO not a good initialization. Performs poorly for some networks.
-def init_weights(module: nn.Module):
-    """
-    Initialize the weights of a module.
-
-    Parameters
-    ----------
-    module : nn.Module
-        The input module to initialize.
-
-    Notes
-    -----
-    - If the module is a Linear layer, initialize weight values from a normal distribution N(mu=0, std=1.0).
-    If biases are available, initialize them to zeros.
-
-    - If the module is an Embedding layer, initialize embeddings with values from N(mu=0, std=1.0).
-    If padding is enabled, set the padding embedding to a zero vector.
-
-    - If the module is a LayerNorm layer, set all biases to zeros and all weights to 1.
-    """
-    if isinstance(module, nn.Linear):
-        module.weight.data.normal_(mean=0.0, std=0.01)
-        if module.bias is not None:
-            module.bias.data.zero_()
-    elif isinstance(module, nn.Embedding):
-        module.weight.data.normal_(mean=0.0, std=0.01)
-        if module.padding_idx is not None:
-            module.weight.data[module.padding_idx].zero_()
-    elif isinstance(module, nn.LayerNorm):
-        module.bias.data.zero_()
-        module.weight.data.fill_(1.0)
 
 
 def _get_gpu_info() -> list[dict[str, ty.Any]]:

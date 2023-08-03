@@ -104,8 +104,11 @@ class ModelWrapper(ModelBase):
 
         if "model" in save_dict:
             model.load_state_dict(save_dict["model"], strict=strict_load)
-        elif self.train_config.rand_weights_init:
-            model.apply(butils.init_weights)
+        elif hasattr(model, "init_weights") and isinstance(
+            model.init_weights, Callable
+        ):
+            # TODO tutorial on this use-case
+            model.init_weights()
 
         model = model.to(self.device)
         optimizer = self.create_optimizer(

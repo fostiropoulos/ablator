@@ -67,6 +67,15 @@ class MyModel(nn.Module):
         return {"preds": x}, x.sum().abs()
 
 
+class MyModelInitWeights(MyModel):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.randn(100, 1))
+
+    def init_weights(self):
+        self.param.data = torch.ones_like(self.param)
+
+
 class MyUnstableModel(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
@@ -450,6 +459,34 @@ def test_train_resume(tmp_path: Path, assert_error_msg):
         == f"Could not find a valid checkpoint in {wrapper.experiment_dir.joinpath('checkpoints')}"
     )
 
+def test_create_model(tmp_path: Path):
+    tmp_path = tmp_path.joinpath("test_exp")
+    _config = copy.deepcopy(config)
+    _config.verbose = "console"
+    _config.experiment_dir = tmp_path
+    wrapper = TestWrapper(MyModelInitWeights)
+    wrapper._init_state(_config)
+    wrapper.create_model()
+    assert (wrapper.model.param == 1).all()
+    rand_weights = torch.randn_like(wrapper.model.param)
+    wrapper.model.param.data = rand_weights
+    save_dict = wrapper.save_dict()
+    del wrapper
+
+    _config.experiment_dir = tmp_path.joinpath("test_exp_2")
+    wrapper = TestWrapper(MyModelInitWeights)
+    wrapper._init_state(_config)
+    wrapper.create_model(save_dict)
+    assert (wrapper.model.param == rand_weights).all().item()
+    wrapper.create_model()
+    assert (wrapper.model.param == 1).all()
+    del MyModelInitWeights.init_weights
+    wrapper.create_model()
+    new_param = wrapper.model.param
+    assert not (new_param == 1).all()
+    MyModelInitWeights.init_weights = ""
+    wrapper.create_model()
+    assert (wrapper.model.param != new_param).all()
 
 if __name__ == "__main__":
     import shutil
@@ -457,6 +494,8 @@ if __name__ == "__main__":
 
     tmp_path = Path("/tmp/")
 
+    shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)
+    test_create_model(tmp_path)
     shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)
     test_load_save(tmp_path, _assert_error_msg)
     shutil.rmtree(tmp_path.joinpath("test_exp"), ignore_errors=True)

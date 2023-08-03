@@ -25,8 +25,6 @@ class TrainConfig(ConfigBase):
         optimizer configuration. (check ``OptimizerConfig`` for more details)
     scheduler_config: Optional[SchedulerConfig]
         scheduler configuration. (check ``SchedulerConfig`` for more details)
-    rand_weights_init: bool = True
-        whether to initialize model weights randomly.
     """
 
     dataset: str
@@ -34,7 +32,6 @@ class TrainConfig(ConfigBase):
     epochs: int
     optimizer_config: OptimizerConfig
     scheduler_config: Optional[SchedulerConfig]
-    rand_weights_init: bool = True
 
 
 # TODO decorator @modelconfig as opposed to @configclass ModelConfig
