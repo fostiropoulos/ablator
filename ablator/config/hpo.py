@@ -66,7 +66,30 @@ class FieldType(Enum):
 @configclass
 class SearchSpace(ConfigBase):
     """
-    Search space configuration.
+    Search space configuration is used to define the search space for a hyperparameter.
+    This configuration is used for parallel experiments.
+
+    Examples
+    --------
+
+    In ablator, search space is defined for HPO that runs in parallel. For example, we would define
+    a search space like the example below:
+
+    - Given the following model configuration: 
+
+    >>> @configclass
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     hidden_size: int
+    >>>     activation: str
+    >>> model_config = CustomModelConfig(num_filter1 =32, num_filter2 = 64, activation = "relu")
+
+    - The search space should look like this, notice how the key is expressed as ``model_config.<model-hyperparameter>``
+    
+    >>> search_space = {
+    ...     "model_config.hidden_size": SearchSpace(value_range = [32, 64], value_type = 'int'),
+    ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"])
+    ... }
+
     """
 
     value_range: Optional[Tuple[str, str]]

@@ -24,18 +24,20 @@ class PlotAnalysis(Analysis):
 
     Examples
     --------
-    Assuming that experiment results are properly read and is stored in ```df``` dataframe. We now can plot these results as follows:
+    - Data frame to be used:
+
+    >>> df2 = pd.DataFrame({'val_accuracy': np.random.uniform(0.8,0.9,10),
+    ...       'train_config.optimizer_config.arguments.lr': np.random.uniform(0.001, 0.1,10),
+    ...       "index": range(10),
+    ...       "path": range(10)})
 
     - Creating dictionaries that map the configuration parameters [categorical + numerical] to custom labels for plots:
 
-    >>> categorical_name_remap = {
-    ...        "model_config.activation": "Activation",
-    ...    }
     >>> numerical_name_remap = {
-    ...        "model_config.num_filter1": "N. Filter 1",
-    ...        "model_config.num_filter2": "N. Filter 2",
-    ...        "train_config.optimizer_config.arguments.lr": "Learning Rate",
-    ...    }
+    ...             "train_config.optimizer_config.arguments.lr": "Learning Rate",
+    ...         }
+    ...     categorical_name_remap = {}
+    ...     attribute_name_remap = {**categorical_name_remap, **numerical_name_remap}
 
     - Initalize the ```PlotAnalysis``` and plot the figures:
 

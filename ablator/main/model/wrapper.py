@@ -920,7 +920,7 @@ class ModelWrapper(ModelBase):
         Returns
         -------
         dict[str, Callable]
-            The evaluation functions to use.Also see ``Metrics`` for details.
+            The evaluation functions to use. Also see ``Metrics`` for details.
         """
 
     # Functions that can be optionally over-written.
@@ -957,6 +957,15 @@ class ModelWrapper(ModelBase):
     def config_parser(self, run_config: RunConfig):
         """
         Used to initialize Derived properties
+
+        Examples
+        --------
+        For example, in GPT2 model, we need to resize its vocabulary size to match the tokenizer's vocabulary size depending on the tokenizer used:
+
+        >>> class MyLMWrapper(ModelWrapper):
+        ...    def config_parser(self, run_config: RunConfig):
+        ...        run_config.model_config.resize_token_embedding = len(self.train_dataloader.dataset.tokenizer)
+        ...        return run_config
         """
         return run_config
 

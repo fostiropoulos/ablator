@@ -182,7 +182,87 @@ class ParallelTrainer(ProtoTrainer):
         The number of cpu used per trial.
     gpu : float
         The number of gpu used per trial.
+    
+    Examples
+    --------
+    Following is a complete workflow on how to launch a parallel training experiment with ``ParallelTrainer``, from defining config to launching the experiment:
 
+    - Define model config, we want to run HPO on activation functions and model hidden size:
+
+    >>> @configclass
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     hidden_size: int
+    >>>     activation: str
+    >>> model_config = CustomModelConfig(num_filter1 =32, num_filter2 = 64, activation = "relu")
+
+    - Define training config:
+
+    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+    >>> train_config = TrainConfig(
+    ...     dataset="[Dataset Name]",
+    ...     batch_size=32,
+    ...     epochs=10,
+    ...     optimizer_config = my_optimizer_config,
+    ...     scheduler_config = my_scheduler_config,
+    ...     rand_weights_init = True
+    ... )
+
+    - Define search space:
+
+    >>> search_space = {
+    ...     "train_config.optimizer_config.arguments.lr": SearchSpace(
+    ...         value_range = [0.001, 0.01],
+    ...         value_type = 'float'
+    ...         ),
+    ...     "model_config.hidden_size": SearchSpace(value_range = [32, 64], value_type = 'int'),
+    ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"]),
+    ... }
+
+    - Define run config (remember to redefine the parallel config to update the model config type to be ``CustomModelConfig``):
+
+    >>> @configclass
+    >>> class CustomParallelConfig(ParallelConfig):
+    ...    model_config: CustomModelConfig
+    >>>
+    >>> parallel_config = CustomParallelConfig(
+    ...     train_config=train_config,
+    ...     model_config=model_config,
+    ...     metrics_n_batches = 800,
+    ...     experiment_dir = "/tmp/experiments/",
+    ...     device="cuda",
+    ...     amp=True,
+    ...     random_seed = 42,
+    ...     total_trials = 20,
+    ...     concurrent_trials = 20,
+    ...     search_space = search_space,
+    ...     optim_metrics = {"val_loss": "min"},
+    ...     gpu_mb_per_experiment = 1024,
+    ...     cpus_per_experiment = 1,
+    ... )
+
+    - Create model wrapper:
+
+    >>> class MyModelWrapper(ModelWrapper):
+    >>>     def __init__(self, *args, **kwargs):
+    >>>         super().__init__(*args, **kwargs)
+    >>>
+    >>>     def make_dataloader_train(self, run_config: CustomRunConfig):
+    >>>         return torch.utils.data.DataLoader(<train_dataset>, batch_size=32, shuffle=True)
+    >>>
+    >>>     def make_dataloader_val(self, run_config: CustomRunConfig):
+    >>>         return torch.utils.data.DataLoader(<val_dataset>, batch_size=32, shuffle=False)
+
+    - After gathering all configurations and model wrapper, it's time we initialize and launch the parallel trainer:
+
+    >>> wrapper = MyModelWrapper(
+    ...     model_class=<your_ModelModule_class>,
+    ... )
+    >>> ablator = ParallelTrainer(
+    ...     wrapper=wrapper,
+    ...     run_config=parallel_config,
+    ... )
+    >>> ablator.launch(working_directory = os.getcwd(), ray_head_address="auto")
     """
 
     def __init__(self, wrapper: ModelWrapper, run_config: ParallelConfig):

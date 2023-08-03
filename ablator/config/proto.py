@@ -27,6 +27,26 @@ class TrainConfig(ConfigBase):
         scheduler configuration. (check ``SchedulerConfig`` for more details)
     rand_weights_init: bool = True
         whether to initialize model weights randomly.
+    
+    Examples
+    --------
+    Training config requires an optimizer config, and optionally a scheduler config: 
+
+    - Define optimizer and scheduler config:
+
+    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+
+    - Define training config:
+
+    >>> train_config = CustomTrainConfig(
+    ...     dataset="[Your Dataset]",
+    ...     batch_size=32,
+    ...     epochs=10,
+    ...     optimizer_config = my_optimizer_config,
+    ...     scheduler_config = my_scheduler_config,
+    ...     rand_weights_init = True
+    ... )
     """
 
     dataset: str
@@ -41,7 +61,7 @@ class TrainConfig(ConfigBase):
 @configclass
 class ModelConfig(ConfigBase):
     """
-    A base class for model configuration. This is used for defining model parameters,
+    A base class for model configuration. This is used for defining model hyperparameters,
     so when initializing a model, this config is passed to the model constructor.
 
     Examples
@@ -62,7 +82,6 @@ class ModelConfig(ConfigBase):
     ...         self.fc1 = nn.Linear(config.input_size, config.hidden_size)
     ...         self.relu1 = nn.ReLU()
     ...         self.fc3 = nn.Linear(config.hidden_size, config.num_classes)
-
     ...     def forward(self, x):
     ...         # code for forward pass
     ...         return x
@@ -118,6 +137,40 @@ class RunConfig(ConfigBase):
     divergence_factor: float = 100
         if ``cur_loss > best_loss > divergence_factor``, the model is considered to have diverged.
 
+    Examples
+    --------
+    There are several steps before defining a run config, let's go through them one by one: 
+
+    - Define model config, here we use default one with no custom hyperparameters (normally you would
+      want to define model config when running HPO on your model's hyperparameters in the parallel experiments
+      with ```ParallelTrainer```, which requires ```ParallelConfig``` instead of ```RunConfig```):
+
+    >>> model_config = ModelConfig()
+
+    - Define training config:
+
+    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+    >>> train_config = TrainConfig(
+    ...     dataset="[Dataset Name]",
+    ...     batch_size=32,
+    ...     epochs=10,
+    ...     optimizer_config = my_optimizer_config,
+    ...     scheduler_config = my_scheduler_config,
+    ...     rand_weights_init = True
+    ... )
+
+    - Lastly, we will define run config, which has train config and model config as parameters:
+
+    >>> run_config = RunConfig(
+    ...     train_config=train_config,
+    ...     model_config=model_config,
+    ...     metrics_n_batches = 800,
+    ...     experiment_dir = "/tmp/experiments",
+    ...     device="cpu",
+    ...     amp=False,
+    ...     random_seed = 42
+    ... )
     """
 
     # location to store experiment artifacts

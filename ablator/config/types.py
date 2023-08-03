@@ -55,7 +55,7 @@ class Enum(_Enum):
 
     Examples
     --------
-    >>> from enum import Enum as _Enum
+    >>> from ablator import Enum
     >>> class Color(Enum):
     ...     RED = 1
     ...     GREEN = 2
