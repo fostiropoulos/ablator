@@ -382,7 +382,7 @@ class ModelWrapper(ModelBase):
             if is_diverged and divergence_step:
                 raise LossDivergedError(
                     f"Val loss {val_loss:.2e} has diverged by "
-                    f"a factor larger than {self.run_config.divergence_factor} to "
+                    f"a factor larger than {self.run_config.divergence_factor:0.0f} to "
                     f"best loss {self.best_loss:.2e}"
                 )
 

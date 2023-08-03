@@ -124,12 +124,17 @@ class ConfigBase:
             else:
                 v = getattr(self, k, None)
 
-            v = parse_value(v, annotation, k)
             setattr(self, k, v)
 
         if len(kwargs) > 0:
             unspected_args = ", ".join(kwargs.keys())
             raise KeyError(f"Unexpected arguments: `{unspected_args}`")
+
+    def __setattr__(self, k, v):
+        annotation = self.annotations[k]
+        v = parse_value(v, annotation, k)
+        super().__setattr__(k, v)
+
 
     def keys(self):
         """

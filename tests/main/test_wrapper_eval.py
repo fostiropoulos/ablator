@@ -144,7 +144,7 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg):
     new_config.train_config.epochs = 5
 
     assert new_config.uid != config.uid
-    new_config.init_chkpt = new_config.experiment_dir.joinpath("checkpoints")
+    new_config.init_chkpt = Path(new_config.experiment_dir).joinpath("checkpoints")
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config))
     assert "test_exp_4/checkpoints is not a valid checkpoint e.g. a `.pt` file. " in msg
     chkpt = get_latest_chkpts(Path(config.experiment_dir).joinpath("checkpoints"))[0]
