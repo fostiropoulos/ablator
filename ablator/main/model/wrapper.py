@@ -1,4 +1,5 @@
 import copy
+import inspect
 import multiprocessing as mp
 import time
 import traceback
@@ -104,11 +105,9 @@ class ModelWrapper(ModelBase):
 
         if "model" in save_dict:
             model.load_state_dict(save_dict["model"], strict=strict_load)
-        elif hasattr(model, "init_weights") and isinstance(
-            model.init_weights, Callable
-        ):
+        elif inspect.ismethod(getattr(model, "init_weights", None)):
             # TODO tutorial on this use-case
-            model.init_weights()
+            model.init_weights()  # type: ignore
 
         model = model.to(self.device)
         optimizer = self.create_optimizer(
