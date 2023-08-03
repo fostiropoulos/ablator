@@ -47,7 +47,7 @@ def flatten_nested_dict(
                 flatten_dict[f"{k}{seperator}{_k}"] = _v
 
     if len(flatten_dict) != len(dict_):
-        return flatten_nested_dict(flatten_dict)
+        return flatten_nested_dict(flatten_dict, expand_list, seperator)
     return flatten_dict
 
 
