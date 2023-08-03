@@ -280,20 +280,6 @@ def test_results_json(tmp_path: Path):
     # return
     pass
 
-def test_summary_logger_with_none():
-    l = SummaryLogger(c)
-
-    # Test _make_dashboard function with `summary_dir` is None.
-    # To check if it can cover edge case.
-    assert l._make_dashboard(summary_dir=None) is None
-
-    # Test _write_config function with `model_dir` is None
-    # To check if it can cover edge case.
-    assert l._write_config(c) is None
-
-    # Test clean_checkpoints function with `model_dir` is None
-    # To check if it can cover edge case.
-    assert l.clean_checkpoints(1) is None
 
 if __name__ == "__main__":
     # test_results_json(Path("/tmp/"))

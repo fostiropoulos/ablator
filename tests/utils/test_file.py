@@ -1,3 +1,4 @@
+from pathlib import Path
 import pytest
 import torch
 import os
@@ -20,8 +21,8 @@ def test_nested_set_path_not_exist():
     assert nested_set(dict_, keys, value) == expected_output
 
 
-def test_truncate_utf8_chars_not_found():
-    file_name = 'test_file.txt'
+def test_truncate_utf8_chars_not_found(tmp_path: Path):
+    file_name = tmp_path / 'test_file.txt'
     last_char = 'Z'  # This char will not be in the file.
     with open(file_name, 'w') as f:
         f.write('abc')

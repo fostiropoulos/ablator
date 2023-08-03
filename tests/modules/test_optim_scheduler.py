@@ -8,6 +8,8 @@ from ablator import (
     OptimizerConfig,
     SCHEDULER_CONFIG_MAP,
     SchedulerConfig,
+    Derived,
+    ModelConfig,
 )
 
 
@@ -69,11 +71,31 @@ def test_get_optim_parameters_without_decay():
         assert torch.all(p1 == p2)
 
 
+class CustomModelConfig(ModelConfig):
+    lr: Derived[int]
+    lr_error_limit: int = 5
+    mock_param: int = 0
+
+
+class MyCustomModel(nn.Module):
+    def __init__(self, config: CustomModelConfig) -> None:
+        super().__init__()
+        self.lr = config.lr
+        self.lr_error_limit = config.lr_error_limit
+        self.param = nn.Parameter(torch.ones(100, 1))
+        self.itr = 0
+
+    def forward(self, x: torch.Tensor):
+        x = self.param + torch.rand_like(self.param) * 0.01
+        self.itr += 1
+        return {"preds": x}, x.sum().abs()
+
+
 # This will test whether the function correctly extracts all the parameters from the model
 # and whether these are the correct parameters.
 # This test case is written for the scenario where `only_requires_grad`` is False.
 def test_get_optim_parameters_without_decay_and_with_all_parameters():
-    model = torch.nn.Linear(10, 1)
+    model = MyCustomModel(CustomModelConfig(lr=0.1))
     params = get_optim_parameters(model, only_requires_grad=False)
     assert len(list(model.parameters())) == len(params)
     for p1, p2 in zip(model.parameters(), params):
@@ -109,6 +131,7 @@ def test_init_scheduler_not_implemented():
     class DummyModel(nn.Module):
         def forward(self, x):
             return x
+
     class DummyOptimizer:
         pass
     scheduler_args = SchedulerArgs(step_when='train')
@@ -122,3 +145,9 @@ def test_init_scheduler_not_implemented():
 
 if __name__ == "__main__":
     test_optimizers()
+    test_get_optim_parameters_without_decay()
+    test_get_optim_parameters_without_decay_and_with_all_parameters()
+    test_get_parameter_names_with_submodules()
+    test_init_optimizer_not_implemented()
+    test_init_scheduler_not_implemented()
+
