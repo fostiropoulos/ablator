@@ -1,3 +1,5 @@
+.. _ablator_config:
+
 ablator.config package
 ======================
 
