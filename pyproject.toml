@@ -29,7 +29,8 @@ dependencies = [
     "seaborn>=0.1",
     "numpydoc>=1.0.0",
     "paramiko>=3.0.0",
-    "gpustat>=1.0"
+    "gpustat>=1.0",
+    "windows-curses; platform_system=='Windows'"
 ]
 
 [project.optional-dependencies]
