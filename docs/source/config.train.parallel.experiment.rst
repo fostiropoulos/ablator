@@ -1,6 +1,10 @@
 Configurations for parallel models experiments
 ==============================================
 
+One of the main features of Ablator is the ability to train and optimize
+multiple models for hyperparameter optimization in parallel. The main
+components of this feature are ``SearchSpace`` and ``ParallelConfig``.
+
 .. autoclass:: ablator.config.hpo.SearchSpace
    :noindex:
    :members:

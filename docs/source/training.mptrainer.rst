@@ -5,4 +5,4 @@ Multi-process Trainer
    :noindex:
    :members:
    :show-inheritance:
-   :exclude-members: pre_train_setup
+   :exclude-members: pre_train_setup, train_main_remote

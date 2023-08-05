@@ -1,8 +1,7 @@
 Model Training Interface
 ========================
 
-.. automodule:: ablator.main.model.wrapper
+.. autoclass:: ablator.main.model.wrapper.ModelWrapper
    :noindex:
-   :members:
+   :members: make_dataloader_train, make_dataloader_val, make_dataloader_test, config_parser, create_model, evaluation_functions, save_dict
    :show-inheritance:
-   :exclude-members: apply_loss, checkpoint, epochs, eval, evaluate, load_checkpoint, log, log_step, make_dataloaders, metrics, mock_train, reset_optimizer_scheduler, status_message, to_device, total_steps, update_status, validation_loop, train

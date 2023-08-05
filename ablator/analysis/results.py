@@ -79,7 +79,18 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
 
 class Results:
     """
-    Class for processing experiment results.
+    Class for processing experiment results. You can use this class to read the results in an
+    experiment output directory. This can be used in combination with ``PlotAnalysis`` to show the
+    correlation between hyperparameters and metrics. Refer to :ref:`Interpreting Results
+    <interpret_results>` tutorial for more details on plotting and interpreting experiment results.
+
+    Examples
+    --------
+
+    >>> directory_path = Path('<path to experiment output defined in experiment_dir>')
+    >>> results = Results(config = ParallelConfig, experiment_dir=directory_path, use_ray=True)
+    >>> df = results.read_results(config_type=ParallelConfig, experiment_dir=directory_path)
+    
 
     Parameters
     ----------

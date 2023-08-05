@@ -44,8 +44,11 @@ class Optim(Enum):
 @configclass
 class ParallelConfig(RunConfig):
     """
-    Parallel training configuration, expanding ``RunConfig``, defines settings of a parallel experiment
-    (number of trials to run for, number of concurrent trials, search space for hyperparameter search, etc.).
+    Parallel training configuration, extending from ``RunConfig``, defines the settings of a parallel experiment
+    (number of trials to run for, number of concurrent trials, search space for hyperparameter search, etc.). This
+    parallel running configuration encapsulates every configuration (model config, optimizer-scheduler config, train
+    config, and the search space) needed to run a parallel experiment. The entire umbrella of configuration is
+    then passed to ``ParallelTrainer`` that launches the experiment.
 
     Attributes
     ----------
@@ -103,7 +106,8 @@ class ParallelConfig(RunConfig):
     ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"]),
     ... }
 
-    - Lastly, we will define the run config from the previous config components (remember to redefine the parallel config to update the model config type to be ``CustomModelConfig``):
+    - Lastly, we will define the run config from the previous config components (remember to redefine
+      the parallel config to update the model config type to be ``CustomModelConfig``):
 
     >>> @configclass
     >>> class CustomParallelConfig(ParallelConfig):

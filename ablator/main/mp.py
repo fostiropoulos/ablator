@@ -159,8 +159,7 @@ def train_main_remote(
 
 class ParallelTrainer(ProtoTrainer):
     """
-    A class for parallelizing training of models of different configurations with ray.
-    Metrics of these models are for optuna to tune hyperparameters. They are also logged to optuna storage.
+    A class for parallelizing training and hyperparameter optimization of models of different configurations with ray.
 
     Attributes
     ----------
@@ -185,7 +184,8 @@ class ParallelTrainer(ProtoTrainer):
     
     Examples
     --------
-    Following is a complete workflow on how to launch a parallel training experiment with ``ParallelTrainer``, from defining config to launching the experiment:
+    Below is a complete workflow on how to launch a parallel experiment with ``ParallelTrainer``,
+    from defining config, getting the model wrapper ready, to launching the experiment:
 
     - Define model config, we want to run HPO on activation functions and model hidden size:
 
@@ -572,19 +572,8 @@ class ParallelTrainer(ProtoTrainer):
         excluding_files: list[str] | None = None,
     ):
         """
-        Set up and launch the parallel training and tuning process. This includes:
-
-        - prepare ray cluster for running optuna trials to tune hyperparameters.
-
-        - if available, synchronize Google Cloud storage buckets to working directory defined in runtime configuration.
-
-        - initialize optuna trials and add them to optuna storage and experiment state database
-          for tracking training progress (or retrieve existing trials from optuna storage).
-
-        Trials initialized (or retrieved), :obj:`experiment_state.pending_trials`,
-        will be pushed to ray nodes so they can be executed in parallel. After all trials
-        have finished and progress is recorded in sqlite databases in the working directory,
-        these changes will be synchronized back to the GCP nodes via ``rsync_up()`` method.
+        Set up and launch the parallel ablation process. This sets up a ray cluster, and trials of different
+        hyperparameters initialized (or retrieved) will be pushed to ray nodes so they can be executed in parallel.
 
         Parameters
         ----------

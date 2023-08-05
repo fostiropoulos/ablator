@@ -26,8 +26,8 @@ from ablator.utils.progress_bar import RemoteProgressBar
 # pylint: disable=too-many-instance-attributes
 class ModelWrapper(ModelBase):
     """
-    A wrapper around model_class that removes training boiler-plate code, with over-writable functions
-    with support for custom use-cases.
+    A wrapper around ``model_class`` that removes training boiler-plate code. Its functions are over-writable
+    to support for custom use-cases.
 
     Attributes
     ----------
@@ -79,7 +79,10 @@ class ModelWrapper(ModelBase):
         strict_load: bool = True,
     ) -> None:
         """
-        Creates the model, optimizer, scheduler and scaler from the save dict or from config.
+        Creates the model, optimizer, scheduler and scaler from the save dict or from config. You can overwrite this
+        function and ``save_dict()`` function to customize saving and loading of the model, optimizer, scheduler to
+        your needs. An example for this is shown in :ref:`Saving and loading multi-module models <multi_module_models>`
+        tutorial.
 
         Parameters
         ----------
@@ -902,7 +905,8 @@ class ModelWrapper(ModelBase):
     @abstractmethod
     def make_dataloader_train(self, run_config: RunConfig) -> DataLoader:
         """
-        Function to make the training dataloader.
+        Function to make the training dataloader. You must overwrite this function and
+        return the training dataloader.
 
         Parameters
         ----------
@@ -913,20 +917,92 @@ class ModelWrapper(ModelBase):
         -------
         DataLoader
             The training dataloader.
+
+        Examples
+        --------
+        >>> class MyModelWrapper(ModelWrapper):
+        >>>     def __init__(self, *args, **kwargs):
+        >>>         super().__init__(*args, **kwargs)
+        >>>     def make_dataloader_train(self, run_config: CustomRunConfig):
+        >>>         return torch.utils.data.DataLoader(
+        ...             train_dataset,
+        ...             batch_size=32,
+        ...             shuffle=True
+        ...         )
+        >>>     def make_dataloader_val(self, run_config: CustomRunConfig):
+        >>>         return torch.utils.data.DataLoader(
+        ...             test_dataset,
+        ...             batch_size=32,
+        ...             shuffle=False
+        ...         )
         """
 
     def evaluation_functions(self) -> dict[str, Callable] | None:
         """
+        You can overwrite this function and return the evaluation functions callables
+        that will be used to evaluate experiment metrics.
+        
         Returns
         -------
         dict[str, Callable]
             The evaluation functions to use. Also see ``Metrics`` for details.
+        
+        Examples
+        --------
+
+        - Define the callables:
+
+        >>> def my_accuracy(y_true, y_pred):
+        >>>     return accuracy_score(y_true.flatten(), y_pred.flatten())
+        >>> def my_f1_score(y_true, y_pred):
+        >>>     return f1_score(y_true.flatten(), y_pred.flatten(), average='weighted')
+
+        - Returns callables in ``evaluation_functions``:
+
+        >>> class MyModelWrapper(ModelWrapper):
+        >>>     def __init__(self, *args, **kwargs):
+        >>>         super().__init__(*args, **kwargs)
+        >>>     def make_dataloader_train(self, run_config: CustomRunConfig):
+        >>>         return torch.utils.data.DataLoader(
+        ...             train_dataset,
+        ...             batch_size=32,
+        ...             shuffle=True
+        ...         )
+        >>>     def make_dataloader_val(self, run_config: CustomRunConfig):
+        >>>         return torch.utils.data.DataLoader(
+        ...             val_dataset,
+        ...             batch_size=32,
+        ...             shuffle=False
+        ...         )
+        >>>     def evaluation_functions(self):
+        >>>         return {
+        ...             "accuracy": my_accuracy,
+        ...             "f1": my_f1_score
+        ...         }
+
+        - The callable's parameter names must match the model's forward output. In our example,
+          ``y_true`` and ``y_pred`` must be returned by the model's forward method:
+        
+        >>> class MyModel(nn.Module):
+        >>>     def __init__(self, config: CustomModelConfig) -> None:
+        >>>         super().__init__()
+        >>>         self.model = FashionMNISTModel(config)
+        >>>         self.loss = nn.CrossEntropyLoss()
+        >>>     def forward(self, x, labels=None):
+        >>>         out = self.model(x)
+        >>>         loss = None
+        >>>         if labels is not None:
+        >>>             loss = self.loss(out, labels)
+        >>>         out = out.argmax(dim=-1)
+        >>>         return {"y_pred": out, "y_true": labels}, loss
+
         """
 
     # Functions that can be optionally over-written.
     def make_dataloader_test(self, run_config: RunConfig) -> DataLoader | None:
         """
-        Function to make the test dataloader.
+        Function to make the test dataloader. You can overwrite this function and
+        return the test dataloader.
 
         Parameters
         ----------
@@ -937,11 +1013,31 @@ class ModelWrapper(ModelBase):
         -------
         DataLoader | None
             The test dataloader.
+
+        Examples
+        --------
+        >>> class MyModelWrapper(ModelWrapper):
+        >>>     def __init__(self, *args, **kwargs):
+        >>>         super().__init__(*args, **kwargs)
+        >>>     def make_dataloader_train(self, run_config: CustomRunConfig):
+        >>>         return torch.utils.data.DataLoader(
+        ...             train_dataset,
+        ...             batch_size=32,
+        ...             shuffle=True
+        ...         )
+        >>>     def make_dataloader_test(self, run_config: CustomRunConfig):
+        >>>         return torch.utils.data.DataLoader(
+        ...             test_dataset,
+        ...             batch_size=32,
+        ...             shuffle=False
+        ...         )
+
         """
 
     def make_dataloader_val(self, run_config: RunConfig) -> DataLoader | None:
         """
-        Function to make the validation dataloader.
+        Function to make the validation dataloader. You can overwrite this function and
+        return the validation dataloader.
 
         Parameters
         ----------
@@ -952,15 +1048,36 @@ class ModelWrapper(ModelBase):
         -------
         DataLoader | None
             The validation dataloader.
+
+        Examples
+        --------
+        >>> class MyModelWrapper(ModelWrapper):
+        >>>     def __init__(self, *args, **kwargs):
+        >>>         super().__init__(*args, **kwargs)
+        >>>     def make_dataloader_train(self, run_config: CustomRunConfig):
+        >>>         return torch.utils.data.DataLoader(
+        ...             train_dataset,
+        ...             batch_size=32,
+        ...             shuffle=True
+        ...         )
+        >>>     def make_dataloader_val(self, run_config: CustomRunConfig):
+        >>>         return torch.utils.data.DataLoader(
+        ...             val_dataset,
+        ...             batch_size=32,
+        ...             shuffle=False
+        ...         )
         """
 
     def config_parser(self, run_config: RunConfig):
         """
-        Used to initialize Derived properties
+        You can overwrite this function to initialize ``Derived`` properties that are not decided
+        until the experiment is launched.
 
         Examples
         --------
-        For example, in GPT2 model, we need to resize its vocabulary size to match the tokenizer's vocabulary size depending on the tokenizer used:
+        For example, in GPT2 model, we need to resize its vocabulary size to match the tokenizer's
+        vocabulary size depending on the tokenizer used. This is decided only after the experiment has
+        been launched. The reason for this is that you might want to run ablation study on different tokenizers:
 
         >>> class MyLMWrapper(ModelWrapper):
         ...    def config_parser(self, run_config: RunConfig):
@@ -999,8 +1116,10 @@ class ModelWrapper(ModelBase):
 
     def save_dict(self) -> dict[str, ty.Any]:
         """
-        Save the current state of the trainer, including model parameters,
-        and current states of the optimizer, the scaler, and the scheduler.
+        Save the current state of the trainer, including model parameters, and current states of the optimizer,
+        the scaler, and the scheduler. You can overwrite this function and ``create_model()`` function to customize
+        saving and loading of the model, optimizer, scheduler to your needs. An example for this is shown in
+        :ref:`Saving and loading multi-module models <multi_module_models>` tutorial.
 
         Returns
         -------

@@ -19,8 +19,12 @@ logger = logging.getLogger(__name__)
 
 class PlotAnalysis(Analysis):
     """
-    Class for plotting experiment results. Plots supported are linear plots for numerical
-    data and violin plots for categorical data.
+    Class for plotting experiment results. You can use this class and ``Results`` class to visualize the
+    relationship between any hyperparameter that you run ablation study on with the result metrics. This
+    valuable insight offers an intuitive understanding of how these parameters may influence your
+    model's performance.
+
+    Plots supported are linear plots for numerical data and violin plots for categorical data.
 
     Examples
     --------
@@ -56,7 +60,7 @@ class PlotAnalysis(Analysis):
     ...    attribute_name_remap= attribute_name_remap
     ... )
 
-    The directory “plots” will contain all the plots of the HPO experiments
+    The directory ``"plots"`` will contain all the plots of the HPO experiments
     """
 
     @classmethod

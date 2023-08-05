@@ -11,7 +11,9 @@ from ablator.modules.scheduler import SchedulerConfig
 @configclass
 class TrainConfig(ConfigBase):
     """
-    Training configuration that defines the training setting, e.g., batch size, number of epochs, the optimizer to be used, etc.
+    Training configuration that defines the training setting, e.g., batch size, number of epochs,
+    the optimizer to be used, etc. This setting configuration is required when creating the run configuration
+    (``RunConfig`` and ``ParallelConfig``), which sets up the running environment of the experiment.
 
     Attributes
     ----------
@@ -30,16 +32,22 @@ class TrainConfig(ConfigBase):
     
     Examples
     --------
-    Training config requires an optimizer config, and optionally a scheduler config: 
+    The following example shows all the steps towards configuring an experiment:
 
-    - Define optimizer and scheduler config:
+    - Define model config, here we use default one with no custom hyperparameters (so we're not
+      running ablation study on the model architecture):
 
-    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_model_config = ModelConfig()
+
+    - Define optimizer and scheduler config, as training config requires an optimizer
+      config, and optionally a scheduler config:
+
+    >>> my_optimizer_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
     >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
 
     - Define training config:
 
-    >>> train_config = CustomTrainConfig(
+    >>> my_train_config = CustomTrainConfig(
     ...     dataset="[Your Dataset]",
     ...     batch_size=32,
     ...     epochs=10,
@@ -47,6 +55,19 @@ class TrainConfig(ConfigBase):
     ...     scheduler_config = my_scheduler_config,
     ...     rand_weights_init = True
     ... )
+
+    - We now define the run config for prototype training, which is the last configuration step:
+
+    >>> run_config = CustomRunConfig(
+    ...     train_config=my_train_config,
+    ...     model_config=my_model_config,
+    ...     metrics_n_batches = 800,
+    ...     experiment_dir = "/tmp/experiments",
+    ...     device="cpu",
+    ...     amp=False,
+    ...     random_seed = 42
+    ... )
+
     """
 
     dataset: str
@@ -62,7 +83,8 @@ class TrainConfig(ConfigBase):
 class ModelConfig(ConfigBase):
     """
     A base class for model configuration. This is used for defining model hyperparameters,
-    so when initializing a model, this config is passed to the model constructor.
+    so when initializing a model, this config is passed to the model constructor. The hyperparameters in
+    the model config will be used to construct the model.
 
     Examples
     --------
@@ -74,7 +96,7 @@ class ModelConfig(ConfigBase):
     ...     hidden_size :int
     ...     num_classes :int
 
-    Define your model class, and pass the configuration to the constructor:
+    Define your model class, pass the configuration to the constructor, and build the model:
 
     >>> class FashionMNISTModel(nn.Module):
     ...     def __init__(self, config: CustomModelConfig):
@@ -94,6 +116,10 @@ class RunConfig(ConfigBase):
     The base configuration that defines the setting of an experiment (experiment main directory, number of 
     checkpoints to maintain, hardware device to use, etc.). You can use this to configure the experiment
     of running a single prototype model.
+    
+    ``RunConfig`` encapsulates every configuration (model config, optimizer-scheduler config,
+    train config) needed for a prototype experiment. The entire umbrella of configurations is then passed
+    to ``ProtoTrainer`` which launches the prototype experiment.
 
     Attributes
     ----------
@@ -149,7 +175,7 @@ class RunConfig(ConfigBase):
 
     - Define training config:
 
-    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_optimizer_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
     >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
     >>> train_config = TrainConfig(
     ...     dataset="[Dataset Name]",
@@ -160,7 +186,7 @@ class RunConfig(ConfigBase):
     ...     rand_weights_init = True
     ... )
 
-    - Lastly, we will define run config, which has train config and model config as parameters:
+    - Lastly, we will create the run config, which has train config and model config as parameters:
 
     >>> run_config = RunConfig(
     ...     train_config=train_config,

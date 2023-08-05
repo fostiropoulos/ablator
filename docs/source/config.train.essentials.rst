@@ -21,7 +21,7 @@ Optimizer Configurations
    :noindex:
    :members: OptimizerConfig
    :show-inheritance:
-   :exclude-members: config_class
+   :exclude-members: config_class, make_optimizer
 
 Scheduler Configurations
 ------------------------
@@ -30,7 +30,7 @@ Scheduler Configurations
    :noindex:
    :members:
    :show-inheritance:
-   :exclude-members: config_class
+   :exclude-members: config_class, make_scheduler
 
 Training Configurations
 -----------------------

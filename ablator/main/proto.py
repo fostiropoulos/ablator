@@ -25,7 +25,7 @@ class ProtoTrainer:
     
     Examples
     --------
-    Following is a complete workflow on how to launch a prototype experiment with ``ProtoTrainer``, from defining config to launching the experiment:
+    Below is a complete workflow on how to launch a prototype experiment with ``ProtoTrainer``, from defining config to launching the experiment:
 
     - Define model config, here we use default one with no custom hyperparameters (normally you would
       want to define model config when running HPO on your model's hyperparameters in the parallel experiments
@@ -126,9 +126,7 @@ class ProtoTrainer:
 
     def launch(self, debug: bool = False):
         """
-        Initialize the data state of the wrapper and train the model inside the wrapper, then sync training
-        results (logged to experiment directory while training) with external logging services (e.g Google
-        cloud storage, other remote servers).
+        Launch the prototype experiment (train, evaluate the single prototype model) and return metrics.
 
         Parameters
         ----------

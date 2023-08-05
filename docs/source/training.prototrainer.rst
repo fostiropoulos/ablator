@@ -1,8 +1,7 @@
 Prototype Trainer
 =================
 
-.. automodule:: ablator.main.proto
+.. autoclass:: ablator.main.proto.ProtoTrainer
    :noindex:
-   :members:
+   :members: launch
    :show-inheritance:
-   :exclude-members: pre_train_setup
