@@ -17,8 +17,12 @@ from ablator import (
     OptimizerConfig,
     RunConfig,
     TrainConfig,
+    SchedulerConfig,
+    ProtoTrainer
 )
+
 from ablator.utils.base import Dummy
+import shutil
 
 optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
 train_config = TrainConfig(
@@ -449,6 +453,81 @@ def test_train_resume(tmp_path: Path, assert_error_msg):
         == f"Could not find a valid checkpoint in {wrapper.experiment_dir.joinpath('checkpoints')}"
     )
 
+class MyCustomModelOptSch(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(100, 1))
+
+    def forward(self, x: torch.Tensor):
+        x = self.param + torch.rand_like(x) * 0.01
+        return {"preds": x}, x.sum().abs()
+
+
+class TestWrapperOptSch(ModelWrapper):
+    def make_dataloader_train(self, run_config: RunConfig):
+        dl = [torch.rand(100) for i in range(100)]
+        return dl
+
+    def make_dataloader_val(self, run_config: RunConfig):
+        dl = [torch.rand(100) for i in range(100)]
+        return dl
+
+
+def test_reset_optimizers_schedulers(tmp_path: Path):
+    train_config = TrainConfig(
+        dataset="test",
+        batch_size=128,
+        epochs=2,
+        optimizer_config= OptimizerConfig(name="sgd", arguments={"lr": 0.1}),
+        scheduler_config= SchedulerConfig(name="step", arguments={"gamma": 0.99}),
+    )
+
+    config = RunConfig(
+        train_config=train_config,
+        model_config=ModelConfig(),
+        verbose="silent",
+        device="cpu",
+        amp=False,
+    )
+
+    tmp_path = tmp_path.joinpath("/tmp/test_opt_sch/")
+    config.experiment_dir = tmp_path
+    shutil.rmtree(tmp_path, ignore_errors=True)
+
+    wrapper = TestWrapperOptSch(
+        model_class=MyCustomModelOptSch,
+    )
+    ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
+    ablator.launch()
+
+    ablator.wrapper.optimizer.param_groups[0]['lr'] = 0.9
+
+    scheduler_state_dict = ablator.wrapper.scheduler.state_dict()
+    scheduler_state_dict['gamma'] = 0.1
+    ablator.wrapper.scheduler.load_state_dict(scheduler_state_dict)
+
+    ablator.wrapper.reset_optimizer_scheduler()
+
+    optimizer_reset_value = ablator.wrapper.optimizer.param_groups[0]['lr']
+    scheduler_reset_value = ablator.wrapper.scheduler.state_dict()["gamma"]
+
+    assert 0.1 == optimizer_reset_value
+    assert 0.99 == scheduler_reset_value
+
+def test_mock_train(tmp_path: Path):
+    wrapper = TestWrapper(MyModel)
+
+    tmp_path = tmp_path.joinpath("/tmp/mock_run/")
+    config.experiment_dir = tmp_path
+    shutil.rmtree(tmp_path, ignore_errors=True)
+
+    train_sep = wrapper.mock_train(run_config=config, run_async=True)
+    train_ = wrapper.mock_train(run_config=config, run_async=False)
+
+    import multiprocessing as mp
+    assert isinstance(train_sep, mp.context.Process)
+
+    assert isinstance(train_, dict)
 
 if __name__ == "__main__":
     import shutil
@@ -468,3 +547,4 @@ if __name__ == "__main__":
     test_train_resume(tmp_path, _assert_error_msg)
     test_train_loop(_assert_error_msg)
     test_validation_loop()
+    # test_reset_optimizers_schedulers(Path("/tmp/test_opt_sch"))

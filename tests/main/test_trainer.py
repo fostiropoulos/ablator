@@ -108,8 +108,6 @@ def test_proto_with_scheduler(tmp_path: Path, config):
     assert abs((metrics["val_loss"] - val_metrics["val"]["loss"])) < 0.01
 
 
-
-
 def test_val_loss_is_none(tmp_path: Path, config, assert_error_msg):
     wrapper = TestWrapper2(MyCustomModel3)
     config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
@@ -121,6 +119,61 @@ def test_val_loss_is_none(tmp_path: Path, config, assert_error_msg):
         "A validation dataset is required with StepLR scheduler",
     )
 
+class MyCustomModel4(nn.Module):
+    # for smoke tests
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(100))
+
+    def forward(self, x: torch.Tensor):
+        x = self.param + torch.rand_like(x) * 0.01
+        return {"preds": x}, x.sum().abs()
+
+
+class TestWrapper3(ModelWrapper):
+    # for smoke tests
+    def make_dataloader_train(self, run_config: RunConfig):
+        dl = [torch.rand(10) for i in range(100)]
+        return dl
+
+    def make_dataloader_val(self, run_config: RunConfig):
+        dl = [torch.rand(10) for i in range(100)]
+        return dl
+
+def test_smoke_tests(tmp_path: Path, assert_error_msg):
+    tmp_path = tmp_path.joinpath("/smoke_test/")
+
+    optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
+    train_config = TrainConfig(
+        dataset="test",
+        batch_size=128,
+        epochs=2,
+        optimizer_config=optimizer_config,
+        scheduler_config=None,
+    )
+    config = RunConfig(
+        train_config=train_config,
+        model_config=ModelConfig(),
+        verbose="silent",
+        device="cpu",
+        amp=False,
+    )
+    config.experiment_dir = tmp_path
+
+    # Runs successfully.
+    wrapper_success = TestWrapper(MyCustomModel)
+    
+    ablator_success = ProtoTrainer(wrapper = wrapper_success, run_config = config)
+    ablator_success.smoke_test()
+
+    # Must Fail
+    wrapper = TestWrapper3(MyCustomModel4)
+    ablator = ProtoTrainer(wrapper=wrapper, run_config= config)
+
+    assert_error_msg(
+        lambda:  ablator.smoke_test(config = None),
+        "The size of tensor a (100) must match the size of tensor b (10) at non-singleton dimension 0"
+    )
 
 if __name__ == "__main__":
     from tests.conftest import _assert_error_msg
@@ -144,3 +197,4 @@ if __name__ == "__main__":
     test_proto(Path("/tmp/"), _assert_error_msg, config)
     test_proto_with_scheduler(Path("/tmp/"), config=config)
     test_val_loss_is_none(Path("/tmp/"), config, _assert_error_msg)
+    test_smoke_tests(Path("/tmp/"), _assert_error_msg)

@@ -65,6 +65,7 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
             experiment_config.annotations, flatten=True
         )
         df = pd.read_json(json_path)
+        df["path"] = json_path.as_posix()
         df = pd.concat([pd.DataFrame([experiment_attributes] * len(df)), df], axis=1)
         df.index.name = "step"
         df.reset_index(inplace=True)
