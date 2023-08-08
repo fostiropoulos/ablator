@@ -13,9 +13,7 @@ Ablator Tutorials
    notebooks/HPO-tutorial.ipynb
    notebooks/Experiment-dir.ipynb
    notebooks/Interpreting-results.ipynb
-   notebooks/GettingStarted-more-demos.ipynb
-
-
+   
 .. toctree::
    :maxdepth: 1
    :caption: Intermediate Tutorials
