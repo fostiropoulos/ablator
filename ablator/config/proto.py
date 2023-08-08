@@ -12,7 +12,7 @@ from ablator.modules.scheduler import SchedulerConfig
 class TrainConfig(ConfigBase):
     """
     Training configuration that defines the training setting, e.g., batch size, number of epochs,
-    the optimizer to be used, etc. This setting configuration is required when creating the run configuration
+    the optimizer to use, etc. This configuration is required when creating the run configuration
     (``RunConfig`` and ``ParallelConfig``), which sets up the running environment of the experiment.
 
     Attributes
@@ -56,7 +56,9 @@ class TrainConfig(ConfigBase):
     ...     rand_weights_init = True
     ... )
 
-    - We now define the run config for prototype training, which is the last configuration step:
+    - We now define the run config for prototype training, which is the last configuration step. Refer to :ref:`Configurations
+      for single model experiments <run_config>` and :ref:`Configurations for parallel models experiments <parallel_config>`
+      for more details on running configs.
 
     >>> run_config = CustomRunConfig(
     ...     train_config=my_train_config,
@@ -83,8 +85,8 @@ class TrainConfig(ConfigBase):
 class ModelConfig(ConfigBase):
     """
     A base class for model configuration. This is used for defining model hyperparameters,
-    so when initializing a model, this config is passed to the model constructor. The hyperparameters in
-    the model config will be used to construct the model.
+    so when initializing a model, this config is passed to the model constructor. The attributes
+    from the model config object will be used to construct the model.
 
     Examples
     --------
@@ -101,9 +103,9 @@ class ModelConfig(ConfigBase):
     >>> class FashionMNISTModel(nn.Module):
     ...     def __init__(self, config: CustomModelConfig):
     ...         super(FashionMNISTModel, self).__init__()
-    ...         self.fc1 = nn.Linear(config.input_size, config.hidden_size)
+    ...         self.fc1 = nn.Linear(config.input_size, config.hidden_size) # model config attributes are used here
     ...         self.relu1 = nn.ReLU()
-    ...         self.fc3 = nn.Linear(config.hidden_size, config.num_classes)
+    ...         self.fc3 = nn.Linear(config.hidden_size, config.num_classes) # model config attributes are used here
     ...     def forward(self, x):
     ...         # code for forward pass
     ...         return x
@@ -167,7 +169,7 @@ class RunConfig(ConfigBase):
     --------
     There are several steps before defining a run config, let's go through them one by one: 
 
-    - Define model config, here we use default one with no custom hyperparameters (normally you would
+    - Define model config, here we use default one with no custom hyperparameters (sometimes you would
       want to define model config when running HPO on your model's hyperparameters in the parallel experiments
       with ```ParallelTrainer```, which requires ```ParallelConfig``` instead of ```RunConfig```):
 

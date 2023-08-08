@@ -171,13 +171,6 @@ class OptimizerConfig(ConfigBase):
     are specific to a certain type of optimizer like SGD, Adam, AdamW). This optimizer config
     will be provided to ``TrainConfig`` as part of the training setting of the experiment.
 
-    A common use case is to run ablation studies on different optimizers to learn about their
-    effects on the model performance. However, ``OptimizerConfig`` only configures one single
-    optimizer for the experiment. But you can run experiments on different optimizers by creating
-    a custom config class and add an extra method called ``make_optimizer``. Go to this tutorial on
-    :ref:`Search space for different types of optimizers and scheduler <search_space_optim_schedule>`
-    for more details.
-
     Attributes
     ----------
     name : str
@@ -200,6 +193,14 @@ class OptimizerConfig(ConfigBase):
     ...     rand_weights_init = True
     ... )
     >>> # ... create running config (proto/parallel), model wrapper, trainer and launch experiment
+
+    .. note::
+        A common use case is to run ablation studies on different optimizers to learn about their
+        effects on the model performance. However, ``OptimizerConfig`` only configures one single
+        optimizer for the experiment. But you can run experiments on different optimizers by creating
+        a custom config class and add an extra method called ``make_optimizer``. Go to the tutorial on
+        :ref:`Search space for different types of optimizers and scheduler <search_space_optim_schedule>`
+        for more details.
 
     """
 

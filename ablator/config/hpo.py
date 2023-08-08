@@ -73,18 +73,18 @@ class SearchSpace(ConfigBase):
     --------
 
     In ablator, search space is defined for HPO that runs in parallel. For example, we want to
-    run a hyperparameter optimization on model's hidden size and activation function, the search
-    space should look like this:
+    run hyperparameter optimization on the model's hidden size and activation function:
 
-    - Given the following model configuration: 
+    - Given the following model configuration:
 
     >>> @configclass
     >>> class CustomModelConfig(ModelConfig):
     >>>     hidden_size: int
     >>>     activation: str
-    >>> my_model_config = CustomModelConfig(num_filter1 =32, num_filter2 = 64, activation = "relu")
+    >>> my_model_config = CustomModelConfig(hidden_size=100, activation="relu")
 
-    - The search space should look like this, notice how the key is expressed as ``model_config.<model-hyperparameter>``
+    - The search space, which will be passed to ``ParallelConfig`` as a dictionary (notice how the
+      key is expressed as ``model_config.<model-hyperparameter>``), should look like this:
     
     >>> search_space = {
     ...     "model_config.hidden_size": SearchSpace(value_range = [32, 64], value_type = 'int'),

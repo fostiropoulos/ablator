@@ -91,6 +91,26 @@ class Results:
     >>> results = Results(config = ParallelConfig, experiment_dir=directory_path, use_ray=True)
     >>> df = results.read_results(config_type=ParallelConfig, experiment_dir=directory_path)
     
+    Pass ``df`` to ``PlotAnalysis`` to create an analysis object that's able to plot the correlation between
+    the hyperparameters and metrics and save the plots to an output directory. For example, the following
+    code snippet generates plots for each of the numerical and categorical hyperparameters and saves them to
+    ``./plots`` directory. Here "Validation Accuracy" is the name of the main metric.
+
+    >>> analysis = PlotAnalysis(
+    ...         df,
+    ...         save_dir="./plots",
+    ...         cache=True,
+    ...         optim_metrics={"val_accuracy": Optim.max},
+    ...         numerical_attributes=<numerical name remap keys names>,
+    ...         categorical_attributes=<categorical name remap keys names>,
+    ...     )
+    >>> analysis.make_figures(
+    ...     metric_name_remap={
+    ...         "val_accuracy": "Validation Accuracy",
+    ...     },
+    ...     attribute_name_remap= attribute_name_remap
+    ... )
+     
 
     Parameters
     ----------

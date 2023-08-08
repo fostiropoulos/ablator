@@ -1,13 +1,13 @@
 Configuration module
 ====================
 
-In ablator, the configuration system serves as a skeleton for an experiment
-definition. Ablator leverages this skeleton to instantiate experiments with
-the corresponding configurations.
+In Ablator, the configuration system is used as a framework or structure for defining
+experiments. With this system, Ablator creates and sets up experiments, incorporating
+the appropriate configurations.
 
-Configuration module is divided into several submodules, all of which you can
-use to define your experiment. Ablator is also flexible enough to allow you to
-write your own configurations and adapt it to your experiment's needs.
+This module is divided into several submodules, all of which you can use to define
+your experiment. Ablator also allows you to write your own configurations and adapt
+them to your experiment's needs.
 
 .. toctree::
    :maxdepth: 2

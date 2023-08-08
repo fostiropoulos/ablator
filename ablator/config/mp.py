@@ -45,10 +45,11 @@ class Optim(Enum):
 class ParallelConfig(RunConfig):
     """
     Parallel training configuration, extending from ``RunConfig``, defines the settings of a parallel experiment
-    (number of trials to run for, number of concurrent trials, search space for hyperparameter search, etc.). This
-    parallel running configuration encapsulates every configuration (model config, optimizer-scheduler config, train
-    config, and the search space) needed to run a parallel experiment. The entire umbrella of configuration is
-    then passed to ``ParallelTrainer`` that launches the experiment.
+    (number of trials to run for, number of concurrent trials, search space for hyperparameter search, etc.).
+    
+    ``ParallelConfig`` encapsulates every configuration (model config, optimizer-scheduler config, train config,
+    and the search space) needed to run a parallel experiment. The entire umbrella of configuration is then passed
+    to ``ParallelTrainer`` that launches the experiment.
 
     Attributes
     ----------
@@ -80,7 +81,7 @@ class ParallelConfig(RunConfig):
     >>> class CustomModelConfig(ModelConfig):
     >>>     hidden_size: int
     >>>     activation: str
-    >>> model_config = CustomModelConfig(num_filter1 =32, num_filter2 = 64, activation = "relu")
+    >>> model_config = CustomModelConfig(hidden_size=100, activation="relu")
 
     - Define training config:
 
@@ -98,10 +99,7 @@ class ParallelConfig(RunConfig):
     - Define search space:
 
     >>> search_space = {
-    ...     "train_config.optimizer_config.arguments.lr": SearchSpace(
-    ...         value_range = [0.001, 0.01],
-    ...         value_type = 'float'
-    ...         ),
+    ...     "train_config.optimizer_config.arguments.lr": SearchSpace(value_range = [0.001, 0.01], value_type = 'float'),
     ...     "model_config.hidden_size": SearchSpace(value_range = [32, 64], value_type = 'int'),
     ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"]),
     ... }

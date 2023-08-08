@@ -43,7 +43,7 @@ class PlotAnalysis(Analysis):
     ...     categorical_name_remap = {}
     ...     attribute_name_remap = {**categorical_name_remap, **numerical_name_remap}
 
-    - Initalize the ```PlotAnalysis``` and plot the figures:
+    - Initalize the ``PlotAnalysis`` and plot the figures:
 
     >>> analysis = PlotAnalysis(
     ...     df,
@@ -60,7 +60,7 @@ class PlotAnalysis(Analysis):
     ...    attribute_name_remap= attribute_name_remap
     ... )
 
-    The directory ``"plots"`` will contain all the plots of the HPO experiments
+    The directory ``"plots"`` contains all the plots of the HPO experiments
     """
 
     @classmethod

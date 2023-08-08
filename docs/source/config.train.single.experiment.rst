@@ -1,3 +1,5 @@
+.. _run_config:
+
 Configurations for single model experiments 
 ===========================================
 

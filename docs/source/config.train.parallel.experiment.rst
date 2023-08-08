@@ -1,3 +1,5 @@
+.. _parallel_config:
+
 Configurations for parallel models experiments
 ==============================================
 

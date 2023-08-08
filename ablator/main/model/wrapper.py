@@ -27,7 +27,9 @@ from ablator.utils.progress_bar import RemoteProgressBar
 class ModelWrapper(ModelBase):
     """
     A wrapper around ``model_class`` that removes training boiler-plate code. Its functions are over-writable
-    to support for custom use-cases.
+    to support for custom use-cases. Once ``make_dataloader_train`` is overriden to provide a training dataset,
+    ``ModelWrapper`` object will be passed to the trainers (``ProtoTrainer`` or ``ParallelTrainer``) along with running
+    configuration to launch the experiment.
 
     Attributes
     ----------
@@ -79,15 +81,15 @@ class ModelWrapper(ModelBase):
         strict_load: bool = True,
     ) -> None:
         """
-        Creates the model, optimizer, scheduler and scaler from the save dict or from config. You can overwrite this
-        function and ``save_dict()`` function to customize saving and loading of the model, optimizer, scheduler to
+        Creates the model, optimizer, scheduler, and scaler from a saved checkpoint dictionary or from config. You can overwrite this
+        function and ``save_dict()`` function to customize the saving and loading of the model, optimizer, and scheduler to
         your needs. An example for this is shown in :ref:`Saving and loading multi-module models <multi_module_models>`
         tutorial.
 
         Parameters
         ----------
         save_dict: dict[str, ty.Any]
-            The save dict to load from.
+            The saved checkpoint dictionary to load from.
         strict_load: bool
             Whether to load the model strictly or not.
         """
@@ -980,7 +982,7 @@ class ModelWrapper(ModelBase):
         ...             "f1": my_f1_score
         ...         }
 
-        - The callable's parameter names must match the model's forward output. In our example,
+        - Note that the callable's parameter names must match the model's forward output. In our example,
           ``y_true`` and ``y_pred`` must be returned by the model's forward method:
         
         >>> class MyModel(nn.Module):
@@ -1116,9 +1118,9 @@ class ModelWrapper(ModelBase):
 
     def save_dict(self) -> dict[str, ty.Any]:
         """
-        Save the current state of the trainer, including model parameters, and current states of the optimizer,
-        the scaler, and the scheduler. You can overwrite this function and ``create_model()`` function to customize
-        saving and loading of the model, optimizer, scheduler to your needs. An example for this is shown in
+        Save the current state of the trainer, including model parameters, the current states of the optimizer,
+        scaler, and scheduler. You can overwrite this function and ``create_model()`` to customize the saving and
+        loading of the model, optimizer, and scheduler to your needs. An example of this is shown in
         :ref:`Saving and loading multi-module models <multi_module_models>` tutorial.
 
         Returns

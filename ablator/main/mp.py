@@ -187,14 +187,6 @@ class ParallelTrainer(ProtoTrainer):
     Below is a complete workflow on how to launch a parallel experiment with ``ParallelTrainer``,
     from defining config, getting the model wrapper ready, to launching the experiment:
 
-    - Define model config, we want to run HPO on activation functions and model hidden size:
-
-    >>> @configclass
-    >>> class CustomModelConfig(ModelConfig):
-    >>>     hidden_size: int
-    >>>     activation: str
-    >>> model_config = CustomModelConfig(num_filter1 =32, num_filter2 = 64, activation = "relu")
-
     - Define training config:
 
     >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
@@ -207,6 +199,14 @@ class ParallelTrainer(ProtoTrainer):
     ...     scheduler_config = my_scheduler_config,
     ...     rand_weights_init = True
     ... )
+
+    - Define model config, we want to run HPO on activation functions and model hidden size:
+
+    >>> @configclass
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     hidden_size: int
+    >>>     activation: str
+    >>> model_config = CustomModelConfig(num_filter1 =32, num_filter2 = 64, activation = "relu")
 
     - Define search space:
 
@@ -253,7 +253,7 @@ class ParallelTrainer(ProtoTrainer):
     >>>     def make_dataloader_val(self, run_config: CustomRunConfig):
     >>>         return torch.utils.data.DataLoader(<val_dataset>, batch_size=32, shuffle=False)
 
-    - After gathering all configurations and model wrapper, it's time we initialize and launch the parallel trainer:
+    - After gathering all configurations and model wrapper, we can initialize and launch the parallel trainer:
 
     >>> wrapper = MyModelWrapper(
     ...     model_class=<your_ModelModule_class>,

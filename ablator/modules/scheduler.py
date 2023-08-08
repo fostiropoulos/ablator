@@ -42,13 +42,13 @@ class SchedulerConfig(ConfigBase):
     A class that defines a configuration for a learning rate scheduler. This scheduler config
     will be provided to ``TrainConfig`` (optional) as part of the training setting of the experiment.
 
-    A common use case is to run ablation studies on different schedulers to learn about their
-    effects on the model performance. However, ``SchedulerConfig`` only configures one single
-    scheduler for the experiment. But you can run experiments on different schedulers by creating
-    a custom config class and add an extra method called ``make_scheduler``. Go to this tutorial on
-    :ref:`Search space for different types of optimizers and scheduler <search_space_optim_schedule>`
-    for more details.
-    
+    Attributes
+    ----------
+    name : str
+        The name of the scheduler.
+    arguments : SchedulerArgs
+        The arguments needed to initialize the scheduler.
+
     Examples
     --------
     The following example shows how to create a scheduler config and use it in
@@ -66,14 +66,13 @@ class SchedulerConfig(ConfigBase):
     ... )
     >>> # ... create running config (proto/parallel), model wrapper, trainer and launch experiment
 
-
-    Attributes
-    ----------
-    name : str
-        The name of the scheduler.
-    arguments : SchedulerArgs
-        The arguments needed to initialize the scheduler.
-
+    .. note::
+        A common use case is to run ablation studies on different schedulers to learn about their
+        effects on the model performance. However, ``SchedulerConfig`` only configures one single
+        scheduler for the experiment. But you can run experiments on different schedulers by creating
+        a custom config class and add an extra method called ``make_scheduler``. Go to this tutorial on
+        :ref:`Search space for different types of optimizers and scheduler <search_space_optim_schedule>`
+        for more details.
     """
 
     name: str
