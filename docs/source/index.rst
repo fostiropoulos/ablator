@@ -101,40 +101,34 @@
                               <div class="contents-card" onclick="navToPath(`tutorials.html`)">
                                     <div class="card-title">
                                        <h5>
-                                          Basic Tutorials
+                                          Ablator Tutorials
                                        </h5>
                                     </div>
 
                                     <p>
-                                       The fundamental tutorials of Ablator. Basic usages and contents of Ablator will be
-                                       introduced
-                                       and explained. Each section will contain a simple demo to elaborate the usage.
+                                       This section will introduce the comprehensive usages of Ablator, including the basic usages and advanced usages. Please refer to this section for detailed instructions.
                                     </p>
                               </div>
-                              <div class="contents-card" onclick="navToPath(`intermediate_tutorials.html`);">
+                              <div class="contents-card" onclick="navToPath(`modules.html`);">
                                     <div class="card-title">
                                        <h5>
-                                          Intermediate Tutorials
+                                          Ablator Modules
                                        </h5>
                                     </div>
 
                                     <p>
-                                       Assuming that you have already accumulated some experience with Ablator, this section will
-                                       introduce some intermediate usages and contents of Ablator.
+                                       Ablator is composed of several core modules. This is the section introducing how Ablator works with these modules.
                                     </p>
                               </div>
-                              <div class="contents-card" onclick="navToPath(`/ablator.html`);">
+                              <div class="contents-card" onclick="navToPath(`api.reference.html`);">
                                     <div class="card-title">
                                        <h5>
-                                          Ablator Packages
+                                          API Reference
                                        </h5>
                                     </div>
 
                                     <p>
-                                       Ablator is composed of several core components packages. Please refer to this section for
-                                       detailed usages of
-                                       each
-                                       component of Ablator.
+                                       This section is the API reference of Ablator. Please refer to this section for detailed usages of Ablator modules and functions.
                                     </p>
                               </div>
                               <div class="contents-card" onclick="navToPath(`/notebooks/GettingStarted-more-demos.html`);">
@@ -210,97 +204,82 @@
                                     How Ablator Works
                               </h3>
                               <p>
-                                    Ablator is composed of several core components packages. Please refer to this section for
-                                    detailed usages of each component of Ablator and learn how Ablator works.
+                                    Ablator is composed of several core modules. Please refer to this section for
+                                    detailed usages of each module of Ablator and learn how Ablator works.
                               </p>
                            </div>
 
 
 
-                           <div class="features-grid">
-                              <div class="feature-card package-card" onclick="navToPath(`/ablator.config.html`)">
+                           <div class="contents-grid">
+                              <div class="feature-card package-card" onclick="navToPath(`/config.html`)">
                                     <div class="card-title">
                                        <h5>
-                                          Config Package
+                                          Configuration module
                                        </h5>
                                     </div>
 
                                     <div class="card-texts">
                                        <p>
-                                          Config Package is where Ablator reads and implements the experiment configurations.
+                                          In Ablator, the configuration system is used as a framework or structure for defining experiments. With this system, Ablator creates and sets up experiments, incorporating the appropriate configurations.
                                        </p>
                                     </div>
                               </div>
-                              <div class="feature-card package-card" onclick="navToPath(`/ablator.main.html`)">
+                              <div class="feature-card package-card" onclick="navToPath(`/training.html`)">
                                     <div class="card-title">
                                        <h5>
-                                          Main Package
+                                          Training module
                                        </h5>
                                     </div>
 
                                     <div class="card-texts">
                                        <p>
-                                          Main Package is the core component of Ablator, where most of key functionalities are
-                                          integrated.
+                                          Other building blocks of ablator are the training module, which launch the experiment that has been configured with the configuration module.
                                        </p>
                                     </div>
                               </div>
 
-                              <div class="feature-card package-card" onclick="navToPath(`/ablator.modules.html`)">
+                              <div class="feature-card package-card" onclick="navToPath(`/results.html`)">
                                     <div class="card-title">
                                        <h5>
-                                          Modules Package
+                                          Experiment result metrics
                                        </h5>
                                     </div>
 
                                     <div class="card-texts">
                                        <p>
-                                          Modules Package accommodates the specific modules for execution of the experiments.
+                                          Experiment result metrics are used to evaluate the experiment results. Ablator provides various metrics for different types of experiments.
                                        </p>
                                     </div>
                               </div>
-                              <div class="feature-card package-card" onclick="navToPath(`/ablator.analysis.html`)">
+                              <div class="feature-card package-card" onclick="navToPath(`/analysis.html`)">
                                     <div class="card-title">
                                        <h5>
-                                          Analysis Package
+                                          Analysis module
                                        </h5>
                                     </div>
 
                                     <div class="card-texts">
                                        <p>
-                                          Analysis Package is where Ablator analyzes the experiment results.
-                                       </p>
-                                    </div>
-                              </div>
-                              <div class="feature-card package-card" onclick="navToPath(`/ablator.utils.html`)">
-                                    <div class="card-title">
-                                       <h5>
-                                          Utils Package
-                                       </h5>
-                                    </div>
-
-                                    <div class="card-texts">
-                                       <p>
-                                          In Utils Package, Ablator provides various utility functions for deep learning
-                                          experiments.
-                                       </p>
-                                    </div>
-                              </div>
-                              <div class="feature-card package-card"
-                                    onclick="window.open(`https://github.com/fostiropoulos/ablator`)">
-                                    <div class="card-title">
-                                       <h5>
-                                          More to come...
-                                       </h5>
-                                    </div>
-
-                                    <div class="card-texts">
-                                       <p>
-                                          Ablator is under active development. More features and packages will be added soon...
+                                          The analysis module has tools that allow you to observe the correlation between the studied hyperparameters and the model's performance.
                                        </p>
                                     </div>
                               </div>
                            </div>
+                           <div class="feature-card package-card"
+                                    onclick="navToPath(`/api.reference.html`)">
+                                    <div class="card-title">
+                                       <h5>
+                                          API Reference
+                                       </h5>
+                                    </div>
+
+                                    <div class="card-texts">
+                                       <p>
+                                          For more detailed information about Ablator modules and APIs, please refer to the API Reference.
+                                       </p>
+                                    </div>
+                              </div>
                         </div>
                         <div class="community">
                            <div class="contents-texts">
