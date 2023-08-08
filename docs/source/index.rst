@@ -6,18 +6,28 @@
 Welcome to ablator's documentation!
 ===================================
 
+Modules
+-------
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
-   ablator.analysis
-   ablator.config
-   ablator.main
-   ablator.modules
-   ablator.utils
+   config
+   training
+   results
+   analysis
+
+API Reference
+-------------
+
+.. toctree::
+   :maxdepth: 2
+
+   api.reference
+
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`

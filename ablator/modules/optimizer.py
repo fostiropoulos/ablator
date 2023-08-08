@@ -168,7 +168,8 @@ class OptimizerArgs(ConfigBase):
 class OptimizerConfig(ConfigBase):
     """
     Configuration for an optimizer, including optimizer name and arguments (these arguments
-    are specific to a certain type of optimizer like SGD, Adam, AdamW).
+    are specific to a certain type of optimizer like SGD, Adam, AdamW). This optimizer config
+    will be provided to ``TrainConfig`` as part of the training setting of the experiment.
 
     Attributes
     ----------
@@ -176,6 +177,31 @@ class OptimizerConfig(ConfigBase):
         Name of the optimizer.
     arguments : OptimizerArgs
         Arguments for the optimizer, specific to a certain type of optimizer.
+    
+    Examples
+    --------
+    The following example shows how to create an optimizer config for SGD optimizer and use it in
+    ``TrainConfig`` to define the training setting of the experiment.
+
+    >>> optim_config = OptimizerConfig("sgd", {"lr": 0.5})
+    >>> train_config = TrainConfig(
+    ...     dataset="[Dataset Name]",
+    ...     batch_size=32,
+    ...     epochs=20,
+    ...     optimizer_config=optim_config,
+    ...     scheduler_config=None,
+    ...     rand_weights_init = True
+    ... )
+    >>> # ... create running config (proto/parallel), model wrapper, trainer and launch experiment
+
+    .. note::
+        A common use case is to run ablation studies on different optimizers to learn about their
+        effects on the model performance. However, ``OptimizerConfig`` only configures one single
+        optimizer for the experiment. But you can run experiments on different optimizers by creating
+        a custom config class and add an extra method called ``make_optimizer``. Go to the tutorial on
+        :ref:`Search space for different types of optimizers and scheduler <search_space_optim_schedule>`
+        for more details.
+
     """
 
     name: str

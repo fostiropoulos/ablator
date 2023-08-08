@@ -1,4 +1,4 @@
-Analysis package
+ablator.analysis package
 ========================
 
 Subpackages
@@ -12,18 +12,20 @@ Subpackages
 Submodules
 ----------
 
-Analysis module module
+ablator.analysis.main module
 ----------------------------
 
 .. automodule:: ablator.analysis.main
    :members:
+   :undoc-members:
    :show-inheritance:
 
-Analysis results module
+ablator.analysis.results module
 -------------------------------
 
 .. automodule:: ablator.analysis.results
    :members:
+   :undoc-members:
    :show-inheritance:
 
 Module contents
@@ -31,4 +33,5 @@ Module contents
 
 .. automodule:: ablator.analysis
    :members:
+   :undoc-members:
    :show-inheritance:

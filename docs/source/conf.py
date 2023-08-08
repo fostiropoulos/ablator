@@ -19,7 +19,8 @@ release = '0.0.1'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ['sphinx.ext.autodoc', 'numpydoc',
-              'sphinx.ext.todo', 'sphinx.ext.viewcode', 'nbsphinx']
+              'sphinx.ext.todo', 'sphinx.ext.viewcode', 'nbsphinx',
+              'sphinx.ext.autosummary']
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -34,10 +35,6 @@ html_static_path = ['_static']
 numpydoc_show_class_members = False
 numpydoc_class_members_toctree = False
 numpydoc_show_inherited_class_membersbool = False
-
-autodoc_default_options = {
-    'special-members': '__init__'
-}
 
 html_title = "Ablator Documentation"
 html_favicon = '_static/ablator-logo.svg'
