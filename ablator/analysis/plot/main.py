@@ -19,7 +19,48 @@ logger = logging.getLogger(__name__)
 
 class PlotAnalysis(Analysis):
     """
-    Class for analyzing plotting
+    Class for plotting experiment results. You can use this class and ``Results`` class to visualize the
+    relationship between any hyperparameter that you run ablation study on with the result metrics. This
+    valuable insight offers an intuitive understanding of how these parameters may influence your
+    model's performance.
+
+    Plots supported are linear plots for numerical data and violin plots for categorical data.
+
+    Examples
+    --------
+    - Data frame to be used:
+
+    >>> df2 = pd.DataFrame({'val_accuracy': np.random.uniform(0.8,0.9,10),
+    ...       'train_config.optimizer_config.arguments.lr': np.random.uniform(0.001, 0.1,10),
+    ...       "index": range(10),
+    ...       "path": range(10)})
+
+    - Creating dictionaries that map the configuration parameters [categorical + numerical] to custom labels for plots:
+
+    >>> numerical_name_remap = {
+    ...             "train_config.optimizer_config.arguments.lr": "Learning Rate",
+    ...         }
+    ...     categorical_name_remap = {}
+    ...     attribute_name_remap = {**categorical_name_remap, **numerical_name_remap}
+
+    - Initalize the ``PlotAnalysis`` and plot the figures:
+
+    >>> analysis = PlotAnalysis(
+    ...     df,
+    ...     save_dir="./plots",
+    ...     cache=True,
+    ...     optim_metrics={"val_accuracy": Optim.max},
+    ...     numerical_attributes=list(numerical_name_remap.keys()),
+    ...     categorical_attributes=list(categorical_name_remap.keys()),
+    ... )
+    >>> analysis.make_figures(
+    ...    metric_name_remap={
+    ...        "val_accuracy": "Validation Accuracy",
+    ...    },
+    ...    attribute_name_remap= attribute_name_remap
+    ... )
+
+    The directory ``"plots"`` contains all the plots of the HPO experiments
     """
 
     @classmethod

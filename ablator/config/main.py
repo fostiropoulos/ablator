@@ -51,10 +51,23 @@ class Missing:
 @dataclass(repr=False)
 class ConfigBase:
     # NOTE: this allows for non-defined arguments to be created. It is very bug-prone and will be disabled.
-    """Base class for configuration objects.
+    """
 
-    First, it checks if there are any unannotated variables inside the child config class. If there are,
-    it will raise an assert error.
+    This class this the building block for all configuration objects within ablator. It serves as the base class for
+    configurations such as ``ModelConfig``, ``TrainConfig``, ``OptimizerConfig``, and more.
+
+    To customize configurations for specific needs, you can create your own configuration class by inheriting from ``ConfigBase``.
+    It's essential to annotate it with ``@configclass``. For instance, in the tutorial :ref:`Search space for different types
+    of optimizers and scheduler <search_space_optim_schedule>`, a custom optimizer config class is created to enable ablation study on various optimizers
+    and schedulers. You can refer to this tutorial for an example of how to create your custom configuration class.
+
+    Examples
+    --------
+
+    >>> @configclass
+    >>> class MyCustomConfig(ConfigBase):
+    ...     attr1: int = 1
+    ...     attr2: Tuple[str, int, str]
 
     Parameters
     ----------
@@ -75,9 +88,9 @@ class ConfigBase:
     KeyError
         If unexpected arguments are provided.
 
-    Notes
-    -----
-    All config class must be decorated with ``@configclass``
+    .. note::
+       All config class must be decorated with ``@configclass``
+
     """
     config_class = type(None)
 
