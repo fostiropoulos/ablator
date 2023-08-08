@@ -358,29 +358,14 @@
 
 .. only:: sidebar
 
-
-   Modules
-   -------
-
    .. toctree::
-      :maxdepth: 2
+      :maxdepth: 1
 
-      config
-      training
-      results
-      analysis
-
-   API Reference
-   -------------
-
-   .. toctree::
-      :maxdepth: 2
-
-      api.reference
-
-
-   Indices and tables
-   ------------------
+      Quick Start <notebooks/GettingStarted.ipynb>
+      Tutorials <tutorials>
+      Modules <modules>
+      API Reference <api.reference>
+      More Examples <notebooks/GettingStarted-more-demos.ipynb>
 
    * :ref:`genindex`
    * :ref:`modindex`

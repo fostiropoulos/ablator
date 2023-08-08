@@ -52,7 +52,7 @@ html_theme_options = {
     "navbar_center": ["navbar-nav"],
     "navbar_end": ["navbar-icon-links"],
     "navbar_persistent": ["search-button"],
-    "header_links_before_dropdown": 5,
+    "header_links_before_dropdown": 6,
     "navigation_with_keys": False,
     "collapse_navigation": True,
     "show_nav_level": 1,
