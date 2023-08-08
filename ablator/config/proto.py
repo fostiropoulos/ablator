@@ -93,22 +93,22 @@ class ModelConfig(ConfigBase):
     Define custom model configuration class for your model:
     
     >>> @configclass
-    ... class CustomModelConfig(ModelConfig):
-    ...     input_size :int
-    ...     hidden_size :int
-    ...     num_classes :int
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     input_size :int
+    >>>     hidden_size :int
+    >>>     num_classes :int
 
     Define your model class, pass the configuration to the constructor, and build the model:
 
     >>> class FashionMNISTModel(nn.Module):
-    ...     def __init__(self, config: CustomModelConfig):
-    ...         super(FashionMNISTModel, self).__init__()
-    ...         self.fc1 = nn.Linear(config.input_size, config.hidden_size) # model config attributes are used here
-    ...         self.relu1 = nn.ReLU()
-    ...         self.fc3 = nn.Linear(config.hidden_size, config.num_classes) # model config attributes are used here
-    ...     def forward(self, x):
-    ...         # code for forward pass
-    ...         return x
+    >>>     def __init__(self, config: CustomModelConfig):
+    >>>         super(FashionMNISTModel, self).__init__()
+    >>>         self.fc1 = nn.Linear(config.input_size, config.hidden_size) # model config attributes are used here
+    >>>         self.relu1 = nn.ReLU()
+    >>>         self.fc3 = nn.Linear(config.hidden_size, config.num_classes) # model config attributes are used here
+    >>>     def forward(self, x):
+    >>>         # code for forward pass
+    >>>         return x
     """
 
 

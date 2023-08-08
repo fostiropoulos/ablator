@@ -22,9 +22,9 @@ class Dict(ty.Dict[str, T]):
 
     >>> @configclass
     >>> class MyConfig(ConfigBase):
-    ...     my_str_dict: Dict[str]
-    ...     my_int_dict: Dict[int]
-    ...     my_space_dict: Dict[SearchSpace]
+    >>>     my_str_dict: Dict[str]
+    >>>     my_int_dict: Dict[int]
+    >>>     my_space_dict: Dict[SearchSpace]
 
     When initializing a config object, you can pass a dictionary with keys as strings.
     For values, ablator will automatically cast them to the correct type if possible. For example:
@@ -70,8 +70,8 @@ class List(ty.List[T]):
 
     >>> @configclass
     >>> class MyConfig(ConfigBase):
-    ...     my_str_list: List[str]  # list of strings
-    ...     my_int_list: List[int]  # list of integers
+    >>>     my_str_list: List[str]  # list of strings
+    >>>     my_int_list: List[int]  # list of integers
 
     When initializing a config object, you can pass a list of proper values. In addition,
     ablator will automatically cast them to the correct type if possible. For example:
@@ -109,8 +109,8 @@ class Tuple(ty.Tuple[T]):
 
     >>> @configclass
     >>> class MyConfig(ConfigBase):
-    ...     my_str_int_tuple: Tuple[str, int]
-    ...     my_2str_int_tuple: Tuple[str, int, str]
+    >>>     my_str_int_tuple: Tuple[str, int]
+    >>>     my_2str_int_tuple: Tuple[str, int, str]
 
     When initializing a config object, you can pass a tuple of proper values. In addition,
     ablator will automatically cast them to the correct type if possible. For example:
@@ -146,7 +146,7 @@ class Optional(ty.Generic[T]):
 
     >>> @configclass
     >>> class MyConfig(ConfigBase):
-    ...     my_optional_list: Optional[List[str]]
+    >>>     my_optional_list: Optional[List[str]]
 
     When initializing a config object, you can pass a ``List[str]`` value to ``a4``, or not passing
     values at all:
@@ -190,16 +190,16 @@ class Enum(_Enum):
 
     >>> from ablator import Enum
     >>> class Color(Enum):
-    ...     RED = 1
-    ...     GREEN = 2
-    ...     BLUE = 3
+    >>>     RED = 1
+    >>>     GREEN = 2
+    >>>     BLUE = 3
     
     ``RED``, ``GREEN``, and ``BLUE`` are fixed value set for Color type. Internally, these values are
     mapped to integers 1, 2, and 3. The custom data type ``Color`` can now be used in config classes:
 
     >>> @configclass
     >>> class MyConfig(ConfigBase):
-    ...     my_color: Color
+    >>>     my_color: Color
     >>> MyConfig(my_color=Color.RED)
     my_color: 1
 
@@ -602,7 +602,7 @@ class Stateful(ty.Generic[T]):
 
     >>> @configclass
     >>> class MyModelConfig(ModelConfig):
-    ...     embed_dim: int
+    >>>     embed_dim: int
     >>> model_config = MyModelConfig(embed_dim=100) # Must provide values for ``embed_dim`` before launching experiment
 
     .. note::
@@ -631,21 +631,21 @@ class Derived(ty.Generic[T]):
 
     >>> @configclass
     >>> class MyModelConfig(ModelConfig):
-    ...     embed_dim: Derived[int]
+    >>>     embed_dim: Derived[int]
 
     Then you can define a model class that takes in the model config as input and set input length using ``embed_dim``:
     
     >>> class MyModel(nn.Module):
-    ...     def __init__(self, config: MyModelConfig):
-    ...         super().__init__()
-    ...         self.embed_dim = config.embed_dim
+    >>>     def __init__(self, config: MyModelConfig):
+    >>>         super().__init__()
+    >>>         self.embed_dim = config.embed_dim
 
     Finally, ``config_parser`` is used to set the value of Derived attribute ``embed_dim`` based on the pretrained word embeddings:
 
     >>> class MyLMWrapper(ModelWrapper):
-    ...     def config_parser(self, run_config: RunConfig):
-    ...         run_config.model_config.embed_dim = len(self.train_dataloader.word2vec.wv.vocab)
-    ...         return run_config
+    >>>     def config_parser(self, run_config: RunConfig):
+    >>>         run_config.model_config.embed_dim = len(self.train_dataloader.word2vec.wv.vocab)
+    >>>         return run_config
 
     .. note::
         When initializing config objects, you do not have to assign values to attributes that are of ``Derived`` type.
@@ -664,7 +664,7 @@ class Stateless(ty.Generic[T]):
 
     >>> @configclass
     >>> class MyModelConfig(ConfigBase):
-    ...     attr: Stateless[List[int]]
+    >>>     attr: Stateless[List[int]]
     >>> config = MyModelConfig(attr=[5,"6",7.25])  # Must provide values for ``attr`` before launching experiment
 
     .. note::
