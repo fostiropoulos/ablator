@@ -6,11 +6,13 @@
 
 .. only:: not html
 
+
    ===================================
    Welcome to ablator!
    ===================================
 
    .. sidebar:: Right Sidebar Title
+
 
 
 .. only:: html

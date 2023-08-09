@@ -81,8 +81,9 @@ class Results:
     """
     Class for processing experiment results. You can use this class to read the results in an
     experiment output directory. This can be used in combination with ``PlotAnalysis`` to show the
-    correlation between hyperparameters and metrics. Refer to :ref:`Interpreting Results
-    <interpret_results>` tutorial for more details on plotting and interpreting experiment results.
+    correlation between hyperparameters and metrics. Refer to
+    `Interpreting Results <./notebooks/Interpreting-results.ipynb>`_ tutorial for more details on plotting
+    and interpreting experiment results.
 
     Examples
     --------

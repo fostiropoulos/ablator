@@ -199,7 +199,7 @@ class OptimizerConfig(ConfigBase):
         effects on the model performance. However, ``OptimizerConfig`` only configures one single
         optimizer for the experiment. But you can run experiments on different optimizers by creating
         a custom config class and add an extra method called ``make_optimizer``. Go to the tutorial on
-        :ref:`Search space for different types of optimizers and scheduler <search_space_optim_schedule>`
+        `Search space for different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_
         for more details.
 
     """

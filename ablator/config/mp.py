@@ -75,14 +75,6 @@ class ParallelConfig(RunConfig):
     --------
     There are several steps before defining a parallel run config, let's go through them one by one: 
 
-    - Define model config, we want to run HPO on activation functions and model hidden size:
-
-    >>> @configclass
-    >>> class CustomModelConfig(ModelConfig):
-    >>>     hidden_size: int
-    >>>     activation: str
-    >>> model_config = CustomModelConfig(hidden_size=100, activation="relu")
-
     - Define training config:
 
     >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
@@ -95,6 +87,14 @@ class ParallelConfig(RunConfig):
     ...     scheduler_config = my_scheduler_config,
     ...     rand_weights_init = True
     ... )
+
+    - Define model config, we want to run HPO on activation functions and model hidden size:
+
+    >>> @configclass
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     hidden_size: int
+    >>>     activation: str
+    >>> model_config = CustomModelConfig(hidden_size=100, activation="relu")
 
     - Define search space:
 

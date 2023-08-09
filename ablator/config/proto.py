@@ -93,22 +93,22 @@ class ModelConfig(ConfigBase):
     Define custom model configuration class for your model:
     
     >>> @configclass
-    ... class CustomModelConfig(ModelConfig):
-    ...     input_size :int
-    ...     hidden_size :int
-    ...     num_classes :int
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     input_size :int
+    >>>     hidden_size :int
+    >>>     num_classes :int
 
     Define your model class, pass the configuration to the constructor, and build the model:
 
     >>> class FashionMNISTModel(nn.Module):
-    ...     def __init__(self, config: CustomModelConfig):
-    ...         super(FashionMNISTModel, self).__init__()
-    ...         self.fc1 = nn.Linear(config.input_size, config.hidden_size) # model config attributes are used here
-    ...         self.relu1 = nn.ReLU()
-    ...         self.fc3 = nn.Linear(config.hidden_size, config.num_classes) # model config attributes are used here
-    ...     def forward(self, x):
-    ...         # code for forward pass
-    ...         return x
+    >>>     def __init__(self, config: CustomModelConfig):
+    >>>         super(FashionMNISTModel, self).__init__()
+    >>>         self.fc1 = nn.Linear(config.input_size, config.hidden_size) # model config attributes are used here
+    >>>         self.relu1 = nn.ReLU()
+    >>>         self.fc3 = nn.Linear(config.hidden_size, config.num_classes) # model config attributes are used here
+    >>>     def forward(self, x):
+    >>>         # code for forward pass
+    >>>         return x
     """
 
 
@@ -169,12 +169,6 @@ class RunConfig(ConfigBase):
     --------
     There are several steps before defining a run config, let's go through them one by one: 
 
-    - Define model config, here we use default one with no custom hyperparameters (sometimes you would
-      want to define model config when running HPO on your model's hyperparameters in the parallel experiments
-      with ```ParallelTrainer```, which requires ```ParallelConfig``` instead of ```RunConfig```):
-
-    >>> model_config = ModelConfig()
-
     - Define training config:
 
     >>> my_optimizer_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
@@ -187,6 +181,12 @@ class RunConfig(ConfigBase):
     ...     scheduler_config = my_scheduler_config,
     ...     rand_weights_init = True
     ... )
+
+    - Define model config, here we use default one with no custom hyperparameters (sometimes you would
+      want to customize the model config to run HPO on your model's hyperparameters in the parallel experiments
+      with ```ParallelTrainer```, which requires ```ParallelConfig``` instead of ```RunConfig```):
+
+    >>> model_config = ModelConfig()
 
     - Lastly, we will create the run config, which has train config and model config as parameters:
 

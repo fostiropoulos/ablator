@@ -71,7 +71,7 @@ class SchedulerConfig(ConfigBase):
         effects on the model performance. However, ``SchedulerConfig`` only configures one single
         scheduler for the experiment. But you can run experiments on different schedulers by creating
         a custom config class and add an extra method called ``make_scheduler``. Go to this tutorial on
-        :ref:`Search space for different types of optimizers and scheduler <search_space_optim_schedule>`
+        `Search space for different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_
         for more details.
     """
 
