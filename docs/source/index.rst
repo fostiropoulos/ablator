@@ -6,29 +6,38 @@
 Welcome to ablator's documentation!
 ===================================
 
-Modules
--------
-
 .. toctree::
    :maxdepth: 2
+   :caption: Modules
 
    config
    training
    results
    analysis
 
-API Reference
--------------
+.. toctree::
+   :maxdepth: 2
+   :caption: Basic Tutorials
+
+   notebooks/GettingStarted.ipynb
+   notebooks/Environment-settings.ipynb
+   notebooks/Configuration-Basics.ipynb
+   notebooks/Prototyping-models.ipynb
+   notebooks/Search-space-tutorial.ipynb
+   notebooks/HPO-tutorial.ipynb
+   notebooks/Experiment-dir.ipynb
+   notebooks/Interpreting-results.ipynb
+   notebooks/GettingStarted-more-demos.ipynb
 
 .. toctree::
    :maxdepth: 2
+   :caption: Intermediate Tutorials
+
+   notebooks/Searchspace-for-diff-optimizers.ipynb
+   notebooks/Multi-Modules.ipynb
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference
 
    api.reference
-
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
