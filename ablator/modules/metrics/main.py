@@ -16,7 +16,7 @@ class Metrics:
     account the memory limits, applies evaluation functions, and provides cached or online updates on the metrics.
 
     We can access all the metrics from the ``Metrics`` object using its ``to_dict()`` method. Refer to
-    :ref:`Prototyping Models <prototype_models>` tutorial for more details.
+    `Prototyping Models <./notebooks/Prototyping-models.ipynb>`_ tutorial for more details.
 
     """
 

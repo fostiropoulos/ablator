@@ -28,8 +28,8 @@ class ModelWrapper(ModelBase):
     """
     A wrapper around ``model_class`` that removes training boiler-plate code. Its functions are over-writable
     to support for custom use-cases. Once ``make_dataloader_train`` is overriden to provide a training dataset,
-    ``ModelWrapper`` object will be passed to the trainers (``ProtoTrainer`` or ``ParallelTrainer``) along with running
-    configuration to launch the experiment.
+    you can pass ``ModelWrapper`` object to the trainers (``ProtoTrainer`` or ``ParallelTrainer``) along with a
+    running configuration (``RunConfig`` or ``ParallelConfig``) to launch the experiment.
 
     Attributes
     ----------
@@ -83,7 +83,7 @@ class ModelWrapper(ModelBase):
         """
         Creates the model, optimizer, scheduler, and scaler from a saved checkpoint dictionary or from config. You can overwrite this
         function and ``save_dict()`` function to customize the saving and loading of the model, optimizer, and scheduler to
-        your needs. An example for this is shown in :ref:`Saving and loading multi-module models <multi_module_models>`
+        your needs. An example for this is shown in `Saving and loading multi-module models <./notebooks/Multi-Modules.ipynb>`_
         tutorial.
 
         Parameters
@@ -983,7 +983,8 @@ class ModelWrapper(ModelBase):
         ...         }
 
         - Note that the callable's parameter names must match the model's forward output. In our example,
-          ``y_true`` and ``y_pred`` must be returned by the model's forward method:
+          ``y_true`` and ``y_pred`` must be returned by the model's forward method to match with ``y_true``
+          and ``y_pred`` parameters of ``my_accuracy`` and ``my_f1_score`` functions:
         
         >>> class MyModel(nn.Module):
         >>>     def __init__(self, config: CustomModelConfig) -> None:
@@ -1121,7 +1122,7 @@ class ModelWrapper(ModelBase):
         Save the current state of the trainer, including model parameters, the current states of the optimizer,
         scaler, and scheduler. You can overwrite this function and ``create_model()`` to customize the saving and
         loading of the model, optimizer, and scheduler to your needs. An example of this is shown in
-        :ref:`Saving and loading multi-module models <multi_module_models>` tutorial.
+        `Saving and loading multi-module models <./notebooks/Multi-Modules.ipynb>`_ tutorial.
 
         Returns
         -------

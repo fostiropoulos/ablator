@@ -169,12 +169,6 @@ class RunConfig(ConfigBase):
     --------
     There are several steps before defining a run config, let's go through them one by one: 
 
-    - Define model config, here we use default one with no custom hyperparameters (sometimes you would
-      want to define model config when running HPO on your model's hyperparameters in the parallel experiments
-      with ```ParallelTrainer```, which requires ```ParallelConfig``` instead of ```RunConfig```):
-
-    >>> model_config = ModelConfig()
-
     - Define training config:
 
     >>> my_optimizer_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
@@ -187,6 +181,12 @@ class RunConfig(ConfigBase):
     ...     scheduler_config = my_scheduler_config,
     ...     rand_weights_init = True
     ... )
+
+    - Define model config, here we use default one with no custom hyperparameters (sometimes you would
+      want to customize the model config to run HPO on your model's hyperparameters in the parallel experiments
+      with ```ParallelTrainer```, which requires ```ParallelConfig``` instead of ```RunConfig```):
+
+    >>> model_config = ModelConfig()
 
     - Lastly, we will create the run config, which has train config and model config as parameters:
 

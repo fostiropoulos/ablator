@@ -9,7 +9,7 @@ from ablator.main.model.wrapper import ModelWrapper
 
 class ProtoTrainer:
     """
-    Manages resources for Prototyping. This trainer runs experiment of a single prototype model. (Therefore no HPO)
+    Manages resources for Prototyping. This trainer runs an experiment of a single prototype model. (Therefore no HPO)
 
     Attributes
     ----------
@@ -25,7 +25,8 @@ class ProtoTrainer:
     
     Examples
     --------
-    Below is a complete workflow on how to launch a prototype experiment with ``ProtoTrainer``, from defining config to launching the experiment:
+    Below is a complete workflow on how to launch a prototype experiment with ``ProtoTrainer``, from defining config to
+    launching the experiment:
 
     - Define training config:
 
@@ -40,9 +41,9 @@ class ProtoTrainer:
     ...     rand_weights_init = True
     ... )
 
-    - Define model config, here we use default one with no custom hyperparameters (sometimes you would
-      want to define model config when running HPO on your model's hyperparameters in the parallel experiments
-      with ```ParallelTrainer```, which requires ```ParallelConfig``` instead of ```RunConfig```):
+    - Define model config, here we use the default one with no custom hyperparameters (sometimes you would
+      want to customize the model config to run HPO on your model's hyperparameters in the parallel experiments,
+      which uses ``ParallelTrainer`` and ``ParallelConfig`` instead of ``ProtoTrainer`` and ``RunConfig``):
 
     >>> model_config = ModelConfig()
 

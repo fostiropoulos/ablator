@@ -66,7 +66,7 @@ class FieldType(Enum):
 @configclass
 class SearchSpace(ConfigBase):
     """
-    Search space configuration, required in parallel experiments, is used to define
+    Search space configuration, required in ``ParallelConfig``, is used to define
     the search space for a hyperparameter.
 
     Examples
