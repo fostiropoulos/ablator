@@ -19,3 +19,4 @@ Ablator Tutorials
    :caption: Intermediate Tutorials
 
    notebooks/Searchspace-for-diff-optimizers.ipynb
+   notebooks/Multi-Modules.ipynb
