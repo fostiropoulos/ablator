@@ -60,7 +60,9 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
     """
 
     try:
-        experiment_config = config_type.load(json_path.parent.joinpath("config.yaml"))
+        experiment_config = config_type.load(
+            json_path.parent.joinpath("config.yaml"), debug=True
+        )
         experiment_attributes = experiment_config.make_dict(
             experiment_config.annotations, flatten=True
         )

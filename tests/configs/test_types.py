@@ -128,7 +128,7 @@ def test_types(assert_error_msg):
     assert e.a8 == "10"
     assert e.a9 is None
     assert_error_msg(
-        lambda: MultiTypeConfig(), "Missing required value ['a5', 'c3', 'c4']"
+        lambda: MultiTypeConfig(), "Missing required values ['a5', 'c3', 'c4']."
     )
     assert_error_msg(
         lambda: MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2.2"}),
@@ -138,7 +138,7 @@ def test_types(assert_error_msg):
 
 def test_error_configs(assert_error_msg):
     ERROR_CONFIGS = [
-        (MultiTypeConfig, "Missing required value ['a5', 'c3', 'c4']"),
+        (MultiTypeConfig, "Missing required values ['a5', 'c3', 'c4']."),
         (
             lambda: MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2.2"}),
             "invalid literal for int() with base 10: '2.2'",
@@ -210,7 +210,7 @@ if __name__ == "__main__":
                 raise excp
 
     test_types(assert_error_msg)
-    test_hierarchical()
+    test_hierarchical(assert_error_msg)
     test_error_configs(assert_error_msg)
     test_iterable(assert_error_msg)
 

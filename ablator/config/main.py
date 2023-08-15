@@ -4,7 +4,7 @@ import operator
 import typing as ty
 from dataclasses import dataclass
 from pathlib import Path
-
+import logging
 from omegaconf import OmegaConf
 from ablator.config.types import (
     Annotation,
@@ -42,6 +42,28 @@ def configclass(cls):
     return dataclass(cls, init=False, repr=False, kw_only=True)
 
 
+def _freeze_helper(obj):
+    def __setattr__(self, k, v):
+        if getattr(self, "_freeze", False):
+            raise RuntimeError(
+                f"Can not set attribute {k} on a class of a frozen configuration ``{type(self).__name__}``."
+            )
+        super(type(self), self).__setattr__(k, v)
+
+    try:
+        obj._freeze = True  # pylint: disable=protected-access
+        type(obj).__setattr__ = __setattr__
+    except Exception:  # pylint: disable=broad-exception-caught
+        # this is the case where the object does not have
+        # attribute setter function
+        pass
+
+
+def _unfreeze_helper(obj):
+    if hasattr(obj, "_freeze"):
+        super(type(obj), obj).__setattr__("_freeze", False)
+
+
 class Missing:
     """
     This type is defined only for raising an error
@@ -60,6 +82,8 @@ class ConfigBase:
     ----------
     *args : Any
         Positional arguments.
+    debug : bool, optional, default=False
+        Whether to load the configuration in debug mode, and ignore discrepencies / errors.
     **kwargs : Any
         Keyword arguments.
 
@@ -71,7 +95,7 @@ class ConfigBase:
     Raises
     ------
     ValueError
-        If positional arguments are provided.
+        If positional arguments are provided or there are missing required values.
     KeyError
         If unexpected arguments are provided.
 
@@ -81,8 +105,57 @@ class ConfigBase:
     """
     config_class = type(None)
 
-    def __init__(self, *args, **kwargs):
-        class_name = type(self).__name__
+    def __init__(self, *args, debug: bool = False, **kwargs):
+        self._debug: bool
+        self._freeze: bool
+        self._class_name: str
+        self.__setattr__internal("_debug", debug)
+        self.__setattr__internal("_freeze", False)
+        self.__setattr__internal("_class_name", type(self).__name__)
+
+        missing_vals = self._validate_inputs(*args, debug=debug, **kwargs)
+
+        assert len(missing_vals) == 0 or debug
+        for k in self.annotations:
+            if k in kwargs:
+                v = kwargs[k]
+                del kwargs[k]
+            else:
+                v = getattr(self, k, None)
+            if k in missing_vals:
+                logging.warning(
+                    "Loading %s in `debug` mode. Setting missing required value %s to `None`.",
+                    self._class_name,
+                    k,
+                )
+                self.__setattr__internal(k, None)
+
+            else:
+                try:
+                    setattr(self, k, v)
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    if not debug:
+                        raise e
+                    logging.warning(
+                        "Loading %s in `debug` mode. Unable to parse `%s` value %s. Setting to `None`.",
+                        self._class_name,
+                        k,
+                        v,
+                    )
+                    self.__setattr__internal(k, None)
+
+        if len(kwargs) > 0 and not debug:
+            unspected_args = ", ".join(kwargs.keys())
+            raise KeyError(f"Unexpected arguments: `{unspected_args}`")
+        if len(kwargs) > 0:
+            unspected_args = ", ".join(kwargs.keys())
+            logging.warning(
+                "Loading %s in `debug` mode. Ignoring unexpected arguments: `%s`",
+                self._class_name,
+                unspected_args,
+            )
+
+    def _validate_inputs(self, *args, debug: bool, **kwargs) -> list[str]:
         added_variables = {
             item[0]
             for item in inspect.getmembers(type(self))
@@ -101,11 +174,20 @@ class ConfigBase:
             len(non_annotated_variables) == 0
         ), f"All variables must be annotated. {non_annotated_variables}"
         if len(args) > 0:
-            raise ValueError(f"{class_name} does not support positional arguments.")
-        if not isinstance(self, self.config_class):
-            raise RuntimeError(
-                f"You must decorate your Config class '{class_name}' with ablator.configclass."
+            raise ValueError(
+                f"{self._class_name} does not support positional arguments."
             )
+        if not isinstance(self, self.config_class):  # type: ignore[arg-type]
+            raise RuntimeError(
+                f"You must decorate your Config class '{self._class_name}' with ablator.configclass."
+            )
+
+        missing_vals = self._validate_missing(debug=debug, **kwargs)
+        if len(missing_vals) != 0 and not debug:
+            raise ValueError(f"Missing required values {missing_vals}.")
+        return missing_vals
+
+    def _validate_missing(self, **kwargs) -> list[str]:
         missing_vals = []
         for k, annotation in self.annotations.items():
             if not annotation.optional and annotation.state not in [Derived]:
@@ -116,25 +198,19 @@ class ConfigBase:
                     or getattr(self, k, None) is not None
                 ):
                     missing_vals.append(k)
-        assert len(missing_vals) == 0, f"Missing required value {missing_vals}"
-        for k, annotation in self.annotations.items():
-            if k in kwargs:
-                v = kwargs[k]
-                del kwargs[k]
-            else:
-                v = getattr(self, k, None)
+        return missing_vals
 
-            setattr(self, k, v)
-
-        if len(kwargs) > 0:
-            unspected_args = ", ".join(kwargs.keys())
-            raise KeyError(f"Unexpected arguments: `{unspected_args}`")
-
-    def __setattr__(self, k, v):
-        annotation = self.annotations[k]
-        v = parse_value(v, annotation, k)
+    def __setattr__internal(self, k, v):
         super().__setattr__(k, v)
 
+    def __setattr__(self, k, v):
+        if self._freeze:
+            raise RuntimeError(
+                f"Can not set attribute {k} on frozen configuration ``{type(self).__name__}``."
+            )
+        annotation = self.annotations[k]
+        v = parse_value(v, annotation, k, self._debug)
+        self.__setattr__internal(k, v)
 
     def keys(self):
         """
@@ -148,7 +224,7 @@ class ConfigBase:
         return self.to_dict().keys()
 
     @classmethod
-    def load(cls, path: ty.Union[Path, str]):
+    def load(cls, path: ty.Union[Path, str], debug: bool = False):
         """
         Load a configuration object from a file.
 
@@ -156,6 +232,8 @@ class ConfigBase:
         ----------
         path : Union[Path, str]
             The path to the configuration file.
+        debug : bool, optional, default=False
+            Whether to load the configuration in debug mode, and ignore discrepencies / errors.
 
         Returns
         -------
@@ -163,7 +241,7 @@ class ConfigBase:
             The loaded configuration object.
         """
         kwargs: dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text(encoding="utf-8")))  # type: ignore
-        return cls(**kwargs)
+        return cls(**kwargs, debug=debug)
 
     @property
     def annotations(self) -> dict[str, Annotation]:
@@ -313,8 +391,9 @@ class ConfigBase:
                     val = None
                 else:
                     val = _val.__dict__
+                    if "_freeze" in val:
+                        del val["_freeze"]
             elif issubclass(type(_val), Enum):
-                # _val: Enum
                 val = _val.value
 
             else:
@@ -590,6 +669,49 @@ class ConfigBase:
                 assert (
                     getattr(self, k) is not None
                 ), f"Ambigious configuration. Must provide value for {k}"
+        self._apply_lambda_recursively("assert_unambigious")
+
+    def freeze(self):
+        self.__setattr__internal("_freeze", True)
+        self._apply_lambda_recursively("freeze")
+
+        for k, annot in self.annotations.items():
+            if (
+                isinstance(annot.variable_type, type)
+                and not issubclass(annot.variable_type, ConfigBase)
+                and getattr(self, k) is not None
+                and hasattr(getattr(self, k), "__setattr__")
+            ):
+                if annot.collection in [List, Tuple]:
+                    for _lval in getattr(self, k):
+                        _freeze_helper(_lval)
+                elif annot.collection in [Dict]:
+                    for _lval in getattr(self, k).values():
+                        _freeze_helper(_lval)
+                else:
+                    _freeze_helper(getattr(self, k))
+
+    def _unfreeze(self):
+        self.__setattr__internal("_freeze", False)
+        self._apply_lambda_recursively("_unfreeze")
+
+        for k, annot in self.annotations.items():
+            if (
+                isinstance(annot.variable_type, type)
+                and not issubclass(annot.variable_type, ConfigBase)
+                and getattr(self, k) is not None
+            ):
+                if annot.collection in [List, Tuple]:
+                    for _lval in getattr(self, k):
+                        _unfreeze_helper(_lval)
+                elif annot.collection in [Dict]:
+                    for _lval in getattr(self, k).values():
+                        _unfreeze_helper(_lval)
+                else:
+                    _unfreeze_helper(getattr(self, k))
+
+    def _apply_lambda_recursively(self, lam: str, *args):
+        for k, annot in self.annotations.items():
             if (
                 isinstance(annot.variable_type, type)
                 and issubclass(annot.variable_type, ConfigBase)
@@ -597,9 +719,9 @@ class ConfigBase:
             ):
                 if annot.collection in [List, Tuple]:
                     for _lval in getattr(self, k):
-                        _lval.assert_unambigious()
+                        getattr(_lval, lam)(*args)
                 elif annot.collection in [Dict]:
                     for _lval in getattr(self, k).values():
-                        _lval.assert_unambigious()
+                        getattr(_lval, lam)(*args)
                 else:
-                    getattr(self, k).assert_unambigious()
+                    getattr(getattr(self, k), lam)(*args)
