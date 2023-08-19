@@ -1,7 +1,10 @@
-ablator
-=======
+Ablator Modules
+====================
 
 .. toctree::
-   :maxdepth: 4
+    :maxdepth: 1
 
-   ablator
+    config
+    training
+    results
+    analysis

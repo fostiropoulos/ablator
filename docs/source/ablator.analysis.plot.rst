@@ -1,35 +1,39 @@
-Plot package
+ablator.analysis.plot package
 =============================
 
 Submodules
 ----------
 
-Categorical plot module
+ablator.analysis.plot.cat\_plot module
 --------------------------------------
 
 .. automodule:: ablator.analysis.plot.cat_plot
    :members:
+   :undoc-members:
    :show-inheritance:
 
-Plot analysis module
+ablator.analysis.plot.main module
 ---------------------------------
 
 .. automodule:: ablator.analysis.plot.main
    :members:
+   :undoc-members:
    :show-inheritance:
 
-Numerical plot module module
+ablator.analysis.plot.num\_plot module
 --------------------------------------
 
 .. automodule:: ablator.analysis.plot.num_plot
    :members:
+   :undoc-members:
    :show-inheritance:
 
-Plotting utilities module
+ablator.analysis.plot.utils module
 ----------------------------------
 
 .. automodule:: ablator.analysis.plot.utils
    :members:
+   :undoc-members:
    :show-inheritance:
 
 Module contents
@@ -37,4 +41,5 @@ Module contents
 
 .. automodule:: ablator.analysis.plot
    :members:
+   :undoc-members:
    :show-inheritance:

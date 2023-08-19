@@ -12,10 +12,12 @@ class LossDivergedError(Exception):
 class Metrics:
     """
     Stores and manages predictions and calculates metrics given some custom evaluation functions.
-    Makes batch-updates
-    Manages memory limits
-    applies evaluation functions.
-    provides cached or online updates on the train loss
+    This class makes batch-updates as metrics are calculated while training/evaluating a model. It takes into
+    account the memory limits, applies evaluation functions, and provides cached or online updates on the metrics.
+
+    We can access all the metrics from the ``Metrics`` object using its ``to_dict()`` method. Refer to
+    `Prototyping Models <./notebooks/Prototyping-models.ipynb>`_ tutorial for more details.
+
     """
 
     def __init__(
@@ -364,7 +366,7 @@ class Metrics:
 
     def to_dict(self):
         """
-        Get all metrics, i.e moving aux metrics, moving evaluation metrics, and static aux metrics.
+        Get all metrics, i.e moving auxiliary metrics, moving evaluation metrics, and static auxiliary metrics.
         Note that moving attributes will be an averaged value of all previous batches. Metrics are
         set to np.nan if it's never updated before
 
