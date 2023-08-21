@@ -21,13 +21,12 @@ def mp_train(mp_config):
         model_class=MyModel,
     )
     run_config = MyParallelConfig.load(mp_config)
-    shutil.rmtree(run_config.experiment_dir)
+    shutil.rmtree(run_config.experiment_dir, ignore_errors=True)
     ablator = ParallelTrainer(
         wrapper=wrapper,
         run_config=run_config,
     )
 
-    # NOTE to run on a cluster you will need to start ray with `ray start --head` and pass ray_head_address="auto"
     ablator.launch(
         working_directory=WORKING_DIRECTORY,
     )
@@ -40,7 +39,7 @@ def base_train(config):
         model_class=MyModel,
     )
     run_config = ResRunConfig.load(config)
-    shutil.rmtree(run_config.experiment_dir)
+    shutil.rmtree(run_config.experiment_dir, ignore_errors=True)
     ablator = ProtoTrainer(
         wrapper=wrapper,
         run_config=run_config,
