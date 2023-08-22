@@ -6,11 +6,13 @@ To execute the example of a ResNet experiment you can run:
 
 1. Locally: `python run.py --config config.yaml`
 
-2. Distributed: `python run.py --config mp_config.yaml --mp`
+2. Distributed in a ray cluster: `python run.py --config mp_config.yaml --mp`
 ## Run
 
 
-To run you will need to supply the configuration and optionally the `--mp` flag. **NOTE** that you must be connected to a ray cluster to be able to run distributed. For getting started with Ray please read [here](https://docs.ray.io/en/latest/cluster/getting-started.html)
+To run you will need to supply the configuration yaml file and optionally the `--mp` flag.
+
+**NOTE** You have the option to set up a ray cluster and run a distributed experiment. For getting started with Ray please read [here](https://docs.ray.io/en/latest/cluster/getting-started.html)
 
 In summary and for simple use-cases you can mock a ray cluster by running on your local machine:
 
@@ -20,12 +22,13 @@ To execute the example of a ResNet experiment you can run:
 
 1. Locally: `python run.py --config config.yaml`
 
-2. Distributed: `python run.py --config mp_config.yaml --mp`
+2. Distributed in a ray cluster: `python run.py --config mp_config.yaml --mp`
 
+**NOTE** if you didn't set up a ray cluster (aka skipping `ray start --head` and jump right to the python script for running experiments in a distributed ray cluster), ablator will take care of creating a local cluster, and then run the experiment in that cluster.
 
 ## Extending ResNet
 
-[resnet.py](resnet.py) includes a basic model implementation. The example can be extended to work with more advanced configurations and training settings. Advanced use-case examples are in progress. Resnet.py provides an ablation experiment on different resnet models for learning rate and batch size.
+[`resnet.py`](resnet.py) includes a basic model implementation. The example can be extended to work with more advanced configurations and training settings (advanced use-case examples are in progress). `resnet.py` provides an ablation experiment on different resnet models for learning rate and batch size.
 
 #### Summary
 
