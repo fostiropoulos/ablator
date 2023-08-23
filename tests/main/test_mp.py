@@ -6,6 +6,7 @@ import tempfile
 import ray
 import torch
 from torch import nn
+import unittest
 
 from ablator import (
     ModelConfig,
@@ -19,6 +20,12 @@ from ablator.config.main import configclass
 from ablator.main.configs import ParallelConfig, SearchSpace
 from ablator.main.mp import ParallelTrainer
 from ablator import Derived
+from ablator.main.mp import train_main_remote
+from ablator.modules.loggers.file import FileLogger
+from ablator.modules.metrics.main import LossDivergedError
+from ablator.main.model.main import CheckpointNotFoundError, TrainPlateauError
+from ablator.main.state import ExperimentState, TrialState
+from ablator.modules.metrics.main import TrainMetrics
 
 
 class CustomModelConfig(ModelConfig):
@@ -213,12 +220,91 @@ def test_relative_path(tmp_path:Path):
     relative_path_config.experiment_dir="../dir"
     ablator=ParallelTrainer(wrapper=wrapper,run_config=relative_path_config)
     assert Path(relative_path_config.experiment_dir).absolute() in ablator.experiment_dir.parents
+
+class test_train_main_remote(unittest.TestCase):
+    def test_complete(self,tmp_path:Path):
+        wrapper = TestWrapper(MyCustomModel)
+        train_main_remote_LossDivergedError_TrainPlateauError_config = MyParallelConfig(
+        train_config=train_config,
+        model_config=CustomModelConfig(),
+        verbose="silent",
+        device="cuda",
+        amp=False,
+        search_space=search_space,
+        optim_metrics={"val_loss": "min"},
+        total_trials=5,
+        concurrent_trials=5,
+        gpu_mb_per_experiment=0.001,
+        cpus_per_experiment=0.001,
+        )
+        logpath = tmp_path.joinpath("test.log")
+        logger = FileLogger(logpath, verbose=True, prefix="1")
+
+        [conf, di, state] = train_main_remote(model=wrapper, run_config=train_main_remote_LossDivergedError_TrainPlateauError_config,mp_logger=logger,root_dir=tmp_path,fault_tollerant=True,crash_exceptions_types=None,resume=False,clean_reset=False)
+        assert state == TrialState.COMPLETE
+        
+    def test_LossDivergedError_TrainPlateauError(self,tmp_path:Path):
+        wrapper = TestWrapper(MyCustomModel)
+        train_main_remote_LossDivergedError_TrainPlateauError_config = MyParallelConfig(
+        train_config=train_config,
+        model_config=CustomModelConfig(),
+        verbose="silent",
+        device="cuda",
+        amp=False,
+        search_space=search_space,
+        optim_metrics={"val_loss": "min"},
+        total_trials=5,
+        concurrent_trials=5,
+        gpu_mb_per_experiment=0.001,
+        cpus_per_experiment=0.001,
+        )
+
+        logpath = tmp_path.joinpath("test.log")
+        logger = FileLogger(logpath, verbose=True, prefix="1")
+
+        [conf, di, state] = train_main_remote(model=wrapper, run_config=train_main_remote_LossDivergedError_TrainPlateauError_config,mp_logger=logger,root_dir=tmp_path,fault_tollerant=True,crash_exceptions_types=None,resume=False,clean_reset=False)
+        with self.assertRaises((LossDivergedError, TrainPlateauError)) as c:
+            assert conf == train_main_remote_LossDivergedError_TrainPlateauError_config
+            #assert di == wrapper.metrics.to_dict()
+            print(state)
+            assert state == TrialState.PRUNED_POOR_PERFORMANCE
+
+    def test_DuplicateRunError(self,tmp_path:Path):
+        wrapper = TestWrapper(MyCustomModel)
+        train_main_remote_DuplicateRunError_config = MyParallelConfig(
+        train_config=train_config,
+        model_config=CustomModelConfig(),
+        verbose="silent",
+        device="cuda",
+        amp=False,
+        search_space=search_space,
+        optim_metrics={"val_loss": "min"},
+        total_trials=5,
+        concurrent_trials=5,
+        gpu_mb_per_experiment=0.001,
+        cpus_per_experiment=0.001,
+        )
+
+        logpath = tmp_path.joinpath("test.log")
+        logger = FileLogger(logpath, verbose=True, prefix="1")
+
+        [conf, di, state] = train_main_remote(model=wrapper, run_config=train_main_remote_DuplicateRunError_config,mp_logger=logger,root_dir=tmp_path,fault_tollerant=True,crash_exceptions_types=None,resume=False,clean_reset=False)
+        with self.assertRaises((LossDivergedError, TrainPlateauError)) as c:
+            assert conf == train_main_remote_DuplicateRunError_config
+            assert di == None
+            assert state == TrialState.RECOVERABLE_ERROR
+
+
 if __name__ == "__main__":
     import shutil
 
     tmp_path = Path("/tmp/experiment_dir")
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir()
+    test_train_main_remote().test_LossDivergedError_TrainPlateauError(tmp_path)
+    test_train_main_remote().test_DuplicateRunError(tmp_path)
+    test_train_main_remote().test_complete(tmp_path)
+
     test_mp(tmp_path)
     test_resume(tmp_path)
     test_relative_path(tmp_path)

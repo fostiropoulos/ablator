@@ -1,0 +1,47 @@
+model_config:
+  lr: null
+experiment_dir: C:\Users\80969\OneDrive - University of Southern California\USC\research\ablatorFork\ablator\tests\main\..\dir\experiment_f83c_9991
+random_seed: null
+train_config:
+  dataset: test
+  batch_size: 128
+  epochs: 2
+  optimizer_config:
+    name: sgd
+    arguments:
+      weight_decay: 0.0
+      momentum: 0.0
+      lr: 0.1
+  scheduler_config: null
+  rand_weights_init: true
+keep_n_checkpoints: 3
+tensorboard: true
+amp: false
+device: cpu
+verbose: silent
+eval_subsample: 1.0
+metrics_n_batches: 32
+metrics_mb_limit: 100
+early_stopping_iter: null
+eval_epoch: 1.0
+log_epoch: 1.0
+init_chkpt: null
+warm_up_epochs: 1.0
+divergence_factor: 100.0
+total_trials: 5
+concurrent_trials: 5
+search_space:
+  train_config.optimizer_config.arguments.lr:
+    value_range:
+    - '0'
+    - '10'
+    categorical_values: null
+    value_type: int
+optim_metrics:
+  val_loss: min
+gpu_mb_per_experiment: 0
+cpus_per_experiment: 0.001
+search_algo: tpe
+ignore_invalid_params: false
+remote_config: null
+gcp_config: null
