@@ -143,6 +143,59 @@ def test_mp(tmp_path: Path):
     res = Results(MyParallelConfig, ablator.experiment_dir)
     assert res.data.shape[0] // 2 == len(ablator.experiment_state.complete_trials)
 
+'''
+Testing the functionalities of train_model_remote() from mp.py
+
+the function in and of itself checks for specific errors and raises them accordingly, so it makes sense to create unit tests 
+to ensure that in certain scenarios, the function raises the correct error.
+
+I am limited with my experience of implementing unit tests, but I would imagine the pseudocode to be of the following:
+
+def test_train_model_remote_<error_name>():
+    # initialize all the objects to pass into train_model_remote() to raise the expected error_name 
+    model = ...
+    run_config = ...
+    mp_logger = ...
+    root_dir = ...
+    fault_tollerant = ...
+    crash_exception_types = [...]
+    resume = ...
+    clean_reset = ...
+
+    result = train_model_remote([objects to be passed in])
+    
+    expected_result = (
+        # the three expected fields within the tuple for the error_name
+        run_config, #this is one of the objects that are initialized above
+        dictionary of metrics,
+        TrialState.{FAIL, PRUNED_POOR_PERFOMANCE, RECOVERABLE_ERROR}
+    )
+
+    assert result == expected_result
+
+For expected cases to be passed, the structure would be near identical but the expected result would differ
+def test_train_model_remote():
+    # initialize all the objects to pass into train_model_remote() to successfully pass 
+    model = ...
+    run_config = ...
+    mp_logger = ...
+    root_dir = ...
+    fault_tollerant = ...
+    crash_exception_types = [...]
+    resume = ...
+    clean_reset = ...
+
+    result = train_model_remote([objects to be passed in])
+    
+    expected_result = (
+        # the three expected fields within the tuple for a successful run
+        run_config, #this is one of the objects that are initialized above
+        dictionary of metrics,
+        TrialState.COMPLETE
+    )
+
+    assert result == expected_result
+'''
 
 def test_resume(tmp_path: Path):
     # Initial setup and launch
