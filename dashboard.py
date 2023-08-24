@@ -21,3 +21,8 @@ db = ExplainerDashboard(explainer, title="Titanic Explainer",
                     shap_dependence=True,
                     shap_interaction=True,
                     decision_trees=True)
+
+# Machine Learning dashboard is useful to visualize the machine learning models. 
+# I am using ExplainerDashboard to create dashboard for Sklearn model.
+# We can take any custom dataset and create dashboard. However, I couldn't do that in the given time.
+  
