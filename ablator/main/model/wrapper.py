@@ -1,13 +1,12 @@
-import copy
 import inspect
-import logging
-import multiprocessing as mp
 import time
 import traceback
 import typing as ty
 from abc import abstractmethod
 from collections.abc import Callable, Iterable
+from functools import cached_property
 from pathlib import Path
+
 import numpy as np
 import torch
 from torch import nn
@@ -21,7 +20,6 @@ from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauErro
 from ablator.modules.metrics.main import LossDivergedError, Metrics
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
-from ablator.utils.progress_bar import RemoteProgressBar
 
 
 # pylint: disable=too-many-public-methods
@@ -29,7 +27,7 @@ from ablator.utils.progress_bar import RemoteProgressBar
 class ModelWrapper(ModelBase):
     """
     A wrapper around model_class that removes training boiler-plate code, with over-writable functions
-    with support for custom use-cases.
+    with support for complex custom use-cases.
 
     Attributes
     ----------
@@ -70,6 +68,14 @@ class ModelWrapper(ModelBase):
             "train_config",
             "model_config",
         ]
+        self._overridable_stats_names = ["epochs"]
+        self._init_function_names += ["train", "evaluate"]
+        self._cached_properties += [
+            "_scheduler_step_when",
+            "_scheduler_requires_metric",
+        ]
+        self._is_partially_optimized: None | bool = None
+        self._is_self_optim: None | bool = None
 
     @property
     def train_config(self) -> TrainConfig:
@@ -237,25 +243,6 @@ class ModelWrapper(ModelBase):
             scaler.load_state_dict(scaler_state)
         return scaler
 
-    def reset_optimizer_scheduler(self):
-        """
-        Resets the optimizer and scheduler by recreating them.
-
-        """
-        optimizer_config = self.train_config.optimizer_config
-        scheduler_config = self.train_config.scheduler_config
-        optimizer = self.create_optimizer(
-            model=self.model,
-            optimizer_config=optimizer_config,
-        )
-        scheduler = self.create_scheduler(
-            model=self.model,
-            optimizer=optimizer,
-            scheduler_config=scheduler_config,
-        )
-        self.optimizer = optimizer
-        self.scheduler = scheduler
-
     def load_checkpoint(
         self, save_dict: dict[str, ty.Any], model_only: bool = False
     ) -> None:
@@ -349,6 +336,7 @@ class ModelWrapper(ModelBase):
             and self.current_iteration % step_interval == 0
         )
 
+    # pylint: disable=too-complex
     def _train_evaluation_step(self, smoke_test=False):
         is_best = False
         optim_metric = None
@@ -361,62 +349,70 @@ class ModelWrapper(ModelBase):
             self.train_metrics.evaluate(reset=False)
 
         if self.val_dataloader is not None:
-            metrics = self._validation_loop(
+            self._validation_loop(
                 model=self.model,
                 dataloader=self.val_dataloader,
                 metrics=self.eval_metrics,
                 subsample=self.run_config.eval_subsample,
                 smoke_test=smoke_test,
             )
-            if (
-                self.optim_metric_name is not None
-                and self.optim_metric_name not in metrics
-            ):
-                raise RuntimeError(
-                    f"optim_metric_name=`{self.optim_metric_name}` not found in validation metrics."
-                )
-            if self.optim_metric_name is not None:
-                optim_metric = metrics[self.optim_metric_name]
+        else:
+            self.logger.warn(
+                "Validation dataloader was not set. Will be skipping `validation_loop`."
+            )
 
-        if optim_metric is not None:
+        if (
+            self.optim_metric_name is not None
+            and self.optim_metric_name not in self.metrics
+        ):
+            metric_names = sorted(list(self.metrics.keys()))
+            raise RuntimeError(
+                f"optim_metric_name=`{self.optim_metric_name}` not found in metrics {metric_names}. "
+                "Make sure your validation loader and validation loop are configured correctly."
+            )
+        if self.optim_metric_name is not None:
             # Use val loss for scheduling or finding best checkpoint
+            optim_metric = self.metrics[self.optim_metric_name]
             optim_direction = self.optim_metric_direction
             best_metric = self.best_metrics[self.optim_metric_name]
+            is_warmup = (
+                self.current_iteration
+                <= self.epoch_len * self.run_config.warm_up_epochs
+            )
             if is_best := (
                 (optim_direction == Optim.min and optim_metric < best_metric)
                 or (optim_direction == Optim.max and optim_metric > best_metric)
             ):
                 self.best_iteration = self.current_iteration
                 self.best_metrics[self.optim_metric_name] = optim_metric
-
-            divergence_step = (
-                self.current_iteration > self.epoch_len * self.run_config.warm_up_epochs
-            )
-            ratio = (optim_metric + 1e-5) / (best_metric + 1e-5)
-            if optim_direction == Optim.max:
-                ratio = 1 / ratio
-            div_factor = self.run_config.divergence_factor
-            is_diverged = div_factor is not None and (ratio > div_factor)
-
-            if is_diverged and divergence_step:
-                raise LossDivergedError(
-                    f"Val {self.optim_metric_name} {optim_metric:.2e} has diverged by "
-                    f"a factor larger than {self.run_config.divergence_factor:0.0f} to "
-                    f"best loss {best_metric:.2e}"
+                best_metric = optim_metric
+            elif not is_warmup:
+                relative_change_a = (optim_metric - best_metric + 1e-5) / abs(
+                    best_metric + 1e-5
                 )
+                relative_change_b = (optim_metric - best_metric + 1e-5) / abs(
+                    optim_metric + 1e-5
+                )
+                ratio = abs(relative_change_a + relative_change_b) / 2
 
-        if (
-            self.scheduler is not None
-            and getattr(self.scheduler, "step_when", None) == "val"
-            and optim_metric is None
-        ):
+                div_factor = self.run_config.divergence_factor
+
+                if div_factor is not None and (ratio > div_factor):
+                    raise LossDivergedError(
+                        f"Val {self.optim_metric_name} {optim_metric:.2e} has diverged by "
+                        f"a factor larger than {self.run_config.divergence_factor:0.0f} to "
+                        f"best_{self.optim_metric_name} {best_metric:.2e}"
+                    )
+        elif self.scheduler is not None and self._scheduler_requires_metric:
             raise EvaluationError(
                 f"A validation optimization argument is required with "
                 f"{self.scheduler.__class__.__name__} scheduler. "
-                "Try setting a validation dataloader."
+                "Try setting a `optim_metric_name`"
             )
-        self.scheduler_step(self.scheduler, optim_metric)
-
+        if self._scheduler_requires_metric:
+            self.scheduler_step(optim_metric, is_val_step=True)
+        else:
+            self.scheduler_step(is_val_step=True)
         self.update_status()
         self._checkpoint()
         if is_best:
@@ -426,10 +422,12 @@ class ModelWrapper(ModelBase):
 
         if (
             early_stopping_iter is not None
+            and self.best_iteration is not None
             and (self.current_iteration - self.best_iteration) > early_stopping_iter
         ):
+            diff = self.current_iteration - self.best_iteration
             raise TrainPlateauError(
-                f"Early stopping, no improvement for {early_stopping_iter} iterations."
+                f"Early stopping. No improvement for {diff} > early_stopping_iter = `{early_stopping_iter}` iterations."
             )
 
     def _model_step(
@@ -475,12 +473,12 @@ class ModelWrapper(ModelBase):
         model = self.model
         optimizer = self.optimizer
         scaler = self.scaler
-        scheduler = self.scheduler
         # Ensure no left-over grads are in the model's parameters from custom evaluation or what-not
         optimizer.zero_grad(set_to_none=True)
         outputs, loss = self._model_step(model=model, batch=batch)
 
-        loss_value = self.apply_loss(model, loss, optimizer, scaler, scheduler)
+        loss_value = self.apply_loss(model, loss, optimizer, scaler)
+        self.scheduler_step()
         self._inc_iter()
         self._update_learning_rate()
 
@@ -502,44 +500,6 @@ class ModelWrapper(ModelBase):
         msg = self.status_message()
         verbose = self.verbose == "console"
         self.logger.info(msg, verbose=verbose)
-
-    @ty.final
-    def mock_train(
-        self,
-        run_config: ty.Optional[RunConfig] = None,
-        run_async=True,
-        block: bool = True,
-    ) -> mp.Process | dict[str, float]:
-        """
-        Mock train the model as a smoke test
-
-        Parameters
-        ----------
-        run_config: RunConfig
-            The run config to use for the mock train.
-        run_async: bool
-            Whether to run the mock train in a separate process.
-        block: bool
-            Whether to block the current process until the mock train is finished.
-
-        Returns
-        -------
-        p: mp.Process
-            The process running the mock train.
-        metrics: dict[str, float]
-            The metrics from the mock train.
-        """
-        mock_model = copy.deepcopy(self)
-
-        if run_config is None:
-            run_config = mock_model.run_config
-        if run_async:
-            p = mp.Process(target=mock_model.train, args=(run_config, True))
-            p.start()
-            if block:
-                p.join()
-            return p
-        return mock_model.train(run_config=run_config, smoke_test=True)
 
     def update_status(self):
         """
@@ -567,7 +527,6 @@ class ModelWrapper(ModelBase):
             A dictionary with keys the metric name and the value corresponding to the metric.
         """
         metrics = {}
-
         if self.eval_metrics is not None:
             for k, v in self.eval_metrics.to_dict().items():
                 metrics[f"val_{k}"] = v
@@ -691,11 +650,10 @@ class ModelWrapper(ModelBase):
     @ty.final
     def train(
         self,
-        run_config: RunConfig,
+        run_config: RunConfig | None = None,
         smoke_test: bool = False,
         debug: bool = False,
         resume: bool = False,
-        remote_progress_bar: ty.Optional[RemoteProgressBar] = None,
     ) -> dict[str, float]:
         """
         Initialize states and train the model.
@@ -703,31 +661,48 @@ class ModelWrapper(ModelBase):
 
         Parameters
         ----------
-        run_config : RunConfig
-            The run config to use for training.
+        run_config : RunConfig | None, optional
+            The run config to use for training. If `None` the wrapper must have been initialized already.
         smoke_test : bool, default=False
             Whether to run a smoke test.
         debug : bool, default=False
             Whether to run in debug mode.
         resume : bool, default=False
             Whether to resume training the model from existing checkpoints and existing experiment state.
-        remote_progress_bar : RemoteProgressBar, optional
-            Optionally, we can pass a remote progress bar to report progress of the training.
 
         Returns
         -------
         Metrics
             The metrics from the training.
         """
-        if not self._is_init:
-            self._init_state(
+        if not self._is_init and not run_config is None:
+            self.init_state(
                 run_config=run_config,
                 smoke_test=smoke_test,
                 debug=debug,
                 resume=resume,
-                remote_progress_bar=remote_progress_bar,
             )
-
+        elif not self._is_init:
+            raise ValueError(
+                f"{self.__class__.__name__} is not initialized. Must provide a `run_config`."
+            )
+        elif debug or smoke_test:
+            self.init_state(
+                run_config=self.run_config,
+                smoke_test=smoke_test,
+                debug=debug,
+                resume=resume,
+            )
+        elif run_config is not None:
+            raise ValueError(
+                f"Can not provide `run_config` to already initialized `{self.__class__.__name__}`"
+            )
+        if self.current_iteration == self.total_steps:
+            self.logger.warn(
+                f"Training is already complete: {self.current_iteration} / {self.total_steps}. "
+                "Returning current metrics."
+            )
+            return self.metrics
         try:
             return self.train_loop(smoke_test)
         except KeyboardInterrupt:
@@ -758,7 +733,7 @@ class ModelWrapper(ModelBase):
             Path to the checkpoint to evaluate. If None, the latest checkpoint is evaluated.
 
         """
-        self._init_state(run_config, resume=True, from_chkpt=chkpt)
+        self.init_state(run_config, resume=True, from_chkpt=chkpt)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
         self.update_status()
         msg = self.metrics
@@ -805,7 +780,7 @@ class ModelWrapper(ModelBase):
         optimizer: Optimizer,
         scaler: torch.cuda.amp.GradScaler,
         model: nn.Module,
-        loss: torch.Tensor,
+        loss: torch.Tensor | None,
     ):
         if self.amp and loss is not None:
             scaler.unscale_(optimizer)
@@ -814,26 +789,65 @@ class ModelWrapper(ModelBase):
             scaler.update()
         else:
             optimizer.step()
+        if self._is_partially_optimized is None and any(
+            p.grad is None
+            for param_group in optimizer.param_groups
+            for p in param_group["params"]
+        ):
+            self.logger.warn(
+                "Not all optimization parameters contain gradients. "
+                "If this is expected behavior please ignore this message. "
+                "Otherwise make sure you are using your model correctly."
+            )
+            self._is_partially_optimized = True
+        elif self._is_partially_optimized is None:
+            self._is_partially_optimized = False
+
         optimizer.zero_grad(set_to_none=True)
 
-    @ty.final
-    def scheduler_step(self, scheduler: ty.Optional[Scheduler], *args):
-        if scheduler is None:
-            return
-        # TODO what to do when scheduler does not have step_when
+    @cached_property
+    def _scheduler_step_when(self):
         step_when = None
         try:
             step_when = self.train_config.scheduler_config.arguments.step_when
-        except:
-            breakpoint() # TODO find the exception type
-            step_when = getattr(scheduler, "step_when", None)
+        except AttributeError:
+            step_when = getattr(self.scheduler, "step_when", None)
+        return step_when
 
+    @cached_property
+    def _scheduler_requires_metric(self):
+        if self.scheduler is None:
+            return False
+        try:
+            params = inspect.signature(self.scheduler.step).parameters.keys()
+            return "metrics" in params
+        except AttributeError:
+            return False
+
+    @ty.final
+    def scheduler_step(self, *args, is_val_step=False):
+        """
+        A single scheduler step. This function accounts for when the scheduler is supposed
+        to take a step. It reads `step_when` as a property from the scheduler or derives
+        it from the train configuration. `step_when` is expected to be in
+        {"train", "epoch", "val"}. When the scheduler is a validation scheduler,
+        it expects some mertrics passed as arguments to the scheduler step function.
+        e.g. `wrapper.scheduler_step(0.001)`.
+
+        When no args is provided and it is a validation scheduler, this function is
+        no-op.
+
+        """
+
+        if (scheduler := self.scheduler) is None:
+            return
+        step_when = self._scheduler_step_when
         if step_when == "train" or step_when is None:
             scheduler.step(*args)  # type: ignore
         elif step_when == "epoch" and self._is_step(self.epoch_len):
             scheduler.step(*args)  # type: ignore
-        elif step_when == "val" and len(args) > 0:
-            self.scheduler.step(*args)  # type: ignore
+        elif step_when == "val" and is_val_step:
+            scheduler.step(*args)  # type: ignore
 
     def apply_loss(
         self,
@@ -841,7 +855,6 @@ class ModelWrapper(ModelBase):
         loss: torch.Tensor | None,
         optimizer: Optimizer,
         scaler: torch.cuda.amp.GradScaler,
-        scheduler: ty.Optional[Scheduler],
     ) -> float | None:
         """
         Calculate the loss and apply the gradients, call ``optimizer.step()`` and ``scheduler.step()``.
@@ -856,8 +869,6 @@ class ModelWrapper(ModelBase):
             The optimizer to step.
         scaler: torch.cuda.amp.GradScaler
             The scaler to use during mixed precision training.
-        scheduler: ty.Optional[Scheduler]
-            The scheduler to step.
 
         Returns
         -------
@@ -868,9 +879,25 @@ class ModelWrapper(ModelBase):
             loss = torch.mean(loss)
             loss_value = self.backward(loss, scaler)
         else:
+            if self._is_self_optim is None and all(
+                p.grad is None
+                for param_group in optimizer.param_groups
+                for p in param_group["params"]
+            ):
+                self.logger.error(
+                    "The loss returned by the model is `None` "
+                    "and no optimization parameter contains gradients. "
+                    "You need to perform optimization internally, either call `loss.backward()`"
+                    " in the `model.forward`, or define your own optimizer to perform `optimizer.step()` "
+                    "inside `model.forward`. "
+                )
+                self._is_self_optim = True
+            elif self._is_self_optim is None:
+                self._is_self_optim = False
+
             loss_value = None
+
         self.optim_step(optimizer, scaler, model, loss)
-        self.scheduler_step(scheduler)
         return loss_value
 
     @torch.no_grad()
@@ -1011,23 +1038,6 @@ class ModelWrapper(ModelBase):
         """
         return run_config
 
-    def _config_parser(self, run_config: RunConfig):
-        scheduler_config = self.run_config.train_config.scheduler_config
-        if scheduler_config is not None and hasattr(scheduler_config.arguments, "mode"):
-            assert self.run_config.optim_metric is not None
-            mode = scheduler_config.arguments.mode
-            _, optim_direction = self.run_config.optim_metric
-            if (direction := optim_direction.value) != mode:
-                logging.warning(
-                    "Different optim_metric_direction %s than scheduler.arguments.mode %s."
-                    "Overwriting scheduler.arguments.mode.",
-                    direction,
-                    mode,
-                )
-            self.run_config.train_config.scheduler_config.arguments.mode = direction
-        config = super()._config_parser(run_config)
-        return config
-
     def make_dataloaders(self, run_config: RunConfig) -> None:
         """
         This function is done post-initialization because otherwise the
@@ -1074,7 +1084,7 @@ class ModelWrapper(ModelBase):
 
         scheduler_state_dict = None
         if getattr(self, "scheduler", None) is not None:
-            scheduler_state_dict = self.scheduler.state_dict()
+            scheduler_state_dict = self.scheduler.state_dict()  # type: ignore
 
         scaler_state_dict = None
         if getattr(self, "scaler", None) is not None:
