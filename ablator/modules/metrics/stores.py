@@ -1,9 +1,9 @@
+import bisect
 import inspect
-
+import logging
 import typing as ty
 from collections.abc import Callable, Sequence
-from functools import cached_property
-import bisect
+
 import numpy as np
 import torch
 
@@ -96,8 +96,9 @@ class ArrayStore(Sequence):
         self._memory_limit = memory_limit
         self._arr_len: list[int] = []
         self._len = 0
-        # initialize memory_size as it is a cached property.
-        getattr(self, "memory_size")
+        self._store_type: type | None = None
+        self._shape: tuple[int, ...] | None = None
+        self._item_size: int | None = None
 
     def append(self, val: np.ndarray | float | int):
         """
@@ -151,40 +152,63 @@ class ArrayStore(Sequence):
         """
         # Appending by batch is faster than converting numpy to list
         np_val = _parse_array_store_val(
-            val, shape=self.shape, store_type=self.store_type
+            val, shape=self._shape, store_type=self._store_type
         )
         self._arr.append(np_val)
-        if self.store_type is None:
-            # we reset the cached properties
-            del self.store_type
-            del self.shape
-            del self.memory_size
+        self._init_properties()
         np_val_len = len(np_val)
         self._arr_len.append(np_val_len)
         self._len += np_val_len
         if (
             self._memory_limit is not None
-            and self.memory_size * (self._len + 1) > self._memory_limit
+            and self._item_size is not None
+            and (
+                self.limit is None
+                or self.limit > int(max(self._memory_limit // self._item_size - 1, 1))
+            )
+            and self._item_size * (self._len + 1) > self._memory_limit
         ):
-            memory_limit = int(max(self._memory_limit // self.memory_size, 1))
+            memory_limit = int(max(self._memory_limit // self._item_size - 1, 1))
             limit: int = (
                 min(memory_limit, self.limit)
                 if self.limit is not None
                 else memory_limit
             )
+            logging.warning(
+                "Memory limit %s reached for ArrayStore. Consider increasing `memory_limit`. "
+                "Will prune to %s samples.",
+                self._memory_limit,
+                limit,
+            )
             self.limit = limit
             self._prune(limit)
-        elif self.limit is not None and self._len > self.limit:
+            assert (
+                self._len == 1
+                or self._item_size * (self._len + 1) <= self._memory_limit
+            )
+        elif self.limit is not None and self._len > 1 and self._len > self.limit:
             self._prune(self.limit)
 
-    @cached_property
-    def memory_size(self):
-        arr_size = 0
-        if len(self) > 0:
-            arr = self._arr[0]
-            arr_size = arr.size * arr.itemsize
+    def _init_properties(self):
+        if len(self._arr) == 0:
+            return
+        if self._shape is None or self._item_size is None or self._store_type is None:
+            last_item = self._arr[-1]
+            self._store_type = last_item.dtype
+            self._shape = last_item.shape[1:]
+            self._item_size = last_item.size * last_item.itemsize
 
-        return arr_size
+    @property
+    def shape(self) -> tuple[int, ...] | None:
+        return self._shape
+
+    @property
+    def item_size(self) -> int | None:
+        return self._item_size
+
+    @property
+    def store_type(self) -> type | None:
+        return self._store_type
 
     def _prune(self, limit: int):
         limit = int(limit)
@@ -223,18 +247,6 @@ class ArrayStore(Sequence):
         if len(self._arr) == 0:
             return np.array([[]])
         return np.concatenate(self._arr)
-
-    @cached_property
-    def store_type(self) -> type | None:
-        if len(self._arr) > 0:
-            return self._arr[-1].dtype
-        return None
-
-    @cached_property
-    def shape(self) -> tuple[int, ...] | None:
-        if len(self._arr) > 0:
-            return self._arr[-1].shape[1:]
-        return None
 
     def __len__(self):
         return self._len
