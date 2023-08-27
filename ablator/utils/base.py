@@ -1,29 +1,13 @@
-import contextlib
-import os
+import logging
 import random
 import sys
+import time
 import typing as ty
-from collections import namedtuple
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 import numpy as np
+import ray
 import torch
-from ablator.utils._nvml import patch_smi
-
-try:
-    # pylint: disable=unspecified-encoding
-    with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
-        from pynvml.smi import nvidia_smi as smi
-        from pynvml import nvml
-
-        _instance = smi.getInstance()
-        _instance.DeviceQuery()
-        # TODO: waiting for fix: https://github.com/pytorch/pytorch/issues/86493
-# pylint: disable=broad-exception-caught
-except Exception:
-    smi = None
-
-CUDA_PROCESS = namedtuple("CUDA_PROCESS", ["process_name", "pid", "memory"])
 
 
 class Dummy:
@@ -38,6 +22,59 @@ class Dummy:
 
     def __getitem__(self, *args, **kwargs):
         return self
+
+
+@ray.remote
+class _Lock:
+    def __init__(self) -> None:
+        self.lock: bool = False
+
+    def acquire(self):
+        if not self.lock:
+            self.lock = True
+            return True
+        return False
+
+    def release(self):
+        if not self.lock:
+            raise ValueError("lock released too many times")
+        self.lock = False
+
+
+class Lock:
+    def __init__(self, timeout: float | None = None) -> None:
+        # pylint: disable=no-member
+        self.lock = _Lock.remote()  # type: ignore
+
+        self.timeout = timeout
+
+    def __enter__(self):
+        self.acquire()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+
+    def acquire(self):
+        current_time = time.time()
+        n = 0
+        while True:
+            if ray.get(self.lock.acquire.remote()):
+                break
+            if self.timeout is not None and time.time() - current_time > self.timeout:
+                raise TimeoutError(
+                    f"Could not obtain lock within {self.timeout:.2f} seconds"
+                )
+            n += 1
+            if n % 10000 == 0:
+                logging.warning(
+                    "Lock(%s) takes an excessive time and it could be caused by a deadlock.",
+                    id(self),
+                )
+
+            time.sleep(0.1)
+
+    def release(self):
+        ray.get(self.lock.release.remote())
 
 
 def iter_to_numpy(iterable):
@@ -247,72 +284,6 @@ def parse_device(device: ty.Union[str, list[str]]):
         return [parse_device(_device) for _device in device]
 
     return "cuda" if torch.cuda.is_available() else "cpu"
-
-
-def _get_gpu_info() -> list[dict[str, ty.Any]]:
-    if smi is not None:
-        try:
-            instance = smi.getInstance()
-            device = instance.DeviceQuery()
-        # pylint: disable=broad-exception-caught
-        except Exception:
-            return []
-    else:
-        return []
-    if not getattr(smi, "_is_id", False):
-        patch_smi(smi, nvml)
-    if "gpu" not in device:
-        return []
-    return sorted(device["gpu"], key=lambda x: x["minor_number"])
-
-
-def get_cuda_processes() -> dict[int, list[CUDA_PROCESS]]:
-    """
-    Finds the currently running cuda processes on the system. Each process is a
-    ``CUDA_PROCESS`` object that contains information on the process name, `pid` and
-    the memory utilization.
-
-    Returns
-    -------
-    dict[int, list[CUDA_PROCESS]]
-        The key of each dictionary is the device-id, corresponding to a list of running CUDA processes.
-    """
-    gpus = _get_gpu_info()
-    cuda_processes: dict[int, list[CUDA_PROCESS]] = {}
-    for gpu in gpus:
-        device_id = int(gpu["minor_number"])
-        if gpu["processes"] is None:
-            cuda_processes[device_id] = []
-            continue
-        cuda_processes[device_id] = [
-            CUDA_PROCESS(p["process_name"], p["pid"], p["used_memory"])
-            for p in gpu["processes"]
-        ]
-    return cuda_processes
-
-
-def get_gpu_mem(
-    mem_type: ty.Literal["used", "total", "free"] = "total"
-) -> dict[int, int]:
-    """
-    Get the memory information of all available GPUs.
-
-    Parameters
-    ----------
-    mem_type : ty.Literal["used", "total", "free"], optional
-        The type of memory information to retrieve, by default "total".
-
-    Returns
-    -------
-    dict[int, int]
-        A list of memory values for each GPU, depending on the specified memory type.
-    """
-    memory: dict[int, int] = {}
-    gpus = _get_gpu_info()
-    for gpu in gpus:
-        device_id = int(gpu["minor_number"])
-        memory[device_id] = int(gpu["fb_memory_usage"][mem_type])
-    return memory
 
 
 def _num_e_format(value: int | np.integer | float | np.floating, width: int) -> str:
