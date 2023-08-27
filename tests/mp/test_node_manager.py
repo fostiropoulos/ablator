@@ -141,6 +141,5 @@ if __name__ == "__main__":
 
     l = locals()
     fn_names = [fn for fn in l if fn.startswith("test_")]
-    fn_names = ["test_node_manager"]
     test_fns = [l[fn] for fn in fn_names]
     run_tests_local(test_fns)

@@ -46,7 +46,7 @@ def utilization():
     )
 
 
-@ray.remote
+@ray.remote(num_cpus=0.001)
 def update_node(node_ip, key):
     # check if key in authorized keys
     ssh_dir = Path.home().joinpath(".ssh")
@@ -87,7 +87,7 @@ class NodeManager:
             node_alive = node.state.lower() == "alive"
             if node_alive and node_ip not in self.nodes:
                 future = update_node.options(  # type: ignore
-                    resources={f"node:{node_ip}": 0.01}
+                    resources={f"node:{node_ip}": 0.001}
                 ).remote(node_ip, self.public_key)
                 try:
                     node_ip, username = ray.get(future, timeout=timeout)
@@ -163,7 +163,7 @@ class NodeManager:
         for node_ip in self._parse_node_ips(node_ips):
             try:
                 results[node_ip] = ray.get(
-                    ray.remote(fn)
+                    ray.remote(num_cpus=0.001)(fn)
                     .options(resources={f"node:{node_ip}": 0.001})
                     .remote(),
                     timeout=timeout,

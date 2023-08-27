@@ -44,7 +44,7 @@ def test_file_logger(tmp_path: Path):
     )
 
 
-@ray.remote
+@ray.remote(num_cpus=0.001)
 def mock_remote(i: int, file_logger: FileLogger):
     file_logger.info(f"\\xx {i} info \\xx")
     file_logger.warn(f"\\xx {i} warn \\xx")
