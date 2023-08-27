@@ -1,25 +1,28 @@
 import copy
 import inspect
+import logging
 import operator
 import typing as ty
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
-import logging
+
 from omegaconf import OmegaConf
+
 from ablator.config.types import (
     Annotation,
     Derived,
     Dict,
     Enum,
     List,
+    Literal,
     Stateless,
     Tuple,
     Type,
-    Literal,
     parse_type_hint,
     parse_value,
 )
-from ablator.config.utils import dict_hash, flatten_nested_dict
+from ablator.config.utils import dict_hash, flatten_nested_dict, parse_repr_to_kwargs
 
 
 def configclass(cls):
@@ -39,7 +42,7 @@ def configclass(cls):
 
     assert issubclass(cls, ConfigBase), f"{cls.__name__} must inherit from ConfigBase"
     setattr(cls, "config_class", cls)
-    return dataclass(cls, init=False, repr=False, kw_only=True)
+    return dataclass(cls, init=False, repr=False, kw_only=True, eq=False)
 
 
 def _freeze_helper(obj):
@@ -64,6 +67,23 @@ def _unfreeze_helper(obj):
         super(type(obj), obj).__setattr__("_freeze", False)
 
 
+def _parse_reconstructor(val, ignore_stateless: bool, flatten: bool):
+    if isinstance(val, (int, float, bool, str, type(None))):
+        return val
+    if issubclass(type(val), ConfigBase):
+        return val.make_dict(
+            val.annotations, ignore_stateless=ignore_stateless, flatten=flatten
+        )
+    if issubclass(type(val), Enum):
+        return val.value
+    args, kwargs = parse_repr_to_kwargs(val)
+    if len(args) == 0:
+        return kwargs
+    if len(kwargs) == 0:
+        return args
+    return args, kwargs
+
+
 class Missing:
     """
     This type is defined only for raising an error
@@ -83,7 +103,7 @@ class ConfigBase:
     *args : Any
         Positional arguments.
     debug : bool, optional, default=False
-        Whether to load the configuration in debug mode, and ignore discrepencies / errors.
+        Whether to load the configuration in debug mode, and ignore discrepancies / errors.
     **kwargs : Any
         Keyword arguments.
 
@@ -181,8 +201,7 @@ class ConfigBase:
             raise RuntimeError(
                 f"You must decorate your Config class '{self._class_name}' with ablator.configclass."
             )
-
-        missing_vals = self._validate_missing(debug=debug, **kwargs)
+        missing_vals = self._validate_missing(**kwargs)
         if len(missing_vals) != 0 and not debug:
             raise ValueError(f"Missing required values {missing_vals}.")
         return missing_vals
@@ -211,6 +230,34 @@ class ConfigBase:
         annotation = self.annotations[k]
         v = parse_value(v, annotation, k, self._debug)
         self.__setattr__internal(k, v)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return len(self.diff(other)) == 0
+        return False
+
+    def __repr__(self) -> str:
+        """
+        Return the string representation of the configuration object.
+
+        Returns
+        -------
+        str
+            The string representation of the configuration object.
+
+        """
+
+        return (
+            self._class_name
+            + "("
+            + ", ".join(
+                [
+                    f"{k}='{v}'" if isinstance(v, str) else f"{k}={v.__repr__()}"
+                    for k, v in self.to_dict().items()
+                ]
+            )
+            + ")"
+        )
 
     def keys(self):
         """
@@ -355,19 +402,9 @@ class ConfigBase:
             The dictionary representation of the configuration object.
         """
         return_dict = {}
-
-        def __parse_nested_value(val):
-            if issubclass(type(val), Type):
-                return val.__dict__
-            if issubclass(type(val), ConfigBase):
-                # TODO test-case for
-                # val.make_dict(val.annotations) vs below
-                return val.make_dict(
-                    val.annotations, ignore_stateless=ignore_stateless, flatten=flatten
-                )
-
-            return val
-
+        parse_reconstructor = partial(
+            _parse_reconstructor, ignore_stateless=ignore_stateless, flatten=flatten
+        )
         for field_name, annot in annotations.items():
             if ignore_stateless and (annot.state in {Stateless, Derived}):
                 continue
@@ -376,11 +413,11 @@ class ConfigBase:
             if annot.collection in [None, Literal] or _val is None:
                 val = _val
             elif annot.collection == List:
-                val = [__parse_nested_value(_lval) for _lval in _val]
+                val = [parse_reconstructor(_lval) for _lval in _val]
             elif annot.collection == Tuple:
-                val = tuple(__parse_nested_value(_lval) for _lval in _val)
+                val = tuple(parse_reconstructor(_lval) for _lval in _val)
             elif annot.collection in [Dict]:
-                val = {k: __parse_nested_value(_dval) for k, _dval in _val.items()}
+                val = {k: parse_reconstructor(_dval) for k, _dval in _val.items()}
             elif issubclass(type(_val), ConfigBase):
                 val = _val.make_dict(
                     _val.annotations, ignore_stateless=ignore_stateless, flatten=flatten
@@ -390,9 +427,7 @@ class ConfigBase:
                 if annot.optional and _val is None:
                     val = None
                 else:
-                    val = _val.__dict__
-                    if "_freeze" in val:
-                        del val["_freeze"]
+                    val = parse_reconstructor(_val)
             elif issubclass(type(_val), Enum):
                 val = _val.value
 
@@ -413,20 +448,7 @@ class ConfigBase:
             The path to the file.
 
         """
-        Path(path).write_text(str(self), encoding="utf-8")
-
-    def to_str(self):
-        """
-        Convert the configuration object to a string.
-
-        Returns
-        -------
-        str
-            The string representation of the configuration object.
-        """
-        # TODO: investigate https://github.com/crdoconnor/strictyaml as an alternative to OmegaConf
-        conf = OmegaConf.create(self.to_dict())
-        return OmegaConf.to_yaml(conf)
+        Path(path).write_text(self.to_yaml(), encoding="utf-8")
 
     def assert_state(self, config: "ConfigBase") -> bool:
         """
@@ -447,41 +469,6 @@ class ConfigBase:
         diff = "\n\t".join(diffs)
         assert len(diffs) == 0, f"Differences between configurations:\n\t{diff}"
         return True
-
-    def merge(self, config: "ConfigBase") -> "ty.Self":  # type: ignore
-        # TODO ty.Self is currently supported by mypy? fixme above
-        # replaces stateless and derived properties
-        """
-        Merge the current configuration object with another configuration object.
-
-        Parameters
-        ----------
-        config : ConfigBase
-            The configuration object to merge.
-
-        Returns
-        -------
-        ty.Self
-            The merged configuration object.
-
-        """
-        self_config = copy.deepcopy(self)
-
-        left_config = self_config
-        right_config = copy.deepcopy(config)
-        right_annotations = right_config.annotations
-        left_annotations = right_config.annotations
-        left_config.assert_state(right_config)
-        right_config.assert_state(left_config)
-        assert isinstance(left_config, type(right_config))
-
-        for k in right_annotations:
-            assert left_annotations[k] == right_annotations[k]
-            if left_annotations[k].state in [Stateless, Derived]:
-                right_val = getattr(right_config, k)
-                setattr(left_config, k, right_val)
-
-        return left_config
 
     def diff_str(self, config: "ConfigBase", ignore_stateless: bool = False):
         """
@@ -607,7 +594,9 @@ class ConfigBase:
             The YAML representation of the configuration object.
 
         """
-        return str(self)
+        # TODO: investigate https://github.com/crdoconnor/strictyaml as an alternative to OmegaConf
+        conf = OmegaConf.create(self.to_dict())
+        return OmegaConf.to_yaml(conf)
 
     def to_dot_path(self, ignore_stateless: bool = False):
         """
@@ -628,18 +617,6 @@ class ConfigBase:
             self.annotations, ignore_stateless=ignore_stateless, flatten=True
         )
         return OmegaConf.to_yaml(OmegaConf.create(_flat_dict))
-
-    def __repr__(self) -> str:
-        """
-        Return the string representation of the configuration object.
-
-        Returns
-        -------
-        str
-            The string representation of the configuration object.
-
-        """
-        return self.to_str()
 
     @property
     def uid(self):
@@ -668,7 +645,7 @@ class ConfigBase:
             if not annot.optional:
                 assert (
                     getattr(self, k) is not None
-                ), f"Ambigious configuration. Must provide value for {k}"
+                ), f"Ambiguous configuration `{self._class_name}`. Must provide value for {k}"
         self._apply_lambda_recursively("assert_unambigious")
 
     def freeze(self):

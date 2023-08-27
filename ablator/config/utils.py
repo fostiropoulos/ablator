@@ -1,9 +1,10 @@
-from collections import abc
+import ast
 import copy
 import hashlib
 import json
-from functools import reduce
 import typing as ty
+from collections import abc
+from functools import reduce
 
 
 def flatten_nested_dict(
@@ -92,3 +93,90 @@ def dict_hash(*dictionaries: list[dict[str, ty.Any]], hash_len=4):
     encoded = json.dumps(_dict, sort_keys=True).encode()
     dhash.update(encoded)
     return dhash.hexdigest()[:hash_len]
+
+
+# pylint: disable=bare-except
+def _parse_fn_repr(val, fn_name):
+    try:
+        kwargs = getattr(val, fn_name)
+        if isinstance(kwargs, abc.Callable):
+            type(val)(**kwargs())
+            assert getattr(type(val)(**kwargs()), fn_name)() == kwargs()
+            return kwargs()
+        assert getattr(type(val)(**kwargs), fn_name) == kwargs
+        return kwargs
+    except:
+        return None
+
+
+def _parse_ast_repr(str_repr):
+    parsed = ast.parse(str_repr, mode="eval")
+
+    # Extract the function call node from the AST
+    func_call_node = parsed.body
+
+    # Ensure that the node is actually a function call
+    if not isinstance(func_call_node, ast.Call):
+        raise ValueError("Input is not a valid function call")
+
+    # Extract the arguments from the function call node
+    args = tuple(ast.literal_eval(arg) for arg in func_call_node.args)
+    kwargs = {
+        str(arg.arg): ast.literal_eval(arg.value) for arg in func_call_node.keywords
+    }
+    return args, kwargs
+
+
+# pylint: disable=bare-except,unnecessary-dunder-call
+def parse_repr_to_kwargs(
+    obj: ty.Any,
+) -> tuple[tuple, dict[str, int | float | str | bool | None]]:
+    """
+    parse a string or dictionary representation to obtain the initialization arguments
+    of the same object. It first attempts to do that via user-implemented `to_dict`,
+    `as_dict` and `__dict__` methods and when it fails it results to evaluating the
+    string representation e.g. `eval(str(obj))`. If all fails... it raises an error.
+
+    NOTE the object `obj` must have the equality operator implemented `__eq__`, ideally
+    a user implemented `to_dict`.
+
+    Parameters
+    ----------
+    obj : ty.Any
+        The object to deconstruct.
+
+    Returns
+    -------
+    tuple[tuple, dict[str, int | float | str | bool | None]]
+        a tuple of (args, kwargs) to reconstruct `obj` from above.
+
+    Raises
+    ------
+    RuntimeError
+        is raised when it is unable to obtain a representation that can
+        reconstruct the original object. The reconstruction is evaluated by
+        the equality operator.
+    """
+    for fn_name in ("to_dict", "as_dict", "__dict__"):
+        if (kwargs := _parse_fn_repr(obj, fn_name)) is not None:
+            return (), kwargs
+
+    try:
+        str_repr = obj.__repr__()
+    except:
+        str_repr = str(obj)
+    try:
+        args, kwargs = _parse_ast_repr(str_repr)
+        _kwargs = copy.deepcopy(kwargs)
+        _args = copy.deepcopy(args)
+        _args, _kwargs = _parse_ast_repr(type(obj)(*_args, **_kwargs).__repr__())
+        assert args == _args and kwargs == _kwargs
+        return args, kwargs
+    except:
+        pass
+    raise RuntimeError(
+        f"Could not parse {type(obj)} from its representation `{str_repr}`. Please make sure that one of "
+        "`to_dict`, `as_dict`, `__dict__`, `__repr__`  is correctly implemented (evaluated in the same order)"
+        " and the object can be reconstructed e.g. `eval(value.__repr__())==value` or "
+        "`type(value)(**value.to_dict())==value`"
+    )

@@ -1,7 +1,11 @@
+import ast
 import copy
 import io
 import logging
 from pathlib import Path
+from typing import Callable
+
+import pytest
 
 from ablator import (
     Annotation,
@@ -15,11 +19,96 @@ from ablator import (
     Type,
     configclass,
 )
+from ablator.config.types import List
+from ablator.config.utils import parse_repr_to_kwargs
+
+
+class BadClassAll:
+    def __init__(self, a) -> None:
+        self.a = a
+
+    def to_dict(self):
+        # this is correct
+        return {"b": self.a}
+
+    def as_dict(self):
+        # this is not, no argument b
+        return {"b": self.a}
+
+    @property
+    def __dict__(self):
+        # this is not, no argument b
+        return {"b": 1000}
+
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, type(self)):
+            return __value.a == self.a
+        return False
+
+
+class GoodClassAsDict(BadClassAll):
+    def as_dict(self):
+        # should be correct
+        return {"a": self.a}
+
+
+class GoodClassToDict(BadClassAll):
+    def to_dict(self):
+        # this is correct
+        return {"a": self.a}
+
+
+class GoodClassDict(BadClassAll):
+    @property
+    def __dict__(self):
+        # this is not, no argument b
+        return {"a": 10}
+
+
+class BadClassDict:
+    def __init__(self, a) -> None:
+        self.a = a
+
+    @property
+    def __dict__(self):
+        # this is not, no argument b
+        return {"b": 1000}
+
+
+class BadClassRerpr(BadClassDict):
+    def __init__(self, a) -> None:
+        self.a = a
+
+    def __repr__(self) -> str:
+        # this is valid
+        return f"BadClass(a={self.a+1})"
+
+
+error_representation_classes = [
+    BadClassRerpr,
+    BadClassAll,
+    BadClassDict,
+]
+
+
+partial_error_representation_classes = [
+    GoodClassAsDict,
+    GoodClassDict,
+    GoodClassToDict,
+]
 
 
 class Pass:
     def __init__(self, a=10) -> None:
         self.a = a
+
+    def __repr__(self) -> str:
+        return f"Pass(a={self.a})"
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.a == other.a
+        return False
 
 
 @configclass
@@ -74,6 +163,14 @@ class NestedParentConfig2(ConfigBase):
     b1: ParentTestConfig3
 
 
+@configclass
+class DictEnumConfig(ConfigBase):
+    a: Dict[myEnum]
+    p: Path = Path("/tmp/")
+
+    p2: List[Path]
+
+
 annotations = {
     "a1": Annotation(
         state=Stateful, optional=False, collection=None, variable_type=int
@@ -98,16 +195,12 @@ annotations = {
 }
 
 
-def test_merge():
-    pass
-
-
 @configclass
 class EmptyConfig(ConfigBase):
     pass
 
 
-def test_attrs(tmp_path: Path, assert_error_msg):
+def test_attrs(tmp_path: Path, assert_error_msg: Callable[..., str]):
     e = EmptyConfig()
     e.annotations
     assert len(e.annotations) == 0
@@ -124,6 +217,8 @@ def test_attrs(tmp_path: Path, assert_error_msg):
     p.a10 = "10"
     p.write(tmp_path.joinpath("test.yaml"))
     loaded_p = p.load(tmp_path.joinpath("test.yaml"))
+
+    assert loaded_p.to_dot_path() == p.to_dot_path()
     assert len(loaded_p.diff(p)) == 0
     assert loaded_p.uid == p.uid
     p.freeze()
@@ -162,18 +257,23 @@ def test_attrs(tmp_path: Path, assert_error_msg):
     assert loaded_p.get_annot_type_with_dot_path("a10") == int
     assert p.get_val_with_dot_path("a10") == "10"
     assert p.get_type_with_dot_path("a10") == str
-    msg = assert_error_msg(lambda: loaded_p.merge(p))
-    assert msg == "Differences between configurations:\n\tc2.a1:(int)4->(int)10"
 
     p_prime = copy.deepcopy(loaded_p)
-    p_prime.a10 = 1000
+    p_prime.a10 = 100
     loaded_p.a10 = 2
-    loaded_p = loaded_p.merge(p_prime)
 
-    assert loaded_p.a10 == 1000
+    assert loaded_p.a10 == 2 and p_prime.a10 == 100
+
+    loaded_p.a5.a = 2
+    p_prime.a5.a = 100
+    assert loaded_p.a5.a == 2 and p_prime.a5.a == 100
+
+    loaded_p.c2.a1 = 2
+    p_prime.c2.a1 = 100
+    assert loaded_p.c2.a1 == 2 and p_prime.c2.a1 == 100
 
 
-def test_set_attr(assert_error_msg):
+def test_set_attr(assert_error_msg: Callable[..., str]):
     c = ParentTestConfig(a10="")
     c.a2 = 1.231
     assert isinstance(c.a2, str) and c.a2 == "1.231"
@@ -185,15 +285,19 @@ def test_set_attr(assert_error_msg):
         c.a5 = 0
 
     msg = assert_error_msg(_error)
-    assert msg == f"Incompatible kwargs <class 'int'>: 0\nand {Pass}."
+
+    assert (
+        msg
+        == f"{Pass} provided args or kwargs (0) must be formatted as (args, kwargs) or (args) or (kwargs)."
+    )
     c.a5 = {"a": 1}
     assert c.a5.a == 1
     c.a5 = {"a": 5}
     assert c.a5.a == 5
 
 
-def test_freeze_unfreeze(assert_error_msg):
-    c = ParentTestConfig(a10="")
+def test_freeze_unfreeze(assert_error_msg: Callable[..., str]):
+    c = copy.deepcopy(ParentTestConfig(a10=""))
     c.freeze()
 
     def _set():
@@ -223,8 +327,6 @@ def test_freeze_unfreeze(assert_error_msg):
     def _set():
         c.c2.a1 = 0
 
-    # TODO context
-    # with assert_error_msg:
     msg = assert_error_msg(_set)
     assert msg == "Can not set attribute a1 on frozen configuration ``SimpleConfig``."
     c._unfreeze()
@@ -236,7 +338,48 @@ def test_freeze_unfreeze(assert_error_msg):
     assert c.c2.a1 == 52
 
 
-def test_debug_load(tmp_path: Path, assert_error_msg):
+def test_parse_repr():
+    for error_class in error_representation_classes:
+        with pytest.raises(
+            RuntimeError,
+            match=f"Could not parse <class '{__name__}.{error_class.__name__}'> from its representation ",
+        ):
+            parse_repr_to_kwargs(error_class(a=10))
+
+    for c in [
+        ParentTestConfig(a10="1"),
+        ParentTestConfig2(a10="1"),
+        ParentTestConfig3(a10="1"),
+        ParentTestConfig4(b1=Pass()),
+        DictEnumConfig(a={"a": "a"}, p2=[Path("/tmp/"), Path("/tmp/")]),
+        Pass(),
+        SimpleConfig(),
+        NestedParentConfig2(b1=ParentTestConfig3(a10="1")),
+        myEnum("a"),
+    ] + [p(a=10) for p in partial_error_representation_classes]:
+        args, kwargs = parse_repr_to_kwargs(c)
+        assert type(c)(*args, **kwargs) == c
+
+
+def test_nested_load_no_depedencies():
+    for c in [
+        ParentTestConfig(a10="1"),
+        ParentTestConfig2(a10="1"),
+        ParentTestConfig3(a10="1"),
+        ParentTestConfig4(b1=Pass()),
+        DictEnumConfig(a={"a": "a"}, p2=[Path("/tmp/"), Path("/tmp/")]),
+        SimpleConfig(),
+        NestedParentConfig2(b1=ParentTestConfig3(a10="1")),
+    ]:
+        assert type(c)(**c.to_dict()) == c
+        assert ast.literal_eval(str(c.to_dict())) == c.to_dict()
+        assert all(
+            isinstance(v, (float, int, bool, type(None), str))
+            for v in c.make_dict(c.annotations, flatten=True).values()
+        )
+
+
+def test_debug_load(tmp_path: Path, assert_error_msg: Callable[..., str]):
     out = io.StringIO()
     logger = logging.getLogger()
     logger.addHandler(logging.StreamHandler(out))
@@ -274,22 +417,23 @@ def test_debug_load(tmp_path: Path, assert_error_msg):
     assert msg == "Missing required values ['b1']."
     msg = assert_error_msg(lambda: ParentTestConfig3.load(yaml_p, debug=False))
     assert (
-        msg == f"Incompatible kwargs <class 'str'>: a\nand <class '{__name__}.Pass'>."
+        msg
+        == f"{Pass} provided args or kwargs (a) must be formatted as (args, kwargs) or (args) or (kwargs)."
     )
     pconfig_3 = ParentTestConfig3.load(yaml_p, debug=True)
     pconfig_4 = ParentTestConfig4.load(yaml_p, debug=True)
     # Testing nested configs.
     nested_c = NestedParentConfig(b1=pconfig_4, a1="")
     msg = assert_error_msg(lambda: NestedParentConfig(b1=pconfig_3, a1=""))
-    assert (
-        msg
-        == f"Incompatible kwargs <class '{__name__}.ParentTestConfig3'>: a6: null\na2: 10\na1: '10'\na10: null\na8: '10'\na9: null\na5:\n  a: 10\nc2:\n  a1: 10\n\nand <class '{__name__}.ParentTestConfig4'>."
-    )
 
+    assert msg == (
+        f"{ParentTestConfig4} provided args or kwargs (ParentTestConfig3(a6=None, a2=10, a1='10', a10=None, a8='10', "
+        "a9=None, a5={'a': 10}, c2={'a1': 10})) must be formatted as (args, kwargs) or (args) or (kwargs)."
+    )
     nested_c = NestedParentConfig(b1=pconfig_3, a1="", debug=True)
     assert (
-        "\n".join(out.getvalue().split("\n")[-12:-1])
-        == "Loading NestedParentConfig in `debug` mode. Unable to parse `b1` value a6: null\na2: 10\na1: '10'\na10: null\na8: '10'\na9: null\na5:\n  a: 10\nc2:\n  a1: 10\n. Setting to `None`."
+        out.getvalue().split("\n")[-2]
+        == f"Loading NestedParentConfig in `debug` mode. Unable to parse `b1` value {pconfig_3}. Setting to `None`."
     )
     nested_c = NestedParentConfig(b1=pconfig_4, a1="")
     assert nested_c.b1.a6 is None
@@ -301,11 +445,9 @@ def test_debug_load(tmp_path: Path, assert_error_msg):
 
 
 if __name__ == "__main__":
-    from tests.conftest import _assert_error_msg
+    from tests.conftest import run_tests_local
 
-    tmp_path = Path("/tmp/xxx")
-    tmp_path.mkdir(exist_ok=True)
-    test_debug_load(tmp_path, _assert_error_msg)
-    test_freeze_unfreeze(_assert_error_msg)
-    test_set_attr(_assert_error_msg)
-    test_attrs(Path("/tmp/"), _assert_error_msg)
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+    run_tests_local(test_fns)
