@@ -1,11 +1,19 @@
 from ablator.config.main import ConfigBase, configclass
-from ablator.config.types import (
-    Optional,
-    Stateless,
-    Literal,
-)
+from ablator.config.types import Dict, Optional, Stateless, Literal, Enum
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import SchedulerConfig
+
+
+class Optim(Enum):
+    """
+    Type of optimization direction.
+
+    can take values `min` and `max` that indicate whether the HPO
+    algorithm should minimize or maximize the corresponding metric.
+    """
+
+    min = "min"
+    max = "max"
 
 
 @configclass
@@ -88,7 +96,9 @@ class RunConfig(ConfigBase):
     warm_up_epochs: float = 0
         number of epochs marked as warm up epochs.
     divergence_factor: float = 100
-        if ``cur_loss > best_loss > divergence_factor``, the model is considered to have diverged.
+        if ``cur_loss > best_metric > divergence_factor``, the model is considered to have diverged.
+    optim_metric: tuple[str, Optim]
+        the optimization metric to use for meta-training procedures, such as for model saving and lr scheduling.
 
     """
 
@@ -104,13 +114,15 @@ class RunConfig(ConfigBase):
     verbose: Stateless[Literal["console", "progress", "silent"]] = "console"
     eval_subsample: Stateless[float] = 1
     metrics_n_batches: Stateless[int] = 32
-    metrics_mb_limit: Stateless[int] = 100
+    metrics_mb_limit: Stateless[int] = 10_000  # 10GB
     early_stopping_iter: Stateless[Optional[int]] = None
     eval_epoch: Stateless[float] = 1
     log_epoch: Stateless[float] = 1
     init_chkpt: Stateless[Optional[str]] = None
     warm_up_epochs: Stateless[float] = 1
-    divergence_factor: Stateless[Optional[float]] = 100
+    divergence_factor: Stateless[Optional[float]] = 10
+    optim_metrics: Stateless[Optional[Dict[Optim]]]
+    optim_metric_name: Stateless[Optional[str]]
 
     @property
     def uid(self) -> str:

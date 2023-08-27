@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 import copy
 import math
 import traceback
@@ -9,17 +10,16 @@ from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
 
-from filelock import FileLock
 import setproctitle
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
 import ablator.utils.base as butils
-from ablator.config.proto import RunConfig
+from ablator.config.proto import Optim, RunConfig
 from ablator.modules.loggers.main import SummaryLogger
 from ablator.modules.metrics.main import Metrics
-from ablator.utils.base import Dummy
+from ablator.utils.base import Dummy, Lock
 from ablator.utils.progress_bar import ProgressBar, RemoteProgressBar
 
 
@@ -67,9 +67,6 @@ class ModelBase(ABC):
         The model directory.
     experiment_dir : Path
         The experiment directory.
-    autocast : torch.autocast
-        Enables autocasting for chosen regions. Autocasting automatically chooses the precision for GPU operations
-        to improve performance while maintaining accuracy.
     verbose : bool
         If ``True``, prints additional information while training. Only applied for the master process.
     amp : bool
@@ -97,8 +94,12 @@ class ModelBase(ABC):
         The current iteration of training.
     best_iteration : int
         The iteration with the best loss value.
-    best_loss : float
-        The lowest loss value encountered during training.
+    best_metrics : dict[str, float]
+        The lowest optim values encountered during training.
+    optim_metric_name : str | None
+        The name of the optimization metric.
+    optim_metric_direction : Optim | None
+        The optimization direction
 
     Notes
     -----
@@ -130,34 +131,78 @@ class ModelBase(ABC):
         self.model_class = model_class
         self.run_config: RunConfig
         self.train_dataloader: DataLoader
-        self.val_dataloader: DataLoader | None = None
-        self.test_dataloader: DataLoader | None = None
+        self.val_dataloader: DataLoader | None
+        self.test_dataloader: DataLoader | None
         self.logger: ty.Union[SummaryLogger, Dummy]
         self.device: str
         self.experiment_dir: Path | None = None
-        self.autocast: torch.autocast
         self.verbose: ty.Literal["progress", "console", "silent"]
         self.amp: bool
         self.random_seed: ty.Optional[int]
         self.progress_bar: ProgressBar | butils.Dummy
 
-        self.current_checkpoint: Path | None = None
+        self.optim_metric_name: str | None
+        self.optim_metric_direction: Optim | None
+
+        self.current_checkpoint: Path | None
         # Runtime metrics
         self.train_metrics: Metrics
-        self.eval_metrics: Metrics | None = None
-        self.current_state: dict = {}
+        self.eval_metrics: Metrics | None
+        self.current_state: dict
 
         # stats
-        self.learning_rate = float("inf")
+        self.learning_rate: float
         self.total_steps: int
         self.epochs: int
-        self.current_iteration = 0
-        self.best_iteration = 0
-        self.best_loss = float("inf")
-
+        # self.current_epoch: int
+        self.current_iteration: int
+        self.best_iteration: int | None
+        self.best_metrics: dict[str, float]
+        # Attributes updated during training
+        self._running_stats_names: list[str] = [
+            "best_iteration",
+            "best_metrics",
+            "current_iteration",
+            "learning_rate",
+        ]
+        # Attributes derived from configuration
+        self._derived_stats_names: list[str] = [
+            "epoch_len",
+            "current_epoch",
+            "log_itr",
+            "eval_itr",
+            "uid",
+            "total_steps",
+            "epochs",
+        ]
+        self._cached_properties: list[str] = [
+            "epoch_len",
+            "eval_itr",
+            "log_itr",
+        ]
+        self._overridable_stats_names: list[str] = []
         # internal properties
         self._uid: str
-        self._epochs: int
+        self._autocast: torch.autocast
+        self._is_init = False
+        # functions that call init_state
+        self._init_function_names = ["init_state"]
+
+    def _init_attrs(self):
+        self.current_iteration = 0
+        self.best_iteration = None
+        self.best_metrics = {}
+        self.learning_rate = float("inf")
+        self.current_state = {}
+        self.eval_metrics = None
+        self.current_checkpoint = None
+        self.val_dataloader = None
+        self.test_dataloader = None
+
+    def _reset_cached_attributes(self):
+        for p in self._cached_properties:
+            if hasattr(self, p):
+                delattr(self, p)
 
     @property
     def train_stats(self) -> OrderedDict:
@@ -181,18 +226,20 @@ class ModelBase(ABC):
 
             - best_iteration: The iteration with the best loss value so far.
 
-            - best_loss: The best (lowest) loss value achieved during training.
+            - best_*: The best (lowest) optim metric value achieved during training, for example `best_val_loss`
 
         """
-        return OrderedDict(
+        train_stats = OrderedDict(
             learning_rate=self.learning_rate,
             total_steps=self.total_steps,
             epochs=self.epochs,
             current_epoch=self.current_epoch,
             current_iteration=self.current_iteration,
             best_iteration=self.best_iteration,
-            best_loss=self.best_loss,
         )
+        for k, v in self.best_metrics.items():
+            train_stats[f"best_{k}"] = v
+        return train_stats
 
     @property
     def current_epoch(self) -> int:
@@ -370,6 +417,23 @@ class ModelBase(ABC):
         """
         raise NotImplementedError
 
+    def _config_parser(self, run_config: RunConfig) -> RunConfig:
+        """
+        Internal method to process a run_config. It is called internally
+        and wraps `config_parser`
+
+        Parameters
+        ----------
+        run_config : RunConfig
+            An instance of ``RunConfig`` containing configuration details.
+
+        Returns
+        -------
+        RunConfig
+            The processed configuration.
+        """
+        return self.config_parser(run_config)
+
     def _init_logger(self, resume=False, debug=False):
         """
         Initializes the logger used for recording experiment details and progress.
@@ -395,7 +459,9 @@ class ModelBase(ABC):
         if self.experiment_dir is not None:
             self.logger.info(f"Model directory: {self.experiment_dir}")
 
-    def _make_dataloaders(self, run_config: RunConfig):
+    def _make_dataloaders(
+        self, run_config: RunConfig, data_lock: ty.Optional[Lock] = None
+    ):
         """
         Creates the data loaders for the training process.
 
@@ -403,12 +469,95 @@ class ModelBase(ABC):
         ----------
         run_config : RunConfig
             An instance of ``RunConfig`` containing configuration details.
+        data_lock: ty.Optional[Lock]
+            A lock for multiprocessing context that prevents simultaneous processing and
+            downloading of the dataset, by default None
         """
-        self.make_dataloaders(run_config)
+        context_lock: ty.Union[nullcontext, Lock]
+        if data_lock is None:
+            context_lock = nullcontext()
+        else:
+            context_lock = data_lock
+        with context_lock:
+            self.make_dataloaders(run_config)
+
         assert (
             len(self.train_dataloader) > 0
         ), "Must define a train dataloader in `make_dataloader`"
-        self._epochs = self.run_config.train_config.epochs
+
+    def _parse_optim_metrics(
+        self, run_config: RunConfig
+    ) -> tuple[Optim, str] | tuple[None, None]:
+        """
+        parses the optimization metrics and their direction to validate they meet
+        several training constraints. For example, the scheduler optimization mode
+        should be aligned with the configuration optimization mode. Other configurations
+        such as EarlyStopping also depend on the optimization metrics.
+
+        Parameters
+        ----------
+        run_config : RunConfig
+            The configuration to parse
+
+        Returns
+        -------
+        tuple[Optim, str] | tuple[None, None]
+            returns the optimization direction and metric name or a tuple of None if they are
+            unspecified.
+
+        Raises
+        ------
+        ValueError
+            is raised when the optimization metrics are incompatible with other user configurations.
+        """
+        scheduler_config = run_config.train_config.scheduler_config
+
+        optim_metric_name = run_config.optim_metric_name
+        optim_metrics = run_config.optim_metrics
+        missing_metrics = [
+            run_config.optim_metrics is None,
+            run_config.optim_metric_name is None,
+        ]
+        if any(missing_metrics) and not all(missing_metrics):
+            raise ValueError(
+                "Invalid configuration. Must specify both `optim_metrics` and `optim_metric_name` or neither."
+            )
+
+        if (
+            optim_metric_name is not None
+            and optim_metrics is not None
+            and optim_metric_name not in optim_metrics
+        ):
+            raise ValueError(
+                f"optim_metric_name={optim_metric_name} "
+                f"was not found in optim_metrics={optim_metrics}"
+            )
+        if optim_metric_name is not None and optim_metrics is not None:
+            optim_direction = optim_metrics[optim_metric_name]
+
+        scheduler_requires_metric = (
+            scheduler_config is not None
+            and hasattr(scheduler_config, "arguments")
+            and hasattr(scheduler_config.arguments, "mode")
+        )
+        if all(missing_metrics) and scheduler_requires_metric:
+            raise ValueError(
+                f"Must provide `optim_metrics` when using Scheduler = `{scheduler_config.name}`."  # type: ignore
+            )
+        if all(missing_metrics) and run_config.early_stopping_iter is not None:
+            raise ValueError(
+                f"Must provide `optim_metrics` when using early_stopping_iter = `{run_config.early_stopping_iter}`."
+            )
+        if all(missing_metrics):
+            return None, None
+        if scheduler_requires_metric:
+            mode = scheduler_config.arguments.mode  # type: ignore
+            if (direction := optim_direction.value) != mode:
+                self.logger.warn(
+                    f"Different optim_metric_direction {direction} than "
+                    f"scheduler.arguments.mode {mode}. Overwriting scheduler.arguments.mode."
+                )
+        return optim_direction, optim_metric_name  # type: ignore
 
     def _init_class_attributes(self):
         """
@@ -421,6 +570,20 @@ class ModelBase(ABC):
         """
         run_config = self.run_config
         self.device = butils.parse_device(run_config.device)
+
+        self.optim_metric_direction, self.optim_metric_name = self._parse_optim_metrics(
+            run_config
+        )
+        if self.optim_metric_direction is not None:
+            self.best_metrics = {
+                self.optim_metric_name: (
+                    float("inf")
+                    if self.optim_metric_direction == Optim.min
+                    else float("-inf")
+                )
+            }
+        else:
+            self.best_metrics = {}
 
         self.amp = run_config.amp
         if self.device == "cpu" and self.amp:
@@ -437,7 +600,7 @@ class ModelBase(ABC):
                 f"20% of the train dataloader length {len(self.train_dataloader)}. "
                 "You might experience slow-down during training. Consider decreasing `metrics_n_batches`."
             )
-        self.autocast = torch.autocast(
+        self._autocast = torch.autocast(
             enabled=self.amp,
             device_type="cuda" if "cuda" in self.device else "cpu",
         )
@@ -473,7 +636,12 @@ class ModelBase(ABC):
             )
         setproctitle.setproctitle(self.uid)
 
-    def _init_model_state(self, resume: bool = False, smoke_test: bool = False):
+    def _init_model_state(
+        self,
+        resume: bool = False,
+        smoke_test: bool = False,
+        from_chkpt: str | Path | None = None,
+    ):
         """
         Initializes the model state based on provided parameters and configuration.
 
@@ -483,9 +651,14 @@ class ModelBase(ABC):
             If True, tries to resume training from a checkpoint, by default False.
         smoke_test : bool, optional
             Whether to run as a smoke test, by default False.
+        from_chkpt: str | Path | None, optional
+            Path to the checkpoint to initialize the state from.
         """
 
-        if self.run_config.init_chkpt is not None and not resume:
+        if from_chkpt is not None:
+            self.current_checkpoint = Path(from_chkpt)
+            self._load_model(self.current_checkpoint, model_only=False)
+        elif self.run_config.init_chkpt is not None and not resume:
             # Loads only the weights
             self.current_checkpoint = Path(self.run_config.init_chkpt)
             self.logger.info(
@@ -507,16 +680,20 @@ class ModelBase(ABC):
             self.create_model()
             self._update_save_dict()
 
-    def _init_state(
+    def init_state(
         self,
         run_config: RunConfig,
         smoke_test: bool = False,
         debug: bool = False,
         resume: bool = False,
         remote_progress_bar: ty.Optional[RemoteProgressBar] = None,
+        from_chkpt: Path | str | None = None,
+        data_lock: ty.Optional[Lock] = None,
     ):
         """
-        Initializes the state of the trainer based on provided configuration and parameters.
+        Initializes the state of the wrapper based on provided configuration and parameters.
+        The lazy-initialization of the wrapper is neccessary, as the wrapper must be pickable.
+        Initializing some objects (e.g. Dataloaders) leads to the opposite.
 
         Parameters
         ----------
@@ -530,24 +707,42 @@ class ModelBase(ABC):
             If True, tries to resume training from a checkpoint, by default False.
         remote_progress_bar: RemoteProgressBar, optional
             A remote progress bar can be used to report metrics from the internal progress bar
+        from_chkpt: str | Path | None, optional
+            Path to the checkpoint to initialize the state from.
+        data_lock: Lock | None, optional
+            Use a Lock to avoid downloading data concurrently.
         """
-        self.run_config = run_config
+        if (
+            self._is_init
+            and not (smoke_test or debug or resume)
+            # Check if the wrapper was previously initialized in dummy mode (e.g. debug or smoke_test)
+            and not isinstance(getattr(self, "logger", butils.Dummy()), butils.Dummy)
+        ):
+            raise RuntimeError(f"{self.__class__.__name__} is already initialized. ")
+        if self._is_init:
+            self._reset_cached_attributes()
+        self._init_attrs()
+        self._is_init = True
+        self.run_config = copy.deepcopy(run_config)
+        self.run_config._unfreeze()  # pylint: disable=protected-access
         self.random_seed = self.run_config.random_seed
         if self.random_seed is not None:
             butils.set_seed(self.random_seed)
-        self.run_config = run_config
-        _run_config = copy.deepcopy(run_config)
-        # TODO unit test
-        with FileLock(Path.home().joinpath(".data-lock-abtorch")):
-            self._make_dataloaders(self.run_config)
+        self._make_dataloaders(self.run_config, data_lock=data_lock)
 
-        self.run_config = self.config_parser(run_config)
+        self.run_config = self._config_parser(self.run_config)
+
+        v = self.run_config.train_config.epochs
+        self.__setattr__internal("epochs", v)
 
         if self.run_config.experiment_dir is not None:
             self.experiment_dir = (
                 Path(self.run_config.experiment_dir).resolve().absolute()
             )
             self.run_config.experiment_dir = self.experiment_dir.as_posix()
+
+        self.run_config.assert_unambigious()
+        self.run_config.freeze()
 
         # Does not create log artifacts during smoke test
         if not smoke_test:
@@ -559,12 +754,10 @@ class ModelBase(ABC):
         if debug and self.experiment_dir is not None:
             self.logger.warn(
                 f"Experiment Directory specified {self.experiment_dir} while running on debug mode. "
-                "You can disable the file system by setting `run_config.experiment_dir=False`. "
+                "If saving artifacts is unnecessary you can disable the file system by setting "
+                "`run_config.experiment_dir=None`. "
             )
-        self._init_model_state(resume, smoke_test or debug)
-        self.run_config.assert_state(_run_config)
-        self.run_config.assert_unambigious()
-        # TODO freeze config here
+        self._init_model_state(resume, smoke_test or debug, from_chkpt=from_chkpt)
         if self.verbose == "progress" and not smoke_test:
             self.progress_bar = ProgressBar(
                 epoch_len=self.epoch_len,
@@ -625,7 +818,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         checkpoint_path : Path
-            The path to the checkpoint file containing the model and its state.
+            The path to the checkpoint file contains the model and its state.
         model_only : bool, optional, default=False
             If True, only the model's weights will be loaded, ignoring other state information.
 
@@ -634,13 +827,13 @@ class ModelBase(ABC):
         NotImplementedError
             If the model's run configuration is not initialized before attempting to load the model.
         RuntimeError
-            If no valid checkpoint was found, such as invalid path, and when `model_only=True` we check
+            If no valid checkpoint was found, such as an invalid path, and when `model_only=True` we check
             for differences between loaded and current configuration.
         """
 
         if not hasattr(self, "run_config") or self.run_config is None:
             raise NotImplementedError(
-                "Can not load model on an unitialzed model state. Consider run init_experiment_state function first"
+                "Can not load model on an uninitialized model state. Consider run init_experiment_state function first"
             )
         try:
             save_dict = torch.load(checkpoint_path, map_location="cpu")
@@ -658,6 +851,13 @@ class ModelBase(ABC):
             )
             raise RuntimeError(
                 f"Mismatching loaded and current configurations. \n{diffs}"
+            )
+        diffs = "\n\t".join(
+            run_config.diff_str(self.run_config, ignore_stateless=False)
+        )
+        if len(diffs) > 0:
+            self.logger.warn(
+                f"Differences between initial configuration and current configuration. \n{diffs}"
             )
         self._load_stats(save_dict)
         self.load_checkpoint(save_dict, model_only=model_only)
@@ -714,6 +914,39 @@ class ModelBase(ABC):
         """
         raise NotImplementedError
 
+    def __setattr__internal(self, k, v):
+        super().__setattr__(k, v)
+
+    def __setattr__(self, k, v):
+        try:
+            _derived_stats_names = super().__getattribute__("_derived_stats_names")
+        except AttributeError:
+            _derived_stats_names = []
+        try:
+            _overridable_stats_names = super().__getattribute__(
+                "_overridable_stats_names"
+            )
+        except AttributeError:
+            _overridable_stats_names = []
+        if k in _derived_stats_names and k not in _overridable_stats_names:
+            raise RuntimeError(f"Can not set derived attribute {k}.")
+        self.__setattr__internal(k, v)
+
+    def __getattribute__(self, name, _ignore_init=False):
+        if name.startswith("_") or super().__getattribute__("_is_init"):
+            return super().__getattribute__(name)
+
+        try:
+            _init_function_names = super().__getattribute__("_init_function_names")
+        except AttributeError:
+            _init_function_names = []
+        if name not in _init_function_names and not _ignore_init:
+            raise RuntimeError(
+                f"Can not read property {name} of unitialized {self.__class__.__name__}. "
+                "It must be initialized with `init_state` before using."
+            )
+        return super().__getattribute__(name)
+
     def _load_stats(self, save_dict) -> None:
         """
         Loads the saved training and validation metrics from the save_dict and updates
@@ -725,21 +958,24 @@ class ModelBase(ABC):
             A dictionary containing the saved model state, metrics, and other necessary information.
         """
         metrics = copy.deepcopy(save_dict["train_metrics"])
-
+        best_metrics = [f"best_{k}" for k in self.best_metrics]
         for k in self.train_stats:
-            if (
-                isinstance(getattr(type(self), k, None), property)
-                and getattr(type(self), k).fset is None
-            ):
+            if k in self._running_stats_names:
+                continue
+            if k in self._derived_stats_names:
+                # We skip assigning this metric as it will be derived by other metrics.
                 if getattr(self, k, None) != metrics[k]:
                     self.logger.warn(
-                        f"Immutable class attribute {k} value {getattr(self, k)} "
-                        f"different than loaded value {metrics[k]}"
+                        f"Current attribute {k} value derived to {getattr(self, k)} and "
+                        f"is different than loaded value {metrics[k]}. Will use the current value."
                     )
                 del metrics[k]
 
         for k in self.train_stats:
-            if k in metrics:
+            if k in metrics and k in best_metrics:
+                self.best_metrics[k.lstrip("best_")] = metrics[k]
+                del metrics[k]
+            elif k in metrics:
                 setattr(self, k, metrics[k])
                 del metrics[k]
 

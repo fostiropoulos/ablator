@@ -19,9 +19,9 @@ from ablator.main.hpo import BaseSampler, GridSampler, OptunaSampler
 from ablator.modules.loggers.file import FileLogger
 from ablator.main.state.store import TrialState, Trial
 from ablator.main.state._utils import (
-    _verify_metrics,
+    verify_metrics,
     augment_trial_kwargs,
-    _parse_metrics,
+    parse_metrics,
 )
 
 
@@ -295,8 +295,8 @@ class ExperimentState:
             self._inc_error_count(trial_id, state)
             return
         # TODO unit test
-        internal_metrics = _parse_metrics(self.optim_metrics, metrics)
-        _verify_metrics(internal_metrics)
+        internal_metrics = parse_metrics(self.optim_metrics, metrics)
+        verify_metrics(internal_metrics)
         self.sampler.update_trial(trial_id, internal_metrics, state)
         try:
             self._update_internal_trial_state(trial_id, internal_metrics, state)

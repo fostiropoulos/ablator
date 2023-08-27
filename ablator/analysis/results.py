@@ -10,8 +10,8 @@ import ray
 from joblib import Memory
 
 from ablator.config.main import ConfigBase
-from ablator.config.mp import Optim, ParallelConfig, SearchSpace
-from ablator.config.proto import RunConfig
+from ablator.config.mp import ParallelConfig, SearchSpace
+from ablator.config.proto import Optim, RunConfig
 
 
 def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame | None:

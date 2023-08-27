@@ -494,26 +494,23 @@ def test_grid_sampler(assert_error_msg):
 
 
 def test_optuna():
-    try:
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Need to specify 'optim_metrics' with sampler = `tpe`"),
+    ):
         s = OptunaSampler(
             search_space={},
             optim_metrics={},
-            search_algo="tpe",
+            search_algo=SearchAlgo.tpe,
             trials=[],
         )
-        assert False
-    except Exception as e:
-        assert "Need to specify 'optim_metrics' with `OptunaSampler`" in str(e)
-    try:
+    with pytest.raises(ValueError, match="'xxx' is not a valid SearchAlgo"):
         s = OptunaSampler(
             search_space={},
             optim_metrics={"test": "test"},
             search_algo="xxx",
             trials=[],
         )
-        assert False
-    except ValueError as e:
-        assert "'xxx' is not a valid SearchAlgo" in str(e)
 
 
 def test_expand_search_space():
@@ -539,16 +536,9 @@ def test_expand_search_space():
 
 
 if __name__ == "__main__":
-    from tests.conftest import _assert_error_msg
+    from tests.conftest import run_tests_local
 
-    # test_expand_search_space()
-    # test_optuna()
-    # test_tpe()
-    # test_tpe_continue()
-    # test_random()
-    # test_update_tpe()
-    # test_optuna_kwargs("tpe")
-    # test_sampled_config("tpe")
-    test_grid_sampler(_assert_error_msg)
-    breakpoint()
-    print()
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+    run_tests_local(test_fns)

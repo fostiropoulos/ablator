@@ -1,12 +1,13 @@
 import copy
 import inspect
+import logging
 import multiprocessing as mp
 import time
 import traceback
 import typing as ty
 from abc import abstractmethod
 from collections.abc import Callable, Iterable
-
+from pathlib import Path
 import numpy as np
 import torch
 from torch import nn
@@ -15,7 +16,7 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 import ablator.utils.base as butils
-from ablator.config.proto import ModelConfig, RunConfig, TrainConfig
+from ablator.config.proto import ModelConfig, Optim, RunConfig, TrainConfig
 from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauError
 from ablator.modules.metrics.main import LossDivergedError, Metrics
 from ablator.modules.optimizer import OptimizerConfig
@@ -65,6 +66,10 @@ class ModelWrapper(ModelBase):
         self.scaler: GradScaler
         self.scheduler: Scheduler | None
         self._prev_update_time: float = time.time()
+        self._derived_stats_names += [
+            "train_config",
+            "model_config",
+        ]
 
     @property
     def train_config(self) -> TrainConfig:
@@ -227,7 +232,7 @@ class ModelWrapper(ModelBase):
         scaler: GradScaler
             The scaler.
         """
-        scaler = GradScaler(enabled=self.run_config.amp)
+        scaler = GradScaler(enabled=self.amp)
         if scaler_state:
             scaler.load_state_dict(scaler_state)
         return scaler
@@ -319,13 +324,12 @@ class ModelWrapper(ModelBase):
             The output of the model,contains current predictions and loss of the model
         """
         batch = self.to_device(batch)
-        with self.autocast:
-            if isinstance(batch, list):
-                out = model(*batch)
-            elif isinstance(batch, dict):
-                out = model(**batch)
-            else:
-                out = model(batch)
+        if isinstance(batch, list):
+            out = model(*batch)
+        elif isinstance(batch, dict):
+            out = model(**batch)
+        else:
+            out = model(batch)
 
         return out
 
@@ -347,7 +351,7 @@ class ModelWrapper(ModelBase):
 
     def _train_evaluation_step(self, smoke_test=False):
         is_best = False
-        val_loss = None
+        optim_metric = None
         # If we are within 10% of the start or end of an epoch, we skip
         # evalaution of train metrics for faster training
         if (
@@ -364,44 +368,59 @@ class ModelWrapper(ModelBase):
                 subsample=self.run_config.eval_subsample,
                 smoke_test=smoke_test,
             )
-            val_loss = metrics["loss"] if "loss" in metrics else None
-        if val_loss is not None:
-            # Use val loss for scheduling or finding best checkpoint
+            if (
+                self.optim_metric_name is not None
+                and self.optim_metric_name not in metrics
+            ):
+                raise RuntimeError(
+                    f"optim_metric_name=`{self.optim_metric_name}` not found in validation metrics."
+                )
+            if self.optim_metric_name is not None:
+                optim_metric = metrics[self.optim_metric_name]
 
-            if is_best := val_loss < self.best_loss:
+        if optim_metric is not None:
+            # Use val loss for scheduling or finding best checkpoint
+            optim_direction = self.optim_metric_direction
+            best_metric = self.best_metrics[self.optim_metric_name]
+            if is_best := (
+                (optim_direction == Optim.min and optim_metric < best_metric)
+                or (optim_direction == Optim.max and optim_metric > best_metric)
+            ):
                 self.best_iteration = self.current_iteration
-                self.best_loss = val_loss
+                self.best_metrics[self.optim_metric_name] = optim_metric
 
             divergence_step = (
                 self.current_iteration > self.epoch_len * self.run_config.warm_up_epochs
             )
-            is_diverged = self.run_config.divergence_factor is not None and (
-                val_loss / (self.best_loss + 1e-5) > self.run_config.divergence_factor
-            )
+            ratio = (optim_metric + 1e-5) / (best_metric + 1e-5)
+            if optim_direction == Optim.max:
+                ratio = 1 / ratio
+            div_factor = self.run_config.divergence_factor
+            is_diverged = div_factor is not None and (ratio > div_factor)
 
             if is_diverged and divergence_step:
                 raise LossDivergedError(
-                    f"Val loss {val_loss:.2e} has diverged by "
+                    f"Val {self.optim_metric_name} {optim_metric:.2e} has diverged by "
                     f"a factor larger than {self.run_config.divergence_factor:0.0f} to "
-                    f"best loss {self.best_loss:.2e}"
+                    f"best loss {best_metric:.2e}"
                 )
 
         if (
             self.scheduler is not None
-            and hasattr(self.train_config.scheduler_config.arguments, "step_when")
-            and self.train_config.scheduler_config.arguments.step_when == "val"
+            and getattr(self.scheduler, "step_when", None) == "val"
+            and optim_metric is None
         ):
-            if val_loss is None:
-                raise EvaluationError(
-                    f"A validation dataset is required with {self.scheduler.__class__.__name__} scheduler"
-                )
-            self.scheduler.step(val_loss)
+            raise EvaluationError(
+                f"A validation optimization argument is required with "
+                f"{self.scheduler.__class__.__name__} scheduler. "
+                "Try setting a validation dataloader."
+            )
+        self.scheduler_step(self.scheduler, optim_metric)
 
         self.update_status()
         self._checkpoint()
         if is_best:
             self._checkpoint(is_best=True)
-
         # Early stopping
         early_stopping_iter = self.run_config.early_stopping_iter
 
@@ -416,7 +435,8 @@ class ModelWrapper(ModelBase):
     def _model_step(
         self, model: nn.Module, batch: Iterable
     ) -> tuple[dict[str, torch.Tensor] | None, torch.Tensor | None]:
-        out = self.model_step(model=model, batch=batch)
+        with self._autocast:
+            out = self.model_step(model=model, batch=batch)
 
         try:
             outputs, loss = out
@@ -461,12 +481,6 @@ class ModelWrapper(ModelBase):
         outputs, loss = self._model_step(model=model, batch=batch)
 
         loss_value = self.apply_loss(model, loss, optimizer, scaler, scheduler)
-        if (
-            scheduler is not None
-            and getattr(scheduler, "step_when", None) == "epoch"
-            and self._is_step(self.epoch_len)
-        ):
-            scheduler.step()  # type: ignore
         self._inc_iter()
         self._update_learning_rate()
 
@@ -625,13 +639,6 @@ class ModelWrapper(ModelBase):
         """
         return self.epoch_len * self.epochs
 
-    @property
-    def epochs(self):
-        """
-        The total number of epochs.
-        """
-        return self._epochs
-
     def train_loop(self, smoke_test=False):
         """
         Train the model in many steps, evaluate the model and log the metrics for each iteration.
@@ -712,13 +719,14 @@ class ModelWrapper(ModelBase):
         Metrics
             The metrics from the training.
         """
-        self._init_state(
-            run_config=run_config,
-            smoke_test=smoke_test,
-            debug=debug,
-            resume=resume,
-            remote_progress_bar=remote_progress_bar,
-        )
+        if not self._is_init:
+            self._init_state(
+                run_config=run_config,
+                smoke_test=smoke_test,
+                debug=debug,
+                resume=resume,
+                remote_progress_bar=remote_progress_bar,
+            )
 
         try:
             return self.train_loop(smoke_test)
@@ -738,10 +746,7 @@ class ModelWrapper(ModelBase):
         return self.metrics
 
     @ty.final
-    def evaluate(
-        self,
-        run_config: RunConfig,
-    ):
+    def evaluate(self, run_config: RunConfig, chkpt: str | Path | None = None):
         """
         Evaluate the model after training on the test and validation sets.
 
@@ -749,11 +754,14 @@ class ModelWrapper(ModelBase):
         ----------
         run_config: RunConfig
             The run config to use for evaluation.
+        chkpt: str | Path | None, optional
+            Path to the checkpoint to evaluate. If None, the latest checkpoint is evaluated.
+
         """
-        self._init_state(run_config, resume=True)
+        self._init_state(run_config, resume=True, from_chkpt=chkpt)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
         self.update_status()
-        msg = self.train_metrics.to_dict()
+        msg = self.metrics
         self.logger.info(f"Current metrics: {msg}")
         metrics = {}
         for loader, tag in zip(
@@ -781,6 +789,52 @@ class ModelWrapper(ModelBase):
                 self.update_status()
         return metrics
 
+    @ty.final
+    def backward(
+        self, loss: torch.Tensor, scaler: torch.cuda.amp.GradScaler | None = None
+    ):
+        if scaler is not None:
+            scaler.scale(loss).backward()
+        else:
+            loss.backward()
+        return loss.item()
+
+    @ty.final
+    def optim_step(
+        self,
+        optimizer: Optimizer,
+        scaler: torch.cuda.amp.GradScaler,
+        model: nn.Module,
+        loss: torch.Tensor,
+    ):
+        if self.amp and loss is not None:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            optimizer.step()
+        optimizer.zero_grad(set_to_none=True)
+
+    @ty.final
+    def scheduler_step(self, scheduler: ty.Optional[Scheduler], *args):
+        if scheduler is None:
+            return
+        # TODO what to do when scheduler does not have step_when
+        step_when = None
+        try:
+            step_when = self.train_config.scheduler_config.arguments.step_when
+        except:
+            breakpoint() # TODO find the exception type
+            step_when = getattr(scheduler, "step_when", None)
+
+        if step_when == "train" or step_when is None:
+            scheduler.step(*args)  # type: ignore
+        elif step_when == "epoch" and self._is_step(self.epoch_len):
+            scheduler.step(*args)  # type: ignore
+        elif step_when == "val" and len(args) > 0:
+            self.scheduler.step(*args)  # type: ignore
+
     def apply_loss(
         self,
         model: nn.Module,
@@ -801,7 +855,7 @@ class ModelWrapper(ModelBase):
         optimizer: Optimizer
             The optimizer to step.
         scaler: torch.cuda.amp.GradScaler
-            The scaler to use for mixed precision training.
+            The scaler to use during mixed precision training.
         scheduler: ty.Optional[Scheduler]
             The scheduler to step.
 
@@ -812,25 +866,11 @@ class ModelWrapper(ModelBase):
         """
         if loss is not None:
             loss = torch.mean(loss)
-            if self.amp:
-                scaler.scale(loss).backward()
-            else:
-                loss.backward()
-            loss_value = loss.item()
+            loss_value = self.backward(loss, scaler)
         else:
             loss_value = None
-
-        if self.amp:
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
-            scaler.step(optimizer)
-            scaler.update()
-        else:
-            optimizer.step()
-        optimizer.zero_grad(set_to_none=True)
-
-        if scheduler is not None and getattr(scheduler, "step_when", None) == "train":
-            scheduler.step()  # type: ignore
+        self.optim_step(optimizer, scaler, model, loss)
+        self.scheduler_step(scheduler)
         return loss_value
 
     @torch.no_grad()
@@ -844,6 +884,15 @@ class ModelWrapper(ModelBase):
     ) -> dict[str, float]:
         was_training = model.training
         model.eval()
+        _sampler = getattr(dataloader, "sampler", None)
+        is_random_sampling = isinstance(
+            _sampler, torch.utils.data.sampler.RandomSampler
+        )
+        if subsample < 1.0 and not is_random_sampling:
+            self.logger.warn(
+                f"Validating on a subsample=`{subsample}` without a random sampler,"
+                f"sampler=`{type(_sampler).__name__}`. The results can be biased. "
+            )
         metrics_dict = self.validation_loop(
             model, dataloader, metrics, subsample, smoke_test
         )
@@ -962,6 +1011,23 @@ class ModelWrapper(ModelBase):
         """
         return run_config
 
+    def _config_parser(self, run_config: RunConfig):
+        scheduler_config = self.run_config.train_config.scheduler_config
+        if scheduler_config is not None and hasattr(scheduler_config.arguments, "mode"):
+            assert self.run_config.optim_metric is not None
+            mode = scheduler_config.arguments.mode
+            _, optim_direction = self.run_config.optim_metric
+            if (direction := optim_direction.value) != mode:
+                logging.warning(
+                    "Different optim_metric_direction %s than scheduler.arguments.mode %s."
+                    "Overwriting scheduler.arguments.mode.",
+                    direction,
+                    mode,
+                )
+            self.run_config.train_config.scheduler_config.arguments.mode = direction
+        config = super()._config_parser(run_config)
+        return config
+
     def make_dataloaders(self, run_config: RunConfig) -> None:
         """
         This function is done post-initialization because otherwise the
@@ -1003,15 +1069,15 @@ class ModelWrapper(ModelBase):
         model_state_dict = self.model.state_dict()
 
         optimizer_state_dict = None
-        if self.optimizer is not None:
+        if getattr(self, "optimizer", None) is not None:
             optimizer_state_dict = self.optimizer.state_dict()
 
         scheduler_state_dict = None
-        if self.scheduler is not None:
+        if getattr(self, "scheduler", None) is not None:
             scheduler_state_dict = self.scheduler.state_dict()
 
         scaler_state_dict = None
-        if self.scaler is not None:
+        if getattr(self, "scaler", None) is not None:
             scaler_state_dict = self.scaler.state_dict()
 
         return {
