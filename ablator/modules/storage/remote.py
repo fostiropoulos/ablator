@@ -40,7 +40,9 @@ def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> Optional[str]:
         cmd, shell=True, stdout=subprocess.PIPE, preexec_fn=os.setsid
     ) as process:
         try:
-            output = process.communicate(timeout=timeout)[0].decode("utf-8", errors="ignore")
+            output = process.communicate(timeout=timeout)[0].decode(
+                "utf-8", errors="ignore"
+            )
         except subprocess.TimeoutExpired as e:
             os.killpg(process.pid, signal.SIGINT)  # send signal to the process group
             output = process.communicate()[0].decode("utf-8", errors="ignore")
@@ -70,6 +72,7 @@ class RemoteConfig(ConfigBase):
     exclude_chkpts : bool
         Whether to exclude checkpoints from the rsync.
     """
+
     remote_path: str
     username: str
     hostname: str

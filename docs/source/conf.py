@@ -8,20 +8,26 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../ablator'))
 
-project = 'ablator'
-copyright = '2023, Iordanis'
-author = 'Iordanis'
-release = '0.0.1'
+sys.path.insert(0, os.path.abspath("../../ablator"))
+
+project = "ablator"
+copyright = "2023, ablator.org"
+author = "Iordanis Fostiropoulos"
+release = "0.0.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.autodoc', 'numpydoc',
-              'sphinx.ext.todo', 'sphinx.ext.viewcode', 'nbsphinx']
+extensions = [
+    "sphinx.ext.autodoc",
+    "numpydoc",
+    "sphinx.ext.todo",
+    "sphinx.ext.viewcode",
+    "nbsphinx",
+]
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = []
 
 
@@ -29,18 +35,16 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_book_theme"
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 numpydoc_show_class_members = False
 numpydoc_class_members_toctree = False
 numpydoc_show_inherited_class_membersbool = False
 
-autodoc_default_options = {
-    'special-members': '__init__'
-}
+autodoc_default_options = {"special-members": "__init__"}
 
 html_title = "Ablator Documentation"
-html_favicon = '_static/ablator-logo.svg'
+html_favicon = "_static/ablator-logo.svg"
 
 html_theme_options = {
     "navbar_start": ["navbar-logo"],
@@ -59,9 +63,9 @@ html_theme_options = {
         "image_light": "_static/ablator-banner-light.svg",
         "image_dark": "_static/ablator-banner-dark.svg",
         "link": "index",
-        "alt_text": "ablator"
+        "alt_text": "ablator",
     },
-    "search_bar_text": "Search"
+    "search_bar_text": "Search",
 }
 
 html_sidebars = {
