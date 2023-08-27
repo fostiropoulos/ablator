@@ -1,100 +1,163 @@
-import multiprocessing as mp
-from ctypes import c_ssize_t, c_uint, c_ulonglong
-from pathlib import Path
+import contextlib
+import logging
+import os
+import typing as ty
+from collections import namedtuple
+from platform import uname
 
+import psutil
 import torch
-from joblib import Memory
 
-cache_location = Path().home().joinpath(".cache", "ablator")
-memory = Memory(cache_location, verbose=0)
+CUDA_PROCESS = namedtuple("CUDA_PROCESS", ["process_name", "pid", "memory"])
 
 
-def _mock_fn(q, l):
-    torch.randn(100).to("cuda")
-    q.put("done")
-    l.acquire()
+try:
+    # pylint: disable=unspecified-encoding
+    with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
+        from pynvml import nvml
+
+        nvml.nvmlInit()
+        device_count = nvml.nvmlDeviceGetCount()
+        HANDLES = []
+        for _i in range(0, device_count):
+            _handle = nvml.nvmlDeviceGetHandleByIndex(_i)
+            HANDLES.append(_handle)
+# pylint: disable=broad-exception-caught
+except Exception:
+    nvml = None
 
 
-def _make_locks(n):
-    locks = [mp.Lock() for i in range(n)]
-    for l in locks:
-        l.acquire()
-    return locks
-
-
-def _make_processes(locks, q):
-    processes = [mp.Process(target=_mock_fn, args=(q, lock)) for lock in locks]
-    for p in processes:
-        p.start()
-    pids = {p.pid for p in processes}
-    return pids
-
-
-def _sync_processes(q, n):
-    for _ in range(n):
-        q.get()
-
-
-def _release_locks(locks):
-    for lock in locks:
-        lock.release()
-
-
-def _get_running_pids(smi):
-    instance = smi.getInstance()
-    device = instance.DeviceQuery()
-    running_pids = []
-    for gpu in device["gpu"]:
-        if gpu["processes"] is None:
-            continue
-        for p in gpu["processes"]:
-            running_pids.append(p["pid"])
-    return set(running_pids)
-
-
-@memory.cache(ignore=["smi"])
-def _is_smi_bug(smi, n_procs=2):
+def _is_smi_bug() -> bool:
     # This is not a reported bug, but apparently there is a padding
     # to each process, causes a strange error.
     # The docs do not report any padding:
     # https://docs.nvidia.com/deploy/nvml-api/structnvmlProcessInfo__t.html#structnvmlProcessInfo__t
     # The byte-order also differs (e.g. pid, usedGpuMemory, gpuInstanceId, computeInstanceId)
-    if not torch.cuda.is_available():
+    # Details here: https://github.com/gpuopenanalytics/pynvml/pull/48
+
+    if not torch.cuda.is_available() or nvml is None:
         return False
+    driver_version = nvml.nvmlSystemGetDriverVersion()
+    if driver_version.startswith("535"):
+        raise RuntimeError(
+            f"Please change your nvidia-driver version `{driver_version}` as there is "
+            "critical bug for version 535: https://github.com/gpuopenanalytics/pynvml/pull/48"
+        )
+    return False
+
+
+def _handleError(err: "nvml.NVMLError") -> str:
+    if err.value == nvml.NVML_ERROR_NOT_SUPPORTED:
+        return "N/A"
+    return str(err)
+
+
+def getProcessName(pid):
+    if os.name == "nt" or "microsoft-standard" in uname().release:
+        return f"process_pid:{str(pid)}"
+    process = psutil.Process(pid)
+    return process.name()
+
+
+def _get_processes(handle) -> list[dict[str, str | int]]:
+    processes = []
     try:
-        torch.multiprocessing.set_start_method("spawn")
-        mp.set_start_method("spawn", force=True)
-    except RuntimeError:
-        pass
-    q = mp.Queue()
-    locks = _make_locks(n_procs)
-    pids = _make_processes(locks, q)
-    assert len(pids) == n_procs
-    _sync_processes(q, n_procs)
-    running_pids = _get_running_pids(smi)
-    _release_locks(locks)
-    if len(pids.difference(running_pids)) == 0:
-        return False
+        procs = nvml.nvmlDeviceGetComputeRunningProcesses(handle)
 
-    return True
+        for p in procs:
+            name = getProcessName(p.pid)
+            processInfo = {}
+            processInfo["pid"] = p.pid
+            processInfo["process_name"] = name
+
+            if p.usedGpuMemory is None:
+                mem = 0
+            else:
+                mem = int(p.usedGpuMemory / 1024 / 1024)
+            processInfo["used_memory"] = mem
+            processInfo["unit"] = "MiB"
+            processes.append(processInfo)
+
+    except nvml.NVMLError as err:
+        logging.error("Unable to read NVML processes error %s", str(err))
+
+    return processes
 
 
-# pylint: disable=protected-access
-def patch_smi(smi, nvml):
-    smi._is_id = True
-    if not _is_smi_bug(smi):
-        return
+def _get_gpu_info() -> list[dict[str, ty.Any]]:
+    if nvml is None:
+        return []
 
-    class c_nvmlProcessInfo_t(nvml._PrintableStructure):
-        _fields_ = [
-            ("pid", c_uint),
-            ("usedGpuMemory", c_ulonglong),
-            ("gpuInstanceId", c_uint),
-            ("computeInstanceId", c_uint),
-            ("pad", c_ssize_t),
+    assert not _is_smi_bug()
+    deviceCount = nvml.nvmlDeviceGetCount()
+    dictResult = []
+    for i in range(0, deviceCount):
+        gpuResults: dict[str, ty.Any] = {}
+        fbMemoryUsage = {}
+        handle = HANDLES[i]
+        try:
+            memInfo = nvml.nvmlDeviceGetMemoryInfo(handle)
+            mem_total = memInfo.total / 1024 / 1024
+            mem_used = memInfo.used / 1024 / 1024
+            mem_free = memInfo.total / 1024 / 1024 - memInfo.used / 1024 / 1024
+        except nvml.NVMLError as err:
+            error = _handleError(err)
+            mem_total = error
+            mem_used = error
+            mem_free = error
+
+        fbMemoryUsage["total"] = mem_total
+        fbMemoryUsage["used"] = mem_used
+        fbMemoryUsage["free"] = mem_free
+        fbMemoryUsage["unit"] = "MiB"
+        gpuResults["fb_memory_usage"] = fbMemoryUsage
+        gpuResults["minor_number"] = i
+        gpuResults["processes"] = _get_processes(handle)
+        dictResult.append(gpuResults)
+    return dictResult
+
+
+def get_cuda_processes() -> dict[int, list[CUDA_PROCESS]]:
+    """
+    Finds the currently running cuda processes on the system. Each process is a
+    ``CUDA_PROCESS`` object that contains information on the process name, `pid` and
+    the memory utilization.
+
+    Returns
+    -------
+    dict[int, list[CUDA_PROCESS]]
+        The key of each dictionary is the device-id, corresponding to a list of running CUDA processes.
+    """
+    gpus = _get_gpu_info()
+    cuda_processes: dict[int, list[CUDA_PROCESS]] = {}
+    for gpu in gpus:
+        device_id = int(gpu["minor_number"])
+        cuda_processes[device_id] = [
+            CUDA_PROCESS(p["process_name"], p["pid"], p["used_memory"])
+            for p in gpu["processes"]
         ]
-        _fmt_ = {
-            "usedGpuMemory": "%d B",
-        }
+    return cuda_processes
 
-    nvml.c_nvmlProcessInfo_t = c_nvmlProcessInfo_t
+
+def get_gpu_mem(
+    mem_type: ty.Literal["used", "total", "free"] = "total"
+) -> dict[int, int]:
+    """
+    Get the memory information of all available GPUs.
+
+    Parameters
+    ----------
+    mem_type : ty.Literal["used", "total", "free"], optional
+        The type of memory information to retrieve, by default "total".
+
+    Returns
+    -------
+    dict[int, int]
+        A list of memory values for each GPU, depending on the specified memory type.
+    """
+    memory: dict[int, int] = {}
+    gpus = _get_gpu_info()
+    for gpu in gpus:
+        device_id = int(gpu["minor_number"])
+        memory[device_id] = int(gpu["fb_memory_usage"][mem_type])
+    return memory
