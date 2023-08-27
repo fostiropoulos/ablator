@@ -4,7 +4,7 @@ import ray
 from ablator.utils.base import Lock
 
 
-@ray.remote(num_cpus=0.1)
+@ray.remote(num_cpus=0.001)
 def mock_remote(t: Lock):
     t.acquire()
     time.sleep(0.1)

@@ -53,7 +53,7 @@ def _make_remote(remote_fn, name, gpu_manager, kwargs):
         kwargs["gpu_id"] = wait_get_gpu(gpu_manager, process_name=name)
     return (
         ray.remote(
-            # num_gpus=0.001,
+            num_gpus=0.001,
             num_cpus=0.001,
             max_calls=1,
             max_retries=0,

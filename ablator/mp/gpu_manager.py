@@ -124,7 +124,7 @@ def unlock_gpu(manager: "GPUManager", gpu: int):
     ray.get(manager.unlock.remote(gpu))  # type: ignore
 
 
-@ray.remote(num_gpus=0.01)
+@ray.remote(num_cpus=0.001, num_gpus=0.001)
 class GPUManager:
     """
     GPUManager class helps manage GPU resources on a given machine.
