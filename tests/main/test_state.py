@@ -1,6 +1,4 @@
-import io
 import shutil
-from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 import numpy as np
@@ -8,7 +6,7 @@ import optuna
 import pandas as pd
 import pytest
 
-from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
+from ablator import ModelConfig, OptimizerConfig, TrainConfig
 from ablator.config.mp import ParallelConfig, SearchAlgo, SearchSpace
 from ablator.main.state import ExperimentState, TrialState
 from ablator.modules.loggers.file import FileLogger
@@ -71,7 +69,8 @@ def make_config(search_space, search_algo):
     )
 
     is_grid_sampler = search_algo in {"grid"}
-    optim_metrics = {"acc": "max"} if not is_grid_sampler else None
+    optim_metrics = {"val_acc": "max"} if not is_grid_sampler else None
+    optim_metric_name = {"val_acc"} if not is_grid_sampler else None
     return MockParallelConfig(
         train_config=train_config,
         model_config=MockModel(),
@@ -80,6 +79,7 @@ def make_config(search_space, search_algo):
         amp=False,
         search_space=search_space,
         optim_metrics=optim_metrics,
+        optim_metric_name=optim_metric_name,
         total_trials=100,
         concurrent_trials=100,
         gpu_mb_per_experiment=0,
@@ -231,7 +231,7 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_ou
     )
     s.update_trial_state(
         0,
-        {"acc": 0},
+        {"val_acc": 0},
         state=TrialState.COMPLETE,
     )
 
@@ -266,7 +266,7 @@ def test_state_resume(tmp_path: Path, search_algo, assert_error_msg):
 
     if config.optim_metrics is not None:
         assert_error_msg(
-            lambda: s.update_trial_state(0, {"acc": 0}),
+            lambda: s.update_trial_state(0, {"val_acc": 0}),
             "Trial 0 was not found.",
         )
         s.sample_trial()
@@ -274,9 +274,9 @@ def test_state_resume(tmp_path: Path, search_algo, assert_error_msg):
             lambda: s.update_trial_state(0, {"aaa": 0}),
             # ,
         )
-        _str = "Expected to find acc in returned model metrics. Instead found: {'aaa'}"
-        assert msg == (f'"{_str}"')
-        for perf in [{"acc": np.nan}, {"acc": 0}, {"acc": None}]:
+        _str = "Expected to find val_acc in returned model metrics. Make sure that `optim_metric_name` corresponds to one of: {'aaa'}"
+        assert msg == f'"{_str}"'
+        for perf in [{"val_acc": np.nan}, {"val_acc": 0}, {"val_acc": None}]:
             trial_id, config = s.sample_trial()
             s.update_trial_state(trial_id, perf, TrialState.COMPLETE)
             trial_id, config = s.sample_trial()
@@ -285,7 +285,7 @@ def test_state_resume(tmp_path: Path, search_algo, assert_error_msg):
             trial_id, config = s.sample_trial()
 
         assert_error_msg(
-            lambda: s.update_trial_state(0, {"acc": "A"}, TrialState.COMPLETE),
+            lambda: s.update_trial_state(0, {"val_acc": "A"}, TrialState.COMPLETE),
             "ufunc 'isfinite' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''",
         )
     else:
@@ -302,7 +302,7 @@ def mock_train(config):
         perf = lr**2
     else:
         perf = b**2
-    return {"acc": -perf, "b": b, "lr": lr}
+    return {"val_acc": -perf, "b": b, "lr": lr}
 
 
 def mock_train_optuna(trial: optuna.Trial):
@@ -328,7 +328,7 @@ def _run_search_algo(s: ExperimentState):
         perf = mock_train(config)
         s.update_trial_state(
             trial_id,
-            {"acc": perf["acc"]},
+            {"val_acc": perf["val_acc"]},
             state=TrialState.COMPLETE,
         )
         perfs.append(perf)
@@ -337,7 +337,7 @@ def _run_search_algo(s: ExperimentState):
 
 def _get_top_n(df: pd.DataFrame):
     top_n = int(BUDGET * 0.1)
-    return df.sort_values("acc")[::-1].iloc[:top_n].mean()["acc"].item()
+    return df.sort_values("val_acc")[::-1].iloc[:top_n].mean()["val_acc"].item()
 
 
 def test_mock_run(tmp_path: Path, search_space):
@@ -362,17 +362,10 @@ def test_mock_run(tmp_path: Path, search_space):
 
 
 if __name__ == "__main__":
-    from tests.conftest import _assert_error_msg, _capture_output
+    from tests.conftest import run_tests_local
 
-    tmp_path = Path("/tmp/state")
-    test_mock_run(tmp_path, _search_space)
-
-    for search_algo in ["random"]:
-        _clean_path(tmp_path)
-        test_state(tmp_path, search_algo, _assert_error_msg)
-
-        _clean_path(tmp_path)
-        test_sample_limits(tmp_path, search_algo, _assert_error_msg, _capture_output)
-
-        _clean_path(tmp_path)
-        test_state_resume(tmp_path, search_algo, _assert_error_msg)
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+    kwargs = dict(search_space=[_search_space], search_algo="tpe")
+    run_tests_local(test_fns, kwargs)

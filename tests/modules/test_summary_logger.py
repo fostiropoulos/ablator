@@ -1,14 +1,13 @@
 import copy
 import io
+import json
 import random
-import sys
+import time
 from contextlib import redirect_stdout
 from pathlib import Path
-import time
+
 import numpy as np
 import pandas as pd
-import pytest
-import json
 from PIL import Image
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
@@ -84,9 +83,7 @@ def test_summary_logger(tmp_path: Path):
     c2.train_config.dataset = "b"
     assert_error_msg_fn(
         lambda: SummaryLogger(c2, tmp_path, resume=True),
-        lambda msg: msg.startswith(
-            "Differences between configurations:"
-        ),
+        lambda msg: msg.startswith("Differences between configurations:"),
     )
     l = SummaryLogger(c, tmp_path, resume=True)
     save_dict = {"A": np.random.random(100)}
@@ -130,12 +127,16 @@ def test_summary_logger(tmp_path: Path):
 
     l = SummaryLogger(c, tmp_path, resume=True, keep_n_checkpoints=3)
 
-    def wait_for_tensorboard(event_acc, tag, tag_type="scalars", max_wait_time=50, output_fn=False):
+    def wait_for_tensorboard(
+        event_acc, tag, tag_type="scalars", max_wait_time=50, output_fn=False
+    ):
         start_time = time.time()
         while True:
             l.dashboard.backend_logger.flush()
             if time.time() - start_time > max_wait_time:
-                raise RuntimeError(f"Timed out waiting for {tag} to appear in TensorBoard.")
+                raise RuntimeError(
+                    f"Timed out waiting for {tag} to appear in TensorBoard."
+                )
             event_acc.Reload()
             if output_fn:
                 print(event_acc.Tags())
@@ -143,12 +144,21 @@ def test_summary_logger(tmp_path: Path):
                 break
             time.sleep(0.1)
 
-    def wait_for_tensorboard_update(event_acc, tag, expected_value, tag_type="scalars", max_wait_time=50, output_fn=False):
+    def wait_for_tensorboard_update(
+        event_acc,
+        tag,
+        expected_value,
+        tag_type="scalars",
+        max_wait_time=50,
+        output_fn=False,
+    ):
         start_time = time.time()
         while True:
             l.dashboard.backend_logger.flush()
             if time.time() - start_time > max_wait_time:
-                raise RuntimeError(f"Timed out waiting for the latest value of {tag} to appear in TensorBoard.")
+                raise RuntimeError(
+                    f"Timed out waiting for the latest value of {tag} to appear in TensorBoard."
+                )
             event_acc.Reload()
             if tag in event_acc.Tags()[tag_type]:
                 event_list = event_acc.Scalars(tag)
@@ -262,7 +272,10 @@ def test_results_json(tmp_path: Path):
 
 
 if __name__ == "__main__":
-    # test_results_json(Path("/tmp/"))
-    test_summary_logger(Path("/tmp/"))
+    from tests.conftest import run_tests_local
 
-    pass
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+
+    run_tests_local(test_fns)

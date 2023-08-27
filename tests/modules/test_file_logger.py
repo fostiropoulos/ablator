@@ -13,6 +13,7 @@ from ablator.modules.loggers.file import FileLogger, RemoteFileLogger
 
 
 def assert_console_output(fn, assert_fn):
+    # TODO replace and use conftest capture_output instead
     f = io.StringIO()
     with redirect_stdout(f):
         fn()
@@ -50,8 +51,6 @@ def mock_remote(i: int, file_logger: FileLogger):
     file_logger.error(f"\\xx {i} error \\xx")
 
 
-
-
 def test_remote_file_logger(tmp_path: Path, ray_cluster):
     logpath = tmp_path.joinpath("test.log")
     if logpath.exists():
@@ -82,6 +81,10 @@ def test_remote_file_logger(tmp_path: Path, ray_cluster):
 
 
 if __name__ == "__main__":
-    test_remote_file_logger(Path("/tmp/"))
+    from tests.conftest import run_tests_local
 
-    pass
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+
+    run_tests_local(test_fns)

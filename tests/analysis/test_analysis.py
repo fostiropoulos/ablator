@@ -1,16 +1,10 @@
+import copy
 from pathlib import Path
 
 import pandas as pd
 import pytest
-import torch
-from torch import nn
 
-from ablator import (
-    ModelConfig,
-    ModelWrapper,
-    OptimizerConfig,
-    PlotAnalysis,
-)
+from ablator import PlotAnalysis
 from ablator.analysis.results import Results
 
 
@@ -53,33 +47,31 @@ def test_analysis(tmp_path: Path, ablator_results):
         tmp_path.joinpath("linearplot", "val_loss", f"{file_name}.png").exists()
         for file_name in numerical_name_remap
     )
-    pass
 
 
 if __name__ == "__main__":
+    import copy
     import shutil
-    from tests.ray_models.model import (
-        WORKING_DIR,
-        TestWrapper,
-        MyErrorCustomModel,
-        _make_config,
-    )
-    from tests.conftest import DockerRayCluster, _assert_error_msg
-    from tests.mp.test_main import test_mp_run
 
-    ray_cluster = DockerRayCluster()
+    from tests.conftest import DockerRayCluster, run_tests_local
+    from tests.test_plugins.model import WORKING_DIR, get_ablator
+
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+    ablator_tmp_path = Path("/tmp/ablator_tmp")
+    shutil.rmtree(ablator_tmp_path, ignore_errors=True)
+    ray_cluster = DockerRayCluster(working_dir=WORKING_DIR)
     ray_cluster.setUp()
-    tmp_path = Path("/tmp/save_dir")
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_path.mkdir(exist_ok=True)
-    test_mp_run = test_mp_run(
-        tmp_path,
-        _assert_error_msg,
-        ray_cluster,
-        TestWrapper(MyErrorCustomModel),
-        _make_config,
-        WORKING_DIR,
+
+    ablator = get_ablator(
+        ablator_tmp_path,
+        working_dir=Path(WORKING_DIR).parent,
+        main_ray_cluster=ray_cluster,
     )
-    config = _make_config(tmp_path, search_space_limit=10)
-    test_mp_run = Results(config, f"/tmp/save_dir/experiment_{config.uid}")
-    test_analysis(tmp_path)
+    config = ablator.run_config
+    ablator_results = Results(config, ablator.experiment_dir)
+    kwargs = {
+        "ablator_results": copy.deepcopy(ablator_results),
+    }
+    run_tests_local(test_fns, kwargs)
