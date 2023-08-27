@@ -1,8 +1,40 @@
 import copy
+import os
+from dataclasses import dataclass, field
 
 import numpy as np
+import ray
+import torch
 
-from ablator.mp.node_manager import Resource
+
+@dataclass
+class Resource:
+    gpu_free_mem: dict[str, int]
+    mem: int
+    cpu_usage: float
+    cpu_count: int
+    running_tasks: list[str] = field(default_factory=lambda: [])
+
+    @property
+    def gpu_free_mem_arr(self) -> np.ndarray:
+        return np.array(list(self.gpu_free_mem.values()))
+
+    @property
+    def cpu_mean_util(self) -> float:
+        return np.array(self.cpu_usage).mean()
+
+    @property
+    def least_used_gpu(self):
+        return min(self.gpu_free_mem, key=self.gpu_free_mem.get)
+
+
+def ray_init(**kwargs):
+    if (
+        "CUDA_VISIBLE_DEVICES" not in os.environ
+        or os.environ["CUDA_VISIBLE_DEVICES"] != ""
+    ) and torch.cuda.is_available():
+        kwargs["num_gpus"] = 1
+    return ray.init(**kwargs)
 
 
 def _sorted_gpu_util(resources: list[Resource]):

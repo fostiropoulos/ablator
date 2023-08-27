@@ -1,14 +1,38 @@
-import shutil
 from pathlib import Path
+import platform
+import pytest
 
 import ray
 
-from ablator.mp.node_manager import NodeManager, Resource
+from ablator.mp.node_manager import NodeManager
+from ablator.mp.utils import Resource
 
 
+@pytest.mark.skipif(
+    "microsoft-standard" not in platform.uname().release,
+    reason="Node Manager test for WSL",
+)
+def test_node_manager_wsl(tmp_path: Path, ray_cluster):
+    timeout = 5
+    n_nodes = ray_cluster.nodes
+    manager = NodeManager(tmp_path, ray_address=ray_cluster.cluster_address)
+    results = manager.run_cmd("whoami", timeout=timeout)
+    test_ips = ray_cluster.node_ips()
+    for node, result in results.items():
+        node_username, node_ip = node.split("@")
+        test_ips.remove(node_ip)
+        assert result.strip() == node_username
+    assert len(test_ips) == 0
+
+
+@pytest.mark.skipif(
+    "microsoft-standard" in platform.uname().release,
+    reason="Node Manager test for Unix platforms",
+)
 def test_node_manager(tmp_path: Path, ray_cluster):
     timeout = 5
     n_nodes = ray_cluster.nodes
+    assert n_nodes >= 1, "This test only supports >= 1 nodes"
     manager = NodeManager(tmp_path, ray_address=ray_cluster.cluster_address)
     results = manager.run_cmd("whoami", timeout=timeout)
     test_ips = ray_cluster.node_ips()
@@ -39,7 +63,13 @@ def test_node_manager(tmp_path: Path, ray_cluster):
     ray_cluster.setUp()
 
 
+@pytest.mark.skipif(
+    "microsoft-standard" in platform.uname().release,
+    reason="Node Manager test for Unix platforms",
+)
 def test_shutdown(tmp_path: Path, ray_cluster, assert_error_msg):
+    n_nodes = ray_cluster.nodes
+    assert n_nodes >= 1, "This test only supports >= 1 nodes"
     msg = assert_error_msg(
         lambda: NodeManager(tmp_path, ray_address=ray_cluster.cluster_ip)
     )
@@ -107,26 +137,10 @@ def test_resource_utilization(tmp_path: Path, ray_cluster):
 
 
 if __name__ == "__main__":
-    from tests.conftest import DockerRayCluster, _assert_error_msg
+    from tests.conftest import run_tests_local
 
-    tmp_path = Path("/tmp/").joinpath("t")
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_path.mkdir(exist_ok=True)
-    ray_cluster = DockerRayCluster()
-    ray_cluster.setUp()
-    assert len(ray_cluster.node_ips()) == ray_cluster.nodes + 1
-    ray_cluster.tearDown()
-    assert len(ray_cluster.node_ips()) == 1
-    ray_cluster.setUp()
-    assert len(ray_cluster.node_ips()) == ray_cluster.nodes + 1
-
-    test_node_manager(tmp_path, ray_cluster)
-    test_shutdown(tmp_path, ray_cluster, _assert_error_msg)
-
-    test_resource_utilization(
-        tmp_path,
-        ray_cluster,
-    )
-    breakpoint()
-    print()
-    pass
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    fn_names = ["test_node_manager"]
+    test_fns = [l[fn] for fn in fn_names]
+    run_tests_local(test_fns)
