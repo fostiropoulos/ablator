@@ -5,6 +5,7 @@ from ablator.analysis.plot.main import PlotAnalysis
 from ablator.analysis.plot.num_plot import LinearPlot
 from ablator.analysis.results import Results
 from ablator.config.main import ConfigBase, configclass
+from ablator.config.hpo import SearchSpace
 from ablator.config.proto import Optim
 from ablator.config.proto import ModelConfig, RunConfig, TrainConfig
 from ablator.config.types import (
