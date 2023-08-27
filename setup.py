@@ -14,7 +14,7 @@ setup(
     long_description=Path(package_path).parent.joinpath("README.md").read_text(),
     long_description_content_type="text/markdown",
     install_requires=[
-        "numpy>=1.24.1",
+        "numpy>=1.22",
         "pandas>=2.0.0",
         "scikit-learn>=1.2.2",
         "torch>=2.0.0",
