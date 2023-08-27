@@ -2,14 +2,22 @@
 
 This guide is meant for those interested in developing on ABLATOR library.
 
-The current document is in progress.
-## Installing Development Version of Ablator
+The current document is in progress. The document explains how to set up the development environment and run tests. The repository follows a test-driven development where every PR must include one or more corresponding tests.
+
+**NOTE** Several tests are written for multi-node environments, the minimum requirement for running the full tests is a
+machine with 2 GPUs running Ubuntu. The tests can also run with 1 GPU or No GPUs and on Windows and Mac but will not be
+comprehensive.
+
+The main library is intended for Prototyping on a local environment e.g. Windows / Mac / Ubuntu but distributed execution
+on a multi-node cluster, **only** Ubuntu. When developing features related to a multi-node cluster a  2 < GPU machine will be required.
+
+## Installing the development version of ABLATOR
 
 The development version of Ablator can be installed via pip `pip install -e .[dev]`
 
-The `-e` option automatically updates the libraries content
+The `-e` option automatically updates the library based on the folder contents.
 
-## Setting up Docker Enviroment
+## Setting up Docker environment
 
 Docker is used for running tests and is required to be installed. For detailed instructions on how to install Docker please refer to the [official documentation](https://docs.docker.com/engine/install/).
 
@@ -28,9 +36,28 @@ sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo docker run hello-world
 ```
-## Setting up Docker Enviroment for non-root users
 
-You will need to set-up docker to run in `root-less` mode. For example, the system user that will be executing the tests should be able to execute: `docker run hello-world` without running into errors. For instructions specific to your system please refer to the [official documentation](https://docs.docker.com/engine/install/linux-postinstall/).
+### For Windows
+
+You will need to install WSL and follow the instructions for Ubuntu (**above** and anywhere in the documentation) even when using Windows. Windows has poor support for
+several functionalities that make it non-ideal for the development of distributed applications and thus ablation experiments. The main issues arise when performing the
+same tests written for multi-node environments on Windows. This is not an expected use case for the library but if you are developing on Windows you will need a way
+to run your tests.
+
+Even when using WSL the biggest issues encountered are the integration of GPU CUDA, Docker and Process Management.
+For example, `setproctitle` does not work, `pynvml` has poor support for Windows with several bugs, e.g. [nvmlSystemGetProcessName](https://github.com/gpuopenanalytics/pynvml/issues/49) and Docker has network permission issues between host and container, while `ray` crashes unexpectedly.
+
+
+**IMPORTANT**
+Do not install Windows Docker using `Docker Desktop` for Windows. If you already have please uninstall and follow the instructions above. `Docker `Desktop` is error-prone in the way it communicates with the WSL over the local network and the ray connection breaks randomly and unexplainably.
+
+### For MAC
+
+TODO
+
+## Setting up Docker environment for non-root users
+
+You will need to set up docker to run in `root-less` mode. For example, the system user that will be executing the tests should be able to execute: `docker run hello-world` without running into errors. For instructions specific to your system please refer to the [official documentation](https://docs.docker.com/engine/install/linux-postinstall/).
 
 ### For Ubuntu
 ```bash
@@ -38,40 +65,60 @@ sudo groupadd docker
 sudo usermod -aG docker $USER
 newgrp docker
 ```
-You will need to reboot / or log-out and log-in again for the changes to take effect.
+You will need to reboot / or log out and log in again for the changes to take effect.
 
 ## Building a Docker Image
 
-The tests require the latest ABLATOR image to be build. The image must have the same pythong version as the running enviroment. From the Dockerfile you will need to modify `python=xxx` to the version of python currently present in your test enviroment.
-e.g.
+The tests require the latest ABLATOR image to be built. The image must have the same python version as the running environment.
 
-`python --version`
-> Python 3.xx.xx
+The easiest way to build a docker image is to run the script **with your **development virtual **environment** active** (as it is used to identify the python version you are using):
+`bash script/make_docker.sh`
 
-To build the docker image you will need to execute in the main ablator directory before running the tests.
+You will **need** to make the docker image in the main ablator directory **every time** before running the tests (as the code in the docker image is updated from the current repository)
+
+### Details of the Build Process and Docker Instructions (Optional)
+
+You might encounter errors using the script above or you might be working on something that requires you to play around with different python versions. You can inspect [make_docker.sh](scripts/make_docker.sh) or simply play around with:
+
 
 ```bash
 docker build --build-arg="PY_VERSION=3.xx.xx" --tag ablator .
 ```
 
+The [Dockerfile](Dockerfile) is used to build the image.
 
-or automatically (**NOTE** your test enviroment would need to be active to correctly identify the python version)
-
-```bash
-docker build --build-arg="PY_VERSION=$(python --version | grep -Eo '[0-9]\.[0-9]+\.[0-9]+')" --tag ablator .
-```
-
-You can run the same image in interactive mode:
+To run the same image in interactive mode for debugging.
 
 ```bash
 docker run -it ablator /bin/bash
 ```
 
+**NOTE** Dockers are ephemeral, any changes you make to the docker container will disappear once the container terminates regardless of what mode you use to execute the container. You can run a container in detached mode by adding the option `-d` which will keep the container active in the background.
+
+```bash
+docker run -it -d ablator /bin/bash
+```
+
+To connect to an existing image, **first** find the container_id of a running image you want to connect
+
+```bash
+docker ps
+```
+
+**then**
+
+```bash
+docker exec -it <container_id> bash
+```
+
+
 ## CUDA Support
 
-IF a GPU is detected on the system, Docker tests will try to start NVIDIA Docker image. To install nvidia container toolkit on your system please refer to the [official documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+**IF** a GPU is detected on the system, Docker tests in ABLATOR will try to start NVIDIA Docker image. To install nvidia container toolkit on your system please refer to the [official documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
-**Optional** (Not Recommended): to disable this behavior you can set `export CUDA_VISIBLE_DEVICES=''`
+**Optional** (Not Recommended): To disable CUDA for the tests you can set `export CUDA_VISIBLE_DEVICES=''`
+
+To install CUDA:
 
 ### For Ubuntu
 
@@ -83,20 +130,26 @@ distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
             sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
 sudo apt-get update \
-    && sudo apt-get install -y nvidia-container-toolkit-base
+    && sudo apt-get install -y nvidia-container-toolkit
 
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 sudo reboot
 ```
-#### Verify installation:
+### For Windows
+See Above
+### For Mac
+**TODO**
+
+### Verify installation:
+
 ```bash
-docker run --rm --runtime=nvidia --gpus all nvidia/cuda:11.6.2-base-ubuntu20.04 nvidia-smi
+docker run --rm --runtime=nvidia --gpus all ablator nvidia-smi
 ```
 
-## Clean Up
 
-During execution of tests, a mock ray cluster is set-up. Due to interuptions or unexpected errors `zombie` nodes can be left up and running.
+## Clean Up
+During the execution of tests, a mock ray cluster is set up. Due to interruptions or unexpected errors `zombie` docker containers can be left up and running. The zombie containers can interact with tests running on the system and it is **BEST** to terminate all running containers to avoid unwanted interactions.
 
 You can check the currently running docker images with: `docker ps`
 
@@ -104,10 +157,38 @@ To kill / clean all running containers you can run `docker kill $(docker ps -q)`
 
 It is recommended you do that before every test.
 
+## System dependencies
 
+SSH should be enabled on the current system. It is recommended for security reasons that you configure SSH to be inaccessible outside your local network, [a good guide](https://www.ssh.com/academy/ssh/sshd_config).
+
+The easiest thing would be to disable ssh-server e.g. `sudo systemctl disable ssh` and stop `sudo systemctl stop ssh` when you are not running tests. Additional security options can include preventing access to SSH outside your local network. A risk is when your user account has a weak password, or your ssh-keys are leaked **and** you are connected to an insecure WiFi network.
+
+### For Ubuntu
+
+To disable password login for ssh
+You can modify `/etc/ssh/sshd_config` and set
+
+```
+PasswordAuthentication no
+PubkeyAuthentication yes
+```
+
+```bash
+sudo apt install openssh-server
+sudo systemctl start ssh
+sudo systemctl status ssh
+```
+
+### For Windows
+None
+### For Mac
+**TODO**
 ## Testing changes
 
-To test changes you can run in the main directory:
+Make sure that ray is not currently running on your local environment. e.g. by running `ray status`
+
+
+To test changes you can run them in the main directory:
 ```bash
 pytest .
 ```
@@ -124,11 +205,12 @@ As the tests are slow (especially the ones that test for multi-processing) when 
 
 ## Contributing Guide-Lines
 
-To avoid polluting the commit-history, each commit should be tested prior to pushing. Each commit should pass the tests, pylint, mypy and flake8.
+To avoid polluting the commit history, each commit should be tested before pushing. Each commit should pass the tests, pylint, mypy and flake8 and have a specific purpose i.e. you should not be making *test commits*, you can experiment in a different branch and then use a separate branch for committing your working changes. This can help other people track the commit history to specific issues in the future.
 
-**NOTE** as there is currently no GPU support in Github actions, you **must** test your code on a machine that has GPUs as well as running inside a Docker container without GPUS. It might seem uneccessary but there have been many cases were test cases fail for either when CUDA is present or not present, even if your changes seem unrelated to the entire workflow of the app.
+**NOTE** As there is currently no GPU support in Github actions, you **must** test your code on a machine that has GPUs as well as run your tests inside a Docker container without GPUS. It might seem unnecessary but there have been many cases where test cases fail either when CUDA is present or not present, even if your changes seem unrelated to the entire workflow of the app.
 
- In the main directory (after activating the correct enviroment):
+In the main directory (after activating the correct environment):
+
 1. `bash scripts/make_docker.sh`
 2.
 ```bash
@@ -148,6 +230,7 @@ docker run -v \
 4. mypy: `mypy ablator`
 5. flake8: `flake8 ablator`
 6. pydoc-lint: `pydoclint ablator`
+7. black: `black .`
 
 Or simply
 
