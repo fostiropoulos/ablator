@@ -264,11 +264,9 @@ def test_git_diffs(
     git.Repo.init(
         remote_path,
         bare=True,
-        initial_branch="master",
     )
     repo = git.Repo.init(
         repo_path,
-        initial_branch="master",
     )
     with pytest.raises(
         RuntimeError, match="Reference at 'refs/heads/master' does not exist"
