@@ -450,26 +450,6 @@ class ConfigBase:
         """
         Path(path).write_text(self.to_yaml(), encoding="utf-8")
 
-    def assert_state(self, config: "ConfigBase") -> bool:
-        """
-        Assert that the configuration object has a valid state.
-
-        Parameters
-        ----------
-        config : ConfigBase
-            The configuration object to compare.
-
-        Returns
-        -------
-        bool
-            ``True`` if the configuration object has a valid state, ``False`` otherwise.
-
-        """
-        diffs = sorted(self.diff_str(config, ignore_stateless=True))
-        diff = "\n\t".join(diffs)
-        assert len(diffs) == 0, f"Differences between configurations:\n\t{diff}"
-        return True
-
     def diff_str(self, config: "ConfigBase", ignore_stateless: bool = False):
         """
         Get the differences between the current configuration object and another configuration object as strings.

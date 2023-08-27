@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import torch
 from torch import nn
 
@@ -89,7 +90,7 @@ def assert_results_equal(res: pd.DataFrame, new_res: pd.DataFrame):
     )
 
 
-def test_wrapper_eval(tmp_path: Path, assert_error_msg):
+def test_wrapper_eval(tmp_path: Path, assert_error_msg, capture_output):
     config.experiment_dir = tmp_path.joinpath("test_exp")
     TestWrapper(MyModel).train(config)
     res = Results.read_results(config, tmp_path)
@@ -161,9 +162,13 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg):
     bad_config.train_config.epochs = 6
 
     assert new_config.uid != bad_config.uid
+    with pytest.raises(RuntimeError, match="Checkpoint not found") as exc_info:
+        TestWrapper(MyModel).train(bad_config, resume=True)
 
-    msg = assert_error_msg(lambda: TestWrapper(MyModel).train(bad_config, resume=True))
-    assert msg == "Differences between configurations:\n\tepochs:(int)6->(int)5"
+    assert (
+        str(exc_info.value.__cause__)
+        == "Mismatching loaded and current configurations. \ntrain_config.epochs:(int)5->(int)6"
+    )
 
 
 if __name__ == "__main__":

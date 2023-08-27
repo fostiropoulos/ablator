@@ -203,7 +203,7 @@ where `-n` is the number of parallel tests to run.
 
 As the tests are slow (especially the ones that test for multi-processing) when developing it is a better idea to only run the tests that affect your changes and reserve running all tests at the end of your work. e.g. `pytest -n 10 tests/your_tests.py`
 
-## Contributing Guide-Lines
+## Contributing Guidelines
 
 To avoid polluting the commit history, each commit should be tested before pushing. Each commit should pass the tests, pylint, mypy and flake8 and have a specific purpose i.e. you should not be making *test commits*, you can experiment in a different branch and then use a separate branch for committing your working changes. This can help other people track the commit history to specific issues in the future.
 

@@ -73,7 +73,7 @@ class ProtoTrainer:
         except ValueError as e:
             raise RuntimeError(
                 f"Could not parse repo at {working_dir}. Error: {str(e)}"
-            )
+            ) from e
         except exc.NoSuchPathError as e:
             raise FileNotFoundError(f"Directory {working_dir} was not found. ") from e
         except exc.InvalidGitRepositoryError as e:
