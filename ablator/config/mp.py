@@ -34,7 +34,7 @@ class ParallelConfig(RunConfig):
     """
     Parallel training configuration, extending from ``RunConfig``, defines the settings of a parallel experiment
     (number of trials to run for, number of concurrent trials, search space for hyperparameter search, etc.).
-    
+
     ``ParallelConfig`` encapsulates every configuration (model config, optimizer-scheduler config, train config,
     and the search space) needed to run a parallel experiment. The entire umbrella of configuration is then passed
     to ``ParallelTrainer`` that launches the experiment.
@@ -61,7 +61,7 @@ class ParallelConfig(RunConfig):
 
     Examples
     --------
-    There are several steps before defining a parallel run config, let's go through them one by one: 
+    There are several steps before defining a parallel run config, let's go through them one by one:
 
     - Define training config:
 

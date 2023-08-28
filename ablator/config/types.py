@@ -16,7 +16,7 @@ class Dict(ty.Dict[str, T]):
     A class for dictionary data type, with keys as strings. Used when you need to specify a config
     attribute as a dictionary (in fact, ablator defines ``search_space`` as a dictionary of ``SearchSpace``
     in config class ``ParallelConfig``).
-    
+
     Examples
     --------
     You can declare an attribute of type ``Dict`` as follows:
@@ -56,6 +56,7 @@ class Dict(ty.Dict[str, T]):
     cast to an integer.
 
     """
+
     pass
 
 
@@ -64,7 +65,7 @@ class List(ty.List[T]):
     """
     A class for list data type, used when you need to specify a config attribute to be a list.
     Remember to wrap the type of the list elements in ``List[]``, e.g ``List[str]``, ``List[int]``.
-    
+
     Examples
     --------
     You can declare an attribute of type ``List`` as follows:
@@ -94,6 +95,7 @@ class List(ty.List[T]):
     and the value of ``my_int_list[2]`` is cast to an integer.
 
     """
+
     pass
 
 
@@ -124,7 +126,7 @@ class Tuple(ty.Tuple[T]):
     - a
     - 1
     - '2'
-    
+
     Notice how data are cast in ``my_str_int_tuple[1]`` and ``my_2str_int_tuple[2]``.
 
     .. note::
@@ -132,6 +134,7 @@ class Tuple(ty.Tuple[T]):
         So for the example above, ``my_str_int_tuple`` must have exactly 2 elements, and
         ``my_2str_int_tuple`` must have exactly 3 elements.
     """
+
     pass
 
 
@@ -140,7 +143,7 @@ class Optional(ty.Generic[T]):
     A class for optional data types. This is helpful when a config attribute is optional,
     meaning that we can leave an optional config attribute empty. (in fact, ablator defines ``scheduler_config``
     as optional in config class ``TrainConfig``).
-    
+
     Examples
     --------
     You can declare an attribute of type ``Optional`` as follows:
@@ -158,6 +161,7 @@ class Optional(ty.Generic[T]):
     >>> MyConfig()
     my_optional_list: null
     """
+
     pass
 
 
@@ -186,7 +190,7 @@ class Enum(_Enum):
     >>>     RED = 1
     >>>     GREEN = 2
     >>>     BLUE = 3
-    
+
     ``RED``, ``GREEN``, and ``BLUE`` are fixed value set for Color type. Internally, these values are
     mapped to integers 1, 2, and 3. The custom data type ``Color`` can now be used in config classes:
 
@@ -653,7 +657,7 @@ class Derived(ty.Generic[T]):
     >>>     embed_dim: Derived[int]
 
     Then you can define a model class that takes in the model config as input and set input length using ``embed_dim``:
-    
+
     >>> class MyModel(nn.Module):
     >>>     def __init__(self, config: MyModelConfig):
     >>>         super().__init__()

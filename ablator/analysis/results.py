@@ -93,7 +93,7 @@ class Results:
     >>> directory_path = Path('<path to experiment output defined in experiment_dir>')
     >>> results = Results(config = ParallelConfig, experiment_dir=directory_path, use_ray=True)
     >>> df = results.read_results(config_type=ParallelConfig, experiment_dir=directory_path)
-    
+
     Pass ``df`` to ``PlotAnalysis`` to create an analysis object that's able to plot the correlation between
     the hyperparameters and metrics and save the plots to an output directory. For example, the following
     code snippet generates plots for each of the numerical and categorical hyperparameters and saves them to
@@ -113,7 +113,7 @@ class Results:
     ...     },
     ...     attribute_name_remap= attribute_name_remap
     ... )
-     
+
 
     Parameters
     ----------

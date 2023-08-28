@@ -238,7 +238,7 @@ def _test_tpe_continue():
             trial_num=trial_id,
             state=TrialState.COMPLETE,
             metrics=[{"loss": perf["loss"]}],
-            **kwargs
+            **kwargs,
         )
         trials.append(trial)
     s = OptunaSampler(

@@ -25,7 +25,7 @@ class ProtoTrainer:
     ------
     RuntimeError
         If experiment directory is not defined in the running configuration.
-    
+
     Examples
     --------
     Below is a complete workflow on how to launch a prototype experiment with ``ProtoTrainer``, from defining config to

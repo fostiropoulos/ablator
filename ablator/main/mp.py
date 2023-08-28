@@ -51,7 +51,7 @@ class ParallelTrainer(ProtoTrainer):
         The number of cpu used per trial.
     gpu : float
         The number of gpu used per trial.
-    
+
     Examples
     --------
     Below is a complete workflow on how to launch a parallel experiment with ``ParallelTrainer``,

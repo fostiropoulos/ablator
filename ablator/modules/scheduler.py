@@ -53,7 +53,7 @@ class SchedulerConfig(ConfigBase):
     --------
     The following example shows how to create a scheduler config and use it in
     ``TrainConfig`` to define the training setting of the experiment.
-    
+
     >>> optim_config = OptimizerConfig("sgd", {"lr": 0.5})
     >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
     >>> train_config = TrainConfig(

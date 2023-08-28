@@ -96,7 +96,7 @@ class OptimizerConfig(ConfigBase):
         Name of the optimizer.
     arguments : OptimizerArgs
         Arguments for the optimizer, specific to a certain type of optimizer.
-    
+
     Examples
     --------
     The following example shows how to create an optimizer config for SGD optimizer and use it in

@@ -19,9 +19,14 @@ release = "0.0.1"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.autodoc', 'numpydoc',
-              'sphinx.ext.todo', 'sphinx.ext.viewcode', 'nbsphinx',
-              'sphinx.ext.autosummary']
+extensions = [
+    "sphinx.ext.autodoc",
+    "numpydoc",
+    "sphinx.ext.todo",
+    "sphinx.ext.viewcode",
+    "nbsphinx",
+    "sphinx.ext.autosummary",
+]
 
 templates_path = ["_templates"]
 exclude_patterns = []
@@ -31,15 +36,13 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "pydata_sphinx_theme"
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 html_css_files = [
-    'css/custom.css',
+    "css/custom.css",
 ]
 
-html_context = {
-    "default_mode": "light"
-}
+html_context = {"default_mode": "light"}
 
 numpydoc_show_class_members = False
 numpydoc_class_members_toctree = False
@@ -73,11 +76,10 @@ html_theme_options = {
         },
     ],
     "icon_links_label": "Quick Links",
-
 }
 
 html_sidebars = {
-    "**": ['search-field', 'sidebar-nav-bs'],
+    "**": ["search-field", "sidebar-nav-bs"],
     "index": [],
     "notebooks/GettingStarted": [],
     "notebooks/GettingStarted-more-demos": [],

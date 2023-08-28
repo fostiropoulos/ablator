@@ -102,7 +102,7 @@ class SearchSpace(ConfigBase):
 
     - The search space, which will be passed to ``ParallelConfig`` as a dictionary (notice how the
       key is expressed as ``model_config.<model-hyperparameter>``), should look like this:
-    
+
     >>> search_space = {
     ...     "model_config.hidden_size": SearchSpace(value_range = [32, 64], value_type = 'int'),
     ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"])
