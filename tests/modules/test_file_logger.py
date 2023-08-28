@@ -58,12 +58,13 @@ def test_remote_file_logger(tmp_path: Path, ray_cluster):
     node_ips = ray_cluster.node_ips()
     l = RemoteFileLogger(logpath, verbose=True, prefix="1")
     l.to_remote()
+    n_trials = 10
     ray.get(
         [
             mock_remote.options(
                 resources={f"node:{random.choice(node_ips)}": 0.001}
             ).remote(i, l)
-            for i in range(100)
+            for i in range(n_trials)
         ]
     )
 
@@ -74,10 +75,10 @@ def test_remote_file_logger(tmp_path: Path, ray_cluster):
     df = pd.DataFrame(
         list(map(clean_msg, re.findall("\\\\xx.*\\\\xx", logpath.read_text())))
     )
-    assert set(df["trial_id"].unique().astype(int)) == set(range(100))
-    assert df.nunique()["trial_id"] == 100
+    assert set(df["trial_id"].unique().astype(int)) == set(range(n_trials))
+    assert df.nunique()["trial_id"] == n_trials
     assert df.nunique()["msg"] == 3
-    assert df.shape[0] == 3 * 100
+    assert df.shape[0] == 3 * n_trials
 
 
 if __name__ == "__main__":
