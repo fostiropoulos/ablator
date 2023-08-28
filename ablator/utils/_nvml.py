@@ -53,10 +53,13 @@ def _handleError(err: "nvml.NVMLError") -> str:
 
 
 def getProcessName(pid):
-    if os.name == "nt" or "microsoft-standard" in uname().release:
+    try:
+        if os.name == "nt" or "microsoft-standard" in uname().release:
+            return f"process_pid:{str(pid)}"
+        process = psutil.Process(pid)
+        return process.name()
+    except:
         return f"process_pid:{str(pid)}"
-    process = psutil.Process(pid)
-    return process.name()
 
 
 def _get_processes(handle) -> list[dict[str, str | int]]:
