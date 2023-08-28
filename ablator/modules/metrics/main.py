@@ -12,19 +12,21 @@ class LossDivergedError(Exception):
 class Metrics:
     """
     Stores and manages predictions and calculates metrics given some custom evaluation functions.
-    Makes batch-updates
-    Manages memory limits
-    applies evaluation functions.
-    provides cached or online updates on the train loss
+    This class makes batch-updates as metrics are calculated while training/evaluating a model. It takes into
+    account the memory limits, applies evaluation functions, and provides cached or online updates on the metrics.
+
+    We can access all the metrics from the ``Metrics`` object using its ``to_dict()`` method. Refer to
+    `Prototyping Models <./notebooks/Prototyping-models.ipynb>`_ tutorial for more details.
+
     """
 
     def __init__(
         self,
         *args,
-        batch_limit=30,
-        memory_limit=1e8,
+        batch_limit: int | None = 30,
+        memory_limit: int | None = int(1e8),
         evaluation_functions: dict[str, Callable] | None = None,
-        moving_average_limit=3000,
+        moving_average_limit: int | None = 3000,
         # metrics with their initial value that are updated manually, i.e. learning rate
         static_aux_metrics: dict[str, ty.Any] | None = None,
         # metrics for which we update with their moving average, i.e. loss
@@ -237,9 +239,14 @@ class Metrics:
         for k, v in metric_dict.items():
             self._get_ma(k).append(v)
 
-    def reset(self):
+    def reset(self, reset_ma: bool = False):
         """
         Reset to empty all prediction sequences (e.g predictions, labels).
+
+        Parameters
+        ----------
+        reset_ma : bool
+            Whether to reset the moving average values.
 
         Examples
         --------
@@ -255,8 +262,18 @@ class Metrics:
         >>> train_metrics.reset()
         """
         self._preds.reset()
+        if not reset_ma:
+            return
+        attrs = set(
+            list(self.__moving_eval_attributes__) + list(self.__moving_aux_attributes__)
+        )
+        for k in attrs:
+            _ma = self._get_ma(k)
+            last = _ma.last
+            _ma.reset()
+            _ma.append(last)
 
-    def evaluate(self, reset=True, update_ma=True):
+    def evaluate(self, reset=True, update=True):
         """
         Apply evaluation_functions to the set of predictions. Possibly update the
         moving averages (only those associated with evaluation functions, not moving auxiliary metrics) with
@@ -266,7 +283,7 @@ class Metrics:
         ----------
         reset : bool, optional
             A flag that indicates whether to reset the predictions to empty after evaluation. Default is True.
-        update_ma : bool, optional
+        update : bool, optional
             A flag that indicates whether to update the moving averages after evaluation. Default is True.
 
         Returns
@@ -300,10 +317,10 @@ class Metrics:
         {'val_mean': 62.5}
         """
         metrics = self._preds.evaluate()
-        if update_ma:
+        if update:
             self._update_ma_metrics(metrics)
         if reset:
-            self._preds.reset()
+            self.reset(reset_ma=update)
         return metrics
 
     # pylint: disable=missing-param-doc
@@ -364,7 +381,7 @@ class Metrics:
 
     def to_dict(self):
         """
-        Get all metrics, i.e moving aux metrics, moving evaluation metrics, and static aux metrics.
+        Get all metrics, i.e moving auxiliary metrics, moving evaluation metrics, and static auxiliary metrics.
         Note that moving attributes will be an averaged value of all previous batches. Metrics are
         set to np.nan if it's never updated before
 
@@ -396,7 +413,7 @@ class Metrics:
             'lr': 0.75
         }
         """
-        attrs = self.__moving_aux_attributes__ + self.__moving_eval_attributes__
-        ma_attrs = {k: self._get_ma(k).value for k in attrs}
+        ma_attrs = {k: self._get_ma(k).value for k in self.__moving_aux_attributes__}
+        eval_attrs = {k: self._get_ma(k).last for k in self.__moving_eval_attributes__}
         static_attrs = {k: getattr(self, k) for k in self.__static_aux_attributes__}
-        return {**ma_attrs, **static_attrs}
+        return {**ma_attrs, **static_attrs, **eval_attrs}

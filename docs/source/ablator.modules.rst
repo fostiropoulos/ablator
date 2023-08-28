@@ -1,4 +1,4 @@
-Modules package
+ablator.modules package
 =======================
 
 Subpackages
@@ -14,18 +14,20 @@ Subpackages
 Submodules
 ----------
 
-Optimizers module
+ablator.modules.optimizer module
 --------------------------------
 
 .. automodule:: ablator.modules.optimizer
    :members:
+   :undoc-members:
    :show-inheritance:
 
-Schedulers module
+ablator.modules.scheduler module
 --------------------------------
 
 .. automodule:: ablator.modules.scheduler
    :members:
+   :undoc-members:
    :show-inheritance:
 
 Module contents
@@ -33,4 +35,5 @@ Module contents
 
 .. automodule:: ablator.modules
    :members:
+   :undoc-members:
    :show-inheritance:

@@ -4,11 +4,11 @@ from collections import OrderedDict
 
 import numpy as np
 
-from ablator.config.mp import Optim
+from ablator.config.proto import Optim
 from ablator.utils.file import nested_set
 
 
-def _verify_metrics(metrics: dict[str, float] | None):
+def verify_metrics(metrics: dict[str, float] | None):
     if metrics is None:
         return
     for k, v in metrics.items():
@@ -60,7 +60,7 @@ def augment_trial_kwargs(
     return trial_kwargs
 
 
-def _parse_metrics(
+def parse_metrics(
     metric_directions: dict[str, Optim], metrics: dict[str, float] | None
 ) -> dict[str, float] | None:
     """
@@ -94,7 +94,8 @@ def _parse_metrics(
     for k in sorted(metric_directions):
         if k not in metrics:
             raise KeyError(
-                f"Expected to find {k} in returned model metrics. Instead found: {set(metrics.keys())}"
+                f"Expected to find {k} in returned model metrics. "
+                f"Make sure that `optim_metric_name` corresponds to one of: {set(metrics.keys())}"
             )
         v = metric_directions[k]
         val = metrics[k]

@@ -119,7 +119,7 @@ class Display:
         self._refresh()
 
 
-@ray.remote
+@ray.remote(num_cpus=0.001)
 class RemoteProgressBar:
     def __init__(self, total_trials: int | None):
         super().__init__()

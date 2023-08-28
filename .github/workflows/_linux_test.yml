@@ -6,11 +6,15 @@ on:
 
 jobs:
   pytest:
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted, ubuntu]
     steps:
+    - uses: actions/checkout@v3
     - name: Build Docker
       run: |
         docker build --build-arg="PY_VERSION=3.10" --tag ablator-test .
-    - name: Test with pytest
+    - name: Test with pytest CUDA
       run: |
         docker run -v /var/run/docker.sock:/var/run/docker.sock --cpuset-cpus="0-4" --pid host --gpus all ablator pytest . --runslow --docker-tag ablator-test
+    - name: Test with pytest CPU
+      run: |
+        docker run -v /var/run/docker.sock:/var/run/docker.sock --cpuset-cpus="0-4" --pid host ablator pytest . --runslow --docker-tag ablator-test

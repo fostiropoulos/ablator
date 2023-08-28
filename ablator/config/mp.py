@@ -29,22 +29,15 @@ class SearchAlgo(Enum):
     grid = "grid"
 
 
-class Optim(Enum):
-    """
-    Type of optimization direction.
-
-    can take values `min` and `max` that indicate whether the HPO
-    algorithm should minimize or maximize the corresponding metric.
-    """
-
-    min = "min"
-    max = "max"
-
-
 @configclass
 class ParallelConfig(RunConfig):
     """
-    Parallel training configuration.
+    Parallel training configuration, extending from ``RunConfig``, defines the settings of a parallel experiment
+    (number of trials to run for, number of concurrent trials, search space for hyperparameter search, etc.).
+
+    ``ParallelConfig`` encapsulates every configuration (model config, optimizer-scheduler config, train config,
+    and the search space) needed to run a parallel experiment. The entire umbrella of configuration is then passed
+    to ``ParallelTrainer`` that launches the experiment.
 
     Attributes
     ----------
@@ -66,13 +59,66 @@ class ParallelConfig(RunConfig):
     remote_config: Optional[RemoteConfig] = None
         remote storage configuration.
 
+    Examples
+    --------
+    There are several steps before defining a parallel run config, let's go through them one by one:
+
+    - Define training config:
+
+    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+    >>> train_config = TrainConfig(
+    ...     dataset="[Dataset Name]",
+    ...     batch_size=32,
+    ...     epochs=10,
+    ...     optimizer_config = my_optimizer_config,
+    ...     scheduler_config = my_scheduler_config,
+    ...     rand_weights_init = True
+    ... )
+
+    - Define model config, we want to run HPO on activation functions and model hidden size:
+
+    >>> @configclass
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     hidden_size: int
+    >>>     activation: str
+    >>> model_config = CustomModelConfig(hidden_size=100, activation="relu")
+
+    - Define search space:
+
+    >>> search_space = {
+    ...     "train_config.optimizer_config.arguments.lr": SearchSpace(value_range = [0.001, 0.01], value_type = 'float'),
+    ...     "model_config.hidden_size": SearchSpace(value_range = [32, 64], value_type = 'int'),
+    ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"]),
+    ... }
+
+    - Lastly, we will define the run config from the previous config components (remember to redefine
+      the parallel config to update the model config type to be ``CustomModelConfig``):
+
+    >>> @configclass
+    >>> class CustomParallelConfig(ParallelConfig):
+    ...    model_config: CustomModelConfig
+    >>> parallel_config = CustomParallelConfig(
+    ...     train_config=train_config,
+    ...     model_config=model_config,
+    ...     metrics_n_batches = 800,
+    ...     experiment_dir = "/tmp/experiments/",
+    ...     device="cuda",
+    ...     amp=True,
+    ...     random_seed = 42,
+    ...     total_trials = 20,
+    ...     concurrent_trials = 20,
+    ...     search_space = search_space,
+    ...     optim_metrics = {"val_loss": "min"},
+    ...     gpu_mb_per_experiment = 1024,
+    ...     cpus_per_experiment = 1,
+    ... )
     """
 
     total_trials: Optional[int]
     concurrent_trials: Stateless[Optional[int]]
     search_space: Dict[SearchSpace]
-    optim_metrics: Stateless[Optional[Dict[Optim]]]
-    gpu_mb_per_experiment: Stateless[int]
-    search_algo: Stateless[SearchAlgo] = SearchAlgo.tpe
+    gpu_mb_per_experiment: Stateless[Optional[int]] = None
+    search_algo: Stateless[SearchAlgo] = SearchAlgo.random
     ignore_invalid_params: Stateless[bool] = False
     remote_config: Stateless[Optional[RemoteConfig]] = None

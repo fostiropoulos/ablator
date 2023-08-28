@@ -61,6 +61,7 @@ class SummaryLogger:
     RESULTS_JSON_NAME = "results.json"
     LOG_FILE_NAME = "train.log"
     CONFIG_FILE_NAME = "config.yaml"
+    BACKUP_CONFIG_FILE_NAME = "config_backup_{i}.yaml"
     METADATA_JSON = "metadata.json"
     CHKPT_DIR_NAMES = ["best", "recent"]
     CHKPT_DIR_VALUES = ["best_checkpoints", "checkpoints"]
@@ -103,6 +104,7 @@ class SummaryLogger:
         self.experiment_dir: Path | None = None
         self.result_json_path: Path | None = None
         self.CHKPT_DIRS = {}
+        _log_msg = ""
         if experiment_dir is not None:
             self.experiment_dir = Path(experiment_dir)
             if not resume and self.experiment_dir.exists():
@@ -113,8 +115,23 @@ class SummaryLogger:
                 _run_config = type(run_config).load(
                     self.experiment_dir.joinpath(self.CONFIG_FILE_NAME)
                 )
-                run_config.train_config.assert_state(_run_config.train_config)
-                run_config.model_config.assert_state(_run_config.model_config)
+
+                diffs = run_config.diff_str(_run_config)
+                if len(diffs) > 0:
+                    i = len(
+                        list(
+                            self.experiment_dir.glob(
+                                self.BACKUP_CONFIG_FILE_NAME.format(i="*")
+                            )
+                        )
+                    )
+                    backup_file_name = self.experiment_dir.joinpath(
+                        self.BACKUP_CONFIG_FILE_NAME.format(i=f"{i:03d}")
+                    )
+                    backup_file_name.write_text(_run_config.to_yaml(), encoding="utf-8")
+                    _log_msg += "Differences between provided configuration and "
+                    _log_msg += f"stored configuration. Creating a configuration backup at {backup_file_name}"
+
                 metadata = json.loads(
                     self.experiment_dir.joinpath(self.METADATA_JSON).read_text(
                         encoding="utf-8"
@@ -135,6 +152,8 @@ class SummaryLogger:
             self._write_config(run_config)
             self._update_metadata()
         self.logger = FileLogger(path=self.log_file_path, verbose=verbose)
+        if len(_log_msg) > 0:
+            self.logger.warn(_log_msg)
 
     def _update_metadata(self):
         """
@@ -187,7 +206,7 @@ class SummaryLogger:
         if self.experiment_dir is None:
             return
         self.experiment_dir.joinpath(self.CONFIG_FILE_NAME).write_text(
-            str(run_config), encoding="utf-8"
+            run_config.to_yaml(), encoding="utf-8"
         )
 
         if self.dashboard is not None:
@@ -298,7 +317,8 @@ class SummaryLogger:
             dict_metrics = metrics
 
         for k, v in dict_metrics.items():
-            self._add_metric(k, v, itr)
+            if v is not None:
+                self._add_metric(k, v, itr)
         self._append_metrics(dict_metrics)
         self._update_metadata()
 

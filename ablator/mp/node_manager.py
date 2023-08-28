@@ -3,39 +3,17 @@ import logging
 import socket
 import traceback
 from collections import defaultdict
-from dataclasses import dataclass, field
 from pathlib import Path
 
-import numpy as np
 import paramiko
 import psutil
 import ray
 from ray.util.state import list_nodes, list_tasks
 
-from ablator.utils.base import get_gpu_mem
+from ablator.mp.utils import Resource, ray_init
+from ablator.utils._nvml import get_gpu_mem
 
 DEFAULT_TIMEOUT = 60
-
-
-@dataclass
-class Resource:
-    gpu_free_mem: dict[str, int]
-    mem: int
-    cpu_usage: float
-    cpu_count: int
-    running_tasks: list[str] = field(default_factory=lambda: [])
-
-    @property
-    def gpu_free_mem_arr(self) -> np.ndarray:
-        return np.array(list(self.gpu_free_mem.values()))
-
-    @property
-    def cpu_mean_util(self) -> float:
-        return np.array(self.cpu_usage).mean()
-
-    @property
-    def least_used_gpu(self):
-        return min(self.gpu_free_mem, key=self.gpu_free_mem.get)
 
 
 def make_private_key(home_path: Path):
@@ -68,7 +46,7 @@ def utilization():
     )
 
 
-@ray.remote
+@ray.remote(num_cpus=0.001)
 def update_node(node_ip, key):
     # check if key in authorized keys
     ssh_dir = Path.home().joinpath(".ssh")
@@ -95,7 +73,7 @@ class NodeManager:
                 "`ray_address` does not match currently running ray instance. Can not initialize ray twice."
             )
         if not ray.is_initialized():
-            ray.init(address=ray_address)
+            ray_init(address=ray_address)
 
         self.ray_address = ray.get_runtime_context().gcs_address
 
@@ -109,7 +87,7 @@ class NodeManager:
             node_alive = node.state.lower() == "alive"
             if node_alive and node_ip not in self.nodes:
                 future = update_node.options(  # type: ignore
-                    resources={f"node:{node_ip}": 0.01}
+                    resources={f"node:{node_ip}": 0.001}
                 ).remote(node_ip, self.public_key)
                 try:
                     node_ip, username = ray.get(future, timeout=timeout)
@@ -186,7 +164,7 @@ class NodeManager:
             try:
                 results[node_ip] = ray.get(
                     ray.remote(fn)
-                    .options(resources={f"node:{node_ip}": 0.001})
+                    .options(num_cpus=0.001, resources={f"node:{node_ip}": 0.001})
                     .remote(),
                     timeout=timeout,
                 )

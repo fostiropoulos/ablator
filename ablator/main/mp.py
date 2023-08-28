@@ -1,6 +1,7 @@
 import copy
 import multiprocessing as mp
 import sys
+import time
 import traceback
 import types as tys
 import typing as ty
@@ -19,16 +20,16 @@ from ablator.config.mp import ParallelConfig
 from ablator.main.model.wrapper import ModelWrapper
 from ablator.main.proto import ProtoTrainer
 from ablator.main.state import ExperimentState, TrialState
-from ablator.mp.node_manager import NodeManager, Resource
-from ablator.mp.utils import _sorted_nodes_by_util
+from ablator.mp.node_manager import NodeManager
+from ablator.mp.utils import Resource
+from ablator.mp.utils import _sorted_nodes_by_util, ray_init
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 from ablator.mp.train_remote import train_main_remote
 
 
 class ParallelTrainer(ProtoTrainer):
     """
-    A class for parallelizing training of models of different configurations with ray.
-    Metrics of these models are for optuna to tune hyperparameters. They are also logged to optuna storage.
+    A class for parallelizing training and hyperparameter optimization of models of different configurations with ray.
 
     Attributes
     ----------
@@ -51,6 +52,87 @@ class ParallelTrainer(ProtoTrainer):
     gpu : float
         The number of gpu used per trial.
 
+    Examples
+    --------
+    Below is a complete workflow on how to launch a parallel experiment with ``ParallelTrainer``,
+    from defining config, getting the model wrapper ready, to launching the experiment:
+
+    - Define training config:
+
+    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+    >>> train_config = TrainConfig(
+    ...     dataset="[Dataset Name]",
+    ...     batch_size=32,
+    ...     epochs=10,
+    ...     optimizer_config = my_optimizer_config,
+    ...     scheduler_config = my_scheduler_config,
+    ...     rand_weights_init = True
+    ... )
+
+    - Define model config, we want to run HPO on activation functions and model hidden size:
+
+    >>> @configclass
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     hidden_size: int
+    >>>     activation: str
+    >>> model_config = CustomModelConfig(num_filter1 =32, num_filter2 = 64, activation = "relu")
+
+    - Define search space:
+
+    >>> search_space = {
+    ...     "train_config.optimizer_config.arguments.lr": SearchSpace(
+    ...         value_range = [0.001, 0.01],
+    ...         value_type = 'float'
+    ...         ),
+    ...     "model_config.hidden_size": SearchSpace(value_range = [32, 64], value_type = 'int'),
+    ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"]),
+    ... }
+
+    - Define run config (remember to redefine the parallel config to update the model config type to be ``CustomModelConfig``):
+
+    >>> @configclass
+    >>> class CustomParallelConfig(ParallelConfig):
+    ...    model_config: CustomModelConfig
+    >>>
+    >>> parallel_config = CustomParallelConfig(
+    ...     train_config=train_config,
+    ...     model_config=model_config,
+    ...     metrics_n_batches = 800,
+    ...     experiment_dir = "/tmp/experiments/",
+    ...     device="cuda",
+    ...     amp=True,
+    ...     random_seed = 42,
+    ...     total_trials = 20,
+    ...     concurrent_trials = 20,
+    ...     search_space = search_space,
+    ...     optim_metrics = {"val_loss": "min"},
+    ...     gpu_mb_per_experiment = 1024,
+    ...     cpus_per_experiment = 1,
+    ... )
+
+    - Create model wrapper:
+
+    >>> class MyModelWrapper(ModelWrapper):
+    >>>     def __init__(self, *args, **kwargs):
+    >>>         super().__init__(*args, **kwargs)
+    >>>
+    >>>     def make_dataloader_train(self, run_config: CustomRunConfig):
+    >>>         return torch.utils.data.DataLoader(<train_dataset>, batch_size=32, shuffle=True)
+    >>>
+    >>>     def make_dataloader_val(self, run_config: CustomRunConfig):
+    >>>         return torch.utils.data.DataLoader(<val_dataset>, batch_size=32, shuffle=False)
+
+    - After gathering all configurations and model wrapper, we can initialize and launch the parallel trainer:
+
+    >>> wrapper = MyModelWrapper(
+    ...     model_class=<your_ModelModule_class>,
+    ... )
+    >>> ablator = ParallelTrainer(
+    ...     wrapper=wrapper,
+    ...     run_config=parallel_config,
+    ... )
+    >>> ablator.launch(working_directory = os.getcwd(), ray_head_address="auto")
     """
 
     def __init__(self, wrapper: ModelWrapper, run_config: ParallelConfig):
@@ -67,26 +149,16 @@ class ParallelTrainer(ProtoTrainer):
 
         self.run_config: ParallelConfig
         super().__init__(wrapper=wrapper, run_config=run_config)
-        # Distributed config parser
-        experiment_dir = self.run_config.experiment_dir or ""
-        experiment_path = Path(experiment_dir).absolute().resolve()
-        if not experiment_path.stem.startswith("experiment_"):
-            experiment_path = experiment_path.joinpath(
-                f"experiment_{self.run_config.uid}"
-            )
-        self.run_config.experiment_dir = str(experiment_path)
-        self.experiment_dir: Path = Path(self.run_config.experiment_dir)
-
         assert issubclass(
             type(self.run_config), ParallelConfig
         ), f"run_config must be of a type - { ParallelConfig.__name__} received {type(self.run_config)}"
 
         assert issubclass(
             type(self.wrapper), ModelWrapper
-        ), f"run_config must be of a type - { ModelWrapper.__name__} received {self.wrapper}"
+        ), f"wrapper must be of a type - { ModelWrapper.__name__} received {self.wrapper}"
 
         self.logger: RemoteFileLogger
-        self.gpu_manager: GPUManager
+        self.gpu_manager: ty.Optional[GPUManager]
         self.experiment_state: ExperimentState
         self.total_trials: int | None
         self.ray_address: str
@@ -94,6 +166,7 @@ class ParallelTrainer(ProtoTrainer):
         self._progress_bar: ty.Optional[RemoteProgressBar] = None
         self._display: butils.Dummy | RemoteDisplay = butils.Dummy()
         self.node_manager: NodeManager
+        self._last_update_resources = None
 
     @cached_property
     def _gpu(self) -> float:
@@ -109,6 +182,10 @@ class ParallelTrainer(ProtoTrainer):
         device = butils.parse_device(self.run_config.device)
         if not device.startswith("cuda"):
             return 0
+        if self.run_config.gpu_mb_per_experiment is None:
+            raise ValueError(
+                "config attribute `gpu_mb_per_experiment` can not be `None` when device=`cuda`"
+            )
         return 0.001
 
     @cached_property
@@ -143,9 +220,17 @@ class ParallelTrainer(ProtoTrainer):
         resume: bool = False,
     ):
         trial_uuid = f"{run_config.uid}_{str(uuid.uuid4())[:4]}"
-        gpu_id = wait_get_gpu(
-            self.gpu_manager, run_config.gpu_mb_per_experiment, process_name=trial_uuid
-        )
+        # TODO need to wait_get_gpu via node_ip
+        if self.gpu_manager is not None:
+            gpu_id = wait_get_gpu(
+                self.gpu_manager,
+                run_config.gpu_mb_per_experiment,
+                process_name=trial_uuid,
+            )
+            gpu_manager = self.gpu_manager
+        else:
+            gpu_id = None
+            gpu_manager = None
         wrapper = copy.deepcopy(self.wrapper)
         # pylint: disable=protected-access
         wrapper._uid = trial_uuid
@@ -168,12 +253,12 @@ class ParallelTrainer(ProtoTrainer):
         msg = f"{action} uid: {trial_uuid}\nParameters: \n\t{diffs}\n-----"
         self.logger.info(msg)
         self.experiment_state.update_trial_state(trial_id, None, TrialState.RUNNING)
-
+        data_lock = butils.Lock()
         return remote_fn.remote(
             model=model_obj,
             run_config=copy.deepcopy(run_config),
             mp_logger=self.logger,
-            gpu_manager=self.gpu_manager,
+            gpu_manager=gpu_manager,
             gpu_id=gpu_id,
             uid=trial_id,
             fault_tollerant=True,
@@ -181,11 +266,16 @@ class ParallelTrainer(ProtoTrainer):
             resume=resume,
             clean_reset=True,
             progress_bar=self._progress_bar,
+            data_lock=data_lock,
         )
 
     def _heartbeat(self):
         self._display.refresh(force=True)
-        self.available_resources = self.node_manager.available_resources()
+        if (
+            self._last_update_resources is None
+            or time.time() - self._last_update_resources > 5
+        ):
+            self.available_resources = self.node_manager.available_resources()
         # TODO find which tasks have died from available_resources and update experiment_state
 
     def _make_futures(self, current_futures: list | None = None, soft_limit: int = 10):
@@ -305,7 +395,7 @@ class ParallelTrainer(ProtoTrainer):
             path=self.experiment_dir / "mp.log", verbose=verbose == "console"
         )
         self.experiment_dir.joinpath("default_config.yaml").write_text(
-            str(self.run_config), encoding="utf-8"
+            self.run_config.to_yaml(), encoding="utf-8"
         )
         self.experiment_state = ExperimentState(
             self.experiment_dir, self.run_config, self.logger, resume=resume
@@ -345,21 +435,29 @@ class ParallelTrainer(ProtoTrainer):
             if ablator_module not in modules:
                 modules.append(ablator_module)
             runtime_env["py_modules"] = modules
-            ray_cluster = ray.init(
-                log_to_driver=verbose == "console",
-                logging_level="warning",
-                include_dashboard=True,  # required for `list_nodes` function
-                address=address,
-                runtime_env=runtime_env,
-            )
+
+            ray_kwargs = {
+                "log_to_driver": verbose == "console",
+                "logging_level": "warning",
+                "include_dashboard": True,  # required for `list_nodes` function
+                "address": address,
+                "runtime_env": runtime_env,
+            }
+
+            ray_cluster = ray_init(**ray_kwargs)
             self.ray_address = ray_cluster.address_info["address"]
         self.node_manager = NodeManager(private_key_home=Path.home())
         self.logger.to_remote()
-        # pylint: disable=no-member
-        self.gpu_manager = GPUManager.remote()  # type: ignore
+        if self._gpu > 0:
+            # pylint: disable=no-member
+            self.gpu_manager = GPUManager.remote()  # type: ignore
+        else:
+            self.gpu_manager = None
+
         # first heartbeat <3
         self._heartbeat()
-        super()._init_state()
+        diffs = self._get_diffs(working_dir)
+        self.logger.warn(diffs)
 
     # pylint: disable=arguments-renamed
     def launch(  # type: ignore
@@ -371,19 +469,8 @@ class ParallelTrainer(ProtoTrainer):
         excluding_files: list[str] | None = None,
     ):
         """
-        Set up and launch the parallel training and tuning process. This includes:
-
-        - prepare ray cluster for running optuna trials to tune hyperparameters.
-
-        - if available, synchronize Google Cloud storage buckets to working directory defined in runtime configuration.
-
-        - initialize optuna trials and add them to optuna storage and experiment state database
-          for tracking training progress (or retrieve existing trials from optuna storage).
-
-        Trials initialized (or retrieved), :obj:`experiment_state.pending_trials`,
-        will be pushed to ray nodes so they can be executed in parallel. After all trials
-        have finished and progress is recorded in sqlite databases in the working directory,
-        these changes will be synchronized back to the GCP nodes via ``rsync_up()`` method.
+        Set up and launch the parallel ablation process. This sets up a ray cluster, and trials of different
+        hyperparameters initialized (or retrieved) will be pushed to ray nodes so they can be executed in parallel.
 
         Parameters
         ----------

@@ -38,9 +38,10 @@ def test_ray_cluster(ray_cluster):
     ray_cluster.tearDown()
 
 
-
 if __name__ == "__main__":
-    random.seed(1)
-    np.random.seed(1)
-    torch.manual_seed(1)
-    test_conftest()
+    from tests.conftest import run_tests_local
+
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+    run_tests_local(test_fns)

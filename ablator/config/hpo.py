@@ -1,4 +1,5 @@
 import typing as ty
+from copy import deepcopy
 
 from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Annotation, Enum, List, Optional, Self, Tuple, Type
@@ -38,6 +39,22 @@ class SubConfiguration:
 
         return {k: _parse_nested_value(v) for k, v in self.arguments.items()}
 
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.arguments = self.arguments
+        return result
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        setattr(result, "arguments", {})
+
+        for k, v in self.arguments.items():
+            result.arguments[k] = deepcopy(v, memo)
+        return result
+
     def contains(self, value: dict[str, ty.Any]):
         def _contains_value(arguments, v):
             if isinstance(arguments, SearchSpace):
@@ -66,7 +83,31 @@ class FieldType(Enum):
 @configclass
 class SearchSpace(ConfigBase):
     """
-    Search space configuration.
+    Search space configuration, required in ``ParallelConfig``, is used to define
+    the search space for a hyperparameter.
+
+    Examples
+    --------
+
+    In ablator, search space is defined for HPO that runs in parallel. For example, we want to
+    run hyperparameter optimization on the model's hidden size and activation function:
+
+    - Given the following model configuration:
+
+    >>> @configclass
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     hidden_size: int
+    >>>     activation: str
+    >>> my_model_config = CustomModelConfig(hidden_size=100, activation="relu")
+
+    - The search space, which will be passed to ``ParallelConfig`` as a dictionary (notice how the
+      key is expressed as ``model_config.<model-hyperparameter>``), should look like this:
+
+    >>> search_space = {
+    ...     "model_config.hidden_size": SearchSpace(value_range = [32, 64], value_type = 'int'),
+    ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"])
+    ... }
+
     """
 
     value_range: Optional[Tuple[str, str]]
@@ -149,8 +190,7 @@ class SearchSpace(ConfigBase):
         _traverse_dict(self.to_dict(), [])
         return list({".".join(p) for p in paths})
 
-    def to_str(self):
-        # TODO make me pretty (e.g. print in an indented format.)
+    def __repr__(self) -> str:
         if self.value_range is not None:
             str_repr = f"SearchSpace(value_range={self.parsed_value_range()}"
             if self.value_type is not None:
@@ -162,15 +202,14 @@ class SearchSpace(ConfigBase):
         if self.categorical_values is not None:
             return f"SearchSpace(categorical_values={self.categorical_values})"
         if self.subspaces is not None:
-            subspaces = ",".join([v.to_str() for v in self.subspaces])
+            subspaces = ",".join([str(v) for v in self.subspaces])
             str_repr = f"SearchSpace(subspaces=[{subspaces}])"
             return str_repr
         if self.sub_configuration is not None:
             sub_config = self.sub_configuration.arguments
             str_repr = f"SearchSpace(sub_configuration={sub_config})"
             return str_repr
-
-        return None
+        raise RuntimeError("Poorly initialized `SearchSpace`.")
 
     def contains(self, value: float | int | str | dict[str, ty.Any]):
         if self.value_range is not None and isinstance(value, (int, float, str)):

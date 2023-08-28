@@ -44,7 +44,8 @@ from optuna.study._study_direction import StudyDirection
 from optuna.trial import TrialState
 
 from ablator.config.hpo import FieldType, SearchSpace
-from ablator.config.mp import Optim, SearchAlgo
+from ablator.config.mp import SearchAlgo
+from ablator.config.proto import Optim
 from ablator.main.state import store as _state_store
 from ablator.main.hpo.base import BaseSampler
 
@@ -214,9 +215,10 @@ class OptunaSampler(BaseSampler):
     ):
         super().__init__()
         self.sampler: optuna.samplers.TPESampler | optuna.samplers.RandomSampler
-        assert (
-            len(optim_metrics) > 0
-        ), "Need to specify 'optim_metrics' with `OptunaSampler`"
+        if len(optim_metrics) == 0:
+            raise ValueError(
+                f"Need to specify 'optim_metrics' with sampler = `{search_algo.value}`"
+            )
         self.optim_metrics = OrderedDict(optim_metrics)
         if search_algo == SearchAlgo.tpe:
             with warnings.catch_warnings():

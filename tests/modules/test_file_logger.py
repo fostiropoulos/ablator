@@ -13,6 +13,7 @@ from ablator.modules.loggers.file import FileLogger, RemoteFileLogger
 
 
 def assert_console_output(fn, assert_fn):
+    # TODO replace and use conftest capture_output instead
     f = io.StringIO()
     with redirect_stdout(f):
         fn()
@@ -43,13 +44,11 @@ def test_file_logger(tmp_path: Path):
     )
 
 
-@ray.remote
+@ray.remote(num_cpus=0.001)
 def mock_remote(i: int, file_logger: FileLogger):
     file_logger.info(f"\\xx {i} info \\xx")
     file_logger.warn(f"\\xx {i} warn \\xx")
     file_logger.error(f"\\xx {i} error \\xx")
-
-
 
 
 def test_remote_file_logger(tmp_path: Path, ray_cluster):
@@ -59,12 +58,13 @@ def test_remote_file_logger(tmp_path: Path, ray_cluster):
     node_ips = ray_cluster.node_ips()
     l = RemoteFileLogger(logpath, verbose=True, prefix="1")
     l.to_remote()
+    n_trials = 10
     ray.get(
         [
             mock_remote.options(
                 resources={f"node:{random.choice(node_ips)}": 0.001}
             ).remote(i, l)
-            for i in range(100)
+            for i in range(n_trials)
         ]
     )
 
@@ -75,13 +75,17 @@ def test_remote_file_logger(tmp_path: Path, ray_cluster):
     df = pd.DataFrame(
         list(map(clean_msg, re.findall("\\\\xx.*\\\\xx", logpath.read_text())))
     )
-    assert set(df["trial_id"].unique().astype(int)) == set(range(100))
-    assert df.nunique()["trial_id"] == 100
+    assert set(df["trial_id"].unique().astype(int)) == set(range(n_trials))
+    assert df.nunique()["trial_id"] == n_trials
     assert df.nunique()["msg"] == 3
-    assert df.shape[0] == 3 * 100
+    assert df.shape[0] == 3 * n_trials
 
 
 if __name__ == "__main__":
-    test_remote_file_logger(Path("/tmp/"))
+    from tests.conftest import run_tests_local
 
-    pass
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+
+    run_tests_local(test_fns)

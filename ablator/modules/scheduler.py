@@ -39,7 +39,8 @@ class SchedulerArgs(ConfigBase):
 @configclass
 class SchedulerConfig(ConfigBase):
     """
-    Class that defines a configuration for a learning rate scheduler.
+    A class that defines a configuration for a learning rate scheduler. This scheduler config
+    will be provided to ``TrainConfig`` (optional) as part of the training setting of the experiment.
 
     Attributes
     ----------
@@ -48,6 +49,30 @@ class SchedulerConfig(ConfigBase):
     arguments : SchedulerArgs
         The arguments needed to initialize the scheduler.
 
+    Examples
+    --------
+    The following example shows how to create a scheduler config and use it in
+    ``TrainConfig`` to define the training setting of the experiment.
+
+    >>> optim_config = OptimizerConfig("sgd", {"lr": 0.5})
+    >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+    >>> train_config = TrainConfig(
+    ...     dataset="[Dataset Name]",
+    ...     batch_size=32,
+    ...     epochs=20,
+    ...     optimizer_config=optim_config,
+    ...     scheduler_config=scheduler_config,
+    ...     rand_weights_init = True
+    ... )
+    >>> # ... create running config (proto/parallel), model wrapper, trainer and launch experiment
+
+    .. note::
+        A common use case is to run ablation studies on different schedulers to learn about their
+        effects on the model performance. However, ``SchedulerConfig`` only configures one single
+        scheduler for the experiment. But you can run experiments on different schedulers by creating
+        a custom config class and add an extra method called ``make_scheduler``. Go to this tutorial on
+        `Search space for different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_
+        for more details.
     """
 
     name: str

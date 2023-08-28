@@ -1,3 +1,4 @@
+from ablator.mp.utils import ray_init
 from ablator.utils.progress_bar import (
     num_format,
     ProgressBar,
@@ -111,7 +112,7 @@ def _test_tui(tmp_path: Path, progress_bar=None):
 
 def _test_tui_remote(tmp_path: Path):
     if not ray.is_initialized():
-        ray.init()
+        ray_init()
     import random
 
     @ray.remote

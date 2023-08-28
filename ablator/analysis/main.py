@@ -6,7 +6,7 @@ from joblib import Memory
 
 from ablator.analysis.plot.utils import parse_name_remap
 from ablator.analysis.results import Results
-from ablator.config.mp import Optim
+from ablator.config.proto import Optim
 
 logger = logging.getLogger(__name__)
 
