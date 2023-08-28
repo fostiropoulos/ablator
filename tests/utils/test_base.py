@@ -72,6 +72,11 @@ def test_apply_lambda_to_iter():
     expected_output = [1, 4, 9, 16, 25]
     output = base.apply_lambda_to_iter(input_list, lambda x: x**2)
     assert output == expected_output
+    values = dict(zip(input_list, input_list))
+
+    output = base.apply_lambda_to_iter(values, lambda x: x**2)
+    assert list(output.values()) == expected_output
+    assert list(output.keys()) == input_list
 
 
 def test_num_format_with_non_numeric_value():
@@ -88,5 +93,4 @@ if __name__ == "__main__":
     l = locals()
     fn_names = [fn for fn in l if fn.startswith("test_")]
     test_fns = [l[fn] for fn in fn_names]
-
     run_tests_local(test_fns)

@@ -196,7 +196,7 @@ def test_metrics(assert_error_msg):
 
     # Test if reset function works
     m3.reset()
-    m3.evaluate(reset=False, update_ma=True)
+    m3.evaluate(reset=False, update=True)
     value = m3.to_dict()["mean"]
     assert math.isnan(value)
 
