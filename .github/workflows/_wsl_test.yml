@@ -1,4 +1,4 @@
-name: linux-test
+name: wsl-test
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   pytest:
-    runs-on: [self-hosted, ubuntu]
+    runs-on: [self-hosted, wsl]
     steps:
     - name: Build Docker
       run: |
