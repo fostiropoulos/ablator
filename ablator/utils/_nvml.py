@@ -58,7 +58,7 @@ def getProcessName(pid):
             return f"process_pid:{str(pid)}"
         process = psutil.Process(pid)
         return process.name()
-    except:
+    except:  # pylint: disable=bare-except
         return f"process_pid:{str(pid)}"
 
 

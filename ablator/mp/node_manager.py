@@ -163,8 +163,8 @@ class NodeManager:
         for node_ip in self._parse_node_ips(node_ips):
             try:
                 results[node_ip] = ray.get(
-                    ray.remote(num_cpus=0.001)(fn)
-                    .options(resources={f"node:{node_ip}": 0.001})
+                    ray.remote(fn)
+                    .options(num_cpus=0.001, resources={f"node:{node_ip}": 0.001})
                     .remote(),
                     timeout=timeout,
                 )
