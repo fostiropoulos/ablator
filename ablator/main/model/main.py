@@ -108,11 +108,10 @@ class ModelBase(ABC):
     2. Users must implement the abstract methods to customize the model's behavior.
 
     3. Mixed precision training enables some operations to use the ``torch.float32`` datatype and
-    other operations use lower
-    precision floating point datatype ``torch.float16``. This is for saving time and reducing memory usage. Ordinarily,
-    "automatic mixed precision training" means training with ``torch.autocast`` and
-    ``torch.cuda.amp.GradScaler`` together.
-    More information: https://pytorch.org/docs/stable/amp.html
+       other operations use lower precision floating point datatype ``torch.float16``. This is for saving time and reducing memory usage. Ordinarily,
+       "automatic mixed precision training" means training with ``torch.autocast`` and
+       ``torch.cuda.amp.GradScaler`` together.
+       More information: https://pytorch.org/docs/stable/amp.html
 
     """
 

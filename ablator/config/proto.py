@@ -19,7 +19,9 @@ class Optim(Enum):
 @configclass
 class TrainConfig(ConfigBase):
     """
-    Training configuration.
+    Training configuration that defines the training setting, e.g., batch size, number of epochs,
+    the optimizer to use, etc. This configuration is required when creating the run configuration
+    (``RunConfig`` and ``ParallelConfig``), which sets up the running environment of the experiment.
 
     Attributes
     ----------
@@ -33,6 +35,49 @@ class TrainConfig(ConfigBase):
         optimizer configuration. (check ``OptimizerConfig`` for more details)
     scheduler_config: Optional[SchedulerConfig]
         scheduler configuration. (check ``SchedulerConfig`` for more details)
+    rand_weights_init: bool = True
+        whether to initialize model weights randomly.
+
+    Examples
+    --------
+    The following example shows all the steps towards configuring an experiment:
+
+    - Define model config, here we use default one with no custom hyperparameters (so we're not
+      running ablation study on the model architecture):
+
+    >>> my_model_config = ModelConfig()
+
+    - Define optimizer and scheduler config, as training config requires an optimizer
+      config, and optionally a scheduler config:
+
+    >>> my_optimizer_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+
+    - Define training config:
+
+    >>> my_train_config = CustomTrainConfig(
+    ...     dataset="[Your Dataset]",
+    ...     batch_size=32,
+    ...     epochs=10,
+    ...     optimizer_config = my_optimizer_config,
+    ...     scheduler_config = my_scheduler_config,
+    ...     rand_weights_init = True
+    ... )
+
+    - We now define the run config for prototype training, which is the last configuration step. Refer to :ref:`Configurations
+      for single model experiments <run_config>` and :ref:`Configurations for parallel models experiments <parallel_config>`
+      for more details on running configs.
+
+    >>> run_config = CustomRunConfig(
+    ...     train_config=my_train_config,
+    ...     model_config=my_model_config,
+    ...     metrics_n_batches = 800,
+    ...     experiment_dir = "/tmp/experiments",
+    ...     device="cpu",
+    ...     amp=False,
+    ...     random_seed = 42
+    ... )
+
     """
 
     dataset: str
@@ -46,15 +91,44 @@ class TrainConfig(ConfigBase):
 @configclass
 class ModelConfig(ConfigBase):
     """
-    Model configuration.
-    When initializing a model, the config is passed to the model constructor.
+    A base class for model configuration. This is used for defining model hyperparameters,
+    so when initializing a model, this config is passed to the model constructor. The attributes
+    from the model config object will be used to construct the model.
+
+    Examples
+    --------
+    Define custom model configuration class for your model:
+
+    >>> @configclass
+    >>> class CustomModelConfig(ModelConfig):
+    >>>     input_size :int
+    >>>     hidden_size :int
+    >>>     num_classes :int
+
+    Define your model class, pass the configuration to the constructor, and build the model:
+
+    >>> class FashionMNISTModel(nn.Module):
+    >>>     def __init__(self, config: CustomModelConfig):
+    >>>         super(FashionMNISTModel, self).__init__()
+    >>>         self.fc1 = nn.Linear(config.input_size, config.hidden_size) # model config attributes are used here
+    >>>         self.relu1 = nn.ReLU()
+    >>>         self.fc3 = nn.Linear(config.hidden_size, config.num_classes) # model config attributes are used here
+    >>>     def forward(self, x):
+    >>>         # code for forward pass
+    >>>         return x
     """
 
 
 @configclass
 class RunConfig(ConfigBase):
     """
-    Base configuration for running an experiment.
+    The base configuration that defines the setting of an experiment (experiment main directory, number of
+    checkpoints to maintain, hardware device to use, etc.). You can use this to configure the experiment
+    of running a single prototype model.
+
+    ``RunConfig`` encapsulates every configuration (model config, optimizer-scheduler config,
+    train config) needed for a prototype experiment. The entire umbrella of configurations is then passed
+    to ``ProtoTrainer`` which launches the prototype experiment.
 
     Attributes
     ----------
@@ -100,6 +174,40 @@ class RunConfig(ConfigBase):
     optim_metric: tuple[str, Optim]
         the optimization metric to use for meta-training procedures, such as for model saving and lr scheduling.
 
+    Examples
+    --------
+    There are several steps before defining a run config, let's go through them one by one:
+
+    - Define training config:
+
+    >>> my_optimizer_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+    >>> train_config = TrainConfig(
+    ...     dataset="[Dataset Name]",
+    ...     batch_size=32,
+    ...     epochs=10,
+    ...     optimizer_config = my_optimizer_config,
+    ...     scheduler_config = my_scheduler_config,
+    ...     rand_weights_init = True
+    ... )
+
+    - Define model config, here we use default one with no custom hyperparameters (sometimes you would
+      want to customize the model config to run HPO on your model's hyperparameters in the parallel experiments
+      with ```ParallelTrainer```, which requires ```ParallelConfig``` instead of ```RunConfig```):
+
+    >>> model_config = ModelConfig()
+
+    - Lastly, we will create the run config, which has train config and model config as parameters:
+
+    >>> run_config = RunConfig(
+    ...     train_config=train_config,
+    ...     model_config=model_config,
+    ...     metrics_n_batches = 800,
+    ...     experiment_dir = "/tmp/experiments",
+    ...     device="cpu",
+    ...     amp=False,
+    ...     random_seed = 42
+    ... )
     """
 
     # location to store experiment artifacts

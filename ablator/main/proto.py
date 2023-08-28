@@ -12,7 +12,7 @@ from ablator.main.model.wrapper import ModelWrapper
 
 class ProtoTrainer:
     """
-    Manages resources for Prototyping.
+    Manages resources for Prototyping. This trainer runs an experiment of a single prototype model. (Therefore no HPO)
 
     Attributes
     ----------
@@ -25,6 +25,65 @@ class ProtoTrainer:
     ------
     RuntimeError
         If experiment directory is not defined in the running configuration.
+    
+    Examples
+    --------
+    Below is a complete workflow on how to launch a prototype experiment with ``ProtoTrainer``, from defining config to
+    launching the experiment:
+
+    - Define training config:
+
+    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+    >>> train_config = TrainConfig(
+    ...     dataset="[Dataset Name]",
+    ...     batch_size=32,
+    ...     epochs=10,
+    ...     optimizer_config = my_optimizer_config,
+    ...     scheduler_config = my_scheduler_config,
+    ...     rand_weights_init = True
+    ... )
+
+    - Define model config, here we use the default one with no custom hyperparameters (sometimes you would
+      want to customize the model config to run HPO on your model's hyperparameters in the parallel experiments,
+      which uses ``ParallelTrainer`` and ``ParallelConfig`` instead of ``ProtoTrainer`` and ``RunConfig``):
+
+    >>> model_config = ModelConfig()
+
+    - Define run config:
+
+    >>> run_config = CustomRunConfig(
+    ...     train_config=train_config,
+    ...     model_config=model_config,
+    ...     metrics_n_batches = 800,
+    ...     experiment_dir = "/tmp/experiments",
+    ...     device="cpu",
+    ...     amp=False,
+    ...     random_seed = 42
+    ... )
+
+    - Create model wrapper:
+
+    >>> class MyModelWrapper(ModelWrapper):
+    >>>     def __init__(self, *args, **kwargs):
+    >>>         super().__init__(*args, **kwargs)
+    >>>
+    >>>     def make_dataloader_train(self, run_config: CustomRunConfig):
+    >>>         return torch.utils.data.DataLoader(<train_dataset>, batch_size=32, shuffle=True)
+    >>>
+    >>>     def make_dataloader_val(self, run_config: CustomRunConfig):
+    >>>         return torch.utils.data.DataLoader(<val_dataset>, batch_size=32, shuffle=False)
+
+    - After gathering all configurations and model wrapper, it's time we initialize and launch the prototype trainer:
+
+    >>> wrapper = MyModelWrapper(
+    ...     model_class=<your_ModelModule_class>,
+    ... )
+    >>> ablator = ProtoTrainer(
+    ...     wrapper=wrapper,
+    ...     run_config=run_config,
+    ... )
+    >>> metrics = ablator.launch()
     """
 
     def __init__(
@@ -85,9 +144,7 @@ class ProtoTrainer:
 
     def launch(self, working_directory: str, debug: bool = False):
         """
-        Initialize the data state of the wrapper and train the model inside the wrapper, then sync training
-        results (logged to experiment directory while training) with external logging services (e.g Google
-        cloud storage, other remote servers).
+        Launch the prototype experiment (train, evaluate the single prototype model) and return metrics.
 
         Parameters
         ----------
