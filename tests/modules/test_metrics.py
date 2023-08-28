@@ -1,10 +1,9 @@
-from pathlib import Path
-from ablator.modules.metrics.main import Metrics
-from ablator.modules.metrics.stores import PredictionStore
+import math
+
 import numpy as np
 
-import sys
-
+from ablator.modules.metrics.main import Metrics
+from ablator.modules.metrics.stores import PredictionStore
 
 moving_average_limit = 100
 memory_limit = 100
@@ -195,6 +194,12 @@ def test_metrics(assert_error_msg):
     m3.evaluate()
     assert np.isnan(m3.to_dict()["mean"]).item()
 
+    # Test if reset function works
+    m3.reset()
+    m3.evaluate(reset=False, update_ma=True)
+    value = m3.to_dict()["mean"]
+    assert math.isnan(value)
+
 
 def test_prediction_store_reset(assert_error_msg):
     ps = PredictionStore(
@@ -240,7 +245,10 @@ def test_prediction_store_reset(assert_error_msg):
 
 
 if __name__ == "__main__":
-    from tests.conftest import _assert_error_msg
+    from tests.conftest import run_tests_local
 
-    test_metrics(_assert_error_msg)
-    test_prediction_store_reset(_assert_error_msg)
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+
+    run_tests_local(test_fns)

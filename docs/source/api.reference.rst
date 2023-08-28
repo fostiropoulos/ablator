@@ -93,7 +93,7 @@ Parallel Config classes
 .. currentmodule:: ablator
 
 .. autosummary::
-   
+
    config.mp.Optim
    config.mp.ParallelConfig
    config.mp.SearchAlgo
@@ -104,7 +104,7 @@ Config Utils functions
 .. currentmodule:: ablator
 
 .. autosummary::
-   
+
    config.utils.dict_hash
    config.utils.flatten_nested_dict
 
@@ -199,7 +199,6 @@ Optimizer classes
    modules.optimizer.SGDConfig
    modules.optimizer.AdamWConfig
    modules.optimizer.AdamConfig
-   modules.optimizer.get_parameter_names
    modules.optimizer.get_optim_parameters
 
 Scheduler classes
@@ -253,4 +252,4 @@ File utilities
    utils.file.make_sub_dirs
    utils.file.nested_set
    utils.file.save_checkpoint
-   
+

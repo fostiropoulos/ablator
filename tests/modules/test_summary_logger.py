@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from PIL import Image
+import math
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
 from ablator.modules.loggers.main import SummaryLogger
@@ -293,6 +294,24 @@ def test_summary_logger(tmp_path: Path):
     img_byte_arr = img_byte_arr.getvalue()
     assert event_acc.Images("img")[0].encoded_image_string == img_byte_arr
 
+    # Test TensorboardLogger's add_scalar function with an None value
+    l.dashboard.add_scalar("test_scalar", None, 1)
+    l.dashboard.add_scalar("test_scalar", 100, 1)
+    l.dashboard.backend_logger.flush()
+    wait_for_tensorboard_update(event_acc, "test_scalar", 100)
+    event_acc.Reload()
+    event_list = event_acc.Scalars("test_scalar")
+    assert math.isnan(event_list[0].value)
+
+    # Test SummaryLogger's `update()`` fcuntion with an unfitable data type
+    set = {1, 2, 3, 4, 5}
+    assert_error_msg(
+        lambda: l.update({"test": set}),
+        f"Unsupported dashboard value {set}. Must be "
+        "[int,float, pd.DataFrame, Image.Image, str, "
+        "MovingAverage, dict[str,float|int], list[float,int], np.ndarray] ",
+    )
+
 
 def test_results_json(tmp_path: Path):
     tmp_path = tmp_path.joinpath(f"{random.random()}")
@@ -311,9 +330,6 @@ def test_results_json(tmp_path: Path):
     l.update({"test": "10"})
     results = json.loads(l.result_json_path.read_text())
     assert results[-1]["test"] == "10"
-    # breakpoint()
-    # return
-    pass
 
 
 if __name__ == "__main__":
