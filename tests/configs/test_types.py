@@ -10,7 +10,6 @@ from ablator import (
     Optional,
     Tuple,
     configclass,
-    Stateful
 )
 
 
@@ -40,6 +39,9 @@ class myEnum(Enum):
 class Pass:
     def __init__(self, a) -> None:
         self.a = a
+
+    def __repr__(self) -> str:
+        return f"Pass(a={self.a})"
 
 
 @configclass
@@ -128,7 +130,7 @@ def test_types(assert_error_msg):
     assert e.a8 == "10"
     assert e.a9 is None
     assert_error_msg(
-        lambda: MultiTypeConfig(), "Missing required value ['a5', 'c3', 'c4']"
+        lambda: MultiTypeConfig(), "Missing required values ['a5', 'c3', 'c4']."
     )
     assert_error_msg(
         lambda: MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2.2"}),
@@ -138,7 +140,7 @@ def test_types(assert_error_msg):
 
 def test_error_configs(assert_error_msg):
     ERROR_CONFIGS = [
-        (MultiTypeConfig, "Missing required value ['a5', 'c3', 'c4']"),
+        (MultiTypeConfig, "Missing required values ['a5', 'c3', 'c4']."),
         (
             lambda: MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2.2"}),
             "invalid literal for int() with base 10: '2.2'",
@@ -161,7 +163,7 @@ def test_error_configs(assert_error_msg):
         ),
         (
             ErrorConfigBadAnnotatedTwo,
-            "Invalid collection typing.Union. type_hints must be structured as:"
+            "Invalid collection typing.Union. type_hints must be structured as:",
         ),
         (
             ErrorConfigHintOrder,
@@ -193,24 +195,26 @@ def test_hierarchical(assert_error_msg):
 
 
 def test_iterable(assert_error_msg):
-    ErrorConfigList(a4=[11,])
-    assert_error_msg(lambda:ErrorConfigList(a4=(11,)),"Invalid type <class 'tuple'> for type List")
-    assert_error_msg(lambda:ErrorConfigList(a4=11),"Invalid type <class 'int'> for type List")
-    assert_error_msg(lambda:ErrorConfigList(a4="11"),"Invalid type <class 'str'> for type List")
+    ErrorConfigList(
+        a4=[
+            11,
+        ]
+    )
+    assert_error_msg(
+        lambda: ErrorConfigList(a4=(11,)), "Invalid type <class 'tuple'> for type List"
+    )
+    assert_error_msg(
+        lambda: ErrorConfigList(a4=11), "Invalid type <class 'int'> for type List"
+    )
+    assert_error_msg(
+        lambda: ErrorConfigList(a4="11"), "Invalid type <class 'str'> for type List"
+    )
 
 
 if __name__ == "__main__":
-    # TODO tests for iterable Type
-    def assert_error_msg(fn, error_msg):
-        try:
-            fn()
-            assert False
-        except Exception as excp:
-            if not error_msg == str(excp):
-                raise excp
+    from tests.conftest import run_tests_local
 
-    test_types(assert_error_msg)
-    test_hierarchical()
-    test_error_configs(assert_error_msg)
-    test_iterable(assert_error_msg)
-
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+    run_tests_local(test_fns)

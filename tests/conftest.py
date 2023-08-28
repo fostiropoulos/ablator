@@ -1,4 +1,5 @@
 import copy
+import inspect
 import io
 import logging
 import os
@@ -7,7 +8,9 @@ import random
 import re
 import time
 from contextlib import redirect_stderr, redirect_stdout
+from multiprocessing import Lock
 from pathlib import Path
+from platform import uname
 
 import docker
 import mock
@@ -15,16 +18,20 @@ import numpy as np
 import pytest
 import ray
 import torch
-from filelock import FileLock
 from ray.util.state import list_nodes
 from xdist.scheduler.loadscope import LoadScopeScheduling
 
 from ablator import package_dir
 from ablator.mp.gpu_manager import GPUManager
-from ablator.utils.base import _get_gpu_info
+from ablator.mp.utils import ray_init
+from ablator.utils._nvml import _get_gpu_info
 
 DOCKER_TAG = "ablator"
-pytest_plugins = ["ray_models.model"]
+pytest_plugins = ["test_plugins.model"]
+
+cuda_lock = Lock()
+
+ray_lock = Lock()
 
 
 def _assert_error_msg(fn, error_msg=None):
@@ -49,11 +56,9 @@ def assert_error_msg():
 
 def _capture_output(fn):
     out = io.StringIO()
-
     err = io.StringIO()
     with redirect_stdout(out), redirect_stderr(err):
         fn()
-
     return out.getvalue(), err.getvalue()
 
 
@@ -64,13 +69,11 @@ def capture_output():
 
 def make_node(docker_client: docker.DockerClient, img, cluster_address):
     cuda_args = {}
-
+    driver_args = {"count": -1, "capabilities": [["gpu"]], "driver": "nvidia"}
     if torch.cuda.is_available():
         cuda_args = dict(
             runtime="nvidia",
-            device_requests=[
-                {"driver": "nvidia", "count": -1, "capabilities": [["gpu"]]}
-            ],
+            device_requests=[driver_args],
         )
     c = docker_client.containers.run(
         img,
@@ -83,9 +86,15 @@ def make_node(docker_client: docker.DockerClient, img, cluster_address):
     )
     res = c.exec_run(f"service ssh start")
     assert "Starting OpenBSD Secure Shell server" in res.output.decode()
-    res = c.exec_run(f"ray start --address='{cluster_address}'")
+    res = c.exec_run(f"ray start --num-gpus=4 --address='{cluster_address}'")
     _out = res.output.decode()
-    assert "Ray runtime started." in _out
+    if "Ray runtime started." not in _out:
+        raise RuntimeError(
+            "Unable to start ray cluster. Potential reasons are different "
+            "python versions. Please consult DEVELOPER.MD in the main repo "
+            f"and inspect log: {_out}"
+        )
+
     node_ip = list(
         set(
             re.findall(
@@ -124,6 +133,8 @@ def pytest_collection_modifyitems(config, items):
 
 
 def build_docker_image(docker_client: docker.DockerClient):
+    # Deprecated as it is too slow to build a docker image. It is better
+    # suited as a cmd line utility as it can use cache.
     py_version = platform.python_version()
     img, *_ = docker_client.images.build(
         nocache=False,
@@ -135,12 +146,8 @@ def build_docker_image(docker_client: docker.DockerClient):
 
 
 def get_docker_image(docker_client, docker_tag):
-    # NOTE the ray and python version must match between nodes.
-    # try:
-    # Currently building the image is too slow, we expect it to have been pre-build
+    # NOTE the ray and python versions must match between nodes and local enviroment.
     return docker_client.images.get(docker_tag)
-    # except:
-    #     return build_docker_image(docker_client)
 
 
 class DockerRayCluster:
@@ -148,6 +155,12 @@ class DockerRayCluster:
         self, nodes=1, working_dir=Path(__file__).parent, docker_tag=DOCKER_TAG
     ) -> None:
         self.nodes = nodes
+        # TODO check if bug is fixed. The reason we turn off multi-node cluster for
+        # WSL tests is that ray nodes die randomly
+        if "microsoft-standard" in uname().release and nodes > 0:
+            raise RuntimeError(
+                "Does not support multi-node cluster environment on Windows."
+            )
         self.working_dir = working_dir
         self.docker_tag = docker_tag
         try:
@@ -155,7 +168,7 @@ class DockerRayCluster:
             self.client = docker.from_env()
         except Exception as e:
             raise RuntimeError(
-                "Could not find a docker installation. Please make sure docker is in Path and can run be run by the current system user (non-root) e.g. `docker run hello-world`. Please refer to https://github.com/fostiropoulos/ablator/blob/main/DEVELOPER.md for detailed instructions."
+                "Could not find a docker installation. Please make sure docker is in Path and can be run by the current system user (non-root) e.g. `docker run hello-world`. Please refer to https://github.com/fostiropoulos/ablator/blob/main/DEVELOPER.md for detailed instructions."
             ) from e
 
     def tearDown(self):
@@ -167,16 +180,18 @@ class DockerRayCluster:
             timeout_config = dict(
                 gcs_failover_worker_reconnect_timeout=2,
                 gcs_rpc_server_reconnect_timeout_s=2,
-                health_check_initial_delay_ms=0,
+                health_check_initial_delay_ms=2000,
                 health_check_period_ms=1000,
                 health_check_timeout_ms=1000,
-                health_check_failure_threshold=2,
+                health_check_failure_threshold=5,
             )
-            ray_cluster = ray.init(
+            ray_kwargs = dict(
                 address="local",
                 runtime_env={"working_dir": self.working_dir},
                 _system_config=timeout_config,
             )
+
+            ray_cluster = ray_init(**ray_kwargs)
             self.cluster_ip = ray_cluster.address_info["node_ip_address"]
             self.cluster_address = ray_cluster.address_info["address"]
         else:
@@ -192,6 +207,7 @@ class DockerRayCluster:
                 self.append_nodes(node_diff)
             elif node_diff < 0:
                 self.kill_nodes(int(node_diff * -1))
+        return self
 
     def _active_containers(self):
         containers = {}
@@ -222,7 +238,7 @@ class DockerRayCluster:
             return []
 
     def append_nodes(self, n):
-        # NOTE Github actions imposes a limit on running Docker containers.
+        # NOTE Github actions impose a limit on running Docker containers.
         # It would not be a good idea to exceed that limit.
         prev_nodes = len(self.node_ips())
         for _ in range(n):
@@ -248,57 +264,72 @@ class DockerRayCluster:
         self._wait_nodes(prev_nodes, -1 * n_nodes)
 
 
+def get_main_ray_cluster(working_dir, docker_tag) -> DockerRayCluster:
+    n_nodes = 0 if "microsoft-standard" in uname().release else 1
+    cluster = DockerRayCluster(
+        nodes=n_nodes, working_dir=working_dir, docker_tag=docker_tag
+    )
+    return cluster
+
+
+@pytest.fixture(scope="session", autouse=True)
+def is_good_os():
+    if os.name == "nt":
+        raise RuntimeError(
+            "Can not run tests on Windows. Please consult DEVELOPER.md from the main repo."
+        )
+    elif "microsoft-standard" in uname().release:
+        logging.warn(
+            "Running LIMITED tests due to poor compatibility of Windows with Ray and Multi-Node environments."
+        )
+
+
 @pytest.fixture(scope="session")
 def main_ray_cluster(working_dir, pytestconfig):
     assert not ray.is_initialized(), "Can not run tests with ray initialized."
     docker_tag = pytestconfig.getoption("--docker-tag")
-    cluster = DockerRayCluster(working_dir=working_dir, docker_tag=docker_tag)
+    cluster = get_main_ray_cluster(working_dir=working_dir, docker_tag=docker_tag)
     cluster.setUp()
     yield cluster
     cluster.tearDown()
 
 
-@pytest.fixture(scope="function")
-def gpu_lock(tmpdir_factory):
-    tmp_path = Path(tmpdir_factory.getbasetemp())
-    if not torch.cuda.is_available():
-        yield False
-    else:
-        with FileLock(tmp_path.joinpath(".gpu")):
-            yield True
-
-
-def _gpu_manager(gpu_lock, ray_cluster, timeout=5):
+def _gpu_manager(timeout=5):
     if "CUDA_VISIBLE_DEVICES" in os.environ:
         devices = copy.deepcopy(os.environ["CUDA_VISIBLE_DEVICES"])
     else:
         devices = ""
+    n_devices = min(torch.cuda.device_count(), 2)
     os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
-    with mock.patch("ablator.utils.base._get_gpu_info", lambda: _get_gpu_info()[:2]):
-        yield GPUManager.remote(timeout, [0, 1])
+    with mock.patch(
+        "ablator.utils._nvml._get_gpu_info", lambda: _get_gpu_info()[:n_devices]
+    ):
+        yield GPUManager.remote(timeout, list(range(n_devices)))
     os.environ["CUDA_VISIBLE_DEVICES"] = devices
 
 
 @pytest.fixture(scope="function")
-def gpu_manager(gpu_lock, ray_cluster):
-    yield from _gpu_manager(gpu_lock, ray_cluster)
+def gpu_manager(ray_cluster):
+    # Requires `ray_cluster` because we need to add the working_dir to the ray cluster for the
+    # remote_fn to be discoverable, when it is used.
+    # Additionally, starting ray before the ray cluster causes issues for the other tests.
+    yield from _gpu_manager()
 
 
 @pytest.fixture(scope="function")
-def very_patient_gpu_manager(gpu_lock, ray_cluster):
-    yield from _gpu_manager(gpu_lock, ray_cluster, 10000000)
+def very_patient_gpu_manager(ray_cluster):
+    yield from _gpu_manager(10000000)
 
 
 @pytest.fixture(scope="function")
-def ray_cluster(tmpdir_factory, main_ray_cluster: DockerRayCluster, gpu_lock):
-    tmp_path = Path(tmpdir_factory.getbasetemp())
-    with FileLock(tmp_path.joinpath(".ray_cluster")):
+def ray_cluster(main_ray_cluster: DockerRayCluster):
+    with ray_lock:
         main_ray_cluster.setUp()
         assert len(main_ray_cluster.node_ips()) == main_ray_cluster.nodes + 1
         yield main_ray_cluster
         if not ray.is_initialized():
             logging.warn(
-                "Shutting down ray during a test, can cause slow-down to set-up the cluster again. "
+                "Shutting down ray during a test can cause slow-down to set-up the cluster again. "
             )
             main_ray_cluster.tearDown()
 
@@ -315,7 +346,7 @@ class MPScheduler(LoadScopeScheduling):
     # when having interacting ray instances.
     def _split_scope(self, nodeid):
         # Since these tests depend on DockerRayCluster we schedule
-        # them together. They all perform a `FileLock` and
+        # them together. They all perform a `Lock` and
         # can not run concurrently.
         file_names = [
             "mp/test_node_manager.py",
@@ -332,3 +363,108 @@ class MPScheduler(LoadScopeScheduling):
 
 def pytest_xdist_make_scheduler(config, log):
     return MPScheduler(config, log)
+
+
+def _test_requires(test_fns, param):
+    return any(
+        [p == param for fn in test_fns for p in inspect.signature(fn).parameters]
+    )
+
+
+def run_tests_local(test_fns, kwargs=None, unpickable_kwargs=None):
+    random.seed(1)
+    np.random.seed(1)
+    torch.manual_seed(1)
+    import shutil
+    from tests.test_plugins.model import (
+        WORKING_DIR,
+        _make_config,
+        get_ablator,
+        _locking_remote_fn,
+        _remote_fn,
+    )
+
+    if kwargs is None:
+        kwargs = {}
+
+    if unpickable_kwargs is None:
+        unpickable_kwargs = {}
+    n_nodes = 0 if "microsoft-standard" in uname().release else 1
+    if _test_requires(test_fns, "ablator") and "ablator" not in unpickable_kwargs:
+        ray_cluster = DockerRayCluster(
+            nodes=n_nodes, working_dir=Path(WORKING_DIR).parent
+        )
+        ray_cluster.setUp()
+
+        unpickable_kwargs["ray_cluster"] = lambda: ray_cluster
+        ablator_tmp_path = Path("/tmp/ablator_tmp")
+        shutil.rmtree(ablator_tmp_path, ignore_errors=True)
+        ablator = get_ablator(
+            ablator_tmp_path,
+            working_dir=Path(WORKING_DIR).parent,
+            main_ray_cluster=ray_cluster,
+        )
+        unpickable_kwargs["ablator"] = lambda: ablator
+    elif (
+        _test_requires(test_fns, "ray_cluster")
+        and "ray_cluster" not in unpickable_kwargs
+    ):
+        ray_cluster = DockerRayCluster(
+            nodes=n_nodes, working_dir=Path(WORKING_DIR).parent
+        )
+        ray_cluster.setUp()
+        unpickable_kwargs["ray_cluster"] = lambda: ray_cluster
+    else:
+        ray_init()
+
+    for fn in test_fns:
+        parameters = inspect.signature(fn).parameters
+
+        tmp_path = Path("/tmp/test_exp")
+        default_kwargs = {
+            "tmp_path": tmp_path,
+            "assert_error_msg": _assert_error_msg,
+            "capture_output": _capture_output,
+            "working_dir": WORKING_DIR,
+            "make_config": _make_config,
+            "remote_fn": _remote_fn,
+            "locking_remote_fn": _locking_remote_fn,
+        }
+
+        if hasattr(fn, "pytestmark"):
+            for mark in fn.pytestmark:
+                if mark.name == "parametrize":
+                    k, v = mark.args
+                    default_kwargs[k] = v
+
+        for k, v in kwargs.items():
+            default_kwargs[k] = copy.deepcopy(kwargs[k])
+
+        _run_args = [{}]
+
+        for k, v in parameters.items():
+            if k in unpickable_kwargs:
+                continue
+            if k not in default_kwargs and v.default != inspect._empty:
+                default_kwargs[k] = v.default
+                for _args in _run_args:
+                    _args[k] = default_kwargs[k]
+
+            elif isinstance(default_kwargs[k], (list, tuple, set, dict)):
+                __run_args = copy.deepcopy(_run_args)
+                _run_args = []
+                for _args in __run_args:
+                    for _v in default_kwargs[k]:
+                        _args[k] = _v
+                        _run_args.append(copy.deepcopy(_args))
+            else:
+                for _args in _run_args:
+                    _args[k] = default_kwargs[k]
+
+        for _args in _run_args:
+            shutil.rmtree(tmp_path, ignore_errors=True)
+            tmp_path.mkdir()
+            for k, v in unpickable_kwargs.items():
+                if k in parameters:
+                    _args[k] = unpickable_kwargs[k]()
+            fn(**_args)

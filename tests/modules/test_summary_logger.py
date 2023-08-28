@@ -1,14 +1,13 @@
 import copy
 import io
+import json
 import random
-import sys
+import time
 from contextlib import redirect_stdout
 from pathlib import Path
-import time
+
 import numpy as np
 import pandas as pd
-import pytest
-import json
 from PIL import Image
 
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
@@ -58,6 +57,57 @@ train_c = TrainConfig(
 c = RunConfig(model_config=model_c, train_config=train_c)
 
 
+def test_backup_config(tmp_path: Path, capture_output):
+    config = copy.deepcopy(c)
+    experiment_dir = tmp_path.joinpath("experiment_dir")
+    l = SummaryLogger(config, experiment_dir)
+
+    assert len(list(experiment_dir.glob(l.BACKUP_CONFIG_FILE_NAME.format(i="*")))) == 0
+    loaded_config = RunConfig.load(experiment_dir.joinpath(l.CONFIG_FILE_NAME))
+    assert loaded_config.train_config.dataset == "x" and loaded_config == config
+
+    # test incremental naming of backup configuration
+    msg = f"Differences between provided configuration and stored configuration. Creating a configuration backup at {experiment_dir.joinpath(l.BACKUP_CONFIG_FILE_NAME)}"
+    prev_config = copy.deepcopy(config)
+    for i in range(10):
+        config.train_config.dataset = str(i)
+        output = capture_output(
+            lambda: SummaryLogger(config, experiment_dir, resume=True)
+        )
+        assert msg.format(i=f"{i:03d}") in output[0]
+        backup_config = RunConfig.load(
+            experiment_dir.joinpath(l.BACKUP_CONFIG_FILE_NAME)
+            .as_posix()
+            .format(i=f"{i:03d}")
+        )
+        assert backup_config == prev_config
+        loaded_config = RunConfig.load(experiment_dir.joinpath(l.CONFIG_FILE_NAME))
+        assert loaded_config.train_config.dataset == str(i) and loaded_config == config
+        output = capture_output(
+            lambda: SummaryLogger(config, experiment_dir, resume=True)
+        )
+        assert output[0] == ""
+        prev_config = copy.deepcopy(config)
+
+    configs = [
+        RunConfig.load(
+            experiment_dir.joinpath(l.BACKUP_CONFIG_FILE_NAME)
+            .as_posix()
+            .format(i=f"{i:03d}")
+        )
+        for i in range(10)
+    ]
+    # test that all back-up configs are intact
+    # -1 because it is offset by 1, where +1 is the current config
+    assert all(
+        c.train_config.dataset == (str(i - 1) if i > 0 else "x")
+        for i, c in enumerate(configs)
+    )
+
+    loaded_config = RunConfig.load(experiment_dir.joinpath(l.CONFIG_FILE_NAME))
+    assert loaded_config.train_config.dataset == str(9)
+
+
 def test_summary_logger(tmp_path: Path):
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
@@ -79,14 +129,6 @@ def test_summary_logger(tmp_path: Path):
             SummaryLogger.LOG_FILE_NAME,
             SummaryLogger.METADATA_JSON,
         ],
-    )
-    c2 = copy.deepcopy(c)
-    c2.train_config.dataset = "b"
-    assert_error_msg_fn(
-        lambda: SummaryLogger(c2, tmp_path, resume=True),
-        lambda msg: msg.startswith(
-            "Differences between configurations:"
-        ),
     )
     l = SummaryLogger(c, tmp_path, resume=True)
     save_dict = {"A": np.random.random(100)}
@@ -130,12 +172,16 @@ def test_summary_logger(tmp_path: Path):
 
     l = SummaryLogger(c, tmp_path, resume=True, keep_n_checkpoints=3)
 
-    def wait_for_tensorboard(event_acc, tag, tag_type="scalars", max_wait_time=50, output_fn=False):
+    def wait_for_tensorboard(
+        event_acc, tag, tag_type="scalars", max_wait_time=50, output_fn=False
+    ):
         start_time = time.time()
         while True:
             l.dashboard.backend_logger.flush()
             if time.time() - start_time > max_wait_time:
-                raise RuntimeError(f"Timed out waiting for {tag} to appear in TensorBoard.")
+                raise RuntimeError(
+                    f"Timed out waiting for {tag} to appear in TensorBoard."
+                )
             event_acc.Reload()
             if output_fn:
                 print(event_acc.Tags())
@@ -143,12 +189,21 @@ def test_summary_logger(tmp_path: Path):
                 break
             time.sleep(0.1)
 
-    def wait_for_tensorboard_update(event_acc, tag, expected_value, tag_type="scalars", max_wait_time=50, output_fn=False):
+    def wait_for_tensorboard_update(
+        event_acc,
+        tag,
+        expected_value,
+        tag_type="scalars",
+        max_wait_time=50,
+        output_fn=False,
+    ):
         start_time = time.time()
         while True:
             l.dashboard.backend_logger.flush()
             if time.time() - start_time > max_wait_time:
-                raise RuntimeError(f"Timed out waiting for the latest value of {tag} to appear in TensorBoard.")
+                raise RuntimeError(
+                    f"Timed out waiting for the latest value of {tag} to appear in TensorBoard."
+                )
             event_acc.Reload()
             if tag in event_acc.Tags()[tag_type]:
                 event_list = event_acc.Scalars(tag)
@@ -262,7 +317,10 @@ def test_results_json(tmp_path: Path):
 
 
 if __name__ == "__main__":
-    # test_results_json(Path("/tmp/"))
-    test_summary_logger(Path("/tmp/"))
+    from tests.conftest import run_tests_local
 
-    pass
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+
+    run_tests_local(test_fns)

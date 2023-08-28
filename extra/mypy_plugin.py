@@ -72,7 +72,9 @@ def SelfCallback(ctx: AnalyzeTypeContext) -> Type:
         ctx.api.fail(f"Self type cannot be used in {ctx.api.prohibit_self_type}", t)
         return AnyType(TypeOfAny.from_error)
     if ctx.api.api.type is None:
-        ctx.api.fail("Self type is only allowed in annotations within class definition", t)
+        ctx.api.fail(
+            "Self type is only allowed in annotations within class definition", t
+        )
         return AnyType(TypeOfAny.from_error)
     if ctx.api.api.type.has_base("builtins.type"):
         ctx.api.fail("Self type cannot be used in a metaclass", t)

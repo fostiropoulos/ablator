@@ -29,18 +29,6 @@ class SearchAlgo(Enum):
     grid = "grid"
 
 
-class Optim(Enum):
-    """
-    Type of optimization direction.
-
-    can take values `min` and `max` that indicate whether the HPO
-    algorithm should minimize or maximize the corresponding metric.
-    """
-
-    min = "min"
-    max = "max"
-
-
 @configclass
 class ParallelConfig(RunConfig):
     """
@@ -130,8 +118,7 @@ class ParallelConfig(RunConfig):
     total_trials: Optional[int]
     concurrent_trials: Stateless[Optional[int]]
     search_space: Dict[SearchSpace]
-    optim_metrics: Stateless[Optional[Dict[Optim]]]
-    gpu_mb_per_experiment: Stateless[int]
-    search_algo: Stateless[SearchAlgo] = SearchAlgo.tpe
+    gpu_mb_per_experiment: Stateless[Optional[int]] = None
+    search_algo: Stateless[SearchAlgo] = SearchAlgo.random
     ignore_invalid_params: Stateless[bool] = False
     remote_config: Stateless[Optional[RemoteConfig]] = None

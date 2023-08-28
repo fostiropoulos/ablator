@@ -1,18 +1,13 @@
-import shutil
 import copy
+import shutil
 from pathlib import Path
-import pandas as pd
 
+import pandas as pd
+import pytest
 import torch
 from torch import nn
 
-from ablator import (
-    ModelConfig,
-    ModelWrapper,
-    OptimizerConfig,
-    RunConfig,
-    TrainConfig,
-)
+from ablator import ModelConfig, ModelWrapper, OptimizerConfig, RunConfig, TrainConfig
 from ablator.analysis.results import Results
 from ablator.utils.base import get_latest_chkpts
 
@@ -33,6 +28,8 @@ config = RunConfig(
     verbose="silent",
     device="cpu",
     amp=False,
+    optim_metrics={"val_loss": "min"},
+    optim_metric_name="val_loss",
 )
 BEST_EPOCH = 3
 
@@ -69,7 +66,7 @@ def assert_results_equal(res: pd.DataFrame, new_res: pd.DataFrame):
         (
             res.reset_index()[
                 [
-                    "best_loss",
+                    "best_val_loss",
                     "best_iteration",
                     "current_iteration",
                     "val_loss",
@@ -79,7 +76,7 @@ def assert_results_equal(res: pd.DataFrame, new_res: pd.DataFrame):
             ]
             == new_res.reset_index()[
                 [
-                    "best_loss",
+                    "best_val_loss",
                     "best_iteration",
                     "current_iteration",
                     "val_loss",
@@ -93,38 +90,42 @@ def assert_results_equal(res: pd.DataFrame, new_res: pd.DataFrame):
     )
 
 
-def test_wrapper_eval(tmp_path: Path, assert_error_msg):
+def test_wrapper_eval(tmp_path: Path, assert_error_msg, capture_output):
     config.experiment_dir = tmp_path.joinpath("test_exp")
     TestWrapper(MyModel).train(config)
     res = Results.read_results(config, tmp_path)
     # The loss should decrease by 100 at every iteration
-    assert ((BEST_ITER - res["current_iteration"]).abs() == res["val_loss"]).all()
+    metric_name = "val_loss"
+    best_metric_name = f"best_{metric_name}"
+    assert ((BEST_ITER - res["current_iteration"]).abs() == res[metric_name]).all()
     assert res["best_iteration"].max() == BEST_ITER
-    assert res["best_loss"].min() == 0
-    assert res.iloc[res["best_loss"].argmin()]["current_iteration"] == BEST_ITER
+    assert res[best_metric_name].min() == 0
+    assert res.iloc[res[best_metric_name].argmin()]["current_iteration"] == BEST_ITER
     assert (res["timestamp"].astype(int).diff(1).dropna() > 0).all()
     new_config = copy.deepcopy(config)
     new_config.experiment_dir = tmp_path.joinpath("test_exp_2")
-    new_config.divergence_factor = int(
-        (100 - 1) / 1e-5
-    )  # the eps in the check for divergence
+    large_div_factor = int(((100 + 1e-5) / 1e-5 + 1) / 2 - 1)
+    new_config.divergence_factor = (
+        large_div_factor  # the eps in the check for divergence
+    )
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config))
     assert (
         msg
-        == "Val loss 1.00e+02 has diverged by a factor larger than 9900000 to best loss 0.00e+00"
+        == f"Val {metric_name} 1.00e+02 has diverged by a factor larger than {large_div_factor} to best_{metric_name} 0.00e+00"
     )
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config, resume=True))
     assert (
         msg
-        == "Val loss 1.00e+02 has diverged by a factor larger than 9900000 to best loss 0.00e+00"
+        == f"Val {metric_name} 1.00e+02 has diverged by a factor larger than {large_div_factor} to best_{metric_name} 0.00e+00"
     )
-    new_config.divergence_factor = 10
+    small_div_factor = 10
+    new_config.divergence_factor = small_div_factor
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config, resume=True))
     assert (
         msg
-        == "Val loss 1.00e+02 has diverged by a factor larger than 10 to best loss 0.00e+00"
+        == f"Val {metric_name} 1.00e+02 has diverged by a factor larger than {small_div_factor} to best_{metric_name} 0.00e+00"
     )
-    new_config.divergence_factor = int((100) / 1e-5)
+    new_config.divergence_factor = large_div_factor + 1
     TestWrapper(MyModel).train(new_config, resume=True)
     # NOTE even if the goal of the test is not to produce an error, we can check the results
     # to see if they are identical to training without interuptions.
@@ -144,7 +145,7 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg):
     new_config.train_config.epochs = 5
 
     assert new_config.uid != config.uid
-    new_config.init_chkpt = new_config.experiment_dir.joinpath("checkpoints")
+    new_config.init_chkpt = Path(new_config.experiment_dir).joinpath("checkpoints")
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config))
     assert "test_exp_4/checkpoints is not a valid checkpoint e.g. a `.pt` file. " in msg
     chkpt = get_latest_chkpts(Path(config.experiment_dir).joinpath("checkpoints"))[0]
@@ -161,16 +162,19 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg):
     bad_config.train_config.epochs = 6
 
     assert new_config.uid != bad_config.uid
+    with pytest.raises(RuntimeError, match="Checkpoint not found") as exc_info:
+        TestWrapper(MyModel).train(bad_config, resume=True)
 
-    msg = assert_error_msg(lambda: TestWrapper(MyModel).train(bad_config, resume=True))
-    assert msg == "Differences between configurations:\n\tepochs:(int)6->(int)5"
+    assert (
+        str(exc_info.value.__cause__)
+        == "Mismatching loaded and current configurations. \ntrain_config.epochs:(int)5->(int)6"
+    )
 
 
 if __name__ == "__main__":
-    from tests.conftest import _assert_error_msg
-    import shutil
+    from tests.conftest import run_tests_local
 
-    tmp_path = Path("/tmp/test_exp")
-
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    test_wrapper_eval(tmp_path, _assert_error_msg)
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+    run_tests_local(test_fns)

@@ -1,11 +1,19 @@
 from ablator.config.main import ConfigBase, configclass
-from ablator.config.types import (
-    Optional,
-    Stateless,
-    Literal,
-)
+from ablator.config.types import Dict, Optional, Stateless, Literal, Enum
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import SchedulerConfig
+
+
+class Optim(Enum):
+    """
+    Type of optimization direction.
+
+    can take values `min` and `max` that indicate whether the HPO
+    algorithm should minimize or maximize the corresponding metric.
+    """
+
+    min = "min"
+    max = "max"
 
 
 @configclass
@@ -29,7 +37,7 @@ class TrainConfig(ConfigBase):
         scheduler configuration. (check ``SchedulerConfig`` for more details)
     rand_weights_init: bool = True
         whether to initialize model weights randomly.
-    
+
     Examples
     --------
     The following example shows all the steps towards configuring an experiment:
@@ -77,7 +85,6 @@ class TrainConfig(ConfigBase):
     epochs: int
     optimizer_config: OptimizerConfig
     scheduler_config: Optional[SchedulerConfig]
-    rand_weights_init: bool = True
 
 
 # TODO decorator @modelconfig as opposed to @configclass ModelConfig
@@ -91,7 +98,7 @@ class ModelConfig(ConfigBase):
     Examples
     --------
     Define custom model configuration class for your model:
-    
+
     >>> @configclass
     >>> class CustomModelConfig(ModelConfig):
     >>>     input_size :int
@@ -115,10 +122,10 @@ class ModelConfig(ConfigBase):
 @configclass
 class RunConfig(ConfigBase):
     """
-    The base configuration that defines the setting of an experiment (experiment main directory, number of 
+    The base configuration that defines the setting of an experiment (experiment main directory, number of
     checkpoints to maintain, hardware device to use, etc.). You can use this to configure the experiment
     of running a single prototype model.
-    
+
     ``RunConfig`` encapsulates every configuration (model config, optimizer-scheduler config,
     train config) needed for a prototype experiment. The entire umbrella of configurations is then passed
     to ``ProtoTrainer`` which launches the prototype experiment.
@@ -163,11 +170,13 @@ class RunConfig(ConfigBase):
     warm_up_epochs: float = 0
         number of epochs marked as warm up epochs.
     divergence_factor: float = 100
-        if ``cur_loss > best_loss > divergence_factor``, the model is considered to have diverged.
+        if ``cur_loss > best_metric > divergence_factor``, the model is considered to have diverged.
+    optim_metric: tuple[str, Optim]
+        the optimization metric to use for meta-training procedures, such as for model saving and lr scheduling.
 
     Examples
     --------
-    There are several steps before defining a run config, let's go through them one by one: 
+    There are several steps before defining a run config, let's go through them one by one:
 
     - Define training config:
 
@@ -213,13 +222,15 @@ class RunConfig(ConfigBase):
     verbose: Stateless[Literal["console", "progress", "silent"]] = "console"
     eval_subsample: Stateless[float] = 1
     metrics_n_batches: Stateless[int] = 32
-    metrics_mb_limit: Stateless[int] = 100
+    metrics_mb_limit: Stateless[int] = 10_000  # 10GB
     early_stopping_iter: Stateless[Optional[int]] = None
     eval_epoch: Stateless[float] = 1
     log_epoch: Stateless[float] = 1
     init_chkpt: Stateless[Optional[str]] = None
     warm_up_epochs: Stateless[float] = 1
-    divergence_factor: Stateless[Optional[float]] = 100
+    divergence_factor: Stateless[Optional[float]] = 10
+    optim_metrics: Stateless[Optional[Dict[Optim]]]
+    optim_metric_name: Stateless[Optional[str]]
 
     @property
     def uid(self) -> str:

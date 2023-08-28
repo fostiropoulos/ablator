@@ -1,3 +1,5 @@
+from collections import abc
+import inspect
 import typing as ty
 from abc import abstractmethod
 
@@ -9,81 +11,24 @@ from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Tuple
 
 
-def get_parameter_names(model: torch.nn.Module, forbidden_layer_types: list[type]):
-    """
-    Recurse into the module and return parameter names of all submodules, excluding
-    modules that are of any type defined in ``forbidden_layer_types``.
-
-    Parameters
-    ----------
-    model : torch.nn.Module
-        The model for which to get parameter names.
-    forbidden_layer_types : list[type]
-        A list of types of modules inside which parameter names should not be included.
-
-    Returns
-    -------
-    list[str]
-        The names of the parameters with the following format: ``<submodule-name>.<parameter-name>``.
-
-    Examples
-    --------
-    >>> class MyModel(nn.Module):
-    >>>     def __init__(self, embedding_dim=10, vocab_size=10, *args, **kwargs) -> None:
-    >>>         super().__init__(*args, **kwargs)
-    >>>         self.param = nn.Parameter(torch.ones(100))
-    >>>         self.embedding = nn.Embedding(num_embeddings=vocab_size,
-    >>>                                     embedding_dim=embedding_dim)
-    >>>         self.norm_layer = nn.LayerNorm(embedding_dim)
-    >>>     def forward(self):
-    >>>         x = self.param + torch.rand_like(self.param) * 0.01
-    >>>         return x.sum().abs()
-    >>> mM = MyModel()
-    >>> get_parameter_names(mM,[])
-    ['embedding.weight', 'norm_layer.weight', 'norm_layer.bias', 'param']
-    >>> get_parameter_names(mM, [torch.nn.LayerNorm])
-    ['embedding.weight', 'param']
-    """
-    result = []
-    for name, child in model.named_children():
-        result += [
-            f"{name}.{n}"
-            for n in get_parameter_names(child, forbidden_layer_types)
-            if not isinstance(child, tuple(forbidden_layer_types))
-        ]
-    # Add model specific parameters (defined with nn.Parameter) since they are not in any child.
-    # pylint: disable=protected-access
-    result += list(model._parameters.keys())
-    return result
-
-
 def get_optim_parameters(
     model: torch.nn.Module,
-    weight_decay: float | None = None,
-    only_requires_grad: bool = True,
-):
+) -> abc.Iterator[nn.Parameter]:
     """
-    Setup the optimizer. Get model parameters to be optimized. If ``weight_decay`` is a ``float``,
-    apply weight decaying to the parameters too (except for bias and parameters from layer
-    normalization module).
+    Get model parameters to be optimized. It first attempts to derive optimization parameters
+    via a user-defined `get_optim_param` function which when it fails to find it simply uses the
+    default torch `nn.parameters()`
 
     Parameters
     ----------
     model : torch.nn.Module
         The model for which to get parameters that will be optimized.
-    weight_decay : float | None
-        The amount of weight decay to use, by default ``None``.
-    only_requires_grad : bool
-        Whether to only use parameters that require gradient or all parameters, by default ``True``.
 
     Returns
     -------
-    dict | list
-        - If weight_decay is ``None``, return all model parameters.
-
-        - If weight_decay is not ``None``, return a dictionary of parameter groups of different weight decay.
-          In specific, bias parameters and parameters from layer normalization module will have weight decay of ``0.0``,
-          while any other parameters will have weight decay of ``weight_decay``.
+    ty.Iterator[nn.Parameter]
+        The list of parameters that require to be optimized. It can be a list, tensor or dictionary. Please see
+        Pytorch Optimizer documentation on the specific format.
 
     Notes
     -----
@@ -102,45 +47,19 @@ def get_optim_parameters(
     >>>     def forward(self):
     >>>         x = self.param + torch.rand_like(self.param) * 0.01
     >>>         return x.sum().abs()
+    >>>     def get_optim_param(self):
+    >>>         return [{"params": [self.param], 'weight_decay':0.2}]
     >>> mM = MyModel()
-    >>> get_optim_parameters(mM, 0.2)
-    [
-        {'params': ['param', 'embedding.weight'], 'weight_decay': 0.2},
-        {'params': ['norm_layer.weight', 'norm_layer.bias'], 'weight_decay': 0.0}
-    ]
+    >>> get_optim_parameters(mM)
+    [{'params': ['param'], 'weight_decay': 0.2}]
     """
-    # default_val = lambda k, v: kwargs[k] if k in kwargs else v
-
-    params_to_update = {}
-    if only_requires_grad:
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                params_to_update[name] = param
-    else:
-        params_to_update = dict(model.named_parameters())
-    if weight_decay is not None:
-        decay_parameters = get_parameter_names(model, [torch.nn.LayerNorm])
-        decay_parameters = [
-            name
-            for name in decay_parameters
-            if "bias" not in name and name in params_to_update
-        ]
-        optimization_params = [
-            {
-                "params": [
-                    p for n, p in params_to_update.items() if n in decay_parameters
-                ],
-                "weight_decay": weight_decay,
-            },
-            {
-                "params": [
-                    p for n, p in params_to_update.items() if n not in decay_parameters
-                ],
-                "weight_decay": 0.0,
-            },
-        ]
-        return optimization_params
-    return list(params_to_update.values())
+    _model = model
+    if isinstance(model, nn.DataParallel):
+        _model = model.module
+    fn = getattr(_model, "get_optim_param", None)
+    if fn is not None and inspect.ismethod(fn):
+        return fn()
+    return model.parameters()
 
 
 @configclass
@@ -337,9 +256,7 @@ class SGDConfig(OptimizerArgs):
         )
         """
         kwargs = self.to_dict()
-        weight_decay = getattr(self, "weight_decay", None)
-        # 1e-4
-        model_parameters = get_optim_parameters(model, weight_decay)
+        model_parameters = get_optim_parameters(model)
         return SGD(model_parameters, **kwargs)
 
 
@@ -356,7 +273,7 @@ class AdamWConfig(OptimizerArgs):
     eps : float
         Term added to the denominator to improve numerical stability (default is ``1e-8``).
     weight_decay : float
-        Weight decay rate (default is ``0.0``).
+        Weight decay rate (default is ``0.01``).
 
     Examples
     --------
@@ -365,7 +282,7 @@ class AdamWConfig(OptimizerArgs):
 
     betas: Tuple[float, float] = (0.9, 0.999)
     eps: float = 1e-8
-    weight_decay: float = 0.0
+    weight_decay: float = 0.01
 
     def init_optimizer(self, model: nn.Module):
         """
@@ -408,9 +325,8 @@ class AdamWConfig(OptimizerArgs):
         )
         """
         kwargs = self.to_dict()
-        weight_decay = getattr(self, "weight_decay", None)
         # 1e-4
-        model_parameters = get_optim_parameters(model, weight_decay)
+        model_parameters = get_optim_parameters(model)
         return AdamW(model_parameters, **kwargs)
 
 
@@ -423,13 +339,13 @@ class AdamConfig(OptimizerArgs):
     Attributes
     ----------
     betas : Tuple[float, float]
-        Coefficients for computing running averages of gradient and its square (default is ``(0.5, 0.9)``).
+        Coefficients for computing running averages of gradient and its square (default is ``(0.9, 0.999)``).
     weight_decay : float
         Weight decay rate (default is ``0.0``).
 
     """
 
-    betas: Tuple[float, float] = (0.5, 0.9)
+    betas: Tuple[float, float] = (0.9, 0.999)
     weight_decay: float = 0.0
 
     def init_optimizer(self, model: nn.Module):
@@ -477,9 +393,7 @@ class AdamConfig(OptimizerArgs):
         )
         """
         kwargs = self.to_dict()
-        weight_decay = getattr(self, "weight_decay", None)
-        # 1e-4
-        model_parameters = get_optim_parameters(model, weight_decay)
+        model_parameters = get_optim_parameters(model)
         return Adam(model_parameters, **kwargs)
 
 

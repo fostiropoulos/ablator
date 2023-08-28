@@ -7,7 +7,7 @@ of the model.
 from dataclasses import dataclass
 import time
 import ray
-from ablator.utils.base import get_gpu_mem
+from ablator.utils._nvml import get_gpu_mem
 
 
 class GPUError(Exception):
@@ -40,8 +40,8 @@ class GPU:
     def is_locked(self):
         return self._locking_process is not None or self._time_lock is not None
 
-    def lock(self, process_name):
-        self._locking_process = process_name
+    def lock(self, process_id):
+        self._locking_process = process_id
         self._time_lock = time.time()
 
     def unlock(self):
@@ -91,10 +91,13 @@ def wait_get_gpu(
         when there are no available GPUs within the timeout limit
     """
     timeouts = 0
+    # TODO the node_ip needs to be specified when requesting a GPU
     while timeouts < max_timeouts:
         if (
             least_used_gpu := ray.get(
-                manager.request_gpu.remote(expected_util_mb, process_name)  # type: ignore
+                manager.request_gpu.remote(  # type: ignore
+                    expected_util_mb, process_name
+                )
             )
         ) is None:
             time.sleep(1)
@@ -121,7 +124,7 @@ def unlock_gpu(manager: "GPUManager", gpu: int):
     ray.get(manager.unlock.remote(gpu))  # type: ignore
 
 
-@ray.remote
+@ray.remote(num_cpus=0.001, num_gpus=0.001)
 class GPUManager:
     """
     GPUManager class helps manage GPU resources on a given machine.

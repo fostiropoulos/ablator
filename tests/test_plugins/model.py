@@ -1,7 +1,8 @@
+import copy
 import os
 import time
+from multiprocessing import Lock
 from pathlib import Path
-from filelock import FileLock
 
 import pytest
 import ray
@@ -32,6 +33,11 @@ WORKING_DIR = Path(__file__).parent.parent.as_posix()
 
 class MyCustomException(Exception):
     pass
+
+
+@pytest.fixture()
+def custom_exception_class():
+    return MyCustomException
 
 
 class CustomModelConfig(ModelConfig):
@@ -83,7 +89,6 @@ class MyCustomModel(nn.Module):
 class MyErrorCustomModel(MyCustomModel):
     def __init__(self, config: CustomModelConfig) -> None:
         super().__init__(config)
-        self.exception_class = MyCustomException
 
     def forward(self, x: torch.Tensor):
         out, loss = super().forward(x)
@@ -128,10 +133,40 @@ def working_dir():
 def _remote_fn(gpu_id: int, gpu_manager=None):
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}"
     t = torch.randn(300, 100, 300).to(f"cuda")
-    time.sleep(2)
+    time.sleep(5)
     if gpu_manager is not None:
         ray.get(gpu_manager.unlock.remote(gpu_id))
     return gpu_id
+
+
+def _locking_remote_fn(gpu_id: int, gpu_manager=None):
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}"
+    t = torch.randn(300, 100, 300).to(f"cuda")
+    start_time = time.time()
+    while True:
+        gpu_info = ray.get(gpu_manager._gpus.remote())[gpu_id]
+        if gpu_info._locking_process is None:
+            break
+        if time.time() - start_time > 120:
+            raise RuntimeError("Never terminated.")
+        time.sleep(1)
+    return True
+
+
+def get_ablator(tmp_path, working_dir, main_ray_cluster):
+    main_ray_cluster.setUp()
+    assert len(main_ray_cluster.node_ips()) == main_ray_cluster.nodes + 1
+    n_trials = 9
+    error_wrapper = TestWrapper(MyErrorCustomModel)
+    config = _make_config(tmp_path, search_space_limit=n_trials)
+    config.experiment_dir = tmp_path
+    config.total_trials = n_trials
+    ablator = ParallelTrainer(wrapper=error_wrapper, run_config=config)
+    ablator.launch(working_dir)
+    return ablator
+
+
+test_lock = Lock()
 
 
 @pytest.fixture(scope="session")
@@ -140,24 +175,20 @@ def ablator(
     working_dir,
     main_ray_cluster,
 ):
-    tmp_path = Path(tmpdir_factory.getbasetemp())
-    with FileLock(tmp_path.joinpath(".ray_cluster")):
-        main_ray_cluster.setUp()
-        assert len(main_ray_cluster.node_ips()) == main_ray_cluster.nodes + 1
-        n_trials = 9
-        error_wrapper = TestWrapper(MyErrorCustomModel)
-        config = _make_config(tmp_path, search_space_limit=n_trials)
-        config.experiment_dir = tmp_path
-        config.total_trials = n_trials
-        ablator = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-        ablator.launch(working_dir)
-        return ablator
+    tmp_path = Path(tmpdir_factory.getbasetemp()).joinpath("ablator")
+
+    with test_lock:
+        yield get_ablator(
+            tmp_path,
+            working_dir,
+            main_ray_cluster,
+        )
 
 
 @pytest.fixture(scope="session")
 def ablator_results(ablator):
     config = ablator.run_config
-    return Results(config, ablator.experiment_dir)
+    return copy.deepcopy(Results(config, ablator.experiment_dir))
 
 
 @pytest.fixture()
@@ -165,11 +196,26 @@ def remote_fn():
     return _remote_fn
 
 
+@pytest.fixture()
+def locking_remote_fn():
+    return _locking_remote_fn
+
+
+# Important NOTE
+# device= "cuda" if torch.cuda.is_available() else "cpu",
+# For whatever reason the above would cause any remote function in this file
+# to not properly allocate cuda. I believe it is because the remote fn is coppied by ray and
+# torch is initialized in this file and messes up with environ "CUDA_VISIBLE_DEVICES"
+# as a consequence. DO not init ray on the same file as you define the remote.
+
+
 def _make_config(
     tmp_path: Path,
     search_space_limit: int | None = None,
     gpu_util: int = 100,
     search_space: dict | None = None,
+    device=None
+    # device= "cuda" if torch.cuda.is_available() else "cpu",
 ):
     optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
     train_config = CustomTrainConfig(
@@ -197,18 +243,22 @@ def _make_config(
             ),
         }
 
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
     config = MyParallelConfig(
         experiment_dir=tmp_path,
         train_config=train_config,
         model_config=CustomModelConfig(),
         verbose="silent",
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=device,
         amp=False,
         search_space=search_space,
         optim_metrics={"val_loss": "min"} if search_space_limit is None else None,
+        optim_metric_name="val_loss" if search_space_limit is None else None,
         total_trials=10,
         search_algo="tpe" if search_space_limit is None else "grid",
         concurrent_trials=10,
         gpu_mb_per_experiment=gpu_util,
     )
-    return config
+    return copy.deepcopy(config)

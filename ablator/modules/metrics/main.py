@@ -23,10 +23,10 @@ class Metrics:
     def __init__(
         self,
         *args,
-        batch_limit=30,
-        memory_limit=1e8,
+        batch_limit: int | None = 30,
+        memory_limit: int | None = int(1e8),
         evaluation_functions: dict[str, Callable] | None = None,
-        moving_average_limit=3000,
+        moving_average_limit: int | None = 3000,
         # metrics with their initial value that are updated manually, i.e. learning rate
         static_aux_metrics: dict[str, ty.Any] | None = None,
         # metrics for which we update with their moving average, i.e. loss
@@ -239,9 +239,14 @@ class Metrics:
         for k, v in metric_dict.items():
             self._get_ma(k).append(v)
 
-    def reset(self):
+    def reset(self, reset_ma: bool = False):
         """
         Reset to empty all prediction sequences (e.g predictions, labels).
+
+        Parameters
+        ----------
+        reset_ma : bool
+            Whether to reset the moving average values.
 
         Examples
         --------
@@ -257,8 +262,18 @@ class Metrics:
         >>> train_metrics.reset()
         """
         self._preds.reset()
+        if not reset_ma:
+            return
+        attrs = set(
+            list(self.__moving_eval_attributes__) + list(self.__moving_aux_attributes__)
+        )
+        for k in attrs:
+            _ma = self._get_ma(k)
+            last = _ma.last
+            _ma.reset()
+            _ma.append(last)
 
-    def evaluate(self, reset=True, update_ma=True):
+    def evaluate(self, reset=True, update=True):
         """
         Apply evaluation_functions to the set of predictions. Possibly update the
         moving averages (only those associated with evaluation functions, not moving auxiliary metrics) with
@@ -268,7 +283,7 @@ class Metrics:
         ----------
         reset : bool, optional
             A flag that indicates whether to reset the predictions to empty after evaluation. Default is True.
-        update_ma : bool, optional
+        update : bool, optional
             A flag that indicates whether to update the moving averages after evaluation. Default is True.
 
         Returns
@@ -302,10 +317,10 @@ class Metrics:
         {'val_mean': 62.5}
         """
         metrics = self._preds.evaluate()
-        if update_ma:
+        if update:
             self._update_ma_metrics(metrics)
         if reset:
-            self._preds.reset()
+            self.reset(reset_ma=update)
         return metrics
 
     # pylint: disable=missing-param-doc
@@ -398,7 +413,7 @@ class Metrics:
             'lr': 0.75
         }
         """
-        attrs = self.__moving_aux_attributes__ + self.__moving_eval_attributes__
-        ma_attrs = {k: self._get_ma(k).value for k in attrs}
+        ma_attrs = {k: self._get_ma(k).value for k in self.__moving_aux_attributes__}
+        eval_attrs = {k: self._get_ma(k).last for k in self.__moving_eval_attributes__}
         static_attrs = {k: getattr(self, k) for k in self.__static_aux_attributes__}
-        return {**ma_attrs, **static_attrs}
+        return {**ma_attrs, **static_attrs, **eval_attrs}

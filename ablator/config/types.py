@@ -3,6 +3,7 @@ Custom types for runtime checking
 """
 
 import typing as ty
+import inspect
 from collections import namedtuple
 from enum import Enum as _Enum
 
@@ -176,14 +177,6 @@ class Enum(_Enum):
     ``Optim``, which specifies the optimization direction: ``Optim.min`` or ``Optim.max``. ``Optim`` is used
     in config class ``ParallelConfig`` (``optim_metrics`` attribute).
 
-    Methods
-    -------
-    __eq__(self, __o: object) -> bool:
-        Checks for equality between the Enum instance and another object.
-
-    __hash__(self) -> int:
-        Calculates the hash of the Enum instance.
-
     Examples
     --------
     Create a custom Enum class by inheriting from ``Enum``:
@@ -246,6 +239,9 @@ class Enum(_Enum):
         True
         """
         return _Enum.__hash__(self)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.value.__repr__()})"
 
 
 # ALLOWED_COLLECTIONS is meant to only support collections that can be
@@ -462,7 +458,7 @@ def parse_type_hint(cls, type_hint):
     )
 
 
-def _parse_class(cls, kwargs):
+def _parse_class(cls, args_kwargs, debug: bool = False):
     """
     Parse values whose types are not  a collection or in ALLOWED_TYPES
     eg. bool, added dict(tune configs)
@@ -471,8 +467,10 @@ def _parse_class(cls, kwargs):
     ----------
     cls : Type
         The input Type
-    kwargs : dict or object
+    args_kwargs : dict or object
         The keyword arguments or object to parse with the given type
+    debug : bool, optional, default=False
+        Whether to load the configuration in debug mode, and ignore discrepancies / errors.
 
     Returns
     -------
@@ -484,21 +482,41 @@ def _parse_class(cls, kwargs):
     RuntimeError
         If the input kwargs is incompatible
     """
-    if isinstance(kwargs, cls):
+    if isinstance(args_kwargs, cls):
         # This is when initializing directly from config
-        pass
-    elif isinstance(kwargs, dict):
+        return args_kwargs
+    if (
+        isinstance(args_kwargs, (tuple, list))
+        and len(args_kwargs) == 2
+        and isinstance(args_kwargs[0], (list, tuple))
+        and isinstance(args_kwargs[1], dict)
+    ):
+        # Initializing from *args, **kwargs
+        params = inspect.signature(cls).parameters.keys()
+        args = args_kwargs[0]
+        kwargs = args_kwargs[1]
+    elif isinstance(args_kwargs, dict):
         # This is when initializing from a dictionary
-        # TODO or not, is to assert that kwargs is composed of primitives?
-        kwargs = cls(**kwargs)
+        args = ()
+        kwargs = args_kwargs
+    elif isinstance(args_kwargs, (tuple, list)):
+        args = args_kwargs
+        kwargs = {}
     else:
         # not sure what to do.....
-        raise RuntimeError(f"Incompatible kwargs {type(kwargs)}: {kwargs}\nand {cls}.")
-    return kwargs
+        raise RuntimeError(
+            f"{cls} provided args or kwargs ({args_kwargs}) must be formatted as "
+            "(args, kwargs) or (args) or (kwargs)."
+        )
+
+    params = inspect.signature(cls).parameters.keys()
+    if "debug" in params:
+        kwargs["debug"] = debug
+    return cls(*args, **kwargs)
 
 
 # pylint: disable=too-complex
-def parse_value(val, annot: Annotation, name=None):
+def parse_value(val, annot: Annotation, name=None, debug: bool = False):
     """
     Parses a value based on the given annotation.
 
@@ -510,6 +528,8 @@ def parse_value(val, annot: Annotation, name=None):
         The annotation namedtuple to guide the parsing.
     name : str, optional
         The name of the value, by default ``None``.
+    debug : bool, optional, default=False
+        Whether to load the configuration in debug mode, and ignore discrepencies / errors.
 
     Returns
     -------
@@ -530,7 +550,6 @@ def parse_value(val, annot: Annotation, name=None):
     >>> parse_value([1, 2, 3], annotation)
     [1, 2, 3]
     """
-    # annot = parse_type_hint(type_hint)
     if val is None:
         if not (annot.state in [Derived, Stateless] or annot.optional):
             raise RuntimeError(f"Missing required value for {name}.")
@@ -567,7 +586,7 @@ def parse_value(val, annot: Annotation, name=None):
         if issubclass(type(annot.variable_type), Type):
             _kwargs = annot._asdict()
             _kwargs["collection"] = Type
-            return [parse_value(_v, Annotation(**_kwargs)) for _v in val]
+            return [parse_value(_v, Annotation(**_kwargs), debug=debug) for _v in val]
         raise ValueError(f"Invalid type {type(annot.variable_type)} and field {name}")
     if annot.collection == Tuple:
         assert len(val) == len(
@@ -575,7 +594,7 @@ def parse_value(val, annot: Annotation, name=None):
         ), f"Incompatible lengths for {name} between {val} and type_hint: {annot.variable_type}"
         return [tp(_v) for tp, _v in zip(annot.variable_type, val)]
     if annot.collection == Type:
-        return _parse_class(annot.variable_type, val)
+        return _parse_class(annot.variable_type, val, debug=debug)
     if annot.collection is None and annot.variable_type == bool:
         return _val2bool(val)
     if annot.collection is None:

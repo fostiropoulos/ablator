@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pytest
 from ablator.modules.storage.remote import RemoteConfig
-import os
 import getpass
 import time
 
@@ -29,6 +28,7 @@ def load_rand_tensors(tmp_path: Path, n=2):
 def assert_tensor_list_eq(a, b):
     assert all([all(_a == _b) for _a, _b in zip(a, b)])
 
+
 @pytest.mark.skip("Remote Config is obsolete")
 def test_remote(tmp_path: Path):
     username = getpass.getuser()
@@ -53,11 +53,9 @@ def test_remote(tmp_path: Path):
 
 
 if __name__ == "__main__":
-    import shutil
-    tmp_path = Path("/tmp/remote_test")
-    shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_path.mkdir(exist_ok=True)
-    test_remote(tmp_path)
-    breakpoint()
+    from tests.conftest import run_tests_local
 
-    pass
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+    run_tests_local(test_fns)

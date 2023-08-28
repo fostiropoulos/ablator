@@ -6,6 +6,7 @@ import typing as ty
 from functools import wraps
 from functools import partial
 
+
 from ablator.mp.gpu_manager import GPUManager, unlock_gpu
 import ablator.utils.base as butils
 from ablator.config.mp import ParallelConfig
@@ -40,7 +41,11 @@ def _apply_unlock_hook(
 
         return run
 
-    model.train_step = hook_function(model.train_step, lock_on_unlocked)  # type: ignore
+    # pylint: disable=unnecessary-dunder-call
+    _hook_fn = hook_function(
+        model.__getattribute__("train_step", True), lock_on_unlocked
+    )
+    setattr(model, "train_step", _hook_fn)  # type: ignore
     return model
 
 
@@ -94,6 +99,7 @@ def train_main_remote(
     resume: bool = False,
     clean_reset: bool = False,
     progress_bar: ty.Optional[RemoteProgressBar] = None,
+    data_lock: ty.Optional[butils.Lock] = None,
 ) -> tuple[int, dict[str, float] | None, TrialState]:
     """
     The trial job that will be executed remotely at a ray node. This is where model training happens.
@@ -123,7 +129,9 @@ def train_main_remote(
         Whether to remove model directory when ``CheckpointNotFoundError`` is raised.
     progress_bar : RemoteProgressBar, optional
         Optionally, we can use a remote progress bar to update the results of the trial.
-
+    data_lock : Lock, optional
+        Use a Lock for when building the dataloader to ensure that it does not concurrently
+        download data for several processes
     Returns
     -------
     int
@@ -166,7 +174,13 @@ def train_main_remote(
     try:
         # NOTE in order for os.environ to wotk CUDA must be unitialized
         # up to this point.
-        res = model.train(run_config, resume=resume, remote_progress_bar=progress_bar)
+        model.init_state(
+            run_config,
+            resume=resume,
+            remote_progress_bar=progress_bar,
+            data_lock=data_lock,
+        )
+        res = model.train()
         mp_logger.info(f"Finished training - {run_config.uid}")
         return uid, res, TrialState.COMPLETE
     except (LossDivergedError, TrainPlateauError) as e:

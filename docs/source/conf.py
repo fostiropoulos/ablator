@@ -8,12 +8,13 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../ablator'))
 
-project = 'ablator'
-copyright = '2023, Iordanis'
-author = 'Iordanis'
-release = '0.0.1'
+sys.path.insert(0, os.path.abspath("../../ablator"))
+
+project = "ablator"
+copyright = "2023, ablator.org"
+author = "Iordanis Fostiropoulos"
+release = "0.0.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -22,7 +23,7 @@ extensions = ['sphinx.ext.autodoc', 'numpydoc',
               'sphinx.ext.todo', 'sphinx.ext.viewcode', 'nbsphinx',
               'sphinx.ext.autosummary']
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = []
 
 
@@ -45,7 +46,7 @@ numpydoc_class_members_toctree = False
 numpydoc_show_inherited_class_membersbool = False
 
 html_title = "Ablator Documentation"
-html_favicon = '_static/ablator-logo.svg'
+html_favicon = "_static/ablator-logo.svg"
 
 html_theme_options = {
     "navbar_start": ["navbar-logo"],
@@ -61,7 +62,7 @@ html_theme_options = {
         "image_light": "_static/ablator-banner-light.svg",
         "image_dark": "_static/ablator-banner-dark.svg",
         "link": "index",
-        "alt_text": "ablator"
+        "alt_text": "ablator",
     },
     "icon_links": [
         {

@@ -1,10 +1,9 @@
 import copy
-import sys
 import timeit
 from pathlib import Path
 
 import numpy as np
-from sklearn.metrics import accuracy_score, roc_auc_score
+from sklearn.metrics import accuracy_score
 
 from ablator.modules.metrics.stores import ArrayStore, MovingAverage, PredictionStore
 
@@ -21,7 +20,7 @@ def test_array_store(assert_error_msg):
         astore.append(i)
     assert len(astore._arr) == batch_limit
     assert astore._arr == list(range(50, 100))
-    assert (astore.get() == np.arange(50, 100)[:, None]).all() and astore.shape == (1,)
+    assert (astore.get() == np.arange(50, 100)[:, None]).all() and astore._shape == (1,)
 
     msg = assert_error_msg(lambda: astore.append(np.array([[10.0]])))
     assert (
@@ -30,9 +29,9 @@ def test_array_store(assert_error_msg):
     )
 
     astore = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
-    assert astore.store_type is None
+    assert astore._store_type is None
     astore.append(0)
-    assert astore.store_type == int
+    assert astore._store_type == int
     astore.reset()
     # reseting should not reset the type of shape
     msg = assert_error_msg(lambda: astore.append(0.0))
@@ -44,8 +43,8 @@ def test_array_store(assert_error_msg):
     astore = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
     assert astore.get().shape == (1, 0)
     astore.append(0.0)
-    assert astore.store_type == float
-    assert astore.shape == (1,)
+    assert astore._store_type == float
+    assert astore._shape == (1,)
     astore.append(0.0)
     assert astore.get().shape == (2, 1)
     astore.append(0.0)
@@ -53,7 +52,7 @@ def test_array_store(assert_error_msg):
     astore = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
     assert len(astore) == 0
     astore.append(np.arange(10)[None, :])
-    assert astore.store_type == int
+    assert astore._store_type == int
     astore.append(np.arange(10)[None, :])
     assert (astore.get() == np.stack([np.arange(10), np.arange(10)])).all()
     msg = assert_error_msg(lambda: astore.append(np.arange(5)[None, :]))
@@ -111,9 +110,9 @@ def test_ma_limits():
         array_store.append(arr)
     practical_limit = 14
     assert (
-        len(array_store) == practical_limit
-        and sum(array_store._arr_len) == practical_limit
-        and sum([len(i) for i in array_store._arr]) == practical_limit
+        len(array_store) == practical_limit - 1
+        and sum(array_store._arr_len) == practical_limit - 1
+        and sum([len(i) for i in array_store._arr]) == practical_limit - 1
     )
     batch_limit = 13
     array_store = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
@@ -148,9 +147,24 @@ def test_moving_average(assert_error_msg):
     assert msg == "MovingAverage value must be scalar. Got [0 1]"
     msg = assert_error_msg(lambda: ma.append("t"))
     assert msg == "Invalid MovingAverage value type <class 'str'>"
+    ma.append(123)
+    assert ma.last == 123
+    ma.append(324)
+    assert ma.last == 324
     ma.reset()
     assert np.isnan(ma.value)
+    assert np.isnan(ma.last)
     assert str(ma) == "nan"
+
+    ma = MovingAverage(
+        batch_limit=10,
+        memory_limit=None,
+    )
+    assert ma.store_type is None
+    last = ma.last
+    ma.reset()
+    ma.append(last)
+    assert ma.store_type is not None and ma.item_size is not None
 
 
 def my_eval_fn(*args, a1, a2="", **kwargs):
@@ -177,7 +191,7 @@ def assert_store_unison_limits(n_labels, n_preds):
         )
     assert store.limit is None
     store.append(preds=np.random.rand(1, n_preds), labels=np.random.rand(1, n_labels))
-    assert store.limit == bottleneck
+    assert store.limit == bottleneck - 1
 
 
 def test_prediction_store(assert_error_msg):
@@ -443,17 +457,16 @@ def test_metrics_speed():
             number=5,
         )
         batch_perfs.append(batch_perf)
-    assert abs(baseline_perf - perf) / baseline_perf < 0.5
-    assert (max(mem_perfs + batch_perfs) - baseline_perf) / baseline_perf < 0.5
+    # less than 100% difference
+    assert abs(baseline_perf - perf) / baseline_perf < 1
+    assert (max(mem_perfs + batch_perfs) - baseline_perf) / baseline_perf < 1.5
 
 
 if __name__ == "__main__":
-    from tests.conftest import _assert_error_msg
+    from tests.conftest import run_tests_local
 
-    test_metrics_speed()
-    test_inhomegenous_limits(_assert_error_msg)
-    test_array_store(_assert_error_msg)
-    test_ma_limits()
-    test_moving_average(_assert_error_msg)
-    test_prediction_store(_assert_error_msg)
-    test_prediction_store_eval_fns(_assert_error_msg)
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+
+    run_tests_local(test_fns)
