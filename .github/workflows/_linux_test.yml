@@ -8,6 +8,7 @@ jobs:
   pytest:
     runs-on: [self-hosted, ubuntu]
     steps:
+    - uses: actions/checkout@v3
     - name: Build Docker
       run: |
         docker build --build-arg="PY_VERSION=3.10" --tag ablator-test .
