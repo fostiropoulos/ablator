@@ -379,6 +379,7 @@ def test_violin_plot():
 if __name__ == "__main__":
     import copy
     from tests.conftest import run_tests_local
+
     l = locals()
     fn_names = [fn for fn in l if fn.startswith("test_")]
     test_fns = [l[fn] for fn in fn_names]

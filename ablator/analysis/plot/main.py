@@ -267,8 +267,7 @@ class PlotAnalysis(Analysis):
         if attribute_name_remap is not None:
             cat_attrs = list(set(attribute_name_remap.keys()).intersection(cat_attrs))
             num_attrs = list(set(attribute_name_remap.keys()).intersection(num_attrs))
-        save_dir = save_dir if save_dir is not None else self.save_dir
-        if save_dir is None:
+        if (save_dir := save_dir if save_dir is not None else self.save_dir) is None:
             raise ValueError(
                 "Must specify a `save_dir` either as an argument to `make_figures` or during class instantiation"
             )
