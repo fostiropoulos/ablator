@@ -31,7 +31,7 @@ class Categorical(Plot):
         if len(attributes.shape) > 1 and attributes.shape[-1] > 1:
             raise ValueError(f"{cls.__name__} attributes must be single dimensional.")
         unique_values = attributes.unique()
-        metrics: dict[str, pd.Series] = {}
+        metrics: dict[str | float, pd.Series] = {}
 
         if None in unique_values:
             # this is because None can not be dictionary key.
@@ -39,7 +39,7 @@ class Categorical(Plot):
             none_name = "None"
             if "None" in unique_values:
                 logger.warning(
-                    "`None` is present as categorical string value as "
+                    "`None` is present as a categorical string value as"
                     " well as None. Will rename None to Type(None)."
                 )
                 none_name = "Type(None)"

@@ -63,6 +63,18 @@ def _capture_output(fn):
     return out.getvalue(), err.getvalue()
 
 
+def _capture_logger():
+    out = io.StringIO()
+    logger = logging.getLogger()
+    logger.addHandler(logging.StreamHandler(out))
+    return out
+
+
+@pytest.fixture
+def capture_logger():
+    return _capture_logger
+
+
 @pytest.fixture
 def capture_output():
     return _capture_output
@@ -434,6 +446,7 @@ def run_tests_local(test_fns, kwargs=None, unpickable_kwargs=None):
             "make_config": _make_config,
             "remote_fn": _remote_fn,
             "locking_remote_fn": _locking_remote_fn,
+            "capture_logger": _capture_logger,
         }
 
         if hasattr(fn, "pytestmark"):

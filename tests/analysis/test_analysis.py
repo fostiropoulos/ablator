@@ -1,4 +1,5 @@
 import copy
+import io
 from pathlib import Path
 import re
 import numpy as np
@@ -283,7 +284,8 @@ def test_linear_plot():
     assert ax.get_legend() is None
 
 
-def test_categorical_plot(capture_output):
+def test_categorical_plot(capture_output, capture_logger):
+    out: io.StringIO = capture_logger()
     metric = pd.Series(np.random.randn(100), name="val_acc")
     cat_attributes = pd.Series(np.random.randint(10, size=(100)), name="attr")
     attribute_metric_map = Categorical._make_attribute_metric_map(
@@ -335,8 +337,8 @@ def test_categorical_plot(capture_output):
         lambda: Categorical._make_attribute_metric_map(metric, cat_attributes)
     )
     assert (
-        "`None` is present as categorical string value as  well as None. Will rename None to Type(None)."
-        in stderr
+        "`None` is present as a categorical string value as well as None. Will rename None to Type(None)."
+        in out.getvalue()
     )
 
     attribute_metric_map = Categorical._make_attribute_metric_map(
