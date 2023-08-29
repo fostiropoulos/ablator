@@ -3,9 +3,11 @@ import inspect
 import logging
 import operator
 import typing as ty
+from typing import Any, Union, KeysView
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
+from typing_extensions import Self
 
 from omegaconf import OmegaConf
 
@@ -25,7 +27,7 @@ from ablator.config.types import (
 from ablator.config.utils import dict_hash, flatten_nested_dict, parse_repr_to_kwargs
 
 
-def configclass(cls):
+def configclass(cls):  # noqa
     """
     Decorator for ConfigBase subclasses, adds the ``config_class`` attribute to the class.
 
@@ -138,9 +140,9 @@ class ConfigBase:
        All config class must be decorated with ``@configclass``.
 
     """
-    config_class = type(None)
+    config_class: Type = type(None)
 
-    def __init__(self, *args, debug: bool = False, **kwargs):
+    def __init__(self, *args: Any, debug: bool = False, **kwargs: Any):
         self._debug: bool
         self._freeze: bool
         self._class_name: str
@@ -190,7 +192,6 @@ class ConfigBase:
                 unspected_args,
             )
 
-    def _validate_inputs(self, *args, debug: bool, **kwargs) -> list[str]:
         added_variables = {
             item[0]
             for item in inspect.getmembers(type(self))
@@ -274,7 +275,7 @@ class ConfigBase:
             + ")"
         )
 
-    def keys(self):
+    def keys(self) -> KeysView[str]:
         """
         Get the keys of the configuration dictionary.
 
@@ -286,7 +287,7 @@ class ConfigBase:
         return self.to_dict().keys()
 
     @classmethod
-    def load(cls, path: ty.Union[Path, str], debug: bool = False):
+    def load(cls, path: Union[Path, str], debug: bool = False) -> Self:
         """
         Load a configuration object from a file.
 
@@ -299,7 +300,7 @@ class ConfigBase:
 
         Returns
         -------
-        ConfigBase
+        Self
             The loaded configuration object.
         """
         kwargs: dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text(encoding="utf-8")))  # type: ignore
@@ -340,7 +341,7 @@ class ConfigBase:
             }
         return annotations
 
-    def get_val_with_dot_path(self, dot_path: str):
+    def get_val_with_dot_path(self, dot_path: str) -> Any:
         """
         Get the value of a configuration object attribute using dot notation.
 
@@ -356,7 +357,7 @@ class ConfigBase:
         """
         return operator.attrgetter(dot_path)(self)
 
-    def get_type_with_dot_path(self, dot_path: str):
+    def get_type_with_dot_path(self, dot_path: str) -> Type:
         """
         Get the type of a configuration object attribute using dot notation.
 
@@ -373,7 +374,7 @@ class ConfigBase:
         val = self.get_val_with_dot_path(dot_path)
         return type(val)
 
-    def get_annot_type_with_dot_path(self, dot_path: str):
+    def get_annot_type_with_dot_path(self, dot_path: str) -> Type:
         """
         Get the type of a configuration object annotation using dot notation.
 
@@ -393,12 +394,13 @@ class ConfigBase:
         return annot[element].variable_type
 
     # pylint: disable=too-complex
+    # flake8: noqa: C901
     def make_dict(
         self,
         annotations: dict[str, Annotation],
         ignore_stateless: bool = False,
         flatten: bool = False,
-    ):
+    ) -> dict:
         """
         Create a dictionary representation of the configuration object.
 
@@ -406,15 +408,20 @@ class ConfigBase:
         ----------
         annotations : dict[str, Annotation]
             A dictionary of annotations.
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
-        flatten : bool, optional, default=False
-            Whether to flatten nested dictionaries.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default = False
+        flatten : bool
+            Whether to flatten nested dictionaries. By default = False
 
         Returns
         -------
         dict
             The dictionary representation of the configuration object.
+
+        Raises
+        ------
+        NotImplementedError
+            If the type of annot.collection is not supported.
         """
         return_dict = {}
         parse_reconstructor = partial(
@@ -445,7 +452,6 @@ class ConfigBase:
                     val = parse_reconstructor(_val)
             elif issubclass(type(_val), Enum):
                 val = _val.value
-
             else:
                 raise NotImplementedError
             return_dict[field_name] = val
@@ -453,7 +459,7 @@ class ConfigBase:
             return_dict = flatten_nested_dict(return_dict)
         return return_dict
 
-    def write(self, path: ty.Union[Path, str]):
+    def write(self, path: Union[Path, str]):
         """
         Write the configuration object to a file.
 
@@ -465,7 +471,9 @@ class ConfigBase:
         """
         Path(path).write_text(self.to_yaml(), encoding="utf-8")
 
-    def diff_str(self, config: "ConfigBase", ignore_stateless: bool = False):
+    def diff_str(
+        self, config: "ConfigBase", ignore_stateless: bool = False
+    ) -> list[str]:
         """
         Get the differences between the current configuration object and another configuration object as strings.
 
@@ -473,8 +481,8 @@ class ConfigBase:
         ----------
         config : ConfigBase
             The configuration object to compare.
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default ``False``.
 
         Returns
         -------
@@ -491,7 +499,7 @@ class ConfigBase:
 
     def diff(
         self, config: "ConfigBase", ignore_stateless: bool = False
-    ) -> list[tuple[str, tuple[type, ty.Any], tuple[type, ty.Any]]]:
+    ) -> list[tuple[str, tuple[type, Any], tuple[type, Any]]]:
         """
         Get the differences between the current configuration object and another configuration object.
 
@@ -499,8 +507,8 @@ class ConfigBase:
         ----------
         config : ConfigBase
             The configuration object to compare.
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default ``False``
 
         Returns
         -------
@@ -562,14 +570,14 @@ class ConfigBase:
                 diffs.append((k, (left_type, left_v), (right_type, right_v)))
         return diffs
 
-    def to_dict(self, ignore_stateless: bool = False):
+    def to_dict(self, ignore_stateless: bool = False) -> dict:
         """
         Convert the configuration object to a dictionary.
 
         Parameters
         ----------
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default ``False``
 
         Returns
         -------
@@ -579,7 +587,7 @@ class ConfigBase:
         """
         return self.make_dict(self.annotations, ignore_stateless=ignore_stateless)
 
-    def to_yaml(self):
+    def to_yaml(self) -> str:
         """
         Convert the configuration object to YAML format.
 
@@ -593,14 +601,14 @@ class ConfigBase:
         conf = OmegaConf.create(self.to_dict())
         return OmegaConf.to_yaml(conf)
 
-    def to_dot_path(self, ignore_stateless: bool = False):
+    def to_dot_path(self, ignore_stateless: bool = False) -> str:
         """
         Convert the configuration object to a dictionary with dot notation paths as keys.
 
         Parameters
         ----------
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. by default ``False``
 
         Returns
         -------
@@ -614,7 +622,7 @@ class ConfigBase:
         return OmegaConf.to_yaml(OmegaConf.create(_flat_dict))
 
     @property
-    def uid(self):
+    def uid(self) -> str:
         """
         Get the unique identifier for the configuration object.
 

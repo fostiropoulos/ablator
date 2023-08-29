@@ -19,7 +19,7 @@ except ImportError:
     widgets = None
 
 
-def in_notebook():
+def in_notebook() -> bool:
     try:
         # pylint: disable=import-outside-toplevel
         from IPython import get_ipython
@@ -33,7 +33,20 @@ def in_notebook():
     return True
 
 
-def get_last_line(filename: Path):
+def get_last_line(filename: Path | None) -> str | None:
+    """
+    This functions gets the last line from the file.
+
+    Parameters
+    ----------
+    filename : Path | None
+        The path of the filename.
+
+    Returns
+    -------
+    str | None
+        None if file doesn't exists or the last line of the file as a string.
+    """
     if filename is None or not filename.exists():
         return None
     with open(filename, "rb") as f:
@@ -51,6 +64,25 @@ SEPERATOR = " | "
 
 
 class Display:
+    """
+    Class for handling display for terminal and notebook.
+
+    Arguments
+    ---------
+    _curses : curses
+        curses object
+    stdscr :  curses.initscr()
+        To initialize the curses library and create a window object stdscr.
+    nrows : int
+        height of stdscr window.
+    nrows : int
+        width of stdscr window.
+    html_widget : widget.HTML
+        html_widget with empty value
+    html_value : str
+        html value for widget
+    """
+
     def __init__(self) -> None:
         self.is_terminal = not in_notebook()
         if self.is_terminal:
@@ -77,7 +109,7 @@ class Display:
             self.html_widget.value = self.html_value
             self.html_value = ""
 
-    def _display(self, text, pos, is_last=False):
+    def _display(self, text: str, pos: int, is_last: bool = False):
         if self.ncols is None or self.nrows is None:
             return
 
@@ -112,7 +144,7 @@ class Display:
         if self.is_terminal:
             self.nrows, self.ncols = self.stdscr.getmaxyx()
 
-    def print_texts(self, texts):
+    def print_texts(self, texts: list[str]):
         self._update_screen_dims()
         for i, text in enumerate(texts):
             self._display(text, i)
@@ -121,6 +153,29 @@ class Display:
 
 @ray.remote(num_cpus=0.001)
 class RemoteProgressBar:
+    """
+    RemoteProgressBar is a ProgressBar that is passed on a training function to report back
+    to a centralized server the metrics.
+
+    Parameters
+    ----------
+    total_trials : int | None
+        The total_trials
+
+    Attributes
+    ----------
+    start_time : float
+        Stores the start time of initializing remote progress bar.
+    total_trials : int | float
+        Stores the total_trials.
+    closed : dict[str, bool]
+        Stores the key-value pairs of trial's ``uid`` and boolean indicated it is closed or not.
+    texts : dict[str, list[str]]
+        Stores the text associated with the ``uid`` of the trial.
+    finished_trials : int
+        Tracks the total finished trials.
+    """
+
     def __init__(self, total_trials: int | None):
         super().__init__()
         self.start_time: float = time.time()
@@ -133,7 +188,7 @@ class RemoteProgressBar:
         for obj in range(self.total_trials):
             yield obj
 
-    def close(self, uid):
+    def close(self, uid: str):
         self.closed[uid] = True
 
     def make_bar(self):
@@ -166,7 +221,7 @@ class RemoteProgressBar:
 
         return texts
 
-    def update(self, finished_trials):
+    def update(self, finished_trials: int):
         self.finished_trials = finished_trials
 
     def update_status(self, uid: str, texts: list[str]):
@@ -182,7 +237,7 @@ class RemoteDisplay(Display):
         self.update_interval = update_interval
         self.remote_progress_bar = remote_progress_bar
 
-    def refresh(self, force=False):
+    def refresh(self, force: bool = False):
         if time.time() - self._prev_update_time > self.update_interval or force:
             self._prev_update_time = time.time()
             self.print_texts(
@@ -191,9 +246,28 @@ class RemoteDisplay(Display):
 
 
 class ProgressBar:
+    """
+    Class for using progress bar. [config.verbose = "progress"]
+
+    Parameters
+    ----------
+    total_steps : int
+        The total steps the progress bar is expected to iterate
+    epoch_len : int | None
+        The number of iterations for a single epoch that is used to calculate the time it takes per epoch.
+    logfile : Path | None
+        Path of logfile to read from to display on console.
+    update_interval : int
+        The time interval by which the progress bar will update the displayed metrics.
+    remote_display : ty.Optional[RemoteProgressBar]
+        A Remote display that can be used to report the progress to instead of printing it directly on console
+    uid : str | None
+        The trial uid that is used to report the metrics.
+    """
+
     def __init__(
         self,
-        total_steps,
+        total_steps: int,
         epoch_len: int | None = None,
         logfile: Path | None = None,
         update_interval: int = 1,
@@ -241,7 +315,7 @@ class ProgressBar:
         cls,
         current_iteration: int,
         start_time: float,
-        epoch_len: int,
+        epoch_len: int | None,
         total_steps: int,
         ncols: int | None = None,
     ):
@@ -267,7 +341,7 @@ class ProgressBar:
         metrics: dict[str, ty.Any],
         nrows: int | None = None,
         ncols: int | None = None,
-    ):
+    ) -> list:
         rows = tabulate(
             [[k + ":", f"{num_format(v)}"] for k, v in metrics.items()],
             disable_numparse=True,
@@ -298,12 +372,12 @@ class ProgressBar:
         return None
 
     @property
-    def nrows(self):
+    def nrows(self) -> int | None:
         if self.display is not None:
             return self.display.nrows - 5  # padding
         return None
 
-    def make_print_message(self):
+    def make_print_message(self) -> list:
         texts = self.make_metrics_message(self.metrics, self.nrows, self.ncols)
         pbar = self.make_bar(
             current_iteration=self.current_iteration,

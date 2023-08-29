@@ -27,10 +27,15 @@ class BaseSampler(ABC):
         ----------
         trial_id : int
             the trial_id which was returned when running ``eager_sampler``
-        metrics : dict[str, float]
+        metrics : dict[str, float] | None
             a metric dictionary corresponding to the updated metrics.
         state : TrialState
             the updated trial state
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented by the subclasses.
         """
         raise NotImplementedError
 
@@ -52,6 +57,11 @@ class BaseSampler(ABC):
             Otherwise a dictionary with keys as the internal configuration names and values, the
             corresponding values.
 
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented by the subclasses.
+
         """
         raise NotImplementedError
 
@@ -62,6 +72,7 @@ class BaseSampler(ABC):
         """
         raise NotImplementedError
 
+    # flake8: noqa
     def eager_sample(self) -> tuple[int, dict[str, ty.Any], None | dict[str, ty.Any]]:
         """
         eager_sample A sampled trial can be erroneous, for this reason we eagerly sample
@@ -69,7 +80,7 @@ class BaseSampler(ABC):
 
         Returns
         -------
-        tuple[int | dict[str, ty.Any]]
+        tuple[int, dict[str, ty.Any], None | dict[str, ty.Any]]
             a tuple that contains the trial id and the sampled configuration from the search space.
 
         Raises

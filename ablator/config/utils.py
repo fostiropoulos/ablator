@@ -8,7 +8,7 @@ from functools import reduce
 
 
 def flatten_nested_dict(
-    dict_: dict, expand_list=True, seperator="."
+    dict_: dict, expand_list: bool = True, seperator: str = "."
 ) -> dict[str, ty.Any]:
     """
     Flattens a nested dictionary, expanding lists and tuples if specified.
@@ -17,9 +17,9 @@ def flatten_nested_dict(
     ----------
     dict_ : dict
         The input dictionary to be flattened.
-    expand_list : bool, optional
+    expand_list : bool
         Whether to expand lists and tuples in the dictionary, by default ``True``.
-    seperator : str, optional
+    seperator : str
         The separator used for joining the keys, by default ``"."``.
 
     Returns
@@ -52,16 +52,18 @@ def flatten_nested_dict(
     return flatten_dict
 
 
-def dict_hash(*dictionaries: list[dict[str, ty.Any]], hash_len=4):
+def dict_hash(
+    *dictionaries: list[dict[str, ty.Any]] | dict[str, ty.Any], hash_len: int = 4
+) -> str:
     """
     Calculates the MD5 hash of one or more dictionaries.
 
     Parameters
     ----------
-    *dictionaries : list[dict[str, ty.Any]]
+    *dictionaries : list[dict[str, ty.Any]] | dict[str, ty.Any]
         One or more dictionaries to calculate the hash for.
-    hash_len : int, optional
-        The length of the hash to return, by default 4.
+    hash_len : int
+        The length of the hash to return, by default = 4.
 
     Returns
     -------

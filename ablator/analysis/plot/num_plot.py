@@ -11,10 +11,31 @@ logger = logging.getLogger(__name__)
 
 
 class Numerical(Plot):
-    DATA_TYPE = "numerical"
+    """
+    Base class for numerical plots
+
+    Attributes
+    ----------
+    DATA_TYPE: str
+        data_type for numerical plots.
+
+    """
+
+    DATA_TYPE: str = "numerical"
 
 
 class LinearPlot(Numerical):
+    """
+    Class for generating linear plots
+
+    Parameters
+    ----------
+    ax: Axes
+        axes object of linear plot.
+    figure: Figure
+        Its corresponding figure object.
+    """
+
     def _make(
         self,
         scatter_plot: bool = True,
@@ -42,5 +63,5 @@ class LinearPlot(Numerical):
 
         return self.figure, self.ax
 
-    def _parse_legend(self, ax):
+    def _parse_legend(self, ax: Axes):
         pass

@@ -25,11 +25,19 @@ from ablator.mp.utils import Resource
 from ablator.mp.utils import _sorted_nodes_by_util, ray_init
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 from ablator.mp.train_remote import train_main_remote
+from ablator.config.types import Optional
 
 
 class ParallelTrainer(ProtoTrainer):
     """
     A class for parallelizing training and hyperparameter optimization of models of different configurations with ray.
+
+    Parameters
+    ----------
+    wrapper : ModelWrapper
+        The model wrapper for the ParallelTrainer
+    run_config : ParallelConfig
+        The runtime configuration for this trainer.
 
     Attributes
     ----------
@@ -136,16 +144,7 @@ class ParallelTrainer(ProtoTrainer):
     """
 
     def __init__(self, wrapper: ModelWrapper, run_config: ParallelConfig):
-        """
-        Initialize ``ParallelTrainer`` using config from ``run_config``.
-
-        Parameters
-        ----------
-        wrapper: ModelWrapper
-            The model wrapper for the ParallelTrainer
-        run_config : ParallelConfig
-            The runtime configuration for this trainer.
-        """
+        # Initialize ``ParallelTrainer`` using config from ``run_config``.
 
         self.run_config: ParallelConfig
         super().__init__(wrapper=wrapper, run_config=run_config)
@@ -247,8 +246,8 @@ class ParallelTrainer(ProtoTrainer):
             resources={f"node:{node_ip}": 0.001}, name=trial_uuid
         )
         run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
-        diffs = self.run_config.diff_str(run_config)
-        diffs = "\n\t".join(diffs)
+        list_diffs = self.run_config.diff_str(run_config)
+        diffs = "\n\t".join(list_diffs)
         action = "Scheduling" if resume is False else "Resuming"
         msg = f"{action} uid: {trial_uuid}\nParameters: \n\t{diffs}\n-----"
         self.logger.info(msg)
@@ -278,7 +277,9 @@ class ParallelTrainer(ProtoTrainer):
             self.available_resources = self.node_manager.available_resources()
         # TODO find which tasks have died from available_resources and update experiment_state
 
-    def _make_futures(self, current_futures: list | None = None, soft_limit: int = 10):
+    def _make_futures(
+        self, current_futures: list | None = None, soft_limit: int = 10
+    ) -> list:
         # make enough futures such that there are concurrent_trials running.
         futures = [] if current_futures is None else current_futures
         concurrent_trial_limit: int | None = self.run_config.concurrent_trials
@@ -372,7 +373,7 @@ class ParallelTrainer(ProtoTrainer):
         ray.get(future)
 
     @property
-    def total_trials(self):
+    def total_trials(self) -> Optional[int]:
         return self.run_config.total_trials
 
     @total_trials.setter
@@ -467,7 +468,7 @@ class ParallelTrainer(ProtoTrainer):
         ray_head_address: str | None = None,
         resume: bool = False,
         excluding_files: list[str] | None = None,
-    ):
+    ) -> None:
         """
         Set up and launch the parallel ablation process. This sets up a ray cluster, and trials of different
         hyperparameters initialized (or retrieved) will be pushed to ray nodes so they can be executed in parallel.
@@ -476,15 +477,19 @@ class ParallelTrainer(ProtoTrainer):
         ----------
         working_directory : str
             The working directory that stores codes, modules that will be used by ray.
-        auxilary_modules : list[tys.ModuleType], None
+        auxilary_modules : list[tys.ModuleType] | None
             A list of modules to be used as ray clusters' working environment.
-        ray_head_address : str, None
+        ray_head_address : str | None
             Ray cluster address.
-        resume : bool, default=False
-            Whether to resume training the model from existing checkpoints and existing experiment state.
-        excluding_files: list[str], None
+        resume : bool
+            Whether to resume training the model from existing checkpoints and existing experiment state. By default False
+        excluding_files : list[str] | None
             A list of files in `.gitignore` format, that will be excluded from being uploaded to the ray cluster.
             If unspecified it ignores `.git/**` folder.
+
+        Returns
+        -------
+        None
         """
         try:
             torch.multiprocessing.set_start_method("spawn")

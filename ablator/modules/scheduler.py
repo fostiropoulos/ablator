@@ -29,7 +29,7 @@ class SchedulerArgs(ConfigBase):
     step_when: StepType
 
     @abstractmethod
-    def init_scheduler(self, model, optimizer):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
         """
         Abstract method to be implemented by derived classes, which creates and returns a scheduler object.
         """
@@ -66,6 +66,12 @@ class SchedulerConfig(ConfigBase):
     ... )
     >>> # ... create running config (proto/parallel), model wrapper, trainer and launch experiment
 
+    In the following example, ``scheduler_config`` will initialize property ``arguments`` of type ``StepLRConfig``,
+    setting ``step_size=1``, ``gamma=0.99`` as its properties. We also have access to ``init_scheduler()`` method
+    of the property, which initalizes an StepLR scheduler. This method is actually called in ``make_scheduler()``
+
+    >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+
     .. note::
         A common use case is to run ablation studies on different schedulers to learn about their
         effects on the model performance. However, ``SchedulerConfig`` only configures one single
@@ -78,25 +84,8 @@ class SchedulerConfig(ConfigBase):
     name: str
     arguments: SchedulerArgs
 
-    def __init__(self, name, arguments: dict[str, ty.Any]):
-        """
-        Initializes the scheduler configuration.
-
-        Parameters
-        ----------
-        name : str
-            The name of the scheduler, this can be any in ``['None', 'step', 'cycle', 'plateau']``.
-        arguments : dict[str, ty.Any]
-            The arguments for the scheduler, specific to a certain type of scheduler.
-
-        Examples
-        --------
-        In the following example, ``scheduler_config`` will initialize property ``arguments`` of type ``StepLRConfig``,
-        setting ``step_size=1``, ``gamma=0.99`` as its properties. We also have access to ``init_scheduler()`` method
-        of the property, which initalizes an StepLR scheduler. This method is actually called in ``make_scheduler()``
-
-        >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
-        """
+    def __init__(self, name: str, arguments: dict[str, ty.Any]):
+        # Initializes the scheduler configuration.
         _arguments: None | StepLRConfig | OneCycleConfig | PlateuaConfig
         if (argument_cls := SCHEDULER_CONFIG_MAP[name]) is None:
             _arguments = StepLRConfig(gamma=1)
@@ -110,9 +99,9 @@ class SchedulerConfig(ConfigBase):
 
         Parameters
         ----------
-        model: nn.Module
+        model : nn.Module
             Some schedulers require information from the model. The model is passed as an argument.
-        optimizer
+        optimizer : Optimizer
             The optimizer used to update the model parameters, whose learning rate we want to monitor.
 
         Returns
@@ -149,7 +138,7 @@ class OneCycleConfig(SchedulerArgs):
     total_steps: Derived[int]
     step_when: StepType = "train"
 
-    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer) -> OneCycleLR:
         """
         Initializes the OneCycleLR scheduler.
         Creates and returns a OneCycleLR scheduler that monitors optimizer's learning rate.
@@ -211,7 +200,9 @@ class PlateuaConfig(SchedulerArgs):
     verbose: bool = False
     step_when: StepType = "val"
 
-    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
+    def init_scheduler(
+        self, model: nn.Module, optimizer: Optimizer
+    ) -> ReduceLROnPlateau:
         """
         Initialize the ReduceLROnPlateau scheduler.
 
@@ -262,7 +253,7 @@ class StepLRConfig(SchedulerArgs):
     gamma: float = 0.99
     step_when: StepType = "epoch"
 
-    def init_scheduler(self, model: nn.Module, optimizer: Optimizer):
+    def init_scheduler(self, model: nn.Module, optimizer: Optimizer) -> StepLR:
         """
         Initialize the StepLR scheduler for a given model and optimizer.
 

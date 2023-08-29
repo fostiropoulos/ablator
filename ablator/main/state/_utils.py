@@ -8,7 +8,7 @@ from ablator.config.proto import Optim
 from ablator.utils.file import nested_set
 
 
-def verify_metrics(metrics: dict[str, float] | None):
+def verify_metrics(metrics: dict[str, float] | None) -> None:
     if metrics is None:
         return
     for k, v in metrics.items():
@@ -30,14 +30,14 @@ def augment_trial_kwargs(
 
     Parameters
     ----------
-    trial_kwargs : dict
+    trial_kwargs : dict[str, ty.Any]
         The dictionary containing the key-value pairs to be augmented.
-    augmentation : dict
+    augmentation : dict[str, ty.Any]
         The dictionary containing the additional key-value pairs.
 
     Returns
     -------
-    dict
+    dict[str, ty.Any]
         The augmented dictionary.
 
     Examples
@@ -61,8 +61,8 @@ def augment_trial_kwargs(
 
 
 def parse_metrics(
-    metric_directions: dict[str, Optim], metrics: dict[str, float] | None
-) -> dict[str, float] | None:
+    metric_directions: OrderedDict[str, Optim], metrics: dict[str, float] | None
+) -> OrderedDict[str, float] | None:
     """
     Convert metrics to ordered dictionary of float values and use their direction (minimize or maximize)
     if they are missing or are invalid to set to inf and -inf respectively. Returns the subet of metrics
@@ -70,15 +70,20 @@ def parse_metrics(
 
     Parameters
     ----------
-    metric_directions : dict
+    metric_directions : OrderedDict
         The ordered dictionary containing the directions of the metrics (minimize or maximize).
-    metrics : dict
+    metrics : dict | None
         The dictionary containing the metric values.
 
     Returns
     -------
-    OrderedDict
+    OrderedDict | None
         The ordered dictionary of metric values converted to float using their direction.
+
+    Raises
+    ------
+    KeyError
+        If any key from metrics_directions not found in metrics.
 
     Examples
     --------

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import git
 from git import exc
+import typing as ty
 import torch
 
 from ablator.config.proto import RunConfig
@@ -13,6 +14,13 @@ from ablator.main.model.wrapper import ModelWrapper
 class ProtoTrainer:
     """
     Manages resources for Prototyping. This trainer runs an experiment of a single prototype model. (Therefore no HPO)
+
+    Parameters
+    ----------
+    wrapper : ModelWrapper
+        The main model wrapper.
+    run_config : RunConfig
+        Running configuration for the model.
 
     Attributes
     ----------
@@ -91,16 +99,7 @@ class ProtoTrainer:
         wrapper: ModelWrapper,
         run_config: RunConfig,
     ):
-        """
-        Initialize model wrapper and running configuration for the model.
-
-        Parameters
-        ----------
-        wrapper : ModelWrapper
-            The main model wrapper.
-        run_config : RunConfig
-            Running configuration for the model.
-        """
+        # Initialize model wrapper and running configuration for the model.
         super().__init__()
         self.wrapper = copy.deepcopy(wrapper)
         self.run_config: RunConfig = copy.deepcopy(run_config)
@@ -142,7 +141,7 @@ class ProtoTrainer:
                 "to keep track of changes."
             )
 
-    def launch(self, working_directory: str, debug: bool = False):
+    def launch(self, working_directory: str, debug: bool = False) -> dict[str, float]:
         """
         Launch the prototype experiment (train, evaluate the single prototype model) and return metrics.
 
@@ -152,11 +151,11 @@ class ProtoTrainer:
             The working directory points to a git repository that is used for keeping track
             the code differences.
         debug : bool, default=False
-            Whether to train model in debug mode.
+            Whether to train model in debug mode. By default False
 
         Returns
         -------
-        metrics : Metrics
+        metrics : dict[str, float]
             Metrics returned after training.
         """
         self._mount()
@@ -169,28 +168,35 @@ class ProtoTrainer:
         metrics = self.wrapper.train(debug=debug)
         return metrics
 
-    def evaluate(self):
+    def evaluate(self) -> dict[str, dict[str, ty.Any]]:
         """
         Run model evaluation on the training results, sync evaluation results to external logging services
         (e.g Google cloud storage, other remote servers).
 
         Returns
         -------
-        metrics : Metrics
+        metrics : dict[str, dict[str, ty.Any]]
             Metrics returned after evaluation.
         """
         # TODO load model if it is un-trained
         metrics = self.wrapper.evaluate(self.run_config)
         return metrics
 
-    def smoke_test(self, config=None):
+    def smoke_test(self, config: RunConfig | None = None):
         """
         Run a smoke test training process on the model.
 
         Parameters
         ----------
-        config : RunConfig
+        config : RunConfig | None
             Running configuration for the model.
+
+        Examples
+        --------
+        try:
+            ablator.smoke_test(run_config)
+        except err:
+            raise err
         """
         if config is None:
             config = self.run_config

@@ -26,6 +26,34 @@ from ablator.main.state._utils import (
 
 
 class ExperimentState:
+    """
+    Initializes the ExperimentState.
+    Initialize databases for storing training states and a sampler
+    Create trials based on total num of trials specified in config
+
+    Parameters
+    ----------
+    experiment_dir : Path
+        The directory where the experiment data will be stored.
+    config : ParallelConfig
+        The configuration object that defines the experiment settings.
+    logger : FileLogger | None
+        The logger for outputting experiment logs. If not specified, a dummy logger will be used. By Default ``None``.
+    resume : bool
+        Whether to resume a previously interrupted experiment. By default ``False``.
+    sampler_seed : int | None
+        The seed to use for the trial sampler. By Default ``None``.
+
+    Raises
+    ------
+    RuntimeError
+        If the specified ``search_space`` parameter is not found in the configuration.
+    AssertionError
+        If ``config.search_space`` is empty.
+    RuntimeError
+        if the experiment database already exists and ``resume`` is ``False``.
+    """
+
     def __init__(
         self,
         experiment_dir: Path,
@@ -34,33 +62,6 @@ class ExperimentState:
         resume: bool = False,
         sampler_seed: int | None = None,
     ) -> None:
-        """
-        Initializes the ExperimentState.
-        Initialize databases for storing training states and a sampler
-        Create trials based on total num of trials specified in config
-
-        Parameters
-        ----------
-        experiment_dir : Path
-            The directory where the experiment data will be stored.
-        config : ParallelConfig
-            The configuration object that defines the experiment settings.
-        logger : FileLogger, optional
-            The logger to use for outputting experiment logs. If not specified, a dummy logger will be used.
-        resume : bool, optional
-            Whether to resume a previously interrupted experiment. Default is ``False``.
-        sampler_seed : int | None
-            The seed to use for the trial sampler. Default is ``None``.
-
-        Raises
-        ------
-        RuntimeError
-            If the specified ``search_space`` parameter is not found in the configuration.
-        AssertionError
-            If ``config.search_space`` is empty.
-        RuntimeError
-            if the experiment database already exists and ``resume`` is ``False``.
-        """
         self.config = config
         self.logger: FileLogger = logger if logger is not None else butils.Dummy()  # type: ignore
 
@@ -138,7 +139,7 @@ class ExperimentState:
 
         Returns
         -------
-        dict[str, Any]
+        dict[str, ty.Any]
             A dictionary of parameter names and their corresponding values.
 
         Examples
@@ -210,8 +211,27 @@ class ExperimentState:
 
     def __sample_trial(
         self,
-        ignore_errors=False,
+        ignore_errors: bool = False,
     ) -> tuple[int, ParallelConfig]:
+        """
+        Parameters
+        ----------
+        ignore_errors : bool
+            To ignore errors.
+
+        Returns
+        -------
+        tuple[int, ParallelConfig]
+
+        Raises
+        ------
+        StopIteration
+            If the number of invalid trials sampled exceeds the internal upper bound (`20`) or the
+            sampler raises a StopIteration exception indicating that the search space has been exhaustively
+            evaluated.
+        TypeError
+            If the trial parameter are invalid and `config.ignore_invalid_params` is set to False
+        """
         error_upper_bound = 20
         errored_trials = 0
         i = 0
@@ -282,10 +302,15 @@ class ExperimentState:
         ----------
         trial_id : int
             The id of the trial to update.
-        metrics : dict[str, float] | None, optional
-            The metrics of the trial, by default ``None``.
-        state : TrialState, optional
-            The state of the trial, by default ``TrialState.RUNNING``.
+        metrics : dict[str, float] | None
+            The metrics of the trial. By default ``None``.
+        state : TrialState
+            The state of the trial, by default ``TrialState.RUNNING``. (Optional)
+
+        Raises
+        ------
+        RuntimeError
+            if the experiment state is corrupted, i.e repeating trials are found.
 
         Examples
         --------
@@ -307,7 +332,7 @@ class ExperimentState:
 
     def _update_internal_trial_state(
         self, trial_id: int, metrics: dict[str, float] | None, state: TrialState
-    ):
+    ) -> bool:
         """
         Update the state of a trial in the Experiment state database.
 
@@ -324,6 +349,11 @@ class ExperimentState:
         -------
         bool
             True if the update was successful.
+
+        Raises
+        ------
+        RuntimeError
+            If the trial associated with the ``trial_id`` is not found.
         """
 
         with Session(self.engine) as session:
@@ -384,6 +414,12 @@ class ExperimentState:
             The optuna trial number.
         trial_state : TrialState
             The state of the trial.
+        _opt_distributions_kwargs : dict[str, ty.Any] | None
+            Optuna distribution kwargs, by default None.
+        _opt_distributions_types : dict[str, str] | None
+            Optuna distribution types, by default None
+        _opt_params : dict[str, ty.Any] | None
+            Optuna params, by default None.
         """
         with Session(self.engine) as session:
             trial = Trial(
@@ -406,9 +442,21 @@ class ExperimentState:
         return trials
 
     def valid_trials_id(self) -> list[int]:
+        """
+        Returns
+        -------
+        list[int]
+            trial ids of all the valid trials.
+        """
         return [c.id for c in self.valid_trials()]
 
     def valid_trials(self) -> list[Trial]:
+        """
+        Returns
+        -------
+        list[Trial]
+            All the valid trials (the are not pruned [Duplicated or Invalid]).
+        """
         stmt = select(Trial).where(
             (Trial.state != TrialState.PRUNED_DUPLICATE)
             & (Trial.state != TrialState.PRUNED_INVALID)
@@ -417,6 +465,19 @@ class ExperimentState:
         return trials
 
     def get_trials_by_state(self, state: TrialState) -> list[Trial]:
+        """
+        To get all the trials in the given state.
+
+        Parameters
+        ----------
+        state : TrialState
+            Represents the state of a trial.
+
+        Returns
+        -------
+        list[Trial]
+            List of all the trials in that given state.
+        """
         assert state in {
             TrialState.PRUNED,
             TrialState.COMPLETE,
@@ -433,6 +494,19 @@ class ExperimentState:
         return trials
 
     def get_trial_configs_by_state(self, state: TrialState) -> list[ParallelConfig]:
+        """
+        To get all the trial's configuration in the given state.
+
+        Parameters
+        ----------
+        state : TrialState
+            The state of a trial.
+
+        Returns
+        -------
+        list[ParallelConfig]
+            List of configurations of all the trials in that state.
+        """
         assert (
             state != TrialState.PRUNED_INVALID
         ), "Can not return configuration for invalid trials due to configuration errors."

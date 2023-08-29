@@ -6,7 +6,21 @@ from ablator.config.types import Annotation, Enum, List, Optional, Self, Tuple, 
 
 
 class SubConfiguration:
-    def __init__(self, **kwargs) -> None:
+    """
+    SubConfiguration for a searchSpace.
+
+    Attributes
+    ----------
+    arguments: dict[str, ty.Any]
+        arguments for the subconfigurations.
+
+    Parameters
+    ----------
+    TODO{hiue}
+
+    """
+
+    def __init__(self, **kwargs: ty.Any) -> None:
         _search_space_annotations = list(SearchSpace.__annotations__.keys())
 
         def _parse_value(v):
@@ -18,12 +32,12 @@ class SubConfiguration:
 
         self.arguments: dict[str, ty.Any] = _parse_value(kwargs)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> ty.Any:
         return self.arguments[item]
 
     @property
     def __dict__(self):
-        def _parse_nested_value(val):
+        def _parse_nested_value(val: ty.Any) -> dict:
             if issubclass(type(val), Type):
                 return _parse_nested_value(val.__dict__)
             if issubclass(type(val), ConfigBase):
@@ -55,8 +69,8 @@ class SubConfiguration:
             result.arguments[k] = deepcopy(v, memo)
         return result
 
-    def contains(self, value: dict[str, ty.Any]):
-        def _contains_value(arguments, v):
+    def contains(self, value: dict[str, ty.Any]) -> bool:
+        def _contains_value(arguments: dict[str, ty.Any], v: dict[str, ty.Any]) -> bool:
             if isinstance(arguments, SearchSpace):
                 return arguments.contains(v)
             if isinstance(v, dict) and not isinstance(arguments, dict):
@@ -85,6 +99,26 @@ class SearchSpace(ConfigBase):
     """
     Search space configuration, required in ``ParallelConfig``, is used to define
     the search space for a hyperparameter.
+
+    Parameters
+    ----------
+    TODO{hieu}
+
+    Attributes
+    ----------
+    value_range: Optional[Tuple[str, str]]
+        value range of the parameter.
+    categorical_values: Optional[List[str]]
+        categorical values for the parameter.
+    subspaces: Optional[List[Self]]
+        Nested SearchSpace, optional
+    sub_configuration: Optional[SubConfiguration]
+    value_type: FieldType = FieldType.continuous
+        value type of the parameter's values (continous or discrete).
+    n_bins: Optional[int]
+        Total bins for grid sampling, optional
+    log: bool = False
+        To log. by default, False.
 
     Examples
     --------
@@ -118,7 +152,7 @@ class SearchSpace(ConfigBase):
     n_bins: Optional[int]
     log: bool = False
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: ty.Any, **kwargs: ty.Any) -> None:
         super().__init__(*args, **kwargs)
         nan_values = sum(
             [
@@ -146,6 +180,19 @@ class SearchSpace(ConfigBase):
             ), "Can not specify `n_bins` without `value_range` or `categorical_values`."
 
     def parsed_value_range(self) -> tuple[int, int] | tuple[float, float]:
+        """
+        Returns
+        -------
+        tuple[int, int] | tuple[float, float]
+            tuple representing range of SearchSpace's value_range
+
+        Examples
+        --------
+        >>> ss = SearchSpace(value_range=[0.05, 0.1], value_type="float")
+        >>> range = ss.parsed_value_range()
+        >>> range
+        (0.05, 0.1)
+        """
         assert self.value_range is not None
         assert self.value_type is not None
         fn = int if self.value_type == FieldType.discrete else float
@@ -161,14 +208,14 @@ class SearchSpace(ConfigBase):
         annotations: dict[str, Annotation],
         ignore_stateless: bool = False,
         flatten: bool = False,
-    ):
+    ) -> dict:
         return_dict = super().make_dict(
             annotations=annotations, ignore_stateless=ignore_stateless, flatten=flatten
         )
 
         return return_dict
 
-    def make_paths(self):
+    def make_paths(self) -> list[str]:
         paths = []
 
         def _traverse_dict(_dict, prefix):
@@ -191,6 +238,17 @@ class SearchSpace(ConfigBase):
         return list({".".join(p) for p in paths})
 
     def __repr__(self) -> str:
+        """
+        Returns
+        -------
+        str
+            Searchspace in string format.
+
+        Raises
+        ------
+        RuntimeError
+            If the Searchspace is invalid or can't be converted to str.
+        """
         if self.value_range is not None:
             str_repr = f"SearchSpace(value_range={self.parsed_value_range()}"
             if self.value_type is not None:
@@ -211,7 +269,25 @@ class SearchSpace(ConfigBase):
             return str_repr
         raise RuntimeError("Poorly initialized `SearchSpace`.")
 
-    def contains(self, value: float | int | str | dict[str, ty.Any]):
+    def contains(self, value: float | int | str | dict[str, ty.Any]) -> bool:
+        """
+        Checks whether the value is in the search-space.
+
+        Parameters
+        ----------
+        value : float | int | str | dict[str, ty.Any]
+            value to search
+
+        Returns
+        -------
+        bool
+            whether searchspace contains the value
+
+        Raises
+        ------
+        ValueError
+            For invalid value.
+        """
         if self.value_range is not None and isinstance(value, (int, float, str)):
             min_val, max_val = self.parsed_value_range()
             return float(value) >= min_val and float(value) <= max_val

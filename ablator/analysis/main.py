@@ -55,6 +55,21 @@ class Analysis:
     """
     A class for analyzing experimental results.
 
+    Parameters
+    ----------
+    results : pd.DataFrame | Results
+        The result dataframe.
+    categorical_attributes : list[str] | None
+        The list of all the categorical hyperparameter names
+    numerical_attributes : list[str] | None
+        The list of all the numerical hyperparameter names
+    optim_metrics : dict[str, Optim] | None
+        A dictionary mapping metric names to optimization directions.
+    save_dir : str | None
+        The directory to save analysis results to.
+    cache : bool
+        Whether to cache results.
+
     Attributes
     ----------
     optim_metrics : dict[str, Optim]
@@ -72,6 +87,10 @@ class Analysis:
     results : pd.DataFrame
         The dataframe extracted from the results file based on given metrics names and hyperparameter names.
 
+    Raises
+    ------
+    FileNotFoundError
+        if the provided `save_dir` to save plots don't exists.
     """
 
     def __init__(
@@ -81,26 +100,8 @@ class Analysis:
         numerical_attributes: list[str] | None = None,
         optim_metrics: dict[str, Optim] | None = None,
         save_dir: str | None = None,
-        cache=False,
+        cache: bool = False,
     ) -> None:
-        """
-        Initialize the Analysis class.
-
-        Parameters
-        ----------
-        results : pd.DataFrame | Results
-            The result dataframe.
-        categorical_attributes : list[str] | None, optional
-            The list of all the categorical hyperparameter names, by default ``None``
-        numerical_attributes : list[str] | None, optional
-            The list of all the numerical hyperparameter names, by default ``None``
-        optim_metrics : dict[str, Optim] | None, optional
-            A dictionary mapping metric names to optimization directions, by default ``None``
-        save_dir : str | None, optional
-            The directory to save analysis results to, by default ``None``
-        cache : bool
-            Whether to cache results.
-        """
         (
             df,
             categorical_attributes,
@@ -138,7 +139,24 @@ class Analysis:
         ]
 
     @property
-    def metric_names(self):
+    def metric_names(self) -> list[str]:
+        """
+        Returns
+        -------
+        list[str]
+            list of all the metrics that will be plotted w.r.t hyperparameters.
+
+        Examples
+        --------
+        >>> Make PlotAnalysis's object
+        plots = Analysis(
+            ...
+            optim_metrics={"val_loss": Optim.min, "train_loss": Optim.min},
+        )
+        metrics = plots.metric_names
+        >>> returns
+        ['val_loss', 'train_loss']
+        """
         return list(self.optim_metrics.keys())
 
     @classmethod
@@ -146,7 +164,7 @@ class Analysis:
         cls,
         raw_results: pd.DataFrame,
         metric_map: dict[str, Optim],
-    ):
+    ) -> pd.DataFrame:
         def _best_perf(row: pd.DataFrame, name, obj_fn):
             if Optim(obj_fn) == Optim.min:
                 return row.sort_values(name, na_position="last").iloc[0]
@@ -173,7 +191,7 @@ class Analysis:
         metric_map: dict[str, Optim],
         metric_name_remap: dict[str, str] | None = None,
         attribute_name_remap: dict[str, str] | None = None,
-    ):
+    ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Optim]]:
         """
         Remaps attribute and metric names in ``attributes`` and ``metrics`` DataFrames
         based on ``attribute_name_remap`` and ``metric_name_remap``, and updates ``metric_map``
@@ -181,22 +199,22 @@ class Analysis:
 
         Parameters
         ----------
-        attributes : pandas.DataFrame
+        attributes : pd.DataFrame
             The DataFrame containing attribute values for each experiment.
-        metrics : pandas.DataFrame
+        metrics : pd.DataFrame
             The DataFrame containing metric values for each experiment.
-        metric_map : dict of str to Optim
+        metric_map : dict[str, Optim]
             A dictionary mapping metric names to optimization objectives (minimization or maximization).
-        metric_name_remap : dict of str to str or None, optional
+        metric_name_remap : dict[str, str] | None
             A dictionary mapping input metric names to output metric names.
             If None, the output metric names will be the same as the input metric names.
-        attribute_name_remap : dict of str to str or None, optional
+        attribute_name_remap : dict[str, str] | None
             A dictionary mapping input attribute names to output attribute names.
             If None, the output attribute names will be the same as the input attribute names.
 
         Returns
         -------
-        pandas.DataFrame, pandas.DataFrame, dict of str to Optim
+        tuple[pd.DataFrame, pd.DataFrame, dict[str, Optim]]
             The remapped ``attributes`` DataFrame, the remapped ``metrics`` DataFrame,
             and the updated ``metric_map`` dictionary.
 

@@ -111,47 +111,47 @@ def train_main_remote(
         The ModelWrapper that is used to train a model.
     run_config : ParallelConfig
         Runtime configuration for this trial.
-    mp_logger : FileLogger
+    mp_logger : RemoteFileLogger
         The file logger that's used to log training progress.
-    gpu_manager : GPUManager | None
+    gpu_manager : ty.Union[GPUManager, None]
         The gpu manager that is used to inform when the training progress starts
     gpu_id : int | None
         The gpu id to which to assign resources on the current remote.
     uid : int
         the trial unique identifier.
-    fault_tollerant : bool, optional, default=True
-        Whether to tollerate crashes, aka to cease execution when the ray job crashes.
-    crash_exceptions_types : list[type], None, optional, default=None
-        Types of exceptions that are considered as crashes.
-    resume : bool, default=False
-        Whether to resume training the model from existing checkpoints and existing experiment state.
-    clean_reset : bool, default=False
-        Whether to remove model directory when ``CheckpointNotFoundError`` is raised.
-    progress_bar : RemoteProgressBar, optional
+    fault_tollerant : bool
+        Whether to tollerate crashes, aka to cease execution when the ray job crashes. By default ``True``
+    crash_exceptions_types : list[type] | None
+        Types of exceptions that are considered as crashes. By default ``None``
+    resume : bool
+        Whether to resume training the model from existing checkpoints and existing experiment state. By default ``False``
+    clean_reset : bool
+        Whether to remove model directory when ``CheckpointNotFoundError`` is raised. By default ``False``
+    progress_bar : ty.Optional[RemoteProgressBar]
         Optionally, we can use a remote progress bar to update the results of the trial.
     data_lock : Lock, optional
         Use a Lock for when building the dataloader to ensure that it does not concurrently
         download data for several processes
     Returns
     -------
-    int
-        The trial uid corresponding to the results.
-    dict[str, float], None
-        If exception raised (Except for LossDivergedError and TrainPlateauError),
-        this will be ``None`` object. Otherwise, this will be a dictionary of metrics.
-    TrialState
-        A TrialState object indicating the state of the trial job
+    tuple[int, dict[str, float] | None, TrialState]
+        int
+            The trial uid corresponding to the results.
+        dict[str, float], None
+            If exception raised (Except for LossDivergedError and TrainPlateauError),
+            this will be ``None`` object. Otherwise, this will be a dictionary of metrics.
+        TrialState
+            A TrialState object indicating the state of the trial job
 
-        - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training,
-          returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
+            - If ``LossDivergedError`` or ``TrainPlateauError`` is raised while training,
+            returned state will be ``TrialState.PRUNED_POOR_PERFORMANCE``
 
-        - If ``RuntimeError`` (with message ``'CUDA out of memory'``),
-          or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training,
-          returned state will be ``TrialState.FAIL_RECOVERABLE``
+            - If ``RuntimeError`` (with message ``'CUDA out of memory'``),
+            or ``CheckpointNotFoundError`` (with ``clean_reset=True``) is raised while training,
+            returned state will be ``TrialState.FAIL_RECOVERABLE``
 
-        - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised,
-          returned state will be ``TrialState.FAIL``
-
+            - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised,
+            returned state will be ``TrialState.FAIL``
     """
     if gpu_id is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)

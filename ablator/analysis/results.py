@@ -40,23 +40,23 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
     Examples
     --------
     >>> result json file:
+    [{
+    "train_loss": 10.35,
+    "val_loss": NaN,
+    "current_epoch": 1,
+    },
     {
-    "run_id": "run_1",
-    "accuracy": 0.85,
-    "loss": 0.35
-    }
-    {
-    "run_id": "run_2",
-    "accuracy": 0.87,
-    "loss": 0.32
-    }
+    "train_loss": 3.89,
+    "val_loss": 7.04,
+    "current_epoch": 2,
+    }]
     >>> config file
-    experiment_name: "My Experiment"
-    batch_size: 64
+    experiment_dir: "\\tmp\\results\\experiment_8925_9991\"
+    device: cpu
     >>> return value
-           run_id  accuracy loss experiment_name batch_size     path
-    0       run_1      0.85  0.35    My Experiment    64  path/to/experiment
-    1        run_2      0.87  0.32    My Experiment    64  path/to/experiment
+    #   current_epoch   train_loss  val_loss            experiment_dir               device
+    0            1          10.35      NaN     "\\tmp\\results\\experiment_8925_9991\"    cpu
+    1            2          3.89       7.04    "\\tmp\\results\\experiment_8925_9991\"    cpu
     """
 
     try:
@@ -117,13 +117,13 @@ class Results:
 
     Parameters
     ----------
-    config : type[ParallelConfig]
+    config : type[ParallelConfig] | ParallelConfig
         The configuration class used
     experiment_dir : str | Path
         The path to the experiment directory.
-    cache : bool, optional
+    cache : bool
         Whether to cache the results, by default ``False``
-    use_ray : bool, optional
+    use_ray : bool
         Whether to use ray for parallel processing, by default ``False``
 
     Attributes
@@ -143,7 +143,14 @@ class Results:
     numerical_attributes: list[str]
         The list of all the numerical hyperparameter names
     categorical_attributes: list[str]
-        The list of all the categorical hyperparameter names
+        The list of all the categorical hyperparameter names.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the experiment directory doesn't exists.
+    ValueError
+        If run-config is provided instead of parallel-config.
     """
 
     def __init__(
@@ -193,7 +200,7 @@ class Results:
         ]
         self._assert_cat_attributes(self.categorical_attributes)
 
-    def _make_cache(self, clean=False):
+    def _make_cache(self, clean: bool = False):
         memory = Memory(self.experiment_dir.joinpath(".cache"), verbose=0)
         self._parse_results = memory.cache(
             self._parse_results, ignore=["self", "init_ray"]
@@ -212,11 +219,6 @@ class Results:
         ----------
         categorical_attributes : list[str]
             list of categorical attributes
-
-        Raises
-        ------
-        AssertionError
-            if the categorical attributes are imbalanced
 
         Examples
         --------
@@ -237,7 +239,7 @@ class Results:
                 )
 
     @property
-    def metric_names(self) -> list[str]:
+    def metric_names(self) -> list[str]:  # type: ignore
         """
         Get the list of all optimize directions
 
@@ -245,6 +247,11 @@ class Results:
         -------
         list[str]
             list of optimize metric names
+
+        Examples
+        --------
+        >>> results.metric_names
+        ["val_loss", "train_loss", "val_acc", "train_acc"]
         """
         return [str(v) for v in self.metric_map.values()]
 
@@ -254,7 +261,7 @@ class Results:
         self,
         experiment_dir: Path,
         init_ray: bool,
-    ):
+    ) -> pd.DataFrame:
         """
         Read multiple results from experiment directory with ray to enable parallel processing.
 
@@ -264,6 +271,11 @@ class Results:
             The experiment directory
         init_ray : bool
             Whether to use ray for parallel processing
+
+        Returns
+        -------
+        pd.DataFrame
+            Pandas Dataframe from read_results.
         """
         assert (
             experiment_dir.exists()
@@ -277,11 +289,10 @@ class Results:
         cls,
         config_type: type[ConfigBase],
         experiment_dir: Path | str,
-        num_cpus=None,
+        num_cpus: float | None = None,
     ) -> pd.DataFrame:
         """
         Read multiple results from experiment directory with ray to enable parallel processing.
-
         This function calls ``read_result`` many times, refer to ``read_result`` for more details.
 
         Parameters
@@ -290,13 +301,29 @@ class Results:
             The configuration class
         experiment_dir : Path | str
             The experiment directory
-        num_cpus : int, optional
+        num_cpus : float | None
             Number of CPUs to use for ray processing, by default ``None``
 
         Returns
         -------
         pd.DataFrame
             A dataframe of all the results
+
+        Raises
+        ------
+        RuntimeError
+            If no results are present in the experiment directory.
+
+        Examples
+        --------
+        >>> results.read_results(config_type = ParallelConfig, experiment_dir = "/tmp/results/experiment_8925_9991/")
+        train_loss	val_loss	best_iteration	best_loss	current_epoch	current_iteration	epochs
+        13.3658738		        0	                inf	            1	            100             5
+        2.277102967	0.277085876	100	            0.277085876	        2	            200	            5
+        2.277154112	0.27619998	200	            0.27619998	        3	            300	            5
+        2.276529543	0.286987235	200	            0.27619998	        4	            400	            5
+        2.279828385	0.274052692	400	            0.274052692	        5	            500	            5
+        11.91869608		        0	                inf	            1	            100	            5
         """
         results: list[pd.DataFrame] = []
         futures: list[ray.ObjectRef] = []

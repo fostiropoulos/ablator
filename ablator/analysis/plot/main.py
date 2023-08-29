@@ -71,15 +71,15 @@ class PlotAnalysis(Analysis):
         file_format: ty.Literal["png", "pdf", "jpg"] = "png",
     ):
         """
-        Write images to a directory based on fig types,
+        Write images to a directory based on fig types.
 
         Parameters
         ----------
-        fig_map: dict[str, ty.Union[Axes, Figure, Image.Image]]
+        fig_map : dict[str, ty.Union[Axes, Figure, Image.Image]]
             A dictionary mapping names to matplotlib objects.
-        path: Path
+        path : Path
             Path to save the images to.
-        file_format: ty.Literal["png", "pdf", "jpg"]
+        file_format : ty.Literal["png", "pdf", "jpg"]
             the file format to save the images as.
 
         Examples
@@ -106,36 +106,42 @@ class PlotAnalysis(Analysis):
         metrics: pd.DataFrame,
         results: pd.DataFrame,
         metric_map: dict[str, Optim],
-        append=False,
+        append: bool = False,
         ax: Axes | None = None,
         metric_name_remap: dict[str, str] | None = None,
         attribute_name_remap: dict[str, str] | None = None,
         **kwargs,
-    ):
+    ) -> dict:
         """
         Method level docstring goes here.
 
         Parameters
         ----------
-        path: Path | None
+        path : Path | None
             A pathlib.Path object representing the directory to write images to.
-        plot_cls: type[Plot]
+        plot_cls : type[Plot]
             A subclass of Plot representing the type of plot to make.
-        metrics: pd.DataFrame
+        metrics : pd.DataFrame
             A pandas DataFrame containing metric values.
-        results: pd.DataFrame
+        results : pd.DataFrame
             A pandas DataFrame containing attribute values.
-        metric_map: dict[str, Optim]
+        metric_map : dict[str, Optim]
             A dictionary mapping metric names to optimization functions.
-        append: bool
+        append : bool
             A boolean indicating whether to append plots to an existing axes object.
-        ax: Axes | None
+        ax : Axes | None
             A matplotlib.axes.Axes object representing the axis to plot on.
-        metric_name_remap: dict[str, str] | None
+        metric_name_remap : dict[str, str] | None
             An optional dictionary mapping metric names to new metric names.
-        attribute_name_remap: dict[str, str] | None
+        attribute_name_remap : dict[str, str] | None
             An optional dictionary mapping attribute names to new attribute names.
-        kwargs: Additional keyword arguments to pass to the plot method.
+        **kwargs
+            Additional keyword arguments to pass to the plot method.
+
+        Returns
+        -------
+        dict
+            A dictionary of metric name to its axes_map
 
         Examples
         --------
@@ -225,6 +231,21 @@ class PlotAnalysis(Analysis):
         save_dir: ty.Union[Path, str],
         **plt_kwargs,
     ):
+        """
+        To make violinplots for the given attribute names (data type: discrete) v.s. the metrics
+        and saving the plots to the `save_dir` directory.
+
+        Parameters
+        ----------
+        attribute_names : list[str]
+            list of attributes to plot against the metrics.
+        metrics : list[str]
+            list of metrics to plot against the given attributes.
+        save_dir : ty.Union[Path, str]
+            directory to save results.
+        **plt_kwargs
+            Additional keyword arguments to pass to the plot.
+        """
         save_path = Path(save_dir).joinpath("violinplot")
         metric_map = {k: v for k, v in self.optim_metrics.items() if k in metrics}
         self._make_metric_plots(
@@ -242,7 +263,26 @@ class PlotAnalysis(Analysis):
         metrics: list[str],
         save_dir: ty.Union[Path, str],
         **plt_kwargs,
-    ):
+    ) -> dict:
+        """
+        To make linear plots for the given attribute names (data type: numerical) v.s. the metrics
+          and saving the plots to the `save_dir` directory.
+
+        Parameters
+        ----------
+        attribute_names : list[str]
+            list of attributes to plot against the metrics.
+        metrics : list[str]
+            list of metrics to plot against the given attributes.
+        save_dir : ty.Union[Path, str]
+            directory to save results.
+        **plt_kwargs
+            Additional keyword arguments to pass to the plot method.
+
+        Returns
+        -------
+        dict
+        """
         save_path = Path(save_dir).joinpath("linearplot")
         metric_map = {k: v for k, v in self.optim_metrics.items() if k in metrics}
 
@@ -259,8 +299,21 @@ class PlotAnalysis(Analysis):
         self,
         metric_name_remap: dict[str, str] | None = None,
         attribute_name_remap: dict[str, str] | None = None,
-        **plt_kwargs,
+        **plt_kwargs: ty.Any,
     ):
+        """
+        The function to generate violinplots for categorical values and linear plots for numerical values.
+        Plots are created as metrics vs. attributes.
+
+        Parameters
+        ----------
+        metric_name_remap : dict[str, str] | None
+            mappings for config's metrics keys to user defined names. By default, None
+        attribute_name_remap : dict[str, str] | None
+            mappings for config's searchspace names to user defined names for attributes. By default, None
+        **plt_kwargs : ty.Any
+            TODO{hieu}
+        """
         cat_attrs = list(self.categorical_attributes)
         num_attrs = list(self.numerical_attributes)
         if attribute_name_remap is not None:
