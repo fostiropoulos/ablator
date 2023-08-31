@@ -49,6 +49,13 @@ class SchedulerConfig(ConfigBase):
     arguments : SchedulerArgs
         The arguments needed to initialize the scheduler.
 
+    Parameters
+    ----------
+    name : str
+        The name of the scheduler, this can be any in ``['None', 'step', 'cycle', 'plateau']``.
+    arguments : dict[str, ty.Any]
+        The arguments for the scheduler, specific to a certain type of scheduler.
+    
     Examples
     --------
     The following example shows how to create a scheduler config and use it in
