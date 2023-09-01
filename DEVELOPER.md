@@ -53,7 +53,42 @@ Do not install Windows Docker using `Docker Desktop` for Windows. If you already
 
 ### For MAC
 
-TODO
+Homebrew is a package manager for macOS that will make installing Docker and other dependencies easier.
+Open a terminal and run the following command to install Homebrew
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Run the following command to install Docker using Homebrew 
+```bash 
+brew install Docker
+```
+
+After installation, you need to start the Docker daemon. Run the following command.
+```bash
+sudo dockerd &
+```
+This command will start the Docker daemon in the background.
+
+
+Docker Compose is a tool for defining and running multi-container Docker applications. You can install it using Homebrew
+```bash
+brew install docker-compose
+```
+
+
+You can verify that Docker is running by using the following command
+```bash
+docker --version
+```
+You should see the version number of Docker if the installation was successful.
+
+
+To verify whether Docker is running, run the below Docker command in the terminal
+```bash
+docker run hello-world
+```
+
 
 ## Setting up Docker environment for non-root users
 
@@ -182,7 +217,43 @@ sudo systemctl status ssh
 ### For Windows
 None
 ### For Mac
-**TODO**
+
+For macOS, enabling and configuring SSH is quite similar to Ubuntu.
+You can use the following commands to disable the SSH server and stop the service while running tests on macOS. The below command disables the remote login feature, and effectively disables the SSH server.
+
+```bash
+sudo systemsetup -setremotelogin off
+```
+
+The below command stops the SSH service using the launchctl command, which manages launch services in macOS.
+```bash
+   sudo launchctl stop com.openssh.sshd 
+```
+
+SSH configuration settings are stored in the /etc/ssh/sshd_config file on macOS, just like on Ubuntu. You can edit the file by using a text editor like nano, vim, or sudo nano.
+For example:
+
+```bash
+sudo nano /etc/ssh/sshd_config
+```
+
+Make the following changes to the sshd_config file - 
+- Set PasswordAuthentication to no to disable password-based authentication.
+- Set PubkeyAuthentication to yes to enable public key authentication.
+After making these changes, save the file (Ctrl + O) and exit (Ctrl + X) the text editor.
+
+Once you've made the changes, you must restart the SSH service to apply them. Use the following commands:
+```bash
+sudo launchctl stop com.openssh.sshd
+sudo launchctl start com.openssh.sshd
+```
+
+You can check SSH Status by using the command below:
+```bash
+sudo launchctl list | grep ssh
+```
+If the SSH service is running, you'll see an entry indicating its status.
+
 ## Testing changes
 
 Make sure that ray is not currently running on your local environment. e.g. by running `ray status`
