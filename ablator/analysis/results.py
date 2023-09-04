@@ -183,11 +183,9 @@ class Results:
         if not run_config_path.exists():
             raise FileNotFoundError(f"{run_config_path}")
         self.config = config_type.load(run_config_path)
-        self.metric_map: dict[str, Optim] = self.config.optim_metrics
-        self._make_cache(clean=not cache)
-        self.data: pd.DataFrame = self._parse_results(
-            self.experiment_dir, init_ray=use_ray
-        )
+        # TODO we need to have mypy plugin to interpret Dict[Optim] as dict[str, Optim]
+        self.metric_map: dict[str, Optim] = self.config.optim_metrics  # type: ignore
+        self.data: pd.DataFrame = self._make_data(use_ray=use_ray, clean=not cache)
 
         self.config_attrs: list[str] = list(self.config.search_space.keys())
         self.search_space: dict[str, SearchSpace] = self.config.search_space
@@ -200,13 +198,13 @@ class Results:
         ]
         self._assert_cat_attributes(self.categorical_attributes)
 
-    def _make_cache(self, clean: bool = False):
+    def _make_data(self, use_ray: bool = False, clean: bool = False):
         memory = Memory(self.experiment_dir.joinpath(".cache"), verbose=0)
-        self._parse_results = memory.cache(
-            self._parse_results, ignore=["self", "init_ray"]
-        )
+        _parse_results = memory.cache(self._parse_results, ignore=["self", "init_ray"])
+
         if clean:
-            self._parse_results.clear()
+            _parse_results.clear()
+        return _parse_results(self.experiment_dir, init_ray=use_ray)
 
     def _assert_cat_attributes(self, categorical_attributes: list[str]):
         """
@@ -255,8 +253,6 @@ class Results:
         """
         return [str(v) for v in self.metric_map.values()]
 
-    # method-hidden because we over-write it with the cached version.
-    # pylint: disable=method-hidden
     def _parse_results(
         self,
         experiment_dir: Path,

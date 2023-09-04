@@ -58,8 +58,6 @@ class Dict(ty.Dict[str, T]):
 
     """
 
-    pass
-
 
 # pylint: disable=deprecated-typing-alias
 class List(ty.List[T]):
@@ -96,8 +94,6 @@ class List(ty.List[T]):
     and the value of ``my_int_list[2]`` is cast to an integer.
 
     """
-
-    pass
 
 
 # pylint: disable=deprecated-typing-alias
@@ -136,8 +132,6 @@ class Tuple(ty.Tuple[T]):
         ``my_2str_int_tuple`` must have exactly 3 elements.
     """
 
-    pass
-
 
 class Optional(ty.Generic[T]):
     """
@@ -163,12 +157,10 @@ class Optional(ty.Generic[T]):
     my_optional_list: null
     """
 
-    pass
-
 
 # Support for nested objects
 class Self:
-    pass
+    ...
 
 
 Type = type
@@ -521,6 +513,7 @@ def _parse_class(cls: Any, args_kwargs: dict | object, debug: bool = False) -> o
 
 
 # flake8: noqa: C901
+# pylint: disable=too-complex
 def parse_value(
     val: Any, annot: Annotation, name: str | None = None, debug: bool = False
 ) -> ty.Any:
@@ -623,8 +616,8 @@ class Stateful(ty.Generic[T]):
 
     Examples
     --------
-    The below example defines a model config that has stateful embedding dimensions, which means among every experiment,
-    the embedding dimension must be the same (and will be 100).
+    The below example defines a model config that has stateful embedding dimensions, which means that in
+    every experiment, the embedding dimension must be the same (and will be 100).
 
     >>> @configclass
     >>> class MyModelConfig(ModelConfig):
@@ -632,11 +625,11 @@ class Stateful(ty.Generic[T]):
     >>> model_config = MyModelConfig(embed_dim=100) # Must provide values for ``embed_dim`` before launching experiment
 
     .. note::
-        - In contrary to ``Derived``, when initializing config objects (aka before launching the experiment), you have to
-          assign values to their stateful attributes.
-        - Stateful is only applied in the context of experiments. So a stateful attribute must be the same between different
-          run of the same experiment configurations. However, within each experiment, a search space on stateful attributes
-          can be defined to run HPO on them.
+        - In contrary to ``Derived``, when initializing config objects (aka before launching the experiment),
+        you have to assign values to their stateful attributes.
+        - Stateful is only applied in the context of experiments. So a stateful attribute must be
+        the same between different run of the same experiment configurations. However, within each experiment,
+        a search space on stateful attributes can be defined to run HPO on them.
 
     """
 
@@ -644,16 +637,16 @@ class Stateful(ty.Generic[T]):
 class Derived(ty.Generic[T]):
     """
     This type is for attributes that are derived during the experiment (after launching the experiment).
-    To make an attribute derived, wrap ``Derived`` around its type defenition, e.g ``Derived[List[int]]``,
+    To make an attribute derived, wrap ``Derived`` around its type definition, e.g ``Derived[List[int]]``,
     ``Derived[str]``.
 
     Examples
     --------
     For example, you want to test how different pretrained word embeddings (e.g word2vec 100d, word2vec 300d) affect the
-    performance of a classification model, and you will use ablator to run ablation study on the effect of word embeddings.
-    Plus, the classification model architecture depends on the size of the embedding length of each pretrained set of word
-    embeddings. In this case, the model architecture is derived from the pretrained word embeddings. So you can define a model
-    config class as follows:
+    performance of a classification model, and you will use ablator to run ablation study on
+    the effect of word embeddings. Plus, the classification model architecture depends on the size
+    of the embedding length of each pretrained set of word embeddings. In this case, the model architecture
+    is derived from the pretrained word embeddings. So you can define a model config class as follows:
 
     >>> @configclass
     >>> class MyModelConfig(ModelConfig):
@@ -666,7 +659,8 @@ class Derived(ty.Generic[T]):
     >>>         super().__init__()
     >>>         self.embed_dim = config.embed_dim
 
-    Finally, ``config_parser`` is used to set the value of Derived attribute ``embed_dim`` based on the pretrained word embeddings:
+    Finally, ``config_parser`` is used to set the value of Derived attribute ``embed_dim``
+    based on the pretrained word embeddings:
 
     >>> class MyLMWrapper(ModelWrapper):
     >>>     def config_parser(self, run_config: RunConfig):
@@ -682,7 +676,7 @@ class Derived(ty.Generic[T]):
 class Stateless(ty.Generic[T]):
     """
     This type is for attributes that can take different value assignments between experiments. To make an
-    attribute stateless, wrap ``Stateless`` around its type defenition, e.g ``Stateless[List[int]]``,
+    attribute stateless, wrap ``Stateless`` around its type definition, e.g ``Stateless[List[int]]``,
     ``Stateless[str]``.
 
     Examples

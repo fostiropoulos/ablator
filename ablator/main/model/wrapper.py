@@ -90,10 +90,10 @@ class ModelWrapper(ModelBase):
         strict_load: bool = True,
     ):
         """
-        Creates the model, optimizer, scheduler, and scaler from a saved checkpoint dictionary or from config. You can overwrite this
-        function and ``save_dict()`` function to customize the saving and loading of the model, optimizer, and scheduler to
-        your needs. An example for this is shown in `Saving and loading multi-module models <./notebooks/Multi-Modules.ipynb>`_
-        tutorial.
+        Creates the model, optimizer, scheduler, and scaler from a saved checkpoint dictionary or from config.
+        You can overwrite this function and ``save_dict()`` function to customize the saving and loading of the
+        model, optimizer, and scheduler to your needs. An example for this is shown in
+        `Saving and loading multi-module models <./notebooks/Multi-Modules.ipynb>`_ tutorial.
 
         Parameters
         ----------
@@ -348,7 +348,7 @@ class ModelWrapper(ModelBase):
         ):
             self.train_metrics.evaluate(reset=False)
 
-        if self.val_dataloader is not None:
+        if self.val_dataloader is not None and self.eval_metrics is not None:
             self._validation_loop(
                 model=self.model,
                 dataloader=self.val_dataloader,
@@ -358,7 +358,7 @@ class ModelWrapper(ModelBase):
             )
         else:
             self.logger.warn(
-                "Validation dataloader was not set. Will be skipping `validation_loop`."
+                "Validation dataloader and metrics were not set. Will be skipping `validation_loop`."
             )
 
         if (
@@ -698,15 +698,20 @@ class ModelWrapper(ModelBase):
         debug : bool
             Whether to run in debug mode. By default ``False``
         resume : bool
-            Whether to resume training the model from existing checkpoints and existing experiment state. By Default ``False``
-        remote_progress_bar : ty.Optional[RemoteProgressBar]
-            Optionally, we can pass a remote progress bar to report progress of the training. By Default ``None``
+            Whether to resume training the model from existing checkpoints and
+            existing experiment state. By Default ``False``
         Returns
         -------
         dict[str, float]
             The metrics from the training.
+
+        Raises
+        ------
+        ValueError
+            if the state is not initialized and no `run_config` is provided or when a `run_config` is
+            provided but the state is already initialized.
         """
-        if not self._is_init and not run_config is None:
+        if not self._is_init and run_config is not None:
             self.init_state(
                 run_config=run_config,
                 smoke_test=smoke_test,
@@ -1056,7 +1061,7 @@ class ModelWrapper(ModelBase):
 
         Returns
         -------
-        dict[str, Callable]
+        dict[str, Callable] | None
             The evaluation functions to use. Also see ``Metrics`` for details.
 
         Examples

@@ -264,7 +264,7 @@ class ModelBase(ABC):
 
         Raises
         ------
-        AssertionError
+        RuntimeError
             If the ``train_dataloader`` is not defined or its length is 0.
         """
         if not hasattr(self, "train_dataloader") or len(self.train_dataloader) == 0:
@@ -736,10 +736,15 @@ class ModelBase(ABC):
             If True, tries to resume training from a checkpoint, by default False.
         remote_progress_bar : ty.Optional[RemoteProgressBar]
             A remote progress bar can be used to report metrics from the internal progress bar
-        from_chkpt: str | Path | None, optional
+        from_chkpt: Path | str | None, optional
             Path to the checkpoint to initialize the state from.
-        data_lock: Lock | None, optional
+        data_lock: ty.Optional[Lock], optional
             Use a Lock to avoid downloading data concurrently.
+
+        Raises
+        ------
+        RuntimeError
+            if the state is already initialized and `smoke_test`, `debug` and `resume` flag are False
         """
         if (
             self._is_init
@@ -840,7 +845,7 @@ class ModelBase(ABC):
             )
         self.current_checkpoint = current_checkpoint
 
-    def _load_model(self, checkpoint_path: Path, model_only: bool = False) -> None:
+    def _load_model(self, checkpoint_path: Path, model_only: bool = False):
         """
         Loads the model and its state from the checkpoint file at the specified path.
 
@@ -859,9 +864,6 @@ class ModelBase(ABC):
             If no valid checkpoint was found, such as an invalid path, and when `model_only=True` we check
             for differences between loaded and current configuration.
 
-        Returns
-        -------
-        None
         """
 
         if not hasattr(self, "run_config") or self.run_config is None:

@@ -98,6 +98,7 @@ def dict_hash(
 
 
 # pylint: disable=bare-except
+# flake8: noqa: E722
 def _parse_fn_repr(val, fn_name):
     try:
         kwargs = getattr(val, fn_name)
@@ -130,6 +131,7 @@ def _parse_ast_repr(str_repr):
 
 
 # pylint: disable=bare-except,unnecessary-dunder-call
+# flake8: noqa: E722
 def parse_repr_to_kwargs(
     obj: ty.Any,
 ) -> tuple[tuple, dict[str, int | float | str | bool | None]]:

@@ -35,7 +35,7 @@ def make_sub_dirs(parent: str | Path, *dir_names: str) -> list[Path]:
      Path('C:/example_parent_directory/subdir2'),
      Path('C:/example_parent_directory/subdir3')]
     """
-    dirs = []
+    dirs: list[Path] = []
     for dir_name in dir_names:
         dir_path = Path(parent).joinpath(dir_name)
         dir_path.mkdir(parents=True, exist_ok=True)

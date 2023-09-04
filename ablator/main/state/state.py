@@ -176,6 +176,7 @@ class ExperimentState:
 
         return msg
 
+    # flake8: noqa: DOC502
     def sample_trial(self) -> tuple[int, ParallelConfig]:
         """
         Samples a trial from the search space and persists the trial state to the experiment database.

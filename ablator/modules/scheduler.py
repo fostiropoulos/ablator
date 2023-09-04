@@ -42,7 +42,7 @@ class SchedulerConfig(ConfigBase):
     A class that defines a configuration for a learning rate scheduler. This scheduler config
     will be provided to ``TrainConfig`` (optional) as part of the training setting of the experiment.
 
-    Attributes
+    Arguments
     ----------
     name : str
         The name of the scheduler.
@@ -77,7 +77,8 @@ class SchedulerConfig(ConfigBase):
         effects on the model performance. However, ``SchedulerConfig`` only configures one single
         scheduler for the experiment. But you can run experiments on different schedulers by creating
         a custom config class and add an extra method called ``make_scheduler``. Go to this tutorial on
-        `Search space for different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_
+        `Search space for different types of
+        optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_
         for more details.
     """
 

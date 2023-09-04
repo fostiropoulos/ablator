@@ -1,4 +1,4 @@
-from mypy.plugin import *
+from mypy.plugin import Callable, AnalyzeTypeContext, Type, Plugin
 from mypy.types import TupleType, UnionType, NoneType, AnyType, TypeOfAny
 from mypy import errorcodes
 from mypy.typevars import fill_typevars

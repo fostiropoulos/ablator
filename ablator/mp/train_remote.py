@@ -124,12 +124,13 @@ def train_main_remote(
     crash_exceptions_types : list[type] | None
         Types of exceptions that are considered as crashes. By default ``None``
     resume : bool
-        Whether to resume training the model from existing checkpoints and existing experiment state. By default ``False``
+        Whether to resume training the model from existing checkpoints
+        and existing experiment state. By default ``False``
     clean_reset : bool
         Whether to remove model directory when ``CheckpointNotFoundError`` is raised. By default ``False``
     progress_bar : ty.Optional[RemoteProgressBar]
         Optionally, we can use a remote progress bar to update the results of the trial.
-    data_lock : Lock, optional
+    data_lock : ty.Optional[butils.Lock], optional
         Use a Lock for when building the dataloader to ensure that it does not concurrently
         download data for several processes
     Returns

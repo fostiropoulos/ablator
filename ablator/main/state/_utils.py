@@ -70,14 +70,14 @@ def parse_metrics(
 
     Parameters
     ----------
-    metric_directions : OrderedDict
+    metric_directions : OrderedDict[str, Optim]
         The ordered dictionary containing the directions of the metrics (minimize or maximize).
-    metrics : dict | None
+    metrics : dict[str, float] | None
         The dictionary containing the metric values.
 
     Returns
     -------
-    OrderedDict | None
+    OrderedDict[str, float] | None
         The ordered dictionary of metric values converted to float using their direction.
 
     Raises

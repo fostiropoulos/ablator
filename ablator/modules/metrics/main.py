@@ -286,7 +286,7 @@ class Metrics:
 
         Returns
         -------
-        metrics : dict
+        metrics : dict[str, float]
             A dictionary of metric values calculated from the predictions.
 
         Examples
@@ -321,7 +321,6 @@ class Metrics:
             self.reset(reset_ma=update)
         return metrics
 
-    # pylint: disable=missing-param-doc
     def append_batch(self, *args: ty.Any, **kwargs: ty.Any):
         """
         Appends a batch of predictions to a specific set.

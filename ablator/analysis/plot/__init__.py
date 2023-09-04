@@ -21,7 +21,7 @@ class Plot(ABC):
         metric_obj_fn: Optim,
         y_axis: str | None = None,
         x_axis: str | None = None,
-        x_ticks: np.ndarray | None = None,
+        x_ticks: list[str] | None = None,
         ax: Axes | None = None,
     ) -> None:
         self.attributes = self._parse_attributes(metric, attributes)

@@ -26,7 +26,7 @@ def get_optim_parameters(
 
     Returns
     -------
-    ty.Iterator[nn.Parameter]
+    abc.Iterator[nn.Parameter]
         The list of parameters that require to be optimized. It can be a list, tensor or dictionary. Please see
         Pytorch Optimizer documentation on the specific format.
 
@@ -128,8 +128,8 @@ class OptimizerConfig(ConfigBase):
         effects on the model performance. However, ``OptimizerConfig`` only configures one single
         optimizer for the experiment. But you can run experiments on different optimizers by creating
         a custom config class and add an extra method called ``make_optimizer``. Go to the tutorial on
-        `Search space for different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_
-        for more details.
+        `Search space for different types of optimizers and
+        scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_ for more details.
 
     """
 

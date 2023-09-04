@@ -69,7 +69,8 @@ class Trial(Base):
     state: Mapped[PickleType]
         The ``TrialState``
     runtime_errors: Mapped[int]
-        Total runtime errors that the trial encountered and are incremented every time the trial faces a recoverable error.
+        Total runtime errors that the trial encountered and are incremented
+        every time the trial faces a recoverable error.
     """
 
     __tablename__ = "trial"

@@ -97,7 +97,8 @@ class ParallelTrainer(ProtoTrainer):
     ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"]),
     ... }
 
-    - Define run config (remember to redefine the parallel config to update the model config type to be ``CustomModelConfig``):
+    - Define run config (remember to redefine the parallel config to
+    update the model config type to be ``CustomModelConfig``):
 
     >>> @configclass
     >>> class CustomParallelConfig(ParallelConfig):
@@ -177,6 +178,11 @@ class ParallelTrainer(ProtoTrainer):
         -------
         float
             mock gpu value i.e. 0.001
+
+        Raises
+        ------
+        ValueError
+            if the `gpu_mb_per_experiment` configuration is not specified when using `device='cuda'`
         """
         device = butils.parse_device(self.run_config.device)
         if not device.startswith("cuda"):
@@ -196,7 +202,7 @@ class ParallelTrainer(ProtoTrainer):
 
         Returns
         -------
-        int | float
+        float
             a virtual number of _cpus to use i.e. 0.001
         """
         if (
@@ -468,7 +474,7 @@ class ParallelTrainer(ProtoTrainer):
         ray_head_address: str | None = None,
         resume: bool = False,
         excluding_files: list[str] | None = None,
-    ) -> None:
+    ):
         """
         Set up and launch the parallel ablation process. This sets up a ray cluster, and trials of different
         hyperparameters initialized (or retrieved) will be pushed to ray nodes so they can be executed in parallel.
@@ -482,14 +488,12 @@ class ParallelTrainer(ProtoTrainer):
         ray_head_address : str | None
             Ray cluster address.
         resume : bool
-            Whether to resume training the model from existing checkpoints and existing experiment state. By default False
+            Whether to resume training the model from existing checkpoints and
+            existing experiment state. By default False
         excluding_files : list[str] | None
             A list of files in `.gitignore` format, that will be excluded from being uploaded to the ray cluster.
             If unspecified it ignores `.git/**` folder.
 
-        Returns
-        -------
-        None
         """
         try:
             torch.multiprocessing.set_start_method("spawn")

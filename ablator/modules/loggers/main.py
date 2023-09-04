@@ -198,7 +198,7 @@ class SummaryLogger:
             return None
         return TensorboardLogger(summary_dir.joinpath("tensorboard"))
 
-    def _write_config(self, run_config: RunConfig) -> None:
+    def _write_config(self, run_config: RunConfig):
         """
         Write the run configuration to the model directory and to the dashboard.
 
@@ -207,9 +207,6 @@ class SummaryLogger:
         run_config : RunConfig
             The run configuration.
 
-        Returns
-        -------
-        None
         """
         if self.experiment_dir is None:
             return
@@ -222,7 +219,7 @@ class SummaryLogger:
 
     # pylint: disable=too-complex
     # flake8: noqa: C901
-    def _add_metric(self, k: str, v: ty.Any, itr: int) -> None:  # flake8: noqa
+    def _add_metric(self, k: str, v: ty.Any, itr: int):
         """
         Add a metric to the dashboard.
 
@@ -234,10 +231,6 @@ class SummaryLogger:
             The metric value.
         itr : int
             The iteration.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -346,7 +339,7 @@ class SummaryLogger:
         file_name: str,
         itr: int | None = None,
         is_best: bool = False,
-    ) -> None:
+    ):
         """
         Save a checkpoint and update the checkpoint iteration
 
@@ -377,9 +370,6 @@ class SummaryLogger:
         is_best : bool
             Whether this is the best checkpoint, by default False.
 
-        Returns
-        -------
-        None
         """
         if self.experiment_dir is None:
             return
@@ -408,7 +398,7 @@ class SummaryLogger:
             futils.clean_checkpoints(dir_path, self.keep_n_checkpoints)
             self._update_metadata()
 
-    def clean_checkpoints(self, keep_n_checkpoints: int) -> None:
+    def clean_checkpoints(self, keep_n_checkpoints: int):
         """
         Clean up checkpoints and keep only the specified number of checkpoints.
 
@@ -417,9 +407,6 @@ class SummaryLogger:
         keep_n_checkpoints : int
             Number of checkpoints to keep.
 
-        Returns
-        -------
-        None
         """
         if self.experiment_dir is None:
             return

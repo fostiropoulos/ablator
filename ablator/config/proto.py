@@ -64,9 +64,9 @@ class TrainConfig(ConfigBase):
     ...     rand_weights_init = True
     ... )
 
-    - We now define the run config for prototype training, which is the last configuration step. Refer to :ref:`Configurations
-      for single model experiments <run_config>` and :ref:`Configurations for parallel models experiments <parallel_config>`
-      for more details on running configs.
+    - We now define the run config for prototype training, which is the last configuration step.
+    Refer to :ref:`Configurations for single model experiments <run_config>` and
+    :ref:`Configurations for parallel models experiments <parallel_config>` for more details on running configs.
 
     >>> run_config = CustomRunConfig(
     ...     train_config=my_train_config,

@@ -1,11 +1,11 @@
 import copy
+import typing as ty
 from copy import deepcopy
 from pathlib import Path
 
 import git
-from git import exc
-import typing as ty
 import torch
+from git import exc
 
 from ablator.config.proto import RunConfig
 from ablator.main.model.wrapper import ModelWrapper
@@ -134,7 +134,7 @@ class ProtoTrainer:
             ) from e
         except exc.NoSuchPathError as e:
             raise FileNotFoundError(f"Directory {working_dir} was not found. ") from e
-        except exc.InvalidGitRepositoryError as e:
+        except exc.InvalidGitRepositoryError:
             return (
                 f"No git repository was detected at {working_dir}. "
                 "We recommend setting the working directory to a git repository "
@@ -150,7 +150,7 @@ class ProtoTrainer:
         working_directory : str
             The working directory points to a git repository that is used for keeping track
             the code differences.
-        debug : bool, default=False
+        debug : bool, optional
             Whether to train model in debug mode. By default False
 
         Returns

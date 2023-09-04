@@ -289,7 +289,7 @@ class PredictionStore:
 
     Parameters
     ----------
-    batch_limit : int
+    batch_limit : int | None
         Maximum number of batches to keep for each array store corresponding to each category of prediction
         outputs (e.g preds, labels), so only ``batch_limit`` number of latest batches is stored per set of
         array store. Default is 30.

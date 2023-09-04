@@ -67,7 +67,7 @@ class Display:
     """
     Class for handling display for terminal and notebook.
 
-    Arguments
+    Attributes
     ---------
     _curses : curses
         curses object
@@ -241,7 +241,7 @@ class RemoteDisplay(Display):
         if time.time() - self._prev_update_time > self.update_interval or force:
             self._prev_update_time = time.time()
             self.print_texts(
-                ray.get(self.remote_progress_bar.make_print_texts.remote())
+                ray.get(self.remote_progress_bar.make_print_texts.remote())  # type: ignore
             )
 
 

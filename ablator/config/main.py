@@ -1,9 +1,10 @@
+from collections import abc
 import copy
 import inspect
 import logging
 import operator
 import typing as ty
-from typing import Any, Union, KeysView
+from typing import Any, Union
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -100,10 +101,11 @@ class ConfigBase:
     This class is the building block for all configuration objects within ablator. It serves as the base class for
     configurations such as ``ModelConfig``, ``TrainConfig``, ``OptimizerConfig``, and more.
 
-    To customize configurations for specific needs, you can create your own configuration class by inheriting from ``ConfigBase``.
-    It's essential to annotate it with ``@configclass``. For instance, in the tutorial `Search space for
-    different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_, a custom optimizer config class is created to enable ablation study on various optimizers
-    and schedulers. You can refer to this tutorial for an example of how to create your custom configuration class.
+    To customize configurations for specific needs, you can create your own configuration class by
+    inheriting from ``ConfigBase``. It's essential to annotate it with ``@configclass``. For instance, in the tutorial
+    `Search space for different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_,
+    a custom optimizer config class is created to enable ablation study on various optimizers and schedulers.
+    You can refer to this tutorial for an example of how to create your custom configuration class.
 
     Examples
     --------
@@ -140,7 +142,7 @@ class ConfigBase:
        All config class must be decorated with ``@configclass``.
 
     """
-    config_class: Type = type(None)
+    config_class = type(None)
 
     def __init__(self, *args: Any, debug: bool = False, **kwargs: Any):
         self._debug: bool
@@ -276,7 +278,7 @@ class ConfigBase:
             + ")"
         )
 
-    def keys(self) -> KeysView[str]:
+    def keys(self) -> abc.KeysView[str]:
         """
         Get the keys of the configuration dictionary.
 
