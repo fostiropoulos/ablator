@@ -4,7 +4,6 @@ Custom types for runtime checking
 
 import typing as ty
 import inspect
-from typing import Any
 from collections import namedtuple
 from enum import Enum as _Enum
 
@@ -310,13 +309,13 @@ def _val2bool(val: str | bool) -> bool:
     raise ValueError(f"Cannot parse {val} as bool.")
 
 
-def _strip_hint_state(type_hint: type[Any]) -> tuple:
+def _strip_hint_state(type_hint: type[ty.Any]) -> tuple:
     """
     Strips the hint state from a type hint.
 
     Parameters
     ----------
-    type_hint : type[Any]
+    type_hint : type[ty.Any]
         The input type hint to strip the state from.
 
     Returns
@@ -339,13 +338,13 @@ def _strip_hint_state(type_hint: type[Any]) -> tuple:
     return Stateful, type_hint
 
 
-def _strip_hint_optional(type_hint: type[Any]) -> tuple:
+def _strip_hint_optional(type_hint: type[ty.Any]) -> tuple:
     """
     Strips the optional part of a type hint.
 
     Parameters
     ----------
-    type_hint : type[Any]
+    type_hint : type[ty.Any]
         The input type hint to strip the optional part from.
 
     Returns
@@ -365,13 +364,13 @@ def _strip_hint_optional(type_hint: type[Any]) -> tuple:
     return False, type_hint
 
 
-def _strip_hint_collection(type_hint: type[Any]) -> tuple:
+def _strip_hint_collection(type_hint: type[ty.Any]) -> tuple:
     """
     Strips the collection from a type hint.
 
     Parameters
     ----------
-    type_hint : type[Any]
+    type_hint : type[ty.Any]
         The input type hint to strip the collection from.
 
     Returns
@@ -419,15 +418,15 @@ def _strip_hint_collection(type_hint: type[Any]) -> tuple:
     )
 
 
-def parse_type_hint(cls: Any, type_hint: type[Any]) -> Annotation:
+def parse_type_hint(cls: ty.Any, type_hint: type[ty.Any]) -> Annotation:
     """
     Parses a type hint and returns a parsed annotation.
 
     Parameters
     ----------
-    cls : Any
+    cls : ty.Any
         The class being annotated.
-    type_hint : type[Any]
+    type_hint : type[ty.Any]
         The input type hint to parse.
 
     Returns
@@ -455,19 +454,19 @@ def parse_type_hint(cls: Any, type_hint: type[Any]) -> Annotation:
     )
 
 
-def _parse_class(cls: Any, args_kwargs: dict | object, debug: bool = False) -> object:
+def _parse_class(cls: ty.Any, args_kwargs: dict | object, debug: bool = False) -> object:
     """
     Parse values whose types are not  a collection or in ALLOWED_TYPES
     eg. bool, added dict(tune configs)
 
     Parameters
     ----------
-    cls : Any
+    cls : ty.Any
         The input Type
     args_kwargs : dict | object
         The positional and keyword arguments or object to parse with the given type
-    debug : bool, optional, default=False
-        Whether to load the configuration in debug mode, and ignore discrepancies/errors.
+    debug : bool, optional
+        Whether to load the configuration in debug mode, and ignore discrepancies/errors, by default ``False``
 
     Returns
     -------
@@ -512,24 +511,23 @@ def _parse_class(cls: Any, args_kwargs: dict | object, debug: bool = False) -> o
     return cls(*args, **kwargs)
 
 
-# flake8: noqa: C901
 # pylint: disable=too-complex
 def parse_value(
-    val: Any, annot: Annotation, name: str | None = None, debug: bool = False
+    val: ty.Any, annot: Annotation, name: str | None = None, debug: bool = False
 ) -> ty.Any:
     """
     Parses a value based on the given annotation.
 
     Parameters
     ----------
-    val : Any
+    val : ty.Any
         The input value to parse.
     annot : Annotation
         The annotation namedtuple to guide the parsing.
     name : str | None
         The name of the value, by default ``None``.
-    debug : bool, optional, default=False
-        Whether to load the configuration in debug mode, and ignore discrepencies / errors.
+    debug : bool, optional
+        Whether to load the configuration in debug mode, and ignore discrepencies / errors, by default ``False``
 
     Returns
     -------

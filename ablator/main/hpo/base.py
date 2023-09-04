@@ -72,7 +72,7 @@ class BaseSampler(ABC):
         """
         raise NotImplementedError
 
-    # flake8: noqa
+    # flake8: noqa: DOC502
     def eager_sample(self) -> tuple[int, dict[str, ty.Any], None | dict[str, ty.Any]]:
         """
         eager_sample A sampled trial can be erroneous, for this reason we eagerly sample

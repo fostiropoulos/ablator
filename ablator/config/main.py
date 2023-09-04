@@ -28,18 +28,18 @@ from ablator.config.types import (
 from ablator.config.utils import dict_hash, flatten_nested_dict, parse_repr_to_kwargs
 
 
-def configclass(cls):  # noqa
+def configclass(cls: ty.Type["ConfigBase"]) -> ty.Type["ConfigBase"]:
     """
     Decorator for ConfigBase subclasses, adds the ``config_class`` attribute to the class.
 
     Parameters
     ----------
-    cls : Type[ConfigBase]
+    cls : ty.Type["ConfigBase"]
         The class to be decorated.
 
     Returns
     -------
-    Type[ConfigBase]
+    ty.Type[ConfigBase]
         The decorated class with the ``config_class`` attribute.
     """
 
@@ -119,8 +119,8 @@ class ConfigBase:
     ----------
     *args : Any
         Positional arguments.
-    debug : bool, optional, default=False
-        Whether to load the configuration in debug mode, and ignore discrepancies / errors.
+    debug : bool, optional
+        Whether to load the configuration in debug mode, and ignore discrepancies/errors, by default ``False``
     **kwargs : Any
         Keyword arguments.
 
@@ -284,7 +284,7 @@ class ConfigBase:
 
         Returns
         -------
-        KeysView[str]
+        abc.KeysView[str]
             The keys of the configuration dictionary.
         """
         return self.to_dict().keys()
@@ -299,7 +299,7 @@ class ConfigBase:
         path : Union[Path, str]
             The path to the configuration file.
         debug : bool, optional, default=False
-            Whether to load the configuration in debug mode, and ignore discrepencies / errors.
+            Whether to load the configuration in debug mode, and ignore discrepancies/errors.
 
         Returns
         -------
@@ -397,7 +397,6 @@ class ConfigBase:
         return annot[element].variable_type
 
     # pylint: disable=too-complex
-    # flake8: noqa: C901
     def make_dict(
         self,
         annotations: dict[str, Annotation],

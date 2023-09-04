@@ -574,7 +574,8 @@ class MovingAverage(ArrayStore):
     def __repr__(self) -> str:
         return f"{self.value:.2e}"
 
-    def append(self, val: ty.Union[np.ndarray, torch.Tensor, float, int]):  # noqa
+    # flake8: noqa: DOC502
+    def append(self, val: ty.Union[np.ndarray, torch.Tensor, float, int]):
         """
         Appends a batch of values, or a single value, constrained on the limits.
 

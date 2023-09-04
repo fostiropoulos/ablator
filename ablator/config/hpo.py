@@ -117,7 +117,7 @@ class SearchSpace(ConfigBase):
         value type of the parameter's values (continous or discrete).
     n_bins: Optional[int]
         Total bins for grid sampling, optional
-    log: bool = False
+    log: bool
         To log. by default, False.
 
     Examples
