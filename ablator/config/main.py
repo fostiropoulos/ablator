@@ -192,6 +192,7 @@ class ConfigBase:
                 unspected_args,
             )
 
+    def _validate_inputs(self, *args, debug: bool, **kwargs) -> list[str]:
         added_variables = {
             item[0]
             for item in inspect.getmembers(type(self))
