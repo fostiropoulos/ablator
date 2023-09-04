@@ -114,6 +114,20 @@ class TestWrapper2(ModelWrapper):
         return dl
 
 
+def my_accuracy(preds):
+    return float(np.mean(preds))
+
+
+class TestWrapperCustomEval(TestWrapper):
+    def evaluation_functions(self):
+        return {"mean": my_accuracy}
+
+
+class TestWrapperCustomEvalUnderscore(TestWrapper):
+    def evaluation_functions(self):
+        return {"mean_score": my_accuracy}
+
+
 def test_proto(tmp_path: Path, config, working_dir):
     wrapper = TestWrapper(MyCustomModel)
 
@@ -301,6 +315,23 @@ def test_git_diffs(
     msg = ablator._get_diffs(repo_path)
     diffs = msg.split("\n")
     assert all(diffs[-(i + 1)] == f"-{99-i}" for i in range(50))
+
+
+def test_proto_custom_eval(tmp_path: Path, config):
+    wrapper = TestWrapperCustomEval(MyCustomModel)
+    config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
+    ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
+    train_metrics = ablator.launch(tmp_path)
+    eval_metrics = ablator.evaluate()
+    assert np.isclose(train_metrics["val_mean"], eval_metrics["val"]["mean"])
+    wrapper = TestWrapperCustomEvalUnderscore(MyCustomModel)
+    config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
+    ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
+    train_metrics = ablator.launch(tmp_path)
+    eval_metrics = ablator.evaluate()
+    assert np.isclose(
+        train_metrics["val_mean_score"], eval_metrics["val"]["mean_score"]
+    )
 
 
 if __name__ == "__main__":
