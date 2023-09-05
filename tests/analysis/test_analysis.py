@@ -4,7 +4,7 @@ import pandas as pd
 
 from ablator import Optim, PlotAnalysis
 from ablator.analysis.main import Analysis
-
+from matplotlib.testing.compare import compare_images
 
 def get_best(x: pd.DataFrame, task_type: str):
     if task_type == "regression":
@@ -62,6 +62,52 @@ def test_analysis(tmp_path: Path):
     )
     pass
 
+#
+def test_generated_plot_similarity(tmp_path: Path):
+    #compare image results in violinplot
+    model_config_activation = tmp_path.joinpath("violinplot", "val_acc", "model_config.activation.png")
+    model_config_initialization = tmp_path.joinpath("violinplot", "val_acc", "model_config.initialization.png")
+    model_config_mask_type = tmp_path.joinpath("violinplot", "val_acc", "model_config.mask_type.png")
+
+    result_model_config_activation = compare_images(model_config_activation, Path(__file__).parent.parent.joinpath("assets", "violinplot", "model_config.activation.png"), 0.001, in_decorator=True)
+    assert result_model_config_activation is None
+
+    result_model_config_intialization = compare_images(model_config_initialization, Path(__file__).parent.parent.joinpath("assets", "violinplot", "model_config.initialization.png"), 0.001, in_decorator=True)
+    assert result_model_config_intialization is None
+
+    result_model_config_mask_type = compare_images(model_config_mask_type, Path(__file__).parent.parent.joinpath("assets", "violinplot", "model_config.mask_type.png"), 0.001, in_decorator=True)
+    assert result_model_config_mask_type is None
+
+    train_config_cat_nan_policy = tmp_path.joinpath("violinplot", "val_acc", "train_config.cat_nan_policy.png")
+    train_config_normalization = tmp_path.joinpath("violinplot", "val_acc", "train_config.normalization.png")
+    train_config_optimizer_config_name = tmp_path.joinpath("violinplot", "val_acc", "train_config.optimizer_config.name.png")
+
+    result_train_config_cat_nan_policy = compare_images(train_config_cat_nan_policy, Path(__file__).parent.parent.joinpath("assets", "violinplot", "train_config.cat_nan_policy.png"), 0.001, in_decorator=True)
+    assert result_train_config_cat_nan_policy is None
+
+    result_train_config_normalization = compare_images(train_config_normalization, Path(__file__).parent.parent.joinpath("assets", "violinplot", "train_config.normalization.png"), 0.001, in_decorator=True)
+    assert result_train_config_normalization is None
+
+    result_train_config_optimizer_config_name = compare_images(train_config_optimizer_config_name, Path(__file__).parent.parent.joinpath("assets", "violinplot", "train_config.optimizer_config.name.png"), 0.001, in_decorator=True)
+    assert result_train_config_optimizer_config_name is None
+
+    #compare image results in linearplot
+    model_config_d_ffn_factor = tmp_path.joinpath("linearplot", "val_acc", "model_config.d_ffn_factor.png")
+    model_config_d_token = tmp_path.joinpath("linearplot", "val_acc", "model_config.d_token.png")
+    model_config_n_heads = tmp_path.joinpath("linearplot", "val_acc", "model_config.n_heads.png")
+    model_config_n_layers = tmp_path.joinpath("linearplot", "val_acc", "model_config.n_layers.png")
+
+    result_model_config_d_ffn_factor = compare_images(model_config_d_ffn_factor, Path(__file__).parent.parent.joinpath("assets", "linearplot", "model_config.d_ffn_factor.png"), 0.001, in_decorator=True)
+    assert result_model_config_d_ffn_factor is None
+
+    result_model_config_d_token = compare_images(model_config_d_token, Path(__file__).parent.parent.joinpath("assets", "linearplot", "model_config.d_token.png"), 0.001, in_decorator=True)
+    assert result_model_config_d_token is None
+
+    result_model_config_n_heads = compare_images(model_config_n_heads, Path(__file__).parent.parent.joinpath("assets", "linearplot", "model_config.n_heads.png"), 0.001, in_decorator=True)
+    assert result_model_config_n_heads is None
+
+    result_config_n_layers = compare_images(model_config_n_layers, Path(__file__).parent.parent.joinpath("assets", "linearplot", "model_config.n_layers.png"), 0.001, in_decorator=True)
+    assert result_config_n_layers is None
 
 # https://github.com/fostiropoulos/ablator/pull/35
 def test_get_best_results_by_metric():
@@ -91,3 +137,4 @@ if __name__ == "__main__":
     shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_path.mkdir(exist_ok=True)
     test_analysis(tmp_path)
+    test_generated_plot_similarity(tmp_path)
