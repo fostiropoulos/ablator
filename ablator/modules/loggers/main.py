@@ -416,30 +416,41 @@ class SummaryLogger:
 
     def info(self, *args: Any, **kwargs: Any):
         """
-        Log an info to files and to console message using the logger.
+        Log an info to files and to console message using the logger. Here you can use
+        positional or keyword arguments. Possible parameters are shown in the Parameters section.
 
         Parameters
         ----------
-        TODO{hiue}
+        msg : str
+            The message to log.
+        verbose : bool
+            Whether to print messages to the console, by default ``False``.
+        
         """
         self.logger.info(*args, **kwargs)
 
     def warn(self, *args: Any, **kwargs: Any):
         """
-        Log a warning message to files and to console using the logger.
+        Log a warning message to files and to console using the logger. Here you can use
+        positional or keyword arguments. Possible parameters are shown in the Parameters section.
 
         Parameters
         ----------
-        TODO{hiue}
+        msg : str
+            The message to log.
+        verbose : bool
+            Whether to print messages to the console, by default ``True``.
         """
         self.logger.warn(*args, **kwargs)
 
     def error(self, *args: Any, **kwargs: Any):
         """
-        Log an error message to files and to console using the logger.
+        Log an error message to files and to console using the logger. Here you can use
+        positional or keyword arguments. Possible parameters are shown in the Parameters section.
 
         Parameters
         ----------
-        TODO{hiue}
+        msg : str
+            The message to log.
         """
         self.logger.error(*args, **kwargs)

@@ -312,7 +312,9 @@ class PlotAnalysis(Analysis):
         attribute_name_remap : dict[str, str] | None
             mappings for config's searchspace names to user defined names for attributes. By default, None
         **plt_kwargs : ty.Any
-            TODO{hieu}
+            Additional keyword arguments to pass to the plot method. These includes `ax` (`Axes | None` - A matplotlib.axes.Axes
+            object representing the axis to plot on), `append` (A boolean indicating whether to append plots to an
+            existing axes object) and extra arguments for creating the plots.
         """
         cat_attrs = list(self.categorical_attributes)
         num_attrs = list(self.numerical_attributes)
