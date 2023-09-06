@@ -184,7 +184,7 @@ class Results:
             raise FileNotFoundError(f"{run_config_path}")
         self.config = config_type.load(run_config_path)
         # TODO we need to have mypy plugin to interpret Dict[Optim] as dict[str, Optim]
-        self.metric_map: dict[str, Optim] = self.config.optim_metrics  # type: ignore
+        self.metric_map: dict[str, Optim] = self.config.optim_metrics # type: ignore[assignment]
         self.data: pd.DataFrame = self._make_data(use_ray=use_ray, clean=not cache)
 
         self.config_attrs: list[str] = list(self.config.search_space.keys())
@@ -237,7 +237,7 @@ class Results:
                 )
 
     @property
-    def metric_names(self) -> list[str]:  # type: ignore
+    def metric_names(self) -> list[str]:
         """
         Get the list of all optimize directions
 

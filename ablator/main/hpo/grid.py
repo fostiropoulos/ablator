@@ -22,7 +22,7 @@ def _parse_search_space(space: SearchSpace) -> list:
     if space.categorical_values is not None:
         return space.categorical_values
     if space.subspaces is not None:
-        return [_ for _v in space.subspaces for _ in _parse_search_space(_v)]  # type: ignore
+        return [_ for _v in space.subspaces for _ in _parse_search_space(_v)]
     raise ValueError(f"Invalid SearchSpace: {space}")
 
 
@@ -106,7 +106,7 @@ class GridSampler(BaseSampler):
         self._lock = False
         self._rng = np.random.default_rng(seed)
         # mypy error because of nested dictionary
-        self._rng.shuffle(self.configs)  # type: ignore
+        self._rng.shuffle(self.configs) # type: ignore[arg-type]
 
     @property
     def _idx(self):

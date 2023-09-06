@@ -1,4 +1,3 @@
-# type: ignore
 # pylint: skip-file
 """
 TODO current implementation is meant to be temporary until there is a concrete replacement to
@@ -52,7 +51,8 @@ from ablator.main.hpo.base import BaseSampler
 
 class _Trial:
     """
-    Mock `optuna.Trial` object for the sake of using optuna
+    Mock `optuna.Trial` object for the sake of using optuna. All the type ignores
+    are because of monkey-patching
     """
 
     def __init__(
@@ -65,26 +65,26 @@ class _Trial:
     ) -> None:
         self.state = TrialState.RUNNING
 
-        self.values: np.ndarray | None = None
+        self.values: list[float] | None = None
         self.id_ = id_
         self.params: dict[ty.Any, ty.Any] = {}
         self.distributions = {}
         self.optim_metrics = optim_metrics
         if resume_trial is not None:
-            self.params = resume_trial._opt_params
+            self.params = resume_trial._opt_params # type: ignore[assignment]
             self.distributions = {
-                k: eval(resume_trial._opt_distributions_types[k])(
-                    **resume_trial._opt_distributions_kwargs[k]
+                k: eval(resume_trial._opt_distributions_types[k])(  # type: ignore[index]
+                    **resume_trial._opt_distributions_kwargs[k]  # type: ignore[index]
                 )
-                for k in resume_trial._opt_distributions_kwargs
+                for k in resume_trial._opt_distributions_kwargs  # type: ignore[attr-defined]
             }
             metrics = None
             if len(resume_trial.metrics) > 0:
-                metrics = resume_trial.metrics[-1]
-            self.update(metrics, resume_trial.state)
-        self.relative_search_space = sampler.infer_relative_search_space(study, self)
+                metrics = resume_trial.metrics[-1] # type: ignore[index]
+            self.update(metrics, resume_trial.state) # type: ignore[arg-type]
+        self.relative_search_space = sampler.infer_relative_search_space(study, self) # type: ignore[arg-type]
         self.relative_params = sampler.sample_relative(
-            study, self, self.relative_search_space
+            study, self, self.relative_search_space # type: ignore[arg-type]
         )
 
     def update(
@@ -131,7 +131,6 @@ class _Trial:
         return distribution._contains(param_value_in_internal_repr)
 
 
-# type: ignore
 class _Study:
     """
     Mock `optuna.Study` object for the sake of using optuna
@@ -146,7 +145,7 @@ class _Study:
         trials = [] if trials is None else trials
         self.trials: list[_Trial] = [
             _Trial(
-                id_=trial.trial_num,
+                id_=trial.trial_num, # type: ignore[arg-type]
                 study=self,
                 sampler=sampler,
                 resume_trial=trial,
@@ -250,7 +249,7 @@ class OptunaSampler(BaseSampler):
         if trial.is_relative_param(name, dist):
             val = trial.relative_params[name]
         else:
-            val = self.sampler.sample_independent(self._study, trial, name, dist)
+            val = self.sampler.sample_independent(self._study, trial, name, dist)  # type: ignore[arg-type]
         trial.params[name] = val
         trial.distributions[name] = dist
         return val
@@ -264,6 +263,8 @@ class OptunaSampler(BaseSampler):
         n_bins: int | None = None,
     ):
         low, high = value_range
+        low = int(low)
+        high = int(high)
         if n_bins is None:
             step = 1
         else:
@@ -340,9 +341,12 @@ class OptunaSampler(BaseSampler):
         return parameter
 
     def update_trial(
-        self, trial_id, metrics: dict[str, float] | None, state: TrialState
+        self,
+        trial_id,
+        metrics: OrderedDict[str, float] | None,
+        state: "_state_store.TrialState",
     ):
-        self._study.update(trial_id, metrics, state)
+        self._study.update(trial_id, metrics, state)  # type: ignore[arg-type]
 
     def internal_repr(self, trial_id):
         params = self._study.get_trial(trial_id).params

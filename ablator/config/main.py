@@ -28,24 +28,24 @@ from ablator.config.types import (
 from ablator.config.utils import dict_hash, flatten_nested_dict, parse_repr_to_kwargs
 
 
-def configclass(cls: ty.Type["ConfigBase"]) -> ty.Type["ConfigBase"]:
+def configclass(cls: type["ConfigBase"]) -> type["ConfigBase"]:
     """
     Decorator for ConfigBase subclasses, adds the ``config_class`` attribute to the class.
 
     Parameters
     ----------
-    cls : ty.Type["ConfigBase"]
+    cls : type["ConfigBase"]
         The class to be decorated.
 
     Returns
     -------
-    ty.Type[ConfigBase]
+    type[ConfigBase]
         The decorated class with the ``config_class`` attribute.
     """
 
     assert issubclass(cls, ConfigBase), f"{cls.__name__} must inherit from ConfigBase"
     setattr(cls, "config_class", cls)
-    return dataclass(cls, init=False, repr=False, kw_only=True, eq=False)
+    return dataclass(cls, init=False, repr=False, kw_only=True, eq=False)  # type: ignore[call-overload]
 
 
 def _freeze_helper(obj):
@@ -216,7 +216,7 @@ class ConfigBase:
             raise ValueError(
                 f"{self._class_name} does not support positional arguments."
             )
-        if not isinstance(self, self.config_class):  # type: ignore[arg-type]
+        if not isinstance(self, self.config_class): # type: ignore[arg-type]
             raise RuntimeError(
                 f"You must decorate your Config class '{self._class_name}' with ablator.configclass."
             )
@@ -306,7 +306,10 @@ class ConfigBase:
         Self
             The loaded configuration object.
         """
-        kwargs: dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text(encoding="utf-8")))  # type: ignore
+        # TODO[iordanis] remove OmegaConf dependency
+        kwargs: dict = OmegaConf.to_object( # type: ignore[assignment]
+            OmegaConf.create(Path(path).read_text(encoding="utf-8"))
+        )
         return cls(**kwargs, debug=debug)
 
     @property

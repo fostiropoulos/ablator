@@ -93,10 +93,11 @@ def wait_get_gpu(
     """
     timeouts = 0
     # TODO the node_ip needs to be specified when requesting a GPU
+    least_used_gpu: int
     while timeouts < max_timeouts:
         if (
             least_used_gpu := ray.get(
-                manager.request_gpu.remote(  # type: ignore
+                manager.request_gpu.remote( # type: ignore[attr-defined]
                     expected_util_mb, process_name
                 )
             )
@@ -104,7 +105,7 @@ def wait_get_gpu(
             time.sleep(1)
             timeouts += 1
             continue
-        return least_used_gpu  # type: ignore
+        return least_used_gpu
     raise GPUError("No available GPU.")
 
 
@@ -122,7 +123,7 @@ def unlock_gpu(manager: "GPUManager", gpu: int):
         the id of the GPU that will unlock.
 
     """
-    ray.get(manager.unlock.remote(gpu))  # type: ignore
+    ray.get(manager.unlock.remote(gpu)) # type: ignore[attr-defined]
 
 
 @ray.remote(num_cpus=0.001, num_gpus=0.001)

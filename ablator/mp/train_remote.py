@@ -26,7 +26,7 @@ def _apply_unlock_hook(
 ) -> ModelWrapper:
     if gpu_manager is None:
         return model
-    model._is_locked = True  # type: ignore
+    model._is_locked = True
 
     def lock_on_unlocked():
         if model._is_locked:
@@ -45,7 +45,7 @@ def _apply_unlock_hook(
     _hook_fn = hook_function(
         model.__getattribute__("train_step", True), lock_on_unlocked
     )
-    setattr(model, "train_step", _hook_fn)  # type: ignore
+    setattr(model, "train_step", _hook_fn)
     return model
 
 

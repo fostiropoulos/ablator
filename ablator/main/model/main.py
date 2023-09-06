@@ -546,7 +546,7 @@ class ModelBase(ABC):
             raise ValueError(
                 "Invalid configuration. Must specify both `optim_metrics` and `optim_metric_name` or neither."
             )
-
+        optim_metric_name = str(optim_metric_name)
         if (
             optim_metric_name is not None
             and optim_metrics is not None
@@ -566,7 +566,7 @@ class ModelBase(ABC):
         )
         if all(missing_metrics) and scheduler_requires_metric:
             raise ValueError(
-                f"Must provide `optim_metrics` when using Scheduler = `{scheduler_config.name}`."  # type: ignore
+                f"Must provide `optim_metrics` when using Scheduler = `{getattr(scheduler_config,'name', 'N/A')}`."
             )
         if all(missing_metrics) and run_config.early_stopping_iter is not None:
             raise ValueError(
@@ -575,13 +575,13 @@ class ModelBase(ABC):
         if all(missing_metrics):
             return None, None
         if scheduler_requires_metric:
-            mode = scheduler_config.arguments.mode  # type: ignore
+            mode = scheduler_config.arguments.mode  # type: ignore[union-attr]
             if (direction := optim_direction.value) != mode:
                 self.logger.warn(
                     f"Different optim_metric_direction {direction} than "
                     f"scheduler.arguments.mode {mode}. Overwriting scheduler.arguments.mode."
                 )
-        return optim_direction, optim_metric_name  # type: ignore
+        return optim_direction, optim_metric_name
 
     def _init_class_attributes(self):
         """

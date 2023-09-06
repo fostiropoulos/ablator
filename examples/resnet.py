@@ -98,11 +98,11 @@ class MyModelWrapper(ModelWrapper):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def make_dataloader_train(self, run_config: ResRunConfig):  # type: ignore
+    def make_dataloader_train(self, run_config: ResRunConfig):
         # return load_cifar10(run_config, flag="val")
         return load_cifar10(run_config, flag="train")
 
-    def make_dataloader_val(self, run_config: ResRunConfig):  # type: ignore
+    def make_dataloader_val(self, run_config: ResRunConfig):
         return load_cifar10(run_config, flag="val")
 
     def evaluation_functions(self) -> Dict[str, Callable]:

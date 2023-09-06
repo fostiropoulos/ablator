@@ -44,7 +44,7 @@ class _Lock:
 class Lock:
     def __init__(self, timeout: float | None = None) -> None:
         # pylint: disable=no-member
-        self.lock = _Lock.remote()  # type: ignore
+        self.lock = _Lock.remote() # type: ignore[attr-defined]
 
         self.timeout = timeout
 

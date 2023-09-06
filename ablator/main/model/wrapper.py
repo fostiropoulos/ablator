@@ -111,16 +111,16 @@ class ModelWrapper(ModelBase):
         model_class = self.model_class
         model: nn.Module
         if (model_config := self.model_config) is not None:
-            model = model_class(model_config)  # type: ignore
+            model = model_class(model_config)
         else:
-            # Support of decleartive paradigm without model over-writing
+            # Support of declarative paradigm without model over-writing
             model = model_class()
 
         if "model" in save_dict:
             model.load_state_dict(save_dict["model"], strict=strict_load)
         elif inspect.ismethod(getattr(model, "init_weights", None)):
             # TODO tutorial on this use-case
-            model.init_weights()  # type: ignore
+            getattr(model, "init_weights")()
 
         model = model.to(self.device)
         optimizer = self.create_optimizer(
@@ -605,7 +605,7 @@ class ModelWrapper(ModelBase):
                 self.logger.info(f"Evaluation Step [{eval_step}] {msg}", verbose=False)
 
     @property
-    def total_steps(self) -> int:  # type: ignore[override] # flake8: noqa
+    def total_steps(self) -> int: # type: ignore[override]
         """
         The total number of steps for training.
 
@@ -885,11 +885,11 @@ class ModelWrapper(ModelBase):
             return
         step_when = self._scheduler_step_when
         if step_when == "train" or step_when is None:
-            scheduler.step(*args)  # type: ignore
+            scheduler.step(*args)
         elif step_when == "epoch" and self._is_step(self.epoch_len):
-            scheduler.step(*args)  # type: ignore
+            scheduler.step(*args)
         elif step_when == "val" and is_val_step:
-            scheduler.step(*args)  # type: ignore
+            scheduler.step(*args)
 
     def apply_loss(
         self,
@@ -1270,7 +1270,7 @@ class ModelWrapper(ModelBase):
 
         scheduler_state_dict = None
         if getattr(self, "scheduler", None) is not None:
-            scheduler_state_dict = self.scheduler.state_dict()  # type: ignore
+            scheduler_state_dict = self.scheduler.state_dict() # type: ignore[union-attr]
 
         scaler_state_dict = None
         if getattr(self, "scaler", None) is not None:

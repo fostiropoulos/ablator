@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 import typing as ty
 
 from ablator.main.state.store import TrialState
@@ -18,7 +19,7 @@ class BaseSampler(ABC):
 
     @abstractmethod
     def update_trial(
-        self, trial_id: int, metrics: dict[str, float] | None, state: TrialState
+        self, trial_id: int, metrics: OrderedDict[str, float] | None, state: TrialState
     ):
         """
         Update the trial state given the trial_id, the updated metrics, and the current trial state.
@@ -27,7 +28,7 @@ class BaseSampler(ABC):
         ----------
         trial_id : int
             the trial_id which was returned when running ``eager_sampler``
-        metrics : dict[str, float] | None
+        metrics : OrderedDict[str, float] | None
             a metric dictionary corresponding to the updated metrics.
         state : TrialState
             the updated trial state

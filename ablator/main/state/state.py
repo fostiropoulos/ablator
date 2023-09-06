@@ -63,7 +63,9 @@ class ExperimentState:
         sampler_seed: int | None = None,
     ) -> None:
         self.config = config
-        self.logger: FileLogger = logger if logger is not None else butils.Dummy()  # type: ignore
+        self.logger: FileLogger | butils.Dummy = (
+            logger if logger is not None else butils.Dummy()
+        )
 
         default_vals = [
             v
@@ -124,7 +126,7 @@ class ExperimentState:
             raise NotImplementedError
         for trial in self.get_trials_by_state(TrialState.RUNNING):
             # mypy error for sqlalchemy types
-            trial_id = int(trial.trial_num)  # type: ignore
+            trial_id: int = trial.trial_num  # type: ignore[assignment]
             self.update_trial_state(trial_id, None, TrialState.WAITING)
 
     @staticmethod
@@ -200,8 +202,8 @@ class ExperimentState:
         if len(pending_trials) > 0:
             trial = random.choice(pending_trials)
             # mypy errors for sqlalchemy types
-            trial_id = int(trial.trial_num)  # type: ignore
-            trial_config = type(self.config)(**trial.config_param)  # type: ignore
+            trial_id: int = trial.trial_num  # type: ignore[assignment]
+            trial_config = type(self.config)(**trial.config_param)
             self._update_internal_trial_state(trial_id, None, TrialState.RUNNING)
             return trial_id, trial_config
 
@@ -363,7 +365,7 @@ class ExperimentState:
                 raise RuntimeError(f"Trial {trial_id} was not found.")
             if metrics is not None:
                 res.metrics.append(metrics)
-            res.state = state  # type: ignore # TODO fix this
+            res.state = state # type: ignore[assignment]
             session.commit()
             session.flush()
 
@@ -439,7 +441,7 @@ class ExperimentState:
 
     def _get_trials_by_stmt(self, stmt) -> list[Trial]:
         with self.engine.connect() as conn:
-            trials: list[Trial] = conn.execute(stmt).fetchall()  # type: ignore
+            trials: list[Trial] = conn.execute(stmt).fetchall()  # type: ignore[assignment]
         return trials
 
     def valid_trials_id(self) -> list[int]:
