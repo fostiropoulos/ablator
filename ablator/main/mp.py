@@ -53,12 +53,6 @@ class ParallelTrainer(ProtoTrainer):
         This attribute manages optuna trials.
     total_trials : int
         Number of trials to run.
-    gpu_mem_bottleneck : int
-        The minimum memory capacity of all available gpus.
-    cpu : float
-        The number of cpu used per trial.
-    gpu : float
-        The number of gpu used per trial.
 
     Examples
     --------

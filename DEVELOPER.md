@@ -72,10 +72,11 @@ You will need to reboot / or log out and log in again for the changes to take ef
 The tests require the latest ABLATOR image to be built. The image must have the same python version as the running environment.
 
 The easiest way to build a docker image is to run the script **with your **development virtual **environment** active** (as it is used to identify the python version you are using):
-`bash script/make_docker.sh`
+`bash scripts/make_docker.sh`
 
 You will **need** to make the docker image in the main ablator directory **every time** before running the tests (as the code in the docker image is updated from the current repository)
 
+**NOTE**  While building the image, you may encounter this error: `Docker-credential-desktop.exe executable file not found in $PATH`. A quick fix is to change `credsStore` to `credStore` in the config file at  `~/.docker/config.json`. ([ref](https://forums.docker.com/t/docker-credential-desktop-exe-executable-file-not-found-in-path-using-wsl2/100225/5))
 ### Details of the Build Process and Docker Instructions (Optional)
 
 You might encounter errors using the script above or you might be working on something that requires you to play around with different python versions. You can inspect [make_docker.sh](scripts/make_docker.sh) or simply play around with:
@@ -234,4 +235,4 @@ docker run -v \
 
 Or simply
 
-`bash scripts/run_test.sh`
+`bash scripts/run_tests.sh`

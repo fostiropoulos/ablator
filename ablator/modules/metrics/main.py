@@ -21,7 +21,7 @@ class Metrics:
     Parameters
     ----------
     *args : ty.Any
-        TODO{hiue}
+        This arguments is just for disabling passing by positional arguments.
     batch_limit : int
         Maximum number of batches to keep for every category of data (specified by ``tags``), so only `batch_limit`
         number of latest batches is stored for each of the categories. Default is 30.
@@ -328,7 +328,8 @@ class Metrics:
         Parameters
         ----------
         *args : ty.Any
-            TODO{hiue}
+            This arguments is just for disabling passing by positional arguments. This is because it is easy to mix up
+            the order of pred, labels and tags.
         **kwargs : ty.Any
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
             and value is a batch of prediction values. Note that the passed keys in ``**kwrags`` must match arguments in
@@ -338,10 +339,6 @@ class Metrics:
         ------
         ValueError
             If any positional arguments are passed.
-
-        Notes
-        -----
-        this is because it is easy to mix up the order of pred, labels and tags
 
         Examples
         --------

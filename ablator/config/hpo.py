@@ -7,7 +7,7 @@ from ablator.config.types import Annotation, Enum, List, Optional, Self, Tuple, 
 
 class SubConfiguration:
     """
-    SubConfiguration for a searchSpace.
+    SubConfiguration for a SearchSpace.
 
     Attributes
     ----------
@@ -16,7 +16,41 @@ class SubConfiguration:
 
     Parameters
     ----------
-    TODO{hiue}
+    kwargs: ty.Any
+        Keyword arguments for the subconfigurations, can be nested dictionary of search spaces.
+    
+    Examples
+    --------
+    >>> search_space = {
+    ...     "train_config.optimizer_config": SearchSpace(
+    ...         subspaces=[
+    ...             {"sub_configuration": {"name": "sgd", "arguments": {"lr": 0.1}}},
+    ...             {
+    ...                 "sub_configuration": {
+    ...                     "name": "adam",
+    ...                     "arguments": {
+    ...                         "lr": {"value_range": (0, 1), "value_type": "float"},
+    ...                         "weight_decay": 0.9,
+    ...                     },
+    ...                 }
+    ...             },
+    ...             {
+    ...                 "sub_configuration": {
+    ...                     "name": "adam",
+    ...                     "arguments": {
+    ...                         "lr": {
+    ...                             "subspaces": [
+    ...                                 {"value_range": (0, 1), "value_type": "float"},
+    ...                                 {"value_range": (0, 1), "value_type": "float"},
+    ...                             ]
+    ...                         },
+    ...                         "weight_decay": 0.9,
+    ...                     },
+    ...                 }
+    ...             },
+    ...         ]
+    ...     )
+    ... }
 
     """
 
@@ -97,12 +131,28 @@ class FieldType(Enum):
 @configclass
 class SearchSpace(ConfigBase):
     """
-    Search space configuration, required in ``ParallelConfig``, is used to define
-    the search space for a hyperparameter.
+    Search space configuration, required in ``ParallelConfig``, is used to define the
+    search space for a hyperparameter. Its constructor takes in as input positional
+    arguments or keyword arguments that corresponds to parameters defined in the
+    Parameters section.
 
     Parameters
     ----------
-    TODO{hieu}
+    value_range: Optional[Tuple[str, str]]
+        value range of the parameter.
+    categorical_values: Optional[List[str]]
+        categorical values for the parameter.
+    subspaces: Optional[List[Self]]
+        Nested SearchSpace, optional
+    sub_configuration: Optional[SubConfiguration]
+        SubConfiguration for a SearchSpace, optional
+    value_type: FieldType = FieldType.continuous
+        value type of the parameter's values (continous or discrete).
+    n_bins: Optional[int]
+        Total bins for grid sampling, optional
+    log: bool = False
+        To log. by default, False.
+    
 
     Attributes
     ----------
@@ -113,6 +163,7 @@ class SearchSpace(ConfigBase):
     subspaces: Optional[List[Self]]
         Nested SearchSpace, optional
     sub_configuration: Optional[SubConfiguration]
+        SubConfiguration for a SearchSpace, optional
     value_type: FieldType = FieldType.continuous
         value type of the parameter's values (continous or discrete).
     n_bins: Optional[int]

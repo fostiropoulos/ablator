@@ -35,8 +35,6 @@ class TrainConfig(ConfigBase):
         optimizer configuration. (check ``OptimizerConfig`` for more details)
     scheduler_config: Optional[SchedulerConfig]
         scheduler configuration. (check ``SchedulerConfig`` for more details)
-    rand_weights_init: bool = True
-        whether to initialize model weights randomly.
 
     Examples
     --------
@@ -60,8 +58,7 @@ class TrainConfig(ConfigBase):
     ...     batch_size=32,
     ...     epochs=10,
     ...     optimizer_config = my_optimizer_config,
-    ...     scheduler_config = my_scheduler_config,
-    ...     rand_weights_init = True
+    ...     scheduler_config = my_scheduler_config
     ... )
 
     - We now define the run config for prototype training, which is the last configuration step.
@@ -187,8 +184,7 @@ class RunConfig(ConfigBase):
     ...     batch_size=32,
     ...     epochs=10,
     ...     optimizer_config = my_optimizer_config,
-    ...     scheduler_config = my_scheduler_config,
-    ...     rand_weights_init = True
+    ...     scheduler_config = my_scheduler_config
     ... )
 
     - Define model config, here we use default one with no custom hyperparameters (sometimes you would
