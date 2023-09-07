@@ -42,7 +42,7 @@ class SchedulerConfig(ConfigBase):
     A class that defines a configuration for a learning rate scheduler. This scheduler config
     will be provided to ``TrainConfig`` (optional) as part of the training setting of the experiment.
 
-    Arguments
+    Attributes
     ----------
     name : str
         The name of the scheduler.
@@ -55,7 +55,7 @@ class SchedulerConfig(ConfigBase):
         The name of the scheduler, this can be any in ``['None', 'step', 'cycle', 'plateau']``.
     arguments : dict[str, ty.Any]
         The arguments for the scheduler, specific to a certain type of scheduler.
-    
+
     Examples
     --------
     The following example shows how to create a scheduler config and use it in

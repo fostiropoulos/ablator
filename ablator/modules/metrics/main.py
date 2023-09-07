@@ -22,7 +22,7 @@ class Metrics:
     ----------
     *args : ty.Any
         This arguments is just for disabling passing by positional arguments.
-    batch_limit : int
+    batch_limit : int | None
         Maximum number of batches to keep for every category of data (specified by ``tags``), so only `batch_limit`
         number of latest batches is stored for each of the categories. Default is 30.
     memory_limit : int | None

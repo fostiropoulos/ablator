@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Plot(ABC):
-    
+
     """
     A base class for parsing experiment results and plotting them with pandas and matplotlib.
 
@@ -30,7 +30,7 @@ class Plot(ABC):
         The y-axis label (metric name), by default None.
     x_axis : str, optional
         The x-axis label (attribute name), by default None.
-    x_ticks : np.ndarray, optional
+    x_ticks : list[str], optional
         The x-axis ticks, by default None.
     ax : Axes, optional
         The axes to plot on, by default None.
@@ -47,7 +47,7 @@ class Plot(ABC):
         The y-axis label (metric name).
     x_axis : str
         The x-axis label (attribute name).
-    x_ticks : np.ndarray
+    x_ticks : list[str]
         The x-axis ticks.
     figure : Figure
         The figure to plot on. If None, new figure of size (4,4) will be created.
