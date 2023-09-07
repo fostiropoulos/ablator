@@ -13,9 +13,17 @@ on a multi-node cluster, **only** Ubuntu. When developing features related to a 
 
 ## Installing the development version of ABLATOR
 
-The development version of Ablator can be installed via pip `pip install -e .[dev]`
+The development version of Ablator can be installed via pip `pip install -e ."[dev]"`
 
-The `-e` option automatically updates the library based on the folder contents.
+The `-e` option automatically updates the library based on the folder contents, while the `[dev]` option installs
+additional developer depedencies for ABLATOR.
+
+### Special Considerations for Mac
+
+You should first make sure that xcode command-line tools are installed using `xcode-select --install`
+
+Depending on whether you have an Intel or Apple Silicon processor, you might need to follow [additional steps in installing ray](https://docs.ray.io/en/master/ray-overview/installation.html)
+
 
 ## Setting up Docker environment
 
@@ -53,7 +61,21 @@ Do not install Windows Docker using `Docker Desktop` for Windows. If you already
 
 ### For MAC
 
-TODO
+
+You should follow the [official instructions](https://docs.docker.com/desktop/install/mac-install/) on how to install docker.
+
+You can verify that Docker is running by using the following command
+```bash
+docker --version
+```
+You should see the version number of Docker if the installation was successful.
+
+
+To verify whether Docker is running, run the below Docker command in the terminal
+```bash
+docker run hello-world
+```
+
 
 ## Setting up Docker environment for non-root users
 
@@ -137,9 +159,12 @@ sudo systemctl restart docker
 sudo reboot
 ```
 ### For Windows
-See Above
+
+You must use WSL (see above) and you should follow the instructions for Ubuntu.
+
 ### For Mac
-**TODO**
+
+Natively torch does not support support CUDA on Mac. On Apple Silicon Mac there is *MPS* accelator support. However, ABLATOR does not currently officially support *MPS*, as such you will only be able to run experiments and tests on CPU.
 
 ### Verify installation:
 
@@ -149,19 +174,14 @@ docker run --rm --runtime=nvidia --gpus all ablator nvidia-smi
 
 
 ## Clean Up
-During the execution of tests, a mock ray cluster is set up. Due to interruptions or unexpected errors `zombie` docker containers can be left up and running. The zombie containers can interact with tests running on the system and it is **BEST** to terminate all running containers to avoid unwanted interactions.
 
-You can check the currently running docker images with: `docker ps`
-
-To kill / clean all running containers you can run `docker kill $(docker ps -q)`.
-
-It is recommended you do that before every test.
+During the execution of tests, a mock ray cluster is set up. Due to interruptions or unexpected errors `zombie` docker containers can remain running. The zombie containers can interact with tests running on the system and it is **BEST** to terminate all running containers to avoid unwanted interactions. The [`run_tests.sh`](scripts/run_tests.sh) script automatically takes care of that. If you have other running containers please modify the script to disable killing your containers.
 
 ## System dependencies
 
 SSH should be enabled on the current system. It is recommended for security reasons that you configure SSH to be inaccessible outside your local network, [a good guide](https://www.ssh.com/academy/ssh/sshd_config).
 
-The easiest thing would be to disable ssh-server e.g. `sudo systemctl disable ssh` and stop `sudo systemctl stop ssh` when you are not running tests. Additional security options can include preventing access to SSH outside your local network. A risk is when your user account has a weak password, or your ssh-keys are leaked **and** you are connected to an insecure WiFi network.
+The easiest thing would be to disable ssh-server when you are not running tests i.e. for Ubuntu `sudo systemctl disable ssh` and stop `sudo systemctl stop ssh`. Additional security options can include preventing access to SSH outside your local network. The risk is present for when your user account has a weak password, your ssh-keys are leaked **and** you are connected to an insecure WiFi network.
 
 ### For Ubuntu
 
@@ -172,6 +192,7 @@ You can modify `/etc/ssh/sshd_config` and set
 PasswordAuthentication no
 PubkeyAuthentication yes
 ```
+To install a local ssh server you can use:
 
 ```bash
 sudo apt install openssh-server
@@ -179,11 +200,13 @@ sudo systemctl start ssh
 sudo systemctl status ssh
 ```
 
-### For Windows
-None
 ### For Mac
-**TODO**
-## Testing changes
+
+You should follow the [official guide](https://support.apple.com/guide/mac-help/allow-a-remote-computer-to-access-your-mac-mchlp1066/mac) on how to set-up remote computer access to your Mac.
+
+Make sure your `authorized_keys` file has the correct permissions i.e. `chmod 600 ~/.ssh/authorized_keys`
+
+## Testing changes locally
 
 Make sure that ray is not currently running on your local environment. e.g. by running `ray status`
 
@@ -211,27 +234,19 @@ To avoid polluting the commit history, each commit should be tested before pushi
 
 In the main directory (after activating the correct environment):
 
-1. `bash scripts/make_docker.sh`
-2.
+
 ```bash
-# maps the local docker instance to inside docker
-# sets sufficient number of cpus
-# allows access of pids to the host for correct GPU utilization
-# enables access to GPUs inside docker, remove `--gpus all` to test without GPUs
-# `ablator` is the tagged docker
-docker run -v \
-   /var/run/docker.sock:/var/run/docker.sock \
-   --cpuset-cpus="0-4" \
-   --pid host \
-   --gpus all \
-   ablator
+$ bash scripts/run_test.sh
 ```
-3. pylint: `pylint ablator`
-4. mypy: `mypy ablator`
-5. flake8: `flake8 ablator`
-6. pydoc-lint: `pydoclint ablator`
-7. black: `black .`
 
-Or simply
+It is always a good idea to run tests **with** and without GPU support
 
-`bash scripts/run_test.sh`
+```bash
+$ bash scripts/run_test.sh --cpu
+```
+
+Before committing, make sure that the static code checks pass.
+
+```bash
+$ bash scripts/run_lint.sh
+```
