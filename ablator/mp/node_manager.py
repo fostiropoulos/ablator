@@ -203,7 +203,6 @@ class NodeManager:
                     auth_timeout=timeout,
                     channel_timeout=timeout,
                 )
-                # _stdin, _stdout, _stderr
                 _, _stdout, _ = client.exec_command(cmd)
                 result[node_name] = _stdout.read().decode()
             # pylint: disable=broad-exception-caught

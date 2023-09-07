@@ -275,31 +275,33 @@ def test_git_diffs(
         msg
         == f"No git repository was detected at {repo_path}. We recommend setting the working directory to a git repository to keep track of changes."
     )
-    git.Repo.init(
+    remote_repo = git.Repo.init(
         remote_path,
         bare=True,
     )
+
     repo = git.Repo.init(
         repo_path,
     )
     with pytest.raises(
-        RuntimeError, match="Reference at 'refs/heads/master' does not exist"
+        RuntimeError, match=".*Reference at .* does not exist"
     ):
-        msg = ablator._get_diffs(repo_path)
+        msg = ablator._get_diffs(repo.working_dir)
 
-    repo.create_remote("origin", url=remote_path)
-    file_name = os.path.join(repo_path, "mock.txt")
+    repo.create_remote("origin", url=remote_repo.working_dir)
+    file_name = os.path.join(repo.working_dir, "mock.txt")
     open(file_name, "wb").close()
     repo.index.add([file_name])
     repo.index.commit("initial commit")
+    repo.create_head("master")
     repo.remote("origin").push("master")
 
-    msg = ablator._get_diffs(repo_path)
+    msg = ablator._get_diffs(repo.working_dir)
     diffs = msg.split("\n")
     assert diffs[0] == f"Git Diffs for {repo.head.ref} @ {repo.head.commit}: "
     assert diffs[1] == ""
     Path(file_name).write_text("\n".join(str(i) for i in range(100)) + "\n")
-    msg = ablator._get_diffs(repo_path)
+    msg = ablator._get_diffs(repo.working_dir)
     diffs = msg.split("\n")
     assert all(diffs[-(i + 1)] == f"+{99-i}" for i in range(100))
 
@@ -307,7 +309,7 @@ def test_git_diffs(
     repo.index.commit("second commit")
     repo.remote("origin").push("master")
     Path(file_name).write_text("\n".join(str(i) for i in range(100)) + "\n")
-    msg = ablator._get_diffs(repo_path)
+    msg = ablator._get_diffs(repo.working_dir)
     diffs = msg.split("\n")
     assert diffs[1] == ""
 

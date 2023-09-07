@@ -4,29 +4,25 @@ import ray
 from ablator.utils.base import Lock
 
 
-@ray.remote(num_cpus=0.001)
-def mock_remote(t: Lock):
-    t.acquire()
-    time.sleep(0.1)
-    t.release()
-    return True
-
-
-def test_time_lock_ray():
+def test_time_lock_ray(ray_cluster, blocking_lock_remote):
     t = Lock(timeout=100)
-    results = ray.get([mock_remote.remote(t) for i in range(10)])
+
+    results = ray.get(
+        [ray.remote(num_cpus=0.001)(blocking_lock_remote).remote(t) for i in range(10)],
+        timeout=10,
+    )
     assert all(results)
 
 
-def test_fail_lock_ray():
+def test_fail_lock_ray(ray_cluster, blocking_lock_remote):
     t = Lock(timeout=1)
     t.acquire()
     with pytest.raises(TimeoutError, match="Could not obtain lock within 1.00 seconds"):
-        ray.get([mock_remote.remote(t) for i in range(10)])
+        ray.get([ray.remote(num_cpus=0.001)(blocking_lock_remote).remote(t) for i in range(10)])
     assert True
 
 
-def test_time_lock():
+def test_time_lock(ray_cluster):
     t = Lock(timeout=1)
     t.acquire()
     with pytest.raises(TimeoutError, match="Could not obtain lock within 1.00 seconds"):

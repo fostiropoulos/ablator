@@ -7,12 +7,17 @@ import ray
 from ablator.mp.node_manager import NodeManager
 from ablator.mp.utils import Resource
 
+IS_LINUX = (
+    "microsoft-standard" not in platform.uname().release
+    and not "darwin" in platform.system().lower()
+)
+
 
 @pytest.mark.skipif(
-    "microsoft-standard" not in platform.uname().release,
-    reason="Node Manager test for WSL",
+    IS_LINUX,
+    reason="Node Manager test for non-linux",
 )
-def test_node_manager_wsl(tmp_path: Path, ray_cluster):
+def test_node_manager_non_linux(tmp_path: Path, ray_cluster):
     timeout = 5
     n_nodes = ray_cluster.nodes
     manager = NodeManager(tmp_path, ray_address=ray_cluster.cluster_address)
@@ -26,7 +31,7 @@ def test_node_manager_wsl(tmp_path: Path, ray_cluster):
 
 
 @pytest.mark.skipif(
-    "microsoft-standard" in platform.uname().release,
+    not IS_LINUX,
     reason="Node Manager test for Unix platforms",
 )
 def test_node_manager(tmp_path: Path, ray_cluster):
@@ -64,7 +69,7 @@ def test_node_manager(tmp_path: Path, ray_cluster):
 
 
 @pytest.mark.skipif(
-    "microsoft-standard" in platform.uname().release,
+    not IS_LINUX,
     reason="Node Manager test for Unix platforms",
 )
 def test_shutdown(tmp_path: Path, ray_cluster, assert_error_msg):

@@ -26,6 +26,11 @@ from ablator.mp.gpu_manager import GPUManager
 from ablator.mp.utils import ray_init
 from ablator.utils._nvml import _get_gpu_info
 
+IS_LINUX = (
+    "microsoft-standard" not in uname().release
+    and not "darwin" in platform.system().lower()
+)
+
 DOCKER_TAG = "ablator"
 pytest_plugins = ["test_plugins.model"]
 
@@ -121,15 +126,12 @@ def pytest_addoption(parser):
 
 def pytest_collection_modifyitems(config, items):
     skip_slow = pytest.mark.skip(reason="need --runslow option to run")
-    skip_dist = pytest.mark.skip(reason="distributed tests run only on linux.")
     dist_arg_names = ["main_ray_cluster", "ray_cluster", "ablator", "ablator_results"]
     for item in items:
         argnames = item._fixtureinfo.argnames
         if any(name in argnames for name in dist_arg_names):
             if not config.getoption("--runslow"):
                 item.add_marker(skip_slow)
-            elif platform.system().lower() != "linux":
-                item.add_marker(skip_dist)
 
 
 def build_docker_image(docker_client: docker.DockerClient):
@@ -157,7 +159,7 @@ class DockerRayCluster:
         self.nodes = nodes
         # TODO check if bug is fixed. The reason we turn off multi-node cluster for
         # WSL tests is that ray nodes die randomly
-        if "microsoft-standard" in uname().release and nodes > 0:
+        if not IS_LINUX and nodes > 0:
             raise RuntimeError(
                 "Does not support multi-node cluster environment on Windows."
             )
@@ -265,7 +267,7 @@ class DockerRayCluster:
 
 
 def get_main_ray_cluster(working_dir, docker_tag) -> DockerRayCluster:
-    n_nodes = 0 if "microsoft-standard" in uname().release else 1
+    n_nodes = 1 if IS_LINUX else 0
     cluster = DockerRayCluster(
         nodes=n_nodes, working_dir=working_dir, docker_tag=docker_tag
     )
@@ -354,6 +356,7 @@ class MPScheduler(LoadScopeScheduling):
             "modules/test_file_logger.py",
             "analysis/test_analysis.py",
             "mp/test_gpu_manager.py",
+            "utils/test_time_lock.py",
         ]
         if any(f in nodeid for f in file_names):
             self.log(f"Scheduling {nodeid} with mp-tests.")
@@ -382,6 +385,7 @@ def run_tests_local(test_fns, kwargs=None, unpickable_kwargs=None):
         get_ablator,
         _locking_remote_fn,
         _remote_fn,
+        _blocking_lock_remote,
     )
 
     if kwargs is None:
@@ -389,7 +393,7 @@ def run_tests_local(test_fns, kwargs=None, unpickable_kwargs=None):
 
     if unpickable_kwargs is None:
         unpickable_kwargs = {}
-    n_nodes = 0 if "microsoft-standard" in uname().release else 1
+    n_nodes = 1 if IS_LINUX else 0
     if _test_requires(test_fns, "ablator") and "ablator" not in unpickable_kwargs:
         ray_cluster = DockerRayCluster(
             nodes=n_nodes, working_dir=Path(WORKING_DIR).parent
@@ -429,6 +433,7 @@ def run_tests_local(test_fns, kwargs=None, unpickable_kwargs=None):
             "make_config": _make_config,
             "remote_fn": _remote_fn,
             "locking_remote_fn": _locking_remote_fn,
+            "blocking_lock_remote": _blocking_lock_remote,
         }
 
         if hasattr(fn, "pytestmark"):

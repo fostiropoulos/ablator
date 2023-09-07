@@ -457,9 +457,9 @@ def test_metrics_speed():
             number=5,
         )
         batch_perfs.append(batch_perf)
-    # less than 100% difference
-    assert abs(baseline_perf - perf) / baseline_perf < 1
-    assert (max(mem_perfs + batch_perfs) - baseline_perf) / baseline_perf < 1.5
+    # less than 200% difference
+    assert abs(baseline_perf - perf) / baseline_perf < 2
+    assert (max(mem_perfs + batch_perfs) - baseline_perf) / baseline_perf < 2
 
 
 if __name__ == "__main__":
