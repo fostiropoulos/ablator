@@ -17,15 +17,11 @@ class Numerical(Plot):
 class LinearPlot(Numerical):
     def _make(
         self,
-        scatter_plot: bool = True,
-        polynomial_fit: int | None = None,
         **kwargs,
     ) -> tuple[Figure, Axes]:
-        if not scatter_plot and polynomial_fit is None:
-            raise ValueError(
-                "Must specify `polynomial_fit` when setting `scatter_plot` to False."
-            )
         attributes = self.attributes.values
+        if len(attributes.shape) > 1 and attributes.shape[-1] > 1:
+            raise ValueError("LinearPlot attributes must be single dimensional.")
         metric = self.metric.values
         df = pd.concat(
             [
@@ -39,7 +35,6 @@ class LinearPlot(Numerical):
         )
         self.ax = g
         self.figure = g.figure
-
         return self.figure, self.ax
 
     def _parse_legend(self, ax):

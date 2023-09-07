@@ -28,25 +28,35 @@ class Categorical(Plot):
         metric: pd.Series,
         attributes: pd.Series,
     ):
+        if len(attributes.shape) > 1 and attributes.shape[-1] > 1:
+            raise ValueError(f"{cls.__name__} attributes must be single dimensional.")
         unique_values = attributes.unique()
-        metrics: dict[str, pd.Series] = {}
+        metrics: dict[str | float, pd.Series] = {}
 
         if None in unique_values:
+            # this is because None can not be dictionary key.
             unique_values = list(filter(None, unique_values))
             none_name = "None"
             if "None" in unique_values:
                 logger.warning(
-                    "`None` name is present as categorical value as well as np.nan."
+                    "`None` is present as a categorical string value as"
+                    " well as None. Will rename None to Type(None)."
                 )
                 none_name = "Type(None)"
                 assert none_name not in unique_values, (
-                    f"{none_name} is also present as a categorical. Highly "
-                    "unlikely it is by accident."
+                    f"{none_name}, and `None` are both present as categorical values. "
+                    "Unable to rename None value."
                 )
-            metrics[none_name] = metric[attributes.isna()]
+            metrics[none_name] = metric[attributes.apply(lambda x: x is None)]
 
-        for u in sorted(unique_values):
-            metrics[u] = metric[attributes == u]
+        for i in np.argsort(unique_values):
+            u = unique_values[i]
+            if isinstance(u, float) and np.isnan(u):
+                metrics[u] = metric[
+                    attributes.apply(lambda x: isinstance(x, float) and np.isnan(x))
+                ]
+            else:
+                metrics[u] = metric[attributes == u]
 
         return metrics
 
@@ -80,19 +90,13 @@ class ViolinPlot(Categorical):
             palette="Set3",
         )
         mean_perf = []
-        std_perf = []
         median_perf = []
         best_perf = []
         for vals in self.attribute_metric_map.values():
             # top performance marker
             obj_fn = self.metrics_obj_fn
             best_perf.append(self._sort_vals_obj(vals, obj_fn)[0])
-
-            std = np.std(vals)
-            if Optim(obj_fn) == Optim.min:
-                std *= -1
             mean_perf.append(np.mean(vals))
-            std_perf.append(np.mean(vals) + std)
             median_perf.append(np.median(vals))
 
         labels = [
