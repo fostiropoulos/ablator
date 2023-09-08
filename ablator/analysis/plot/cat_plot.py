@@ -34,12 +34,12 @@ class Categorical(Plot):
         ``ax`` : ``Axes, optional`` -  The axes to plot on, by default ``None``.
     **kwargs : ty.Any
         Keyword arguments to be passed to the base class `Plot`. These arguments are:
-        ``metric`` : ``pd.Series`` -  The ablation study metric values to plot, 
-        ``attributes`` : ``pd.Series`` -  The ablation study attributes values to plot, 
-        ``metric_obj_fn`` : ``Optim`` -  The metric optimization direction, 
-        ``y_axis`` : ``str, optional`` -  The y-axis label (metric name), by default ``None``, 
-        ``x_axis`` : ``str, optional`` -  The x-axis label (attribute name), by default ``None``, 
-        ``x_ticks`` : ``list[str], optional`` -  The x-axis ticks, by default ``None``, 
+        ``metric`` : ``pd.Series`` -  The ablation study metric values to plot,
+        ``attributes`` : ``pd.Series`` -  The ablation study attributes values to plot,
+        ``metric_obj_fn`` : ``Optim`` -  The metric optimization direction,
+        ``y_axis`` : ``str, optional`` -  The y-axis label (metric name), by default ``None``,
+        ``x_axis`` : ``str, optional`` -  The x-axis label (attribute name), by default ``None``,
+        ``x_ticks`` : ``list[str], optional`` -  The x-axis ticks, by default ``None``,
         ``ax`` : ``Axes, optional`` -  The axes to plot on, by default ``None``.
 
     Attributes

@@ -421,11 +421,15 @@ class SummaryLogger:
 
         Parameters
         ----------
-        msg : str
-            The message to log.
-        verbose : bool
-            Whether to print messages to the console, by default ``False``.
-        
+        *args : Any
+            Positional arguments to be passed. These arguments are:
+            ``msg`` : ``str`` - The message to log,
+            ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``False``.
+        **kwargs : Any
+            Keyword arguments to be passed. These arguments are:
+            ``msg`` : ``str`` - The message to log,
+            ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``False``.
+
         """
         self.logger.info(*args, **kwargs)
 
@@ -436,10 +440,14 @@ class SummaryLogger:
 
         Parameters
         ----------
-        msg : str
-            The message to log.
-        verbose : bool
-            Whether to print messages to the console, by default ``True``.
+        *args : Any
+            Positional arguments to be passed. These arguments are:
+            ``msg`` : ``str`` - The message to log,
+            ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``True``.
+        **kwargs : Any
+            Keyword arguments to be passed. These arguments are:
+            ``msg`` : ``str`` - The message to log,
+            ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``True``.
         """
         self.logger.warn(*args, **kwargs)
 
@@ -450,7 +458,13 @@ class SummaryLogger:
 
         Parameters
         ----------
-        msg : str
-            The message to log.
+        *args : Any
+            Positional arguments to be passed. These arguments are:
+            ``msg`` : ``str`` - The message to log.
+
+        **kwargs : Any
+            Keyword arguments to be passed. These arguments are:
+            ``msg`` : ``str`` - The message to log.
+
         """
         self.logger.error(*args, **kwargs)

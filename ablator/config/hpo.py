@@ -18,7 +18,7 @@ class SubConfiguration:
     ----------
     **kwargs: ty.Any
         Keyword arguments for the subconfigurations, can be nested dictionary of search spaces.
-    
+
     Examples
     --------
     >>> search_space = {
@@ -144,19 +144,18 @@ class SearchSpace(ConfigBase):
         ``categorical_values``: ``Optional[List[str]]`` - categorical values for the parameter,
         ``subspaces``: ``Optional[List[Self]]`` - Nested SearchSpace, optional,
         ``sub_configuration``: ``Optional[SubConfiguration]`` - SubConfiguration for a SearchSpace, optional,
-        ``value_type``: ``FieldType`` - value type of the parameter's values (continous or discrete). By default, ``FieldType.continuous``,
-        ``n_bins``: ``Optional[int]`` - Total bins for grid sampling, optional,
-        ``log``: ``bool`` - To log. By default, ``False``.
+        ``value_type``: ``FieldType`` - value type of the parameter's values (continous or discrete).
+        By default, ``FieldType.continuous``, ``n_bins``: ``Optional[int]`` - Total bins for grid sampling,
+        optional, ``log``: ``bool`` - To log. By default, ``False``.
     **kwargs : ty.Any
         Keyword arguments to be passed. These arguments are:
         ``value_range``: ``Optional[Tuple[str, str]]`` - value range of the parameter,
         ``categorical_values``: ``Optional[List[str]]`` - categorical values for the parameter,
         ``subspaces``: ``Optional[List[Self]]`` - Nested SearchSpace, optional,
         ``sub_configuration``: ``Optional[SubConfiguration]`` - SubConfiguration for a SearchSpace, optional,
-        ``value_type``: ``FieldType`` - value type of the parameter's values (continous or discrete). By default, ``FieldType.continuous``,
-        ``n_bins``: ``Optional[int]`` - Total bins for grid sampling, optional,
-        ``log``: ``bool`` - To log. By default, ``False``.
-    
+        ``value_type``: ``FieldType`` - value type of the parameter's values (continous or discrete).
+        By default, ``FieldType.continuous``, ``n_bins``: ``Optional[int]`` - Total bins for grid sampling,
+        optional, ``log``: ``bool`` - To log. By default, ``False``.
 
     Attributes
     ----------

@@ -605,7 +605,7 @@ class ModelWrapper(ModelBase):
                 self.logger.info(f"Evaluation Step [{eval_step}] {msg}", verbose=False)
 
     @property
-    def total_steps(self) -> int: # type: ignore[override]
+    def total_steps(self) -> int:  # type: ignore[override]
         """
         The total number of steps for training.
 
@@ -1270,7 +1270,7 @@ class ModelWrapper(ModelBase):
 
         scheduler_state_dict = None
         if getattr(self, "scheduler", None) is not None:
-            scheduler_state_dict = self.scheduler.state_dict() # type: ignore[union-attr]
+            scheduler_state_dict = self.scheduler.state_dict()  # type: ignore[union-attr]
 
         scaler_state_dict = None
         if getattr(self, "scaler", None) is not None:

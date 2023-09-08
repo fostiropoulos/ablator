@@ -216,7 +216,7 @@ class ConfigBase:
             raise ValueError(
                 f"{self._class_name} does not support positional arguments."
             )
-        if not isinstance(self, self.config_class): # type: ignore[arg-type]
+        if not isinstance(self, self.config_class):  # type: ignore[arg-type]
             raise RuntimeError(
                 f"You must decorate your Config class '{self._class_name}' with ablator.configclass."
             )
@@ -298,8 +298,9 @@ class ConfigBase:
         ----------
         path : Union[Path, str]
             The path to the configuration file.
-        debug : bool, optional, default=False
+        debug : bool, optional
             Whether to load the configuration in debug mode, and ignore discrepancies/errors.
+            By default ``False``.
 
         Returns
         -------
@@ -307,7 +308,7 @@ class ConfigBase:
             The loaded configuration object.
         """
         # TODO[iordanis] remove OmegaConf dependency
-        kwargs: dict = OmegaConf.to_object( # type: ignore[assignment]
+        kwargs: dict = OmegaConf.to_object(  # type: ignore[assignment]
             OmegaConf.create(Path(path).read_text(encoding="utf-8"))
         )
         return cls(**kwargs, debug=debug)

@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class Plot(ABC):
-
     """
     A base class for parsing experiment results and plotting them with pandas and matplotlib.
 
@@ -26,15 +25,15 @@ class Plot(ABC):
         The ablation study attributes values to plot.
     metric_obj_fn : Optim
         The metric optimization direction.
-    y_axis : str, optional
+    y_axis : str | None
         The y-axis label (metric name), by default None.
-    x_axis : str, optional
+    x_axis : str | None
         The x-axis label (attribute name), by default None.
-    x_ticks : list[str], optional
+    x_ticks : list[str] | None
         The x-axis ticks, by default None.
-    ax : Axes, optional
+    ax : Axes | None
         The axes to plot on, by default None.
-    
+
     Attributes
     ----------
     metric : pd.Series

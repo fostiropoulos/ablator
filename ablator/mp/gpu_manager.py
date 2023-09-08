@@ -97,7 +97,7 @@ def wait_get_gpu(
     while timeouts < max_timeouts:
         if (
             least_used_gpu := ray.get(
-                manager.request_gpu.remote( # type: ignore[attr-defined]
+                manager.request_gpu.remote(  # type: ignore[attr-defined]
                     expected_util_mb, process_name
                 )
             )
@@ -123,7 +123,7 @@ def unlock_gpu(manager: "GPUManager", gpu: int):
         the id of the GPU that will unlock.
 
     """
-    ray.get(manager.unlock.remote(gpu)) # type: ignore[attr-defined]
+    ray.get(manager.unlock.remote(gpu))  # type: ignore[attr-defined]
 
 
 @ray.remote(num_cpus=0.001, num_gpus=0.001)
