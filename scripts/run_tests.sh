@@ -13,7 +13,7 @@ do
        DOCKER_RUN=false;;
        --no-build )
        BUILD_FLAG=false;;
-       --ablator-tag )
+       --docker-tag )
        ((i++))
        CONTAINER_NAME=${ARGS[$i]};;
        * ) ;;
@@ -29,6 +29,7 @@ fi
 
 if [ "$DOCKER_RUN" = true ]; then
    mkdir -p shared
+   rm -f shared/*
    # -v option maps the local docker instance to inside docker
    # --cpuset-cpus sets sufficient number of cpus
    # --pid option allows access of pids to the host for correct GPU utilization
