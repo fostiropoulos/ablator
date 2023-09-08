@@ -317,6 +317,37 @@ def test_git_diffs(
     assert all(diffs[-(i + 1)] == f"-{99-i}" for i in range(50))
 
 
+def test_smoke_tests(tmp_path: Path):
+    optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
+    train_config = TrainConfig(
+        dataset="test",
+        batch_size=128,
+        epochs=2,
+        optimizer_config=optimizer_config,
+        scheduler_config=None,
+    )
+    config = RunConfig(
+        train_config=train_config,
+        model_config=ModelConfig(),
+        verbose="silent",
+        device="cpu",
+        amp=False,
+    )
+    config.experiment_dir = tmp_path.joinpath("i")
+
+    # Runs successfully.
+    wrapper = TestWrapper(MyCustomModel)
+
+    ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
+    assert not ablator.wrapper._is_init
+    ablator.launch(".")
+    assert ablator.wrapper._is_init
+    config.train_config.batch_size = 512
+    assert ablator.smoke_test(config)
+    # does not corrupt the wrapper config.
+    assert ablator.wrapper.run_config != config
+
+
 def test_proto_custom_eval(tmp_path: Path, config):
     wrapper = TestWrapperCustomEval(MyCustomModel)
     config.experiment_dir = tmp_path.joinpath(f"{random.random()}")

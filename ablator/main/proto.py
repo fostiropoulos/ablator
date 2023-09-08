@@ -201,7 +201,8 @@ class ProtoTrainer:
         if config is None:
             config = self.run_config
         run_config = deepcopy(config)
-        wrapper = deepcopy(self.wrapper)
+        wrapper = type(self.wrapper)(self.wrapper.model_class)
         wrapper.train(run_config=run_config, smoke_test=True)
         del wrapper
         torch.cuda.empty_cache()
+        return True
