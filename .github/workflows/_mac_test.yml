@@ -6,29 +6,25 @@ on:
 
 jobs:
   pytest:
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS]
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.10"
-      - name: Install rsync (macOS)
-        if: runner.os == 'macOS'
+      - name: Set up Conda Python 3.10
         run: |
-            brew install rsync
-      - name: Generate SSH keys
-        run: |
-          ssh-keygen -t rsa -b 4096 -C "dev@ablator.org" -f ~/.ssh/id_rsa -q -N ""
-          chmod 700 ~/.ssh
-          chmod 600 ~/.ssh/id_rsa
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_rsa
-          cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+            conda remove -y --name test-env --all
+            conda create -y -n test-env python=3.10
       - name: Install dependencies
         run: |
-          pip install -e .[dev] -v
+          conda activate test-env
+          pip install -e ."[dev]" -v
+          pip uninstall grpcio; conda install grpcio
+      - name: Make Docker
+        run: |
+          bash ./scripts/make_docker.sh ablator-test
       - name: Test with pytest
         run: |
-          pip install pytest
-          pytest
+          conda activate test-env
+          pytest --runslow --docker-tag ablator-test
