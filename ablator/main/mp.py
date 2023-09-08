@@ -246,9 +246,7 @@ class ParallelTrainer(ProtoTrainer):
             num_cpus=self._cpu,
             max_calls=1,
             max_retries=max_error_retries,
-        )(
-            train_main_remote
-        ).options(
+        )(train_main_remote).options(
             resources={f"node:{node_ip}": 0.001}, name=trial_uuid
         )
         run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
@@ -412,8 +410,8 @@ class ParallelTrainer(ProtoTrainer):
 
         if verbose == "progress":
             # pylint: disable=no-member
-            self._progress_bar = RemoteProgressBar.remote(self.total_trials) # type: ignore[attr-defined]
-            self._display = RemoteDisplay(self._progress_bar) # type: ignore[arg-type]
+            self._progress_bar = RemoteProgressBar.remote(self.total_trials)  # type: ignore[attr-defined]
+            self._display = RemoteDisplay(self._progress_bar)  # type: ignore[arg-type]
 
         if ray.is_initialized():
             self.logger.warn(
@@ -457,7 +455,7 @@ class ParallelTrainer(ProtoTrainer):
         self.logger.to_remote()
         if self._gpu > 0:
             # pylint: disable=no-member
-            self.gpu_manager = GPUManager.remote() # type: ignore[attr-defined]
+            self.gpu_manager = GPUManager.remote()  # type: ignore[attr-defined]
         else:
             self.gpu_manager = None
 
@@ -467,7 +465,7 @@ class ParallelTrainer(ProtoTrainer):
         self.logger.warn(diffs)
 
     # pylint: disable=arguments-renamed
-    def launch( # type: ignore[override]
+    def launch(  # type: ignore[override]
         self,
         working_directory: str,
         auxilary_modules: list[tys.ModuleType] | None = None,

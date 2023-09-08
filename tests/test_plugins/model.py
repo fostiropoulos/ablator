@@ -208,9 +208,11 @@ def remote_fn():
 def locking_remote_fn():
     return _locking_remote_fn
 
+
 @pytest.fixture()
 def blocking_lock_remote():
     return _blocking_lock_remote
+
 
 # Important NOTE
 # device= "cuda" if torch.cuda.is_available() else "cpu",

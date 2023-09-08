@@ -85,7 +85,7 @@ class MyModel(nn.Module):
             loss = self.loss(out, labels)
 
         out = out.argmax(dim=-1)
-        
+
         out = out.reshape(-1, 1)
         labels = labels.reshape(-1, 1)
 
