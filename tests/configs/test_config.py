@@ -379,10 +379,10 @@ def test_nested_load_no_depedencies():
         )
 
 
-def test_debug_load(tmp_path: Path, assert_error_msg: Callable[..., str]):
-    out = io.StringIO()
-    logger = logging.getLogger()
-    logger.addHandler(logging.StreamHandler(out))
+def test_debug_load(
+    tmp_path: Path, assert_error_msg: Callable[..., str], capture_logger
+):
+    out: io.StringIO = capture_logger()
     ParentTestConfig(debug=True)
     last_line = out.getvalue().split("\n")[-2]
     assert (

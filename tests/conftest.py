@@ -22,6 +22,7 @@ from ray.util.state import list_nodes
 from xdist.scheduler.loadscope import LoadScopeScheduling
 
 from ablator import package_dir
+from ablator.analysis.results import Results
 from ablator.mp.gpu_manager import GPUManager
 from ablator.mp.utils import ray_init
 from ablator.utils._nvml import _get_gpu_info
@@ -65,6 +66,18 @@ def _capture_output(fn):
     with redirect_stdout(out), redirect_stderr(err):
         fn()
     return out.getvalue(), err.getvalue()
+
+
+def _capture_logger():
+    out = io.StringIO()
+    logger = logging.getLogger()
+    logger.addHandler(logging.StreamHandler(out))
+    return out
+
+
+@pytest.fixture
+def capture_logger():
+    return _capture_logger
 
 
 @pytest.fixture
@@ -368,9 +381,13 @@ def pytest_xdist_make_scheduler(config, log):
     return MPScheduler(config, log)
 
 
-def _test_requires(test_fns, param):
+def _test_requires(test_fns, *params, **kwargs):
     return any(
-        [p == param for fn in test_fns for p in inspect.signature(fn).parameters]
+        [
+            p in list(params) and p not in kwargs
+            for fn in test_fns
+            for p in inspect.signature(fn).parameters
+        ]
     )
 
 
@@ -394,32 +411,32 @@ def run_tests_local(test_fns, kwargs=None, unpickable_kwargs=None):
     if unpickable_kwargs is None:
         unpickable_kwargs = {}
     n_nodes = 1 if IS_LINUX else 0
-    if _test_requires(test_fns, "ablator") and "ablator" not in unpickable_kwargs:
+    if _test_requires(
+        test_fns, "ablator", "ablator_results", "ray_cluster", **unpickable_kwargs
+    ):
         ray_cluster = DockerRayCluster(
             nodes=n_nodes, working_dir=Path(WORKING_DIR).parent
         )
         ray_cluster.setUp()
 
         unpickable_kwargs["ray_cluster"] = lambda: ray_cluster
+    else:
+        ray_init()
+
+    if _test_requires(test_fns, "ablator", "ablator_results", **unpickable_kwargs):
         ablator_tmp_path = Path("/tmp/ablator_tmp")
         shutil.rmtree(ablator_tmp_path, ignore_errors=True)
         ablator = get_ablator(
             ablator_tmp_path,
             working_dir=Path(WORKING_DIR).parent,
-            main_ray_cluster=ray_cluster,
+            main_ray_cluster=unpickable_kwargs["ray_cluster"](),
         )
         unpickable_kwargs["ablator"] = lambda: ablator
-    elif (
-        _test_requires(test_fns, "ray_cluster")
-        and "ray_cluster" not in unpickable_kwargs
-    ):
-        ray_cluster = DockerRayCluster(
-            nodes=n_nodes, working_dir=Path(WORKING_DIR).parent
-        )
-        ray_cluster.setUp()
-        unpickable_kwargs["ray_cluster"] = lambda: ray_cluster
-    else:
-        ray_init()
+    if _test_requires(test_fns, "ablator_results", unpickable_kwargs):
+        ablator = unpickable_kwargs["ablator"]()
+        config = ablator.run_config
+        ablator_results = Results(config, ablator.experiment_dir)
+        unpickable_kwargs["ablator_results"] = lambda: copy.deepcopy(ablator_results)
 
     for fn in test_fns:
         parameters = inspect.signature(fn).parameters
@@ -433,6 +450,7 @@ def run_tests_local(test_fns, kwargs=None, unpickable_kwargs=None):
             "make_config": _make_config,
             "remote_fn": _remote_fn,
             "locking_remote_fn": _locking_remote_fn,
+            "capture_logger": _capture_logger,
             "blocking_lock_remote": _blocking_lock_remote,
         }
 
@@ -443,7 +461,7 @@ def run_tests_local(test_fns, kwargs=None, unpickable_kwargs=None):
                     default_kwargs[k] = v
 
         for k, v in kwargs.items():
-            default_kwargs[k] = copy.deepcopy(kwargs[k])
+            default_kwargs[k] = lambda: copy.deepcopy(kwargs[k])
 
         _run_args = [{}]
 

@@ -85,6 +85,10 @@ class MyModel(nn.Module):
             loss = self.loss(out, labels)
 
         out = out.argmax(dim=-1)
+        
+        out = out.reshape(-1, 1)
+        labels = labels.reshape(-1, 1)
+
         return {"y_pred": out, "y_true": labels}, loss
 
 
@@ -107,11 +111,3 @@ class MyModelWrapper(ModelWrapper):
 
     def evaluation_functions(self) -> Dict[str, Callable]:
         return {"accuracy_score": my_accuracy}
-
-    def custom_evaluation(
-        self, model: nn.Module, dataloader: Iterable
-    ) -> Optional[Dict[str, Any]]:
-        b = next(iter(dataloader))
-        img = torchvision.utils.make_grid(b["custom_input"])
-        self.logger.update({"train_image": img})
-        return super().custom_evaluation(model, dataloader)

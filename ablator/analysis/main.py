@@ -130,6 +130,8 @@ class Analysis:
             if not cache:
                 self.cache.clear()
                 self.cache = None
+        elif cache:
+            raise ValueError("Must provide a `save_dir` when specifying `cache=True`.")
         self.experiment_attributes: list[str] = (
             self.categorical_attributes + self.numerical_attributes
         )
