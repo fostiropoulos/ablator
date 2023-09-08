@@ -17,7 +17,7 @@ class Plot(ABC):
         self,
         metric: pd.Series,
         attributes: pd.Series,
-        metric_obj_fn: Optim,
+        metric_obj_fn: Optim | str,
         y_axis: str | None = None,
         x_axis: str | None = None,
         x_ticks: np.ndarray | None = None,
@@ -25,7 +25,7 @@ class Plot(ABC):
     ) -> None:
         self.attributes = self._parse_attributes(metric, attributes)
         self.metric = self._parse_metrics(metric)
-        self.metrics_obj_fn = metric_obj_fn
+        self.metrics_obj_fn: Optim = Optim(metric_obj_fn)
         self.y_axis = y_axis
         self.x_axis = x_axis
         self.x_ticks = x_ticks
@@ -43,6 +43,8 @@ class Plot(ABC):
         return attributes
 
     def _parse_metrics(self, metric: pd.Series) -> pd.Series:
+        if metric.isna().all():
+            raise ValueError(f"No valid value was found for metric `{metric.name}`.")
         metric = metric[~metric.isna()]
         return metric
 
