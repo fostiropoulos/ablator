@@ -23,8 +23,7 @@ search_space:
     value_type: int
   model_config.name:
     categorical_values: ['resnet18','resnet34']
-concurrent_trials: 10
+concurrent_trials: 2
 optim_metrics:
   "val_loss": "min"
 gpu_mb_per_experiment: 100
-cpus_per_experiment: 1

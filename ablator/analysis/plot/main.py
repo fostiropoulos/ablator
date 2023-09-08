@@ -299,6 +299,7 @@ class PlotAnalysis(Analysis):
         self,
         metric_name_remap: dict[str, str] | None = None,
         attribute_name_remap: dict[str, str] | None = None,
+        save_dir: str | Path | None = None,
         **plt_kwargs: ty.Any,
     ):
         """
@@ -311,6 +312,10 @@ class PlotAnalysis(Analysis):
             mappings for config's metrics keys to user defined names. By default, None
         attribute_name_remap : dict[str, str] | None
             mappings for config's searchspace names to user defined names for attributes. By default, None
+        save_dir : str | Path | None
+            optional directory of where to save the results, when unspecified, it expects one set during
+            class initialization. By default, None
+
         **plt_kwargs : ty.Any
             TODO{hieu}
         """
@@ -319,7 +324,10 @@ class PlotAnalysis(Analysis):
         if attribute_name_remap is not None:
             cat_attrs = list(set(attribute_name_remap.keys()).intersection(cat_attrs))
             num_attrs = list(set(attribute_name_remap.keys()).intersection(num_attrs))
-
+        if (save_dir := save_dir if save_dir is not None else self.save_dir) is None:
+            raise ValueError(
+                "Must specify a `save_dir` either as an argument to `make_figures` or during class instantiation"
+            )
         if len(cat_attrs) > 0:
             for plot_fn in ("make_violinplot",):
                 getattr(self, plot_fn)(
@@ -327,7 +335,7 @@ class PlotAnalysis(Analysis):
                     self.metric_names,
                     metric_name_remap=metric_name_remap,
                     attribute_name_remap=attribute_name_remap,
-                    save_dir=self.save_dir,
+                    save_dir=save_dir,
                     **plt_kwargs,
                 )
         if len(num_attrs) > 0:
@@ -337,6 +345,6 @@ class PlotAnalysis(Analysis):
                     self.metric_names,
                     metric_name_remap=metric_name_remap,
                     attribute_name_remap=attribute_name_remap,
-                    save_dir=self.save_dir,
+                    save_dir=save_dir,
                     **plt_kwargs,
                 )

@@ -23,6 +23,7 @@ jobs:
           pip uninstall grpcio; conda install grpcio
       - name: Make Docker
         run: |
+          conda activate test-env
           bash ./scripts/make_docker.sh ablator-test
       - name: Test with pytest
         run: |

@@ -5,3 +5,4 @@
 !.pytest.ini
 !.readthedocs.yaml
 Dockerfile
+shared
