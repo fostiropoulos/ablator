@@ -94,7 +94,7 @@ You will need to reboot / or log out and log in again for the changes to take ef
 The tests require the latest ABLATOR image to be built. The image must have the same python version as the running environment.
 
 The easiest way to build a docker image is to run the script **with your **development virtual **environment** active** (as it is used to identify the python version you are using):
-`bash script/make_docker.sh`
+`bash scripts/make_docker.sh`
 
 You will **need** to make the docker image in the main ablator directory **every time** before running the tests (as the code in the docker image is updated from the current repository)
 
