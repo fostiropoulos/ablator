@@ -6,7 +6,7 @@ on:
 
 jobs:
   pytest:
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, wsl]
     defaults:
       run:
         shell: bash -l {0}
