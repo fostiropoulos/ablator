@@ -365,7 +365,7 @@ class ExperimentState:
                 raise RuntimeError(f"Trial {trial_id} was not found.")
             if metrics is not None:
                 res.metrics.append(metrics)
-            res.state = state # type: ignore[assignment]
+            res.state = state  # type: ignore[assignment]
             session.commit()
             session.flush()
 

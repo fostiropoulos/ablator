@@ -71,7 +71,7 @@ class _Trial:
         self.distributions = {}
         self.optim_metrics = optim_metrics
         if resume_trial is not None:
-            self.params = resume_trial._opt_params # type: ignore[assignment]
+            self.params = resume_trial._opt_params  # type: ignore[assignment]
             self.distributions = {
                 k: eval(resume_trial._opt_distributions_types[k])(  # type: ignore[index]
                     **resume_trial._opt_distributions_kwargs[k]  # type: ignore[index]
@@ -80,11 +80,11 @@ class _Trial:
             }
             metrics = None
             if len(resume_trial.metrics) > 0:
-                metrics = resume_trial.metrics[-1] # type: ignore[index]
-            self.update(metrics, resume_trial.state) # type: ignore[arg-type]
-        self.relative_search_space = sampler.infer_relative_search_space(study, self) # type: ignore[arg-type]
+                metrics = resume_trial.metrics[-1]  # type: ignore[index]
+            self.update(metrics, resume_trial.state)  # type: ignore[arg-type]
+        self.relative_search_space = sampler.infer_relative_search_space(study, self)  # type: ignore[arg-type]
         self.relative_params = sampler.sample_relative(
-            study, self, self.relative_search_space # type: ignore[arg-type]
+            study, self, self.relative_search_space  # type: ignore[arg-type]
         )
 
     def update(
@@ -145,7 +145,7 @@ class _Study:
         trials = [] if trials is None else trials
         self.trials: list[_Trial] = [
             _Trial(
-                id_=trial.trial_num, # type: ignore[arg-type]
+                id_=trial.trial_num,  # type: ignore[arg-type]
                 study=self,
                 sampler=sampler,
                 resume_trial=trial,

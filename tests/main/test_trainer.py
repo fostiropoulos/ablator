@@ -283,9 +283,7 @@ def test_git_diffs(
     repo = git.Repo.init(
         repo_path,
     )
-    with pytest.raises(
-        RuntimeError, match=".*Reference at .* does not exist"
-    ):
+    with pytest.raises(RuntimeError, match=".*Reference at .* does not exist"):
         msg = ablator._get_diffs(repo.working_dir)
 
     repo.create_remote("origin", url=remote_repo.working_dir)

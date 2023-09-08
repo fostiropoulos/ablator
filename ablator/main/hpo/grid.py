@@ -106,7 +106,7 @@ class GridSampler(BaseSampler):
         self._lock = False
         self._rng = np.random.default_rng(seed)
         # mypy error because of nested dictionary
-        self._rng.shuffle(self.configs) # type: ignore[arg-type]
+        self._rng.shuffle(self.configs)  # type: ignore[arg-type]
 
     @property
     def _idx(self):

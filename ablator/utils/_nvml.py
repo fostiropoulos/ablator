@@ -51,6 +51,7 @@ def _handleError(err: "nvml.NVMLError") -> str:
         return "N/A"
     return str(err)
 
+
 # flake8: noqa: E722
 def getProcessName(pid):
     try:

@@ -454,7 +454,9 @@ def parse_type_hint(cls: ty.Any, type_hint: type[ty.Any]) -> Annotation:
     )
 
 
-def _parse_class(cls: ty.Any, args_kwargs: dict | object, debug: bool = False) -> object:
+def _parse_class(
+    cls: ty.Any, args_kwargs: dict | object, debug: bool = False
+) -> object:
     """
     Parse values whose types are not  a collection or in ALLOWED_TYPES
     eg. bool, added dict(tune configs)
