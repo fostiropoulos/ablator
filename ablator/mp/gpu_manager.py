@@ -24,7 +24,7 @@ class GPU:
     ----------
     num : int
         the GPU id number
-    free_mem : int | None
+    free_mem : int
         the free memory for the given GPU in MB
     is_locked : bool
         whether the GPU is currently pending memory allotment.
@@ -80,6 +80,7 @@ def wait_get_gpu(
         the name of the process to use to identify memory utilization, by default ``None``
     max_timeouts : int
         the seconds of timeouts after which to throw an error, by default 60
+
     Returns
     -------
     int
@@ -92,10 +93,11 @@ def wait_get_gpu(
     """
     timeouts = 0
     # TODO the node_ip needs to be specified when requesting a GPU
+    least_used_gpu: int
     while timeouts < max_timeouts:
         if (
             least_used_gpu := ray.get(
-                manager.request_gpu.remote(  # type: ignore
+                manager.request_gpu.remote( # type: ignore[attr-defined]
                     expected_util_mb, process_name
                 )
             )
@@ -103,7 +105,7 @@ def wait_get_gpu(
             time.sleep(1)
             timeouts += 1
             continue
-        return least_used_gpu  # type: ignore
+        return least_used_gpu
     raise GPUError("No available GPU.")
 
 
@@ -121,7 +123,7 @@ def unlock_gpu(manager: "GPUManager", gpu: int):
         the id of the GPU that will unlock.
 
     """
-    ray.get(manager.unlock.remote(gpu))  # type: ignore
+    ray.get(manager.unlock.remote(gpu)) # type: ignore[attr-defined]
 
 
 @ray.remote(num_cpus=0.001, num_gpus=0.001)
@@ -170,9 +172,9 @@ class GPUManager:
 
         Parameters
         ----------
-        expected_util_mb : int
+        expected_util_mb : int | None
             the expected utilization of the cuda process.
-        process_name : str
+        process_name : str | None
             the name of the process requesting the GPU resources, by default ``None``
 
         Returns

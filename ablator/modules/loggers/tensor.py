@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Union
 import logging
+import typing as ty
 import numpy as np
 import pandas as pd
 from omegaconf import OmegaConf
@@ -10,12 +11,18 @@ from ablator.config.main import ConfigBase
 from ablator.config.utils import flatten_nested_dict
 from ablator.modules.loggers import LoggerBase
 
+
 logging.getLogger("tensorboardX").setLevel(logging.ERROR)
 
 
 class TensorboardLogger(LoggerBase):
     """
     A logger class for Tensorboard visualization.
+
+    Parameters
+    ----------
+    summary_dir : Union[str, Path]
+        The directory to store the Tensorboard summary files.
 
     Attributes
     ----------
@@ -26,18 +33,13 @@ class TensorboardLogger(LoggerBase):
     """
 
     def __init__(self, summary_dir: Union[str, Path]):
-        """
-        Initialize the TensorboardLogger with a summary directory.
-
-        Parameters
-        ----------
-        summary_dir : Union[str, Path]
-            The directory to store the Tensorboard summary files.
-        """
+        # Initialize the TensorboardLogger with a summary directory.
         self.summary_dir = Path(summary_dir).as_posix()
         self.backend_logger = SummaryWriter(log_dir=summary_dir)
 
-    def add_image(self, k, v, itr, dataformats="CHW"):
+    def add_image(
+        self, k: str, v: np.ndarray, itr: int, dataformats: ty.Optional[str] = "CHW"
+    ):
         """
         Add an image to the TensorBoard dashboard.
 
@@ -49,12 +51,12 @@ class TensorboardLogger(LoggerBase):
             The image data.
         itr : int
             The iteration number.
-        dataformats : str, optional
+        dataformats : ty.Optional[str]
             The format of the image data, by default ``"CHW"``.
         """
         self.backend_logger.add_image(k, v, itr, dataformats=dataformats)
 
-    def add_table(self, k, v: pd.DataFrame, itr):
+    def add_table(self, k: str, v: pd.DataFrame, itr: int):
         """
         Add a table to the TensorBoard dashboard.
 
@@ -69,7 +71,7 @@ class TensorboardLogger(LoggerBase):
         """
         self.backend_logger.add_text(k, v.to_markdown(), itr)
 
-    def add_text(self, k, v, itr):
+    def add_text(self, k: str, v: str, itr: int):
         """
         Add a text to the TensorBoard dashboard.
 
@@ -84,7 +86,7 @@ class TensorboardLogger(LoggerBase):
         """
         self.backend_logger.add_text(k, v, itr)
 
-    def add_scalars(self, k, v: dict[str, float | int], itr):
+    def add_scalars(self, k: str, v: dict[str, float | int], itr: int):
         """
         Add multiple scalars to the TensorBoard dashboard.
 
@@ -102,7 +104,7 @@ class TensorboardLogger(LoggerBase):
         # NOTE this is buggy:
         # self.backend_logger.add_scalars(k, v_dict, itr)
 
-    def add_scalar(self, k, v, itr):
+    def add_scalar(self, k: str, v: float | int, itr: int):
         """
         Add a scalar to the TensorBoard dashboard.
 

@@ -57,8 +57,6 @@ class Dict(ty.Dict[str, T]):
 
     """
 
-    pass
-
 
 # pylint: disable=deprecated-typing-alias
 class List(ty.List[T]):
@@ -95,8 +93,6 @@ class List(ty.List[T]):
     and the value of ``my_int_list[2]`` is cast to an integer.
 
     """
-
-    pass
 
 
 # pylint: disable=deprecated-typing-alias
@@ -135,8 +131,6 @@ class Tuple(ty.Tuple[T]):
         ``my_2str_int_tuple`` must have exactly 3 elements.
     """
 
-    pass
-
 
 class Optional(ty.Generic[T]):
     """
@@ -162,12 +156,10 @@ class Optional(ty.Generic[T]):
     my_optional_list: null
     """
 
-    pass
-
 
 # Support for nested objects
 class Self:
-    pass
+    ...
 
 
 Type = type
@@ -228,7 +220,7 @@ class Enum(_Enum):
             val = type(self)(val)
         return super().__eq__(val)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """
         Calculates the hash of the Enum instance.
 
@@ -317,13 +309,13 @@ def _val2bool(val: str | bool) -> bool:
     raise ValueError(f"Cannot parse {val} as bool.")
 
 
-def _strip_hint_state(type_hint):
+def _strip_hint_state(type_hint: type[ty.Any]) -> tuple:
     """
     Strips the hint state from a type hint.
 
     Parameters
     ----------
-    type_hint : Type
+    type_hint : type[ty.Any]
         The input type hint to strip the state from.
 
     Returns
@@ -346,13 +338,13 @@ def _strip_hint_state(type_hint):
     return Stateful, type_hint
 
 
-def _strip_hint_optional(type_hint):
+def _strip_hint_optional(type_hint: type[ty.Any]) -> tuple:
     """
     Strips the optional part of a type hint.
 
     Parameters
     ----------
-    type_hint : Type
+    type_hint : type[ty.Any]
         The input type hint to strip the optional part from.
 
     Returns
@@ -372,13 +364,13 @@ def _strip_hint_optional(type_hint):
     return False, type_hint
 
 
-def _strip_hint_collection(type_hint):
+def _strip_hint_collection(type_hint: type[ty.Any]) -> tuple:
     """
     Strips the collection from a type hint.
 
     Parameters
     ----------
-    type_hint : Type
+    type_hint : type[ty.Any]
         The input type hint to strip the collection from.
 
     Returns
@@ -426,15 +418,15 @@ def _strip_hint_collection(type_hint):
     )
 
 
-def parse_type_hint(cls, type_hint):
+def parse_type_hint(cls: ty.Any, type_hint: type[ty.Any]) -> Annotation:
     """
     Parses a type hint and returns a parsed annotation.
 
     Parameters
     ----------
-    cls : Any
+    cls : ty.Any
         The class being annotated.
-    type_hint : Type
+    type_hint : type[ty.Any]
         The input type hint to parse.
 
     Returns
@@ -462,19 +454,19 @@ def parse_type_hint(cls, type_hint):
     )
 
 
-def _parse_class(cls, args_kwargs, debug: bool = False):
+def _parse_class(cls: ty.Any, args_kwargs: dict | object, debug: bool = False) -> object:
     """
     Parse values whose types are not  a collection or in ALLOWED_TYPES
     eg. bool, added dict(tune configs)
 
     Parameters
     ----------
-    cls : Type
+    cls : ty.Any
         The input Type
-    args_kwargs : dict or object
-        The keyword arguments or object to parse with the given type
-    debug : bool, optional, default=False
-        Whether to load the configuration in debug mode, and ignore discrepancies / errors.
+    args_kwargs : dict | object
+        The positional and keyword arguments or object to parse with the given type
+    debug : bool, optional
+        Whether to load the configuration in debug mode, and ignore discrepancies/errors, by default ``False``
 
     Returns
     -------
@@ -520,24 +512,26 @@ def _parse_class(cls, args_kwargs, debug: bool = False):
 
 
 # pylint: disable=too-complex
-def parse_value(val, annot: Annotation, name=None, debug: bool = False):
+def parse_value(
+    val: ty.Any, annot: Annotation, name: str | None = None, debug: bool = False
+) -> ty.Any:
     """
     Parses a value based on the given annotation.
 
     Parameters
     ----------
-    val : Any
+    val : ty.Any
         The input value to parse.
     annot : Annotation
         The annotation namedtuple to guide the parsing.
-    name : str, optional
+    name : str | None
         The name of the value, by default ``None``.
-    debug : bool, optional, default=False
-        Whether to load the configuration in debug mode, and ignore discrepencies / errors.
+    debug : bool, optional
+        Whether to load the configuration in debug mode, and ignore discrepencies / errors, by default ``False``
 
     Returns
     -------
-    Any
+    ty.Any
         The parsed value.
 
     Raises
@@ -620,8 +614,8 @@ class Stateful(ty.Generic[T]):
 
     Examples
     --------
-    The below example defines a model config that has stateful embedding dimensions, which means among every experiment,
-    the embedding dimension must be the same (and will be 100).
+    The below example defines a model config that has stateful embedding dimensions, which means that in
+    every experiment, the embedding dimension must be the same (and will be 100).
 
     >>> @configclass
     >>> class MyModelConfig(ModelConfig):
@@ -629,11 +623,11 @@ class Stateful(ty.Generic[T]):
     >>> model_config = MyModelConfig(embed_dim=100) # Must provide values for ``embed_dim`` before launching experiment
 
     .. note::
-        - In contrary to ``Derived``, when initializing config objects (aka before launching the experiment), you have to
-          assign values to their stateful attributes.
-        - Stateful is only applied in the context of experiments. So a stateful attribute must be the same between different
-          run of the same experiment configurations. However, within each experiment, a search space on stateful attributes
-          can be defined to run HPO on them.
+        - In contrary to ``Derived``, when initializing config objects (aka before launching the experiment),
+        you have to assign values to their stateful attributes.
+        - Stateful is only applied in the context of experiments. So a stateful attribute must be
+        the same between different run of the same experiment configurations. However, within each experiment,
+        a search space on stateful attributes can be defined to run HPO on them.
 
     """
 
@@ -641,16 +635,16 @@ class Stateful(ty.Generic[T]):
 class Derived(ty.Generic[T]):
     """
     This type is for attributes that are derived during the experiment (after launching the experiment).
-    To make an attribute derived, wrap ``Derived`` around its type defenition, e.g ``Derived[List[int]]``,
+    To make an attribute derived, wrap ``Derived`` around its type definition, e.g ``Derived[List[int]]``,
     ``Derived[str]``.
 
     Examples
     --------
     For example, you want to test how different pretrained word embeddings (e.g word2vec 100d, word2vec 300d) affect the
-    performance of a classification model, and you will use ablator to run ablation study on the effect of word embeddings.
-    Plus, the classification model architecture depends on the size of the embedding length of each pretrained set of word
-    embeddings. In this case, the model architecture is derived from the pretrained word embeddings. So you can define a model
-    config class as follows:
+    performance of a classification model, and you will use ablator to run ablation study on
+    the effect of word embeddings. Plus, the classification model architecture depends on the size
+    of the embedding length of each pretrained set of word embeddings. In this case, the model architecture
+    is derived from the pretrained word embeddings. So you can define a model config class as follows:
 
     >>> @configclass
     >>> class MyModelConfig(ModelConfig):
@@ -663,7 +657,8 @@ class Derived(ty.Generic[T]):
     >>>         super().__init__()
     >>>         self.embed_dim = config.embed_dim
 
-    Finally, ``config_parser`` is used to set the value of Derived attribute ``embed_dim`` based on the pretrained word embeddings:
+    Finally, ``config_parser`` is used to set the value of Derived attribute ``embed_dim``
+    based on the pretrained word embeddings:
 
     >>> class MyLMWrapper(ModelWrapper):
     >>>     def config_parser(self, run_config: RunConfig):
@@ -679,7 +674,7 @@ class Derived(ty.Generic[T]):
 class Stateless(ty.Generic[T]):
     """
     This type is for attributes that can take different value assignments between experiments. To make an
-    attribute stateless, wrap ``Stateless`` around its type defenition, e.g ``Stateless[List[int]]``,
+    attribute stateless, wrap ``Stateless`` around its type definition, e.g ``Stateless[List[int]]``,
     ``Stateless[str]``.
 
     Examples

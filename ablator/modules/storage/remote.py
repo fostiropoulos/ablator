@@ -2,6 +2,8 @@
 File is obsolete to be replaced with rclone. TODO
 """
 # pylint: skip-file
+# flake8: noqa
+
 import os
 import signal
 import subprocess

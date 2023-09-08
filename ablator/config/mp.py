@@ -87,9 +87,13 @@ class ParallelConfig(RunConfig):
     - Define search space:
 
     >>> search_space = {
-    ...     "train_config.optimizer_config.arguments.lr": SearchSpace(value_range = [0.001, 0.01], value_type = 'float'),
-    ...     "model_config.hidden_size": SearchSpace(value_range = [32, 64], value_type = 'int'),
-    ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"]),
+    ...     "train_config.optimizer_config.arguments.lr": SearchSpace(
+    ...         value_range=[0.001, 0.01], value_type="float"
+    ...     ),
+    ...     "model_config.hidden_size": SearchSpace(value_range=[32, 64], value_type="int"),
+    ...     "model_config.activation": SearchSpace(
+    ...         categorical_values=["relu", "elu", "leakyRelu"]
+    ...     ),
     ... }
 
     - Lastly, we will define the run config from the previous config components (remember to redefine

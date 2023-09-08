@@ -86,7 +86,7 @@ class NodeManager:
             node_ip = node.node_ip
             node_alive = node.state.lower() == "alive"
             if node_alive and node_ip not in self.nodes:
-                future = update_node.options(  # type: ignore
+                future = update_node.options(
                     resources={f"node:{node_ip}": 0.001}
                 ).remote(node_ip, self.public_key)
                 try:
@@ -203,7 +203,6 @@ class NodeManager:
                     auth_timeout=timeout,
                     channel_timeout=timeout,
                 )
-                # _stdin, _stdout, _stderr
                 _, _stdout, _ = client.exec_command(cmd)
                 result[node_name] = _stdout.read().decode()
             # pylint: disable=broad-exception-caught

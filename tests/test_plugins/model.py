@@ -22,6 +22,7 @@ from ablator.analysis.results import Results
 from ablator.config.main import configclass
 from ablator.config.mp import ParallelConfig, SearchSpace
 from ablator.main.mp import ParallelTrainer
+from ablator.utils import base
 
 N_MOCK_NODES = 10
 
@@ -139,6 +140,13 @@ def _remote_fn(gpu_id: int, gpu_manager=None):
     return gpu_id
 
 
+def _blocking_lock_remote(t: base.Lock):
+    t.acquire()
+    time.sleep(0.1)
+    t.release()
+    return True
+
+
 def _locking_remote_fn(gpu_id: int, gpu_manager=None):
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}"
     t = torch.randn(300, 100, 300).to(f"cuda")
@@ -200,6 +208,9 @@ def remote_fn():
 def locking_remote_fn():
     return _locking_remote_fn
 
+@pytest.fixture()
+def blocking_lock_remote():
+    return _blocking_lock_remote
 
 # Important NOTE
 # device= "cuda" if torch.cuda.is_available() else "cpu",

@@ -451,7 +451,6 @@ if __name__ == "__main__":
 
     l = locals()
     fn_names = [fn for fn in l if fn.startswith("test_")]
-    fn_names = ["test_mp_run"]
     test_fns = [l[fn] for fn in fn_names]
 
     kwargs = {

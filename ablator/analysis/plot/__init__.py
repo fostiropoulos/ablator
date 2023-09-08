@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+import typing as ty
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +21,7 @@ class Plot(ABC):
         metric_obj_fn: Optim | str,
         y_axis: str | None = None,
         x_axis: str | None = None,
-        x_ticks: np.ndarray | None = None,
+        x_ticks: list[str] | None = None,
         ax: Axes | None = None,
     ) -> None:
         self.attributes = self._parse_attributes(metric, attributes)
@@ -48,7 +49,7 @@ class Plot(ABC):
         metric = metric[~metric.isna()]
         return metric
 
-    def _parse_legend(self, ax):
+    def _parse_legend(self, ax: Axes):
         ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.05))
 
     def _parse_figure_axis(
@@ -71,11 +72,11 @@ class Plot(ABC):
 
         ax.figure.tight_layout()
 
-    def make(self, **kwargs):
+    def make(self, **kwargs: ty.Any) -> tuple[Figure, Axes]:
         fig, ax = self._make(**kwargs)
         self._parse_figure_axis(ax, self.x_axis, self.y_axis, self.x_ticks)
         return fig, ax
 
     @abstractmethod
-    def _make(self, **kwargs):
+    def _make(self, **kwargs: ty.Any):
         pass

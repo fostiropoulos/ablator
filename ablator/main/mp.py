@@ -25,11 +25,19 @@ from ablator.mp.utils import Resource
 from ablator.mp.utils import _sorted_nodes_by_util, ray_init
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 from ablator.mp.train_remote import train_main_remote
+from ablator.config.types import Optional
 
 
 class ParallelTrainer(ProtoTrainer):
     """
     A class for parallelizing training and hyperparameter optimization of models of different configurations with ray.
+
+    Parameters
+    ----------
+    wrapper : ModelWrapper
+        The model wrapper for the ParallelTrainer
+    run_config : ParallelConfig
+        The runtime configuration for this trainer.
 
     Attributes
     ----------
@@ -89,7 +97,8 @@ class ParallelTrainer(ProtoTrainer):
     ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"]),
     ... }
 
-    - Define run config (remember to redefine the parallel config to update the model config type to be ``CustomModelConfig``):
+    - Define run config (remember to redefine the parallel config to
+    update the model config type to be ``CustomModelConfig``):
 
     >>> @configclass
     >>> class CustomParallelConfig(ParallelConfig):
@@ -136,16 +145,7 @@ class ParallelTrainer(ProtoTrainer):
     """
 
     def __init__(self, wrapper: ModelWrapper, run_config: ParallelConfig):
-        """
-        Initialize ``ParallelTrainer`` using config from ``run_config``.
-
-        Parameters
-        ----------
-        wrapper: ModelWrapper
-            The model wrapper for the ParallelTrainer
-        run_config : ParallelConfig
-            The runtime configuration for this trainer.
-        """
+        # Initialize ``ParallelTrainer`` using config from ``run_config``.
 
         self.run_config: ParallelConfig
         super().__init__(wrapper=wrapper, run_config=run_config)
@@ -178,6 +178,11 @@ class ParallelTrainer(ProtoTrainer):
         -------
         float
             mock gpu value i.e. 0.001
+
+        Raises
+        ------
+        ValueError
+            if the `gpu_mb_per_experiment` configuration is not specified when using `device='cuda'`
         """
         device = butils.parse_device(self.run_config.device)
         if not device.startswith("cuda"):
@@ -197,7 +202,7 @@ class ParallelTrainer(ProtoTrainer):
 
         Returns
         -------
-        int | float
+        float
             a virtual number of _cpus to use i.e. 0.001
         """
         if (
@@ -243,12 +248,12 @@ class ParallelTrainer(ProtoTrainer):
             max_retries=max_error_retries,
         )(
             train_main_remote
-        ).options(  # type: ignore
+        ).options(
             resources={f"node:{node_ip}": 0.001}, name=trial_uuid
         )
         run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
-        diffs = self.run_config.diff_str(run_config)
-        diffs = "\n\t".join(diffs)
+        list_diffs = self.run_config.diff_str(run_config)
+        diffs = "\n\t".join(list_diffs)
         action = "Scheduling" if resume is False else "Resuming"
         msg = f"{action} uid: {trial_uuid}\nParameters: \n\t{diffs}\n-----"
         self.logger.info(msg)
@@ -278,7 +283,9 @@ class ParallelTrainer(ProtoTrainer):
             self.available_resources = self.node_manager.available_resources()
         # TODO find which tasks have died from available_resources and update experiment_state
 
-    def _make_futures(self, current_futures: list | None = None, soft_limit: int = 10):
+    def _make_futures(
+        self, current_futures: list | None = None, soft_limit: int = 10
+    ) -> list:
         # make enough futures such that there are concurrent_trials running.
         futures = [] if current_futures is None else current_futures
         concurrent_trial_limit: int | None = self.run_config.concurrent_trials
@@ -372,7 +379,7 @@ class ParallelTrainer(ProtoTrainer):
         ray.get(future)
 
     @property
-    def total_trials(self):
+    def total_trials(self) -> Optional[int]:
         return self.run_config.total_trials
 
     @total_trials.setter
@@ -405,8 +412,8 @@ class ParallelTrainer(ProtoTrainer):
 
         if verbose == "progress":
             # pylint: disable=no-member
-            self._progress_bar = RemoteProgressBar.remote(self.total_trials)  # type: ignore
-            self._display = RemoteDisplay(self._progress_bar)  # type: ignore
+            self._progress_bar = RemoteProgressBar.remote(self.total_trials) # type: ignore[attr-defined]
+            self._display = RemoteDisplay(self._progress_bar) # type: ignore[arg-type]
 
         if ray.is_initialized():
             self.logger.warn(
@@ -450,7 +457,7 @@ class ParallelTrainer(ProtoTrainer):
         self.logger.to_remote()
         if self._gpu > 0:
             # pylint: disable=no-member
-            self.gpu_manager = GPUManager.remote()  # type: ignore
+            self.gpu_manager = GPUManager.remote() # type: ignore[attr-defined]
         else:
             self.gpu_manager = None
 
@@ -460,7 +467,7 @@ class ParallelTrainer(ProtoTrainer):
         self.logger.warn(diffs)
 
     # pylint: disable=arguments-renamed
-    def launch(  # type: ignore
+    def launch( # type: ignore[override]
         self,
         working_directory: str,
         auxilary_modules: list[tys.ModuleType] | None = None,
@@ -476,15 +483,17 @@ class ParallelTrainer(ProtoTrainer):
         ----------
         working_directory : str
             The working directory that stores codes, modules that will be used by ray.
-        auxilary_modules : list[tys.ModuleType], None
+        auxilary_modules : list[tys.ModuleType] | None
             A list of modules to be used as ray clusters' working environment.
-        ray_head_address : str, None
+        ray_head_address : str | None
             Ray cluster address.
-        resume : bool, default=False
-            Whether to resume training the model from existing checkpoints and existing experiment state.
-        excluding_files: list[str], None
+        resume : bool
+            Whether to resume training the model from existing checkpoints and
+            existing experiment state. By default False
+        excluding_files : list[str] | None
             A list of files in `.gitignore` format, that will be excluded from being uploaded to the ray cluster.
             If unspecified it ignores `.git/**` folder.
+
         """
         try:
             torch.multiprocessing.set_start_method("spawn")

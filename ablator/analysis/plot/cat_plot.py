@@ -1,4 +1,5 @@
 import logging
+import typing as ty
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,9 +15,24 @@ logger = logging.getLogger(__name__)
 
 
 class Categorical(Plot):
-    DATA_TYPE = "categorical"
+    """
+    Class for categorical plots
 
-    def __init__(self, *args, **kwargs) -> None:
+    Attributes
+    ----------
+    DATA_TYPE : str
+        The type of data
+    figsize: tuple
+        A tuple represent size of figure in terms of axes (x, y).
+
+    Parameters
+    ----------
+    TODO{hieu} inherit from Plot
+    """
+
+    DATA_TYPE: str = "categorical"
+
+    def __init__(self, *args: ty.Any, **kwargs: ty.Any) -> None:
         super().__init__(*args, **kwargs)
         self.attribute_metric_map = self._make_attribute_metric_map(
             self.metric, self.attributes
@@ -27,7 +43,7 @@ class Categorical(Plot):
         cls,
         metric: pd.Series,
         attributes: pd.Series,
-    ):
+    ) -> dict[str | float, pd.Series]:
         if len(attributes.shape) > 1 and attributes.shape[-1] > 1:
             raise ValueError(f"{cls.__name__} attributes must be single dimensional.")
         unique_values = attributes.unique()
@@ -67,7 +83,15 @@ class Categorical(Plot):
 
 
 class ViolinPlot(Categorical):
-    def __init__(self, *args, **kwargs) -> None:
+    """
+    Class for constructing violinplots.
+
+    Parameters
+    ----------
+    TODO{hieu} inherit from Plot
+    """
+
+    def __init__(self, *args: ty.Any, **kwargs: ty.Any) -> None:
         sns.set()
         sns.set_style("whitegrid")
         self.figsize = (8, 4)
@@ -82,8 +106,8 @@ class ViolinPlot(Categorical):
 
     def _make(
         self,
-        **kwargs,
-    ):
+        **kwargs: ty.Any,
+    ) -> tuple[Figure, Axes]:
         sns.violinplot(
             [v.values for v in self.attribute_metric_map.values()],
             ax=self.ax,
@@ -113,5 +137,5 @@ class ViolinPlot(Categorical):
         sns.despine(left=True, bottom=True)
         return self.figure, self.ax
 
-    def _parse_legend(self, ax):
+    def _parse_legend(self, ax: Axes):
         pass

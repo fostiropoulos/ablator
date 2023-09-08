@@ -35,18 +35,44 @@ class TrialState(enum.IntEnum):
 
     """
 
-    RUNNING = 0
-    COMPLETE = 1
-    PRUNED = 2
-    FAIL = 3
-    WAITING = 4
-    PRUNED_INVALID = 5
-    PRUNED_DUPLICATE = 6
-    PRUNED_POOR_PERFORMANCE = 7
-    FAIL_RECOVERABLE = 8
+    RUNNING: int = 0
+    COMPLETE: int = 1
+    PRUNED: int = 2
+    FAIL: int = 3
+    WAITING: int = 4
+    PRUNED_INVALID: int = 5
+    PRUNED_DUPLICATE: int = 6
+    PRUNED_POOR_PERFORMANCE: int = 7
+    FAIL_RECOVERABLE: int = 8
 
 
 class Trial(Base):
+    """
+    Class to store adata about trial.
+
+    Attributes
+    ----------
+    id: Mapped[int]
+        The trial Id used for internal purposes
+    config_uid: Mapped[str]
+        The configuration identifier associated with the trial's unique attributes
+    metrics: Mapped[PickleType]
+        The performance metrics dictionary associated as reported by the trial.
+        Dict[str,float] where str is the metric name and float is the metric value.
+    config_param: Mapped[PickleType]
+        The configuration parameters for the specific trial including the defaults.
+    aug_config_param: Mapped[PickleType]
+        The augmenting configuration as picked by the config sampler.
+        It is the values only different from the default config (excl. Derived properties)
+    trial_num: Mapped[Integer]
+        The trial_num corresponding to the internal HPO sampler, used to communicate with the sampler.
+    state: Mapped[PickleType]
+        The ``TrialState``
+    runtime_errors: Mapped[int]
+        Total runtime errors that the trial encountered and are incremented
+        every time the trial faces a recoverable error.
+    """
+
     __tablename__ = "trial"
     id: Mapped[int] = mapped_column(primary_key=True)
     config_uid: Mapped[str] = mapped_column(String(30))

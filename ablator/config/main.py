@@ -1,11 +1,14 @@
+from collections import abc
 import copy
 import inspect
 import logging
 import operator
 import typing as ty
+from typing import Any, Union
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
+from typing_extensions import Self
 
 from omegaconf import OmegaConf
 
@@ -25,24 +28,24 @@ from ablator.config.types import (
 from ablator.config.utils import dict_hash, flatten_nested_dict, parse_repr_to_kwargs
 
 
-def configclass(cls):
+def configclass(cls: type["ConfigBase"]) -> type["ConfigBase"]:
     """
     Decorator for ConfigBase subclasses, adds the ``config_class`` attribute to the class.
 
     Parameters
     ----------
-    cls : Type[ConfigBase]
+    cls : type["ConfigBase"]
         The class to be decorated.
 
     Returns
     -------
-    Type[ConfigBase]
+    type[ConfigBase]
         The decorated class with the ``config_class`` attribute.
     """
 
     assert issubclass(cls, ConfigBase), f"{cls.__name__} must inherit from ConfigBase"
     setattr(cls, "config_class", cls)
-    return dataclass(cls, init=False, repr=False, kw_only=True, eq=False)
+    return dataclass(cls, init=False, repr=False, kw_only=True, eq=False)  # type: ignore[call-overload]
 
 
 def _freeze_helper(obj):
@@ -98,10 +101,11 @@ class ConfigBase:
     This class is the building block for all configuration objects within ablator. It serves as the base class for
     configurations such as ``ModelConfig``, ``TrainConfig``, ``OptimizerConfig``, and more.
 
-    To customize configurations for specific needs, you can create your own configuration class by inheriting from ``ConfigBase``.
-    It's essential to annotate it with ``@configclass``. For instance, in the tutorial `Search space for
-    different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_, a custom optimizer config class is created to enable ablation study on various optimizers
-    and schedulers. You can refer to this tutorial for an example of how to create your custom configuration class.
+    To customize configurations for specific needs, you can create your own configuration class by
+    inheriting from ``ConfigBase``. It's essential to annotate it with ``@configclass``. For instance, in the tutorial
+    `Search space for different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_,
+    a custom optimizer config class is created to enable ablation study on various optimizers and schedulers.
+    You can refer to this tutorial for an example of how to create your custom configuration class.
 
     Examples
     --------
@@ -115,8 +119,8 @@ class ConfigBase:
     ----------
     *args : Any
         Positional arguments.
-    debug : bool, optional, default=False
-        Whether to load the configuration in debug mode, and ignore discrepancies / errors.
+    debug : bool, optional
+        Whether to load the configuration in debug mode, and ignore discrepancies/errors, by default ``False``
     **kwargs : Any
         Keyword arguments.
 
@@ -140,7 +144,7 @@ class ConfigBase:
     """
     config_class = type(None)
 
-    def __init__(self, *args, debug: bool = False, **kwargs):
+    def __init__(self, *args: Any, debug: bool = False, **kwargs: Any):
         self._debug: bool
         self._freeze: bool
         self._class_name: str
@@ -212,7 +216,7 @@ class ConfigBase:
             raise ValueError(
                 f"{self._class_name} does not support positional arguments."
             )
-        if not isinstance(self, self.config_class):  # type: ignore[arg-type]
+        if not isinstance(self, self.config_class): # type: ignore[arg-type]
             raise RuntimeError(
                 f"You must decorate your Config class '{self._class_name}' with ablator.configclass."
             )
@@ -274,19 +278,19 @@ class ConfigBase:
             + ")"
         )
 
-    def keys(self):
+    def keys(self) -> abc.KeysView[str]:
         """
         Get the keys of the configuration dictionary.
 
         Returns
         -------
-        KeysView[str]
+        abc.KeysView[str]
             The keys of the configuration dictionary.
         """
         return self.to_dict().keys()
 
     @classmethod
-    def load(cls, path: ty.Union[Path, str], debug: bool = False):
+    def load(cls, path: Union[Path, str], debug: bool = False) -> Self:
         """
         Load a configuration object from a file.
 
@@ -295,14 +299,17 @@ class ConfigBase:
         path : Union[Path, str]
             The path to the configuration file.
         debug : bool, optional, default=False
-            Whether to load the configuration in debug mode, and ignore discrepencies / errors.
+            Whether to load the configuration in debug mode, and ignore discrepancies/errors.
 
         Returns
         -------
-        ConfigBase
+        Self
             The loaded configuration object.
         """
-        kwargs: dict = OmegaConf.to_object(OmegaConf.create(Path(path).read_text(encoding="utf-8")))  # type: ignore
+        # TODO[iordanis] remove OmegaConf dependency
+        kwargs: dict = OmegaConf.to_object( # type: ignore[assignment]
+            OmegaConf.create(Path(path).read_text(encoding="utf-8"))
+        )
         return cls(**kwargs, debug=debug)
 
     @property
@@ -340,7 +347,7 @@ class ConfigBase:
             }
         return annotations
 
-    def get_val_with_dot_path(self, dot_path: str):
+    def get_val_with_dot_path(self, dot_path: str) -> Any:
         """
         Get the value of a configuration object attribute using dot notation.
 
@@ -356,7 +363,7 @@ class ConfigBase:
         """
         return operator.attrgetter(dot_path)(self)
 
-    def get_type_with_dot_path(self, dot_path: str):
+    def get_type_with_dot_path(self, dot_path: str) -> Type:
         """
         Get the type of a configuration object attribute using dot notation.
 
@@ -373,7 +380,7 @@ class ConfigBase:
         val = self.get_val_with_dot_path(dot_path)
         return type(val)
 
-    def get_annot_type_with_dot_path(self, dot_path: str):
+    def get_annot_type_with_dot_path(self, dot_path: str) -> Type:
         """
         Get the type of a configuration object annotation using dot notation.
 
@@ -398,7 +405,7 @@ class ConfigBase:
         annotations: dict[str, Annotation],
         ignore_stateless: bool = False,
         flatten: bool = False,
-    ):
+    ) -> dict:
         """
         Create a dictionary representation of the configuration object.
 
@@ -406,15 +413,20 @@ class ConfigBase:
         ----------
         annotations : dict[str, Annotation]
             A dictionary of annotations.
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
-        flatten : bool, optional, default=False
-            Whether to flatten nested dictionaries.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default = False
+        flatten : bool
+            Whether to flatten nested dictionaries. By default = False
 
         Returns
         -------
         dict
             The dictionary representation of the configuration object.
+
+        Raises
+        ------
+        NotImplementedError
+            If the type of annot.collection is not supported.
         """
         return_dict = {}
         parse_reconstructor = partial(
@@ -445,7 +457,6 @@ class ConfigBase:
                     val = parse_reconstructor(_val)
             elif issubclass(type(_val), Enum):
                 val = _val.value
-
             else:
                 raise NotImplementedError
             return_dict[field_name] = val
@@ -453,7 +464,7 @@ class ConfigBase:
             return_dict = flatten_nested_dict(return_dict)
         return return_dict
 
-    def write(self, path: ty.Union[Path, str]):
+    def write(self, path: Union[Path, str]):
         """
         Write the configuration object to a file.
 
@@ -465,7 +476,9 @@ class ConfigBase:
         """
         Path(path).write_text(self.to_yaml(), encoding="utf-8")
 
-    def diff_str(self, config: "ConfigBase", ignore_stateless: bool = False):
+    def diff_str(
+        self, config: "ConfigBase", ignore_stateless: bool = False
+    ) -> list[str]:
         """
         Get the differences between the current configuration object and another configuration object as strings.
 
@@ -473,8 +486,8 @@ class ConfigBase:
         ----------
         config : ConfigBase
             The configuration object to compare.
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default ``False``.
 
         Returns
         -------
@@ -491,7 +504,7 @@ class ConfigBase:
 
     def diff(
         self, config: "ConfigBase", ignore_stateless: bool = False
-    ) -> list[tuple[str, tuple[type, ty.Any], tuple[type, ty.Any]]]:
+    ) -> list[tuple[str, tuple[type, Any], tuple[type, Any]]]:
         """
         Get the differences between the current configuration object and another configuration object.
 
@@ -499,8 +512,8 @@ class ConfigBase:
         ----------
         config : ConfigBase
             The configuration object to compare.
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default ``False``
 
         Returns
         -------
@@ -562,14 +575,14 @@ class ConfigBase:
                 diffs.append((k, (left_type, left_v), (right_type, right_v)))
         return diffs
 
-    def to_dict(self, ignore_stateless: bool = False):
+    def to_dict(self, ignore_stateless: bool = False) -> dict:
         """
         Convert the configuration object to a dictionary.
 
         Parameters
         ----------
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. By default ``False``
 
         Returns
         -------
@@ -579,7 +592,7 @@ class ConfigBase:
         """
         return self.make_dict(self.annotations, ignore_stateless=ignore_stateless)
 
-    def to_yaml(self):
+    def to_yaml(self) -> str:
         """
         Convert the configuration object to YAML format.
 
@@ -593,14 +606,14 @@ class ConfigBase:
         conf = OmegaConf.create(self.to_dict())
         return OmegaConf.to_yaml(conf)
 
-    def to_dot_path(self, ignore_stateless: bool = False):
+    def to_dot_path(self, ignore_stateless: bool = False) -> str:
         """
         Convert the configuration object to a dictionary with dot notation paths as keys.
 
         Parameters
         ----------
-        ignore_stateless : bool, optional, default=False
-            Whether to ignore stateless values.
+        ignore_stateless : bool
+            Whether to ignore stateless values. by default ``False``
 
         Returns
         -------
@@ -614,7 +627,7 @@ class ConfigBase:
         return OmegaConf.to_yaml(OmegaConf.create(_flat_dict))
 
     @property
-    def uid(self):
+    def uid(self) -> str:
         """
         Get the unique identifier for the configuration object.
 

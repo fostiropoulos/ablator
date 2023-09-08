@@ -44,7 +44,7 @@ class _Lock:
 class Lock:
     def __init__(self, timeout: float | None = None) -> None:
         # pylint: disable=no-member
-        self.lock = _Lock.remote()  # type: ignore
+        self.lock = _Lock.remote() # type: ignore[attr-defined]
 
         self.timeout = timeout
 
@@ -77,7 +77,7 @@ class Lock:
         ray.get(self.lock.release.remote())
 
 
-def iter_to_numpy(iterable):
+def iter_to_numpy(iterable: Iterable) -> ty.Any:
     """
     Convert elements of the input iterable to NumPy arrays if they are torch.Tensor objects.
 
@@ -88,7 +88,7 @@ def iter_to_numpy(iterable):
 
     Returns
     -------
-    any
+    ty.Any
         The iterable with torch.Tensor elements replaced with their NumPy array equivalents.
     """
     return apply_lambda_to_iter(
@@ -98,16 +98,16 @@ def iter_to_numpy(iterable):
 
 
 def iter_to_device(
-    data_dict, device
+    data_dict: Iterable, device: str
 ) -> ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]:
     """
     Moving torch.Tensor elements to the specified device.
 
     Parameters
     ----------
-    data_dict : dict or list
+    data_dict : Iterable
         The input dictionary or list containing torch.Tensor elements.
-    device : torch.device | str
+    device : str
         The target device for the tensors.
 
     Returns
@@ -120,7 +120,7 @@ def iter_to_device(
     )
 
 
-def apply_lambda_to_iter(iterable, fn: Callable):
+def apply_lambda_to_iter(iterable: Iterable, fn: Callable) -> ty.Any:
     """
     Applies a given function ``fn`` to each element of an iterable data structure.
 
@@ -137,7 +137,7 @@ def apply_lambda_to_iter(iterable, fn: Callable):
 
     Returns
     -------
-    any
+    ty.Any
         The resulting data structure after applying ``fn`` to each element of the input ``iterable``.
         The type of the returned object matches the type of the input ``iterable``.
     """
@@ -152,7 +152,7 @@ def apply_lambda_to_iter(iterable, fn: Callable):
     return fn(iterable)
 
 
-def set_seed(seed: int):
+def set_seed(seed: int) -> int:
     """
     Set the random seed.
 
@@ -174,13 +174,13 @@ def set_seed(seed: int):
     return seed
 
 
-def get_lr(optimizer):
+def get_lr(optimizer: torch.optim.Optimizer | dict) -> float:
     """
     Get the learning rate from an optimizer.
 
     Parameters
     ----------
-    optimizer : torch.optim.Optimizer or dict
+    optimizer : torch.optim.Optimizer | dict
         The optimizer.
 
     Returns
@@ -230,7 +230,7 @@ def get_latest_chkpts(checkpoint_dir: Path) -> list[Path]:
     return sorted(list(checkpoint_dir.glob("*.pt")))[::-1]
 
 
-def parse_device(device: ty.Union[str, list[str]]):
+def parse_device(device: ty.Union[str, list[str], int]) -> ty.Any:
     """
     Parse a device string, an integer, or a list of device strings or integers.
 
@@ -241,7 +241,7 @@ def parse_device(device: ty.Union[str, list[str]]):
 
     Returns
     -------
-    any
+    ty.Any
         The parsed device string, integer, or list of device strings or integers.
 
     Raises
@@ -361,15 +361,28 @@ def num_format(
 
     Parameters
     ----------
-    value : int | float
+    value : str | int | float | np.integer | np.floating
         the value to format
-    width : int, optional
-        the width of the decimal places, by default 5
+    width : int
+        the width of the decimal places, by default 8
 
     Returns
     -------
     str
         The formatted string representation of the `value`
+
+    Examples
+    --------
+    >>> num_format(123456, width=8)
+    123456
+    >>> num_format(123456789, width=8)
+    1.23e+08
+    >>> num_format(1234.5678, width=8)
+    1.23e+03
+    >>> num_format(0.000012345, width=8)
+    1.23e-05
+    >>> num_format(np.float64(12345678.12345678), width=8)
+    1.23e+07
     """
     assert width >= 8
     if isinstance(value, (int, np.integer)):
