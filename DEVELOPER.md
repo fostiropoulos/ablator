@@ -16,7 +16,7 @@ on a multi-node cluster, **only** Ubuntu. When developing features related to a 
 The development version of Ablator can be installed via pip `pip install -e ."[dev]"`
 
 The `-e` option automatically updates the library based on the folder contents, while the `[dev]` option installs
-additional developer depedencies for ABLATOR.
+additional developer depedencies for ABLATOR. It is always a good idea to re-run the above when pulling from a branch to install any missing depedencies.
 
 ### Special Considerations for Mac
 
@@ -236,13 +236,13 @@ In the main directory (after activating the correct environment):
 
 
 ```bash
-$ bash scripts/run_test.sh
+$ bash scripts/run_tests.sh
 ```
 
 It is always a good idea to run tests **with** and without GPU support
 
 ```bash
-$ bash scripts/run_test.sh --cpu
+$ bash scripts/run_tests.sh --cpu
 ```
 
 Before committing, make sure that the static code checks pass.
@@ -250,3 +250,32 @@ Before committing, make sure that the static code checks pass.
 ```bash
 $ bash scripts/run_lint.sh
 ```
+### Testing individual changes
+
+The above workflow is very slow to execute every time you make a change to the code. It is better to reserve it for the very end of your development process. To execute a specific test you can run
+
+```bash
+$ pytest tests/<test_folder>/<test_file.py>::<test_function_name>
+```
+To debug a test you can execute the debugger in the same file, there is logic implemented in each test file that will allow you to test a specific test by automatically passing test fixtures for you. For example:
+
+```python
+if __name__ == "__main__":
+    from tests.conftest import run_tests_local
+
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    # OR a specific test
+    fn_names = ["test_name"]
+    test_fns = [l[fn] for fn in fn_names]
+    # Special locally defined fixtures or function parameters.
+    kwargs = {
+        "config": copy.deepcopy(_config),
+        "train_config": copy.deepcopy(_train_config),
+    }
+    run_tests_local(test_fns, kwargs)
+```
+
+### Code Coverage
+
+By default pytests run codecov which will generate a `coverage.xml` in the main repo directory. The coverage report is by default uploaded to [codecov](https://about.codecov.io/) every time you perform an update. To visualize it locally you can use the [official guide](https://github.com/codecov/codecov-cli#how-to-use-local-upload).
