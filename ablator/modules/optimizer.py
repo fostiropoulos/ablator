@@ -90,13 +90,6 @@ class OptimizerConfig(ConfigBase):
     are specific to a certain type of optimizer like SGD, Adam, AdamW). This optimizer config
     will be provided to ``TrainConfig`` as part of the training setting of the experiment.
 
-    Attributes
-    ----------
-    name : str
-        Name of the optimizer.
-    arguments : OptimizerArgs
-        Arguments for the optimizer, specific to a certain type of optimizer.
-
     Parameters
     ----------
     name : str
@@ -104,8 +97,15 @@ class OptimizerConfig(ConfigBase):
     arguments : dict[str, ty.Any]
         Arguments for the optimizer, specific to a certain type of optimizer. A common argument
         can be learning rate, e.g ``{'lr': 0.5}``. If ``name`` is ``"adamw"``, can add ``eps`` to ``arguments``,
-        e.g ``{'lr': 0.5, 'eps': 0.001}``.
+        e.g ``{'lr': 0.5, 'eps': 0.001}``. Refer to  `Configuration Basics
+        scheduler <./notebooks/Configuration-Basics.ipynb>`_ tutorial for more details on each optimizer's arguments.
 
+    Attributes
+    ----------
+    name : str
+        Name of the optimizer.
+    arguments : OptimizerArgs
+        Arguments for the optimizer, specific to a certain type of optimizer.
 
     Examples
     --------
@@ -118,13 +118,12 @@ class OptimizerConfig(ConfigBase):
     ...     batch_size=32,
     ...     epochs=20,
     ...     optimizer_config=optim_config,
-    ...     scheduler_config=None,
-    ...     rand_weights_init = True
+    ...     scheduler_config=None
     ... )
-    >>> # ... create running config (proto/parallel), model wrapper, trainer and launch experiment
+    >>> # ... create the run config (proto/parallel), model wrapper, trainer and launch the experiment
 
     .. note::
-        A common use case is to run ablation studies on different optimizers to learn about their
+        Sometimes we want to run ablation studies on different optimizers to learn about their
         effects on the model performance. However, ``OptimizerConfig`` only configures one single
         optimizer for the experiment. But you can run experiments on different optimizers by creating
         a custom config class and add an extra method called ``make_optimizer``. Go to the tutorial on
@@ -259,11 +258,11 @@ class AdamWConfig(OptimizerArgs):
     Attributes
     ----------
     betas : Tuple[float, float]
-        Coefficients for computing running averages of gradient and its square (default is ``(0.9, 0.999)``).
+        Coefficients for computing running averages of gradient and its square, by default ``(0.9, 0.999)``.
     eps : float
-        Term added to the denominator to improve numerical stability (default is ``1e-8``).
+        Term added to the denominator to improve numerical stability, by default ``1e-8``.
     weight_decay : float
-        Weight decay rate (default is ``0.01``).
+        Weight decay rate, by default ``0.01``.
 
     Examples
     --------
@@ -329,9 +328,9 @@ class AdamConfig(OptimizerArgs):
     Attributes
     ----------
     betas : Tuple[float, float]
-        Coefficients for computing running averages of gradient and its square (default is ``(0.9, 0.999)``).
+        Coefficients for computing running averages of gradient and its square, by default ``(0.9, 0.999)``.
     weight_decay : float
-        Weight decay rate (default is ``0.0``).
+        Weight decay rate, by default ``0.0``.
 
     """
 

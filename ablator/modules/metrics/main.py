@@ -21,28 +21,28 @@ class Metrics:
     Parameters
     ----------
     *args : ty.Any
-        This arguments is just for disabling passing by positional arguments.
+        This argument is just for disabling passing by positional arguments.
     batch_limit : int | None
-        Maximum number of batches to keep for every category of data (specified by ``tags``), so only `batch_limit`
-        number of latest batches is stored for each of the categories. Default is 30.
+        Maximum number of batches to keep for every category of data (specified by ``tags``), so only ``batch_limit``
+        number of latest batches is stored for each of the categories, by default ``30``.
     memory_limit : int | None
         Maximum memory (in bytes) of batches to keep for every category of data (specified by ``tags``). Every time
-        this limit is exceeded, ``batch_limit`` will be reduced by 1. Default is 1e8.
+        this limit is exceeded, ``batch_limit`` will be reduced by 1, by default ``1e8``.
     evaluation_functions : dict[str, Callable] | None
         A dictionary of key-value pairs, keys are evaluation function names, values are
         callable evaluation functions, e.g mean, sum. Note that arguments to this Callable
         must match with names of prediction batches that the model returns. So if model prediction over
-        a batch looks like this: {"preds": <batch of predictions>, "labels": <batch of predicted labels>},
+        a batch looks like this: ``{"preds": <batch of predictions>, "labels": <batch of predicted labels>}``,
         then callable's arguments should be ``preds`` and ``labels``, e.g ``evaluation_functions=
-        {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``. Default is None.
+        {"mean": lambda preds, labels: np.mean(preads) + np.mean(labels)}``, by default ``None``.
     moving_average_limit : int | None
-        The maximum number of values allowed to store moving average metrics. Default is 3000.
+        The maximum number of values allowed to store moving average metrics, by default ``3000``.
     static_aux_metrics : dict[str, ty.Any] | None
         A dictionary of static metrics, those with their initial value that are updated manually,
         such as learning rate, best loss, total steps, etc. Keys of this dictionary are static metric names,
-        while values is a proper initial value. Default is None.
+        while values is a proper initial value, by default ``None``.
     moving_aux_metrics : Iterable[str] | None
-        A list of metrics, those we update with their moving average, such as loss. Default is None.
+        A list of metrics, those we update with their moving average, such as loss, by default ``None``.
 
     Examples
     --------
@@ -58,9 +58,7 @@ class Metrics:
     ...     moving_aux_metrics={"loss"},
     ... )
     >>> train_metrics.to_dict() # metrics are set to np.nan if it's not updated yet
-    {
-        "mean": np.nan, "loss": np.nan, "lr": 1.0
-    }
+    {'loss': nan, 'lr': 1.0, 'mean': nan}
     """
 
     def __init__(
@@ -280,9 +278,9 @@ class Metrics:
         Parameters
         ----------
         reset : bool
-            A flag that indicates whether to reset the predictions to empty after evaluation. Default is True.
+            A flag that indicates whether to reset the predictions to empty after evaluation, by default ``True``.
         update : bool
-            A flag that indicates whether to update the moving averages after evaluation. Default is True.
+            A flag that indicates whether to update the moving averages after evaluation, by default ``True``.
 
         Returns
         -------
@@ -333,7 +331,7 @@ class Metrics:
         **kwargs : ty.Any
             A dictionary of key-value pairs, where key is type of prediction (e.g predictions, labels),
             and value is a batch of prediction values. Note that the passed keys in ``**kwrags`` must match arguments in
-            evaluation functions arguments in Callable in evaluation_functions when we initialize Metrics object.
+            evaluation functions arguments in Callable in ``evaluation_functions`` when we initialize Metrics object.
 
         Raises
         ------
@@ -379,12 +377,12 @@ class Metrics:
         """
         Get all metrics, i.e moving auxiliary metrics, moving evaluation metrics, and static auxiliary metrics.
         Note that moving attributes will be an averaged value of all previous batches. Metrics are
-        set to np.nan if it's never updated before.
+        set to ``np.nan`` if it's never updated.
 
         Returns
         -------
         dict[str, ty.Any]
-            Contains key-value pairs for metric's name and it's value.
+            Contains key-value pairs for the metric's name and its value.
 
         Examples
         --------
@@ -392,27 +390,19 @@ class Metrics:
         >>> train_metrics = Metrics(
         ...     batch_limit=30,
         ...     memory_limit=None,
-        ...     evaluation_functions={"mean": lambda preds: np.mean(preds)},
+        ...     evaluation_functions={"mean": lambda preds: np.mean(preds)},  # mean of all predictions appended
         ...     moving_average_limit=100,
         ...     static_aux_metrics={"lr": 0.75},
         ...     moving_aux_metrics={"loss"},
         ... )
-        >>> train_metrics.append_batch(preds=np.array([100]))
+        >>> train_metrics.append_batch(preds=np.array([[100]*10]))
         >>> train_metrics.evaluate(reset=False, update=True)
         >>> train_metrics.to_dict()
-        {
-            'train_mean': np.nan, 'train_loss': np.nan,
-            'val_mean': 100.0, 'val_loss': np.nan,
-            'lr': 0.75
-        }
-        >>> train_metrics.append_batch(preds=np.array([0] * 3))
+        {'loss': nan, 'lr': 0.75, 'mean': 100.0}
+        >>> train_metrics.append_batch(preds=np.array([0] * 10))
         >>> train_metrics.evaluate(reset=True, update=True)
         >>> train_metrics.to_dict()
-        {
-            'train_mean': np.nan, 'train_loss': np.nan,
-            'val_mean': 62.5, 'val_loss': np.nan,
-            'lr': 0.75
-        }
+        {'loss': nan, 'lr': 0.75, 'mean': 50.0}
         """
         ma_attrs = {k: self._get_ma(k).value for k in self.__moving_aux_attributes__}
         eval_attrs = {k: self._get_ma(k).last for k in self.__moving_eval_attributes__}

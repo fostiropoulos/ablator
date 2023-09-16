@@ -68,7 +68,7 @@ class FileLogger:
         msg : str
             The message to print.
         verbose : bool
-            Whether to print messages to the console, by default True.
+            Whether to print messages to the console, by default ``True``.
         """
 
         if self.verbose or verbose:
@@ -133,7 +133,7 @@ class FileLogger:
         msg : str
             The message to log.
         verbose : bool
-            Whether to print messages to the console, by default True.
+            Whether to print messages to the console, by default ``True``.
 
 
         Returns

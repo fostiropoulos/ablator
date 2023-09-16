@@ -7,7 +7,11 @@ from ablator.config.types import Annotation, Enum, List, Optional, Self, Tuple, 
 
 class SubConfiguration:
     """
-    SubConfiguration for a SearchSpace.
+    Subconfiguration for a ``SearchSpace``. As the name suggests, its arguments typically
+    correspond to the attributes of the main config classs that we're creating ``SearchSpace``
+    for. For example, if the main config class is ``OptimizerConfig``, keys to the
+    ``sub_configuration`` object should be ``name``, and ``arguments``. Refer to the example
+    for more details on how to use it.
 
     Attributes
     ----------
@@ -17,40 +21,33 @@ class SubConfiguration:
     Parameters
     ----------
     **kwargs: ty.Any
-        Keyword arguments for the subconfigurations, can be nested dictionary of search spaces.
+        Keyword arguments for the subconfiguration, which typically correspond to the attributes of
+        the main config classs that we're creating ``SearchSpace`` for. You can also create extra search
+        spaces for any of the arguments.
 
     Examples
     --------
+    The below example defines optimizer config as a search space of 2 subspaces: an SGD optimizer and an adam
+    optimizer with a learning rate coming from a search space.
+
     >>> search_space = {
     ...     "train_config.optimizer_config": SearchSpace(
     ...         subspaces=[
     ...             {"sub_configuration": {"name": "sgd", "arguments": {"lr": 0.1}}},
-    ...             {
-    ...                 "sub_configuration": {
-    ...                     "name": "adam",
-    ...                     "arguments": {
-    ...                         "lr": {"value_range": (0, 1), "value_type": "float"},
-    ...                         "weight_decay": 0.9,
-    ...                     },
-    ...                 }
-    ...             },
-    ...             {
-    ...                 "sub_configuration": {
-    ...                     "name": "adam",
-    ...                     "arguments": {
-    ...                         "lr": {
-    ...                             "subspaces": [
-    ...                                 {"value_range": (0, 1), "value_type": "float"},
-    ...                                 {"value_range": (0, 1), "value_type": "float"},
-    ...                             ]
-    ...                         },
-    ...                         "weight_decay": 0.9,
-    ...                     },
-    ...                 }
-    ...             },
+    ...             {"sub_configuration": {
+    ...                 "name": "adam",
+    ...                 "arguments": {
+    ...                     "lr": {"value_range": (0, 1), "value_type": "float"},
+    ...                     "weight_decay": 0.9,
+    ...                 },
+    ...             }}
     ...         ]
     ...     )
     ... }
+
+    Note that the keys for ``"sub_configuration"`` comes from the constructor arguments of the
+    ``optimizer_config`` class, which in ablator is ``OptimizerConfig``, which are ``"name"``
+    and ``"arguments"``.
 
     """
 
@@ -132,53 +129,53 @@ class FieldType(Enum):
 class SearchSpace(ConfigBase):
     """
     Search space configuration, required in ``ParallelConfig``, is used to define the
-    search space for a hyperparameter. Its constructor takes in as input positional
-    arguments or keyword arguments that corresponds to parameters defined in the
-    Parameters section.
+    search space for a hyperparameter. Its constructor takes as input keyword arguments
+    that correspond to parameters defined in the Parameters section.
 
     Parameters
     ----------
     *args : ty.Any
-        Positional arguments to be passed. These arguments are:
-        ``value_range``: ``Optional[Tuple[str, str]]`` - value range of the parameter,
-        ``categorical_values``: ``Optional[List[str]]`` - categorical values for the parameter,
-        ``subspaces``: ``Optional[List[Self]]`` - Nested SearchSpace, optional,
-        ``sub_configuration``: ``Optional[SubConfiguration]`` - SubConfiguration for a SearchSpace, optional,
-        ``value_type``: ``FieldType`` - value type of the parameter's values (continous or discrete).
-        By default, ``FieldType.continuous``, ``n_bins``: ``Optional[int]`` - Total bins for grid sampling,
-        optional, ``log``: ``bool`` - To log. By default, ``False``.
+        This argument is just for disabling passing by positional arguments.
     **kwargs : ty.Any
         Keyword arguments to be passed. These arguments are:
-        ``value_range``: ``Optional[Tuple[str, str]]`` - value range of the parameter,
-        ``categorical_values``: ``Optional[List[str]]`` - categorical values for the parameter,
-        ``subspaces``: ``Optional[List[Self]]`` - Nested SearchSpace, optional,
-        ``sub_configuration``: ``Optional[SubConfiguration]`` - SubConfiguration for a SearchSpace, optional,
-        ``value_type``: ``FieldType`` - value type of the parameter's values (continous or discrete).
-        By default, ``FieldType.continuous``, ``n_bins``: ``Optional[int]`` - Total bins for grid sampling,
-        optional, ``log``: ``bool`` - To log. By default, ``False``.
+
+        - ``value_range`` : ``Optional[Tuple[str, str]]`` - value range of the parameter,
+
+        - ``categorical_values`` : ``Optional[List[str]]`` - categorical values for the parameter,
+
+        - ``subspaces`` : ``Optional[List[Self]]`` - A list of search spaces,
+
+        - ``sub_configuration``: ``Optional[SubConfiguration]`` - Subconfiguration for a ``SearchSpace``,
+
+        - ``value_type`` : ``FieldType`` - value type of the parameter's values (continuous or discrete),
+          by default ``FieldType.continuous``,
+
+        - ``n_bins`` : ``Optional[int]`` - Total bins for grid sampling, optional,
+
+        - ``log`` : ``bool`` - To log, by default ``False``.
 
     Attributes
     ----------
     value_range: Optional[Tuple[str, str]]
-        value range of the parameter.
+        Value range of the parameter.
     categorical_values: Optional[List[str]]
-        categorical values for the parameter.
+        Categorical values for the parameter.
     subspaces: Optional[List[Self]]
-        Nested SearchSpace, optional
+        A list of search spaces.
     sub_configuration: Optional[SubConfiguration]
-        SubConfiguration for a SearchSpace, optional
+        Subconfiguration for a ``SearchSpace``.
     value_type: FieldType = FieldType.continuous
-        value type of the parameter's values (continous or discrete).
+        Value type of the parameter's values (continuous or discrete).
     n_bins: Optional[int]
-        Total bins for grid sampling, optional
+        Total bins for grid sampling.
     log: bool
-        To log. by default, False.
+        To log, by default ``False``.
 
     Examples
     --------
 
-    In ablator, search space is defined for HPO that runs in parallel. For example, we want to
-    run hyperparameter optimization on the model's hidden size and activation function:
+    In ablator, search space is defined for parallel ablation studies. For example, we want to
+    run an ablation study on the model's hidden size and activation function:
 
     - Given the following model configuration:
 
@@ -235,10 +232,12 @@ class SearchSpace(ConfigBase):
 
     def parsed_value_range(self) -> tuple[int, int] | tuple[float, float]:
         """
+        Extract the lower and upper bound in the search space, values are cast to ``int`` or ``float``.
+
         Returns
         -------
         tuple[int, int] | tuple[float, float]
-            tuple representing range of SearchSpace's value_range
+            tuple representing the range of SearchSpace's ``value_range``.
 
         Examples
         --------
@@ -296,12 +295,12 @@ class SearchSpace(ConfigBase):
         Returns
         -------
         str
-            Searchspace in string format.
+            ``Searchspace`` in string format.
 
         Raises
         ------
         RuntimeError
-            If the Searchspace is invalid or can't be converted to str.
+            If the ``Searchspace`` is invalid or can't be converted to str.
         """
         if self.value_range is not None:
             str_repr = f"SearchSpace(value_range={self.parsed_value_range()}"
@@ -325,7 +324,7 @@ class SearchSpace(ConfigBase):
 
     def contains(self, value: float | int | str | dict[str, ty.Any]) -> bool:
         """
-        Checks whether the value is in the search-space.
+        Check whether the value is in the search space.
 
         Parameters
         ----------
@@ -340,7 +339,7 @@ class SearchSpace(ConfigBase):
         Raises
         ------
         ValueError
-            For invalid value.
+            Raised if ``value`` is not of specified types.
         """
         if self.value_range is not None and isinstance(value, (int, float, str)):
             min_val, max_val = self.parsed_value_range()

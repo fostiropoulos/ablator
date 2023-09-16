@@ -16,7 +16,9 @@ from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Optional
 
 
-def run_cmd_wait(cmd: str, timeout: int = 300, raise_errors: bool = False) -> Optional[str]:
+def run_cmd_wait(
+    cmd: str, timeout: int = 300, raise_errors: bool = False
+) -> Optional[str]:
     """
     Run a command and wait for it to finish.
     If the command takes longer than ``timeout`` seconds, kill it.
@@ -27,9 +29,9 @@ def run_cmd_wait(cmd: str, timeout: int = 300, raise_errors: bool = False) -> Op
     cmd : str
         The command to run.
     timeout : int
-        The timeout in seconds. By default, 300.
+        The timeout in seconds, by default ``300``.
     raise_errors : bool
-        Whether to raise errors. By default, ``False``.
+        Whether to raise errors, by default ``False``.
 
     Raises
     ------
@@ -118,7 +120,9 @@ class RemoteConfig(ConfigBase):
         cmd += f" {local_path}  {username}@{host}:{path}"
         return cmd
 
-    def _make_cmd_down(self, local_path: Path, destination: str, verbose: bool = True) -> str:
+    def _make_cmd_down(
+        self, local_path: Path, destination: str, verbose: bool = True
+    ) -> str:
         """
         Make the rsync command to download files from the remote storage.
 

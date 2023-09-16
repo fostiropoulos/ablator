@@ -53,7 +53,8 @@ def _parse_results(
 
 class Analysis:
     """
-    A class for analyzing experimental results.
+    A class that stores and processes the attributes, metrics, and other data for the plotting
+    of the experiment result.
 
     Parameters
     ----------

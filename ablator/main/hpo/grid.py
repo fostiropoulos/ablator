@@ -81,9 +81,9 @@ class GridSampler(BaseSampler):
     search_space : dict[str, SearchSpace]
         A dictionary with keys the configuration name and the search space to sample from
     configs : list[dict[str, ty.Any]] | None
-        Previous configurations to resume the state from, by default None
+        Previous configurations to resume the state from, by default ``None``.
     seed : int | None
-        A seed to use for the HPO sampler, by default None
+        A seed to use for the HPO sampler, by default ``None``.
     """
 
     def __init__(

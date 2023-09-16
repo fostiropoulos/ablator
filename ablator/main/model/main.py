@@ -77,7 +77,7 @@ class ModelBase(ABC):
         An optional instance of ``ProgressBar`` that displays real-time information during training.
         e.g. time remaining. Only applied for the master process.
     current_checkpoint : Optional[Path]
-        Directory for the current checkpoint file, by default None.
+        Directory for the current checkpoint file, by default ``None``.
     train_metrics : Metrics
         Training metrics including model information. i.e. learning rate and loss value.
     eval_metrics : Metrics | None
@@ -465,9 +465,9 @@ class ModelBase(ABC):
         Parameters
         ----------
         resume : bool
-            If True, the logger will resume logging from a previous experiment, by default False.
+            If True, the logger will resume logging from a previous experiment, by default ``False``.
         debug : bool
-            If True, no artifacts will be saved by the ``SummaryLogger``, by default False.
+            If True, no artifacts will be saved by the ``SummaryLogger``, by default ``False``.
         """
         self.logger = SummaryLogger(
             run_config=self.run_config,
@@ -495,7 +495,7 @@ class ModelBase(ABC):
             An instance of ``RunConfig`` containing configuration details.
         data_lock: ty.Optional[Lock]
             A lock for multiprocessing context that prevents simultaneous processing and
-            downloading of the dataset, by default None
+            downloading of the dataset, by default ``None``.
         """
         context_lock: ty.Union[nullcontext, Lock]
         if data_lock is None:
@@ -672,9 +672,9 @@ class ModelBase(ABC):
         Parameters
         ----------
         resume : bool
-            If True, tries to resume training from a checkpoint, by default False.
+            If True, tries to resume training from a checkpoint, by default ``False``.
         smoke_test : bool
-            Whether to run as a smoke test, by default False.
+            Whether to run as a smoke test, by default ``False``.
         from_chkpt: str | Path | None, optional
             Path to the checkpoint to initialize the state from.
 
@@ -729,11 +729,11 @@ class ModelBase(ABC):
         run_config : RunConfig
             An instance of ``RunConfig`` containing configuration details.
         smoke_test : bool
-            Whether to run as a smoke test, by default False.
+            Whether to run as a smoke test, by default ``False``.
         debug : bool
-            If True, disables logging and model directory creation, by default False.
+            If True, disables logging and model directory creation, by default ``False``.
         resume : bool
-            If True, tries to resume training from a checkpoint, by default False.
+            If True, tries to resume training from a checkpoint, by default ``False``.
         remote_progress_bar : ty.Optional[RemoteProgressBar]
             A remote progress bar can be used to report metrics from the internal progress bar
         from_chkpt: Path | str | None, optional
@@ -744,7 +744,7 @@ class ModelBase(ABC):
         Raises
         ------
         RuntimeError
-            if the state is already initialized and `smoke_test`, `debug` and `resume` flag are False
+            if the state is already initialized and `smoke_test`, `debug` and `resume` flag are ``False``
         """
         if (
             self._is_init
@@ -911,7 +911,8 @@ class ModelBase(ABC):
         save_dict : dict[str, ty.Any]
             A dictionary containing the saved model state and other necessary information.
         model_only : bool
-            If ``True``, only the model's weights will be loaded, ignoring other state information. BY default=False.
+            If ``True``, only the model's weights will be loaded, ignoring other state information, by
+            default ``False``.
 
         Raises
         ------
@@ -1044,7 +1045,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         user_save_dict : dict[str, ty.Any] | None
-            A dictionary containing user-defined information to be saved, by default None.
+            A dictionary containing user-defined information to be saved, by default ``None``.
         """
         self.current_state = {
             "run_config": self.run_config.to_dict(),
@@ -1062,7 +1063,7 @@ class ModelBase(ABC):
         Parameters
         ----------
         is_best : bool
-            Indicates if the current checkpoint is the best model so far, by default False.
+            Indicates if the current checkpoint is the best model so far, by default ``False``.
         """
         user_save_dict = self.save_dict()
         self._update_save_dict(user_save_dict)

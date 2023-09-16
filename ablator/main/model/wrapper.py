@@ -26,10 +26,13 @@ from ablator.modules.scheduler import Scheduler, SchedulerConfig
 # pylint: disable=too-many-instance-attributes
 class ModelWrapper(ModelBase):
     """
-    A wrapper around ``model_class`` that removes training boiler-plate code. Its functions are over-writable
-    to support for custom use-cases. Once ``make_dataloader_train`` is overriden to provide a training dataset,
-    you can pass ``ModelWrapper`` object to the trainers (``ProtoTrainer`` or ``ParallelTrainer``) along with a
-    running configuration (``RunConfig`` or ``ParallelConfig``) to launch the experiment.
+    A wrapper around ``model_class`` that removes training boiler-plate code. Once ``make_dataloader_train`` is
+    overridden to provide a training dataset, you can pass ``ModelWrapper`` object to the trainers
+    (``ProtoTrainer`` or ``ParallelTrainer``) along with a running configuration (``RunConfig`` or
+    ``ParallelConfig``) to launch the experiment.
+
+    The wrapper lets you customize the training process by allowing the overriding of various functions, this makes
+    it adaptable to different training paradigms. Several customizing use cases are shown below.
 
     Attributes
     ----------
@@ -90,18 +93,18 @@ class ModelWrapper(ModelBase):
         strict_load: bool = True,
     ):
         """
-        Creates the model, optimizer, scheduler, and scaler from a saved checkpoint dictionary or from config.
-        You can overwrite this function and ``save_dict()`` function to customize the saving and loading of the
-        model, optimizer, and scheduler to your needs. An example for this is shown in
-        `Saving and loading multi-module models <./notebooks/Multi-Modules.ipynb>`_ tutorial.
+        Creates the model, optimizer, scheduler, and scaler from a saved checkpoint dictionary or from configuration
+        objects. You can overwrite this function and ``save_dict()`` function to customize the saving and loading of
+        the model, optimizer, and scheduler to your needs. An example for this is shown in `Saving and loading
+        multi-module models <./notebooks/Multi-Modules.ipynb>`_ tutorial.
 
         Parameters
         ----------
 
         save_dict : dict[str, ty.Any] | None
-            The saved checkpoint dictionary to load from. By default ``None``.
+            The saved checkpoint dictionary to load from, by default ``None``.
         strict_load : bool
-            Whether to throw an error for mismatched keys. By default ``True``
+            Whether to throw an error for mismatched keys, by default ``True``.
         """
         save_dict = {} if save_dict is None else save_dict
         scheduler_state = save_dict["scheduler"] if "scheduler" in save_dict else None
@@ -157,9 +160,9 @@ class ModelWrapper(ModelBase):
         optimizer : Optimizer
             The optimizer to create the scheduler for.
         scheduler_config : SchedulerConfig | None
-            The scheduler config to create the scheduler from. By Default None.
+            The scheduler config to create the scheduler from, by default ``None``.
         scheduler_state : dict[str, ty.Any] | None
-            The scheduler state to load the scheduler from. By Default None.
+            The scheduler state to load the scheduler from, by default ``None``.
 
         Returns
         -------
@@ -193,9 +196,9 @@ class ModelWrapper(ModelBase):
         model : nn.Module
             The model to create the optimizer for.
         optimizer_config : OptimizerConfig | None
-            The optimizer config to create the optimizer from. By Default None.
+            The optimizer config to create the optimizer from, by default ``None``.
         optimizer_state : dict[str, ty.Any] | None
-            The optimizer state to load the optimizer from. By Default None.
+            The optimizer state to load the optimizer from, by default ``None``.
 
         Returns
         -------
@@ -235,7 +238,7 @@ class ModelWrapper(ModelBase):
         Parameters
         ----------
         scaler_state : ty.Optional[dict[str, ty.Any]]
-            The scaler state to load the scaler from. optional, by default ``None``
+            The scaler state to load the scaler from, optional, by default ``None``.
 
         Returns
         -------
@@ -256,7 +259,7 @@ class ModelWrapper(ModelBase):
         save_dict : dict[str, ty.Any]
             The save dict to load the checkpoint from.
         model_only : bool
-            Whether to load only the model or include scheduler, optimizer and scaler. By default False.
+            Whether to load only the model or include scheduler, optimizer and scaler, by default ``False``.
 
         Notes
         -----
@@ -578,7 +581,7 @@ class ModelWrapper(ModelBase):
         Parameters
         ----------
         smoke_test : bool
-            If True, for a smoke test. By default, False
+            If True, for a smoke test, by default, ``False``.
 
         Raises
         ------
@@ -692,14 +695,14 @@ class ModelWrapper(ModelBase):
         Parameters
         ----------
         run_config : RunConfig | None
-            The run config to use for training. By Default ``None``
+            The run config to use for training, by default ``None``.
         smoke_test : bool
-            Whether to run a smoke test. By default ``False``
+            Whether to run a smoke test, by default ``False``.
         debug : bool
-            Whether to run in debug mode. By default ``False``
+            Whether to run in debug mode, by default ``False``.
         resume : bool
             Whether to resume training the model from existing checkpoints and
-            existing experiment state. By Default ``False``
+            existing experiment state, by default ``False``.
         Returns
         -------
         dict[str, float]
@@ -768,7 +771,7 @@ class ModelWrapper(ModelBase):
         run_config : RunConfig
             The run config to use for evaluation.
         chkpt: str | Path | None
-            Path to the checkpoint to evaluate. If None, the latest checkpoint is evaluated. By Default ``None``
+            Path to the checkpoint to evaluate. If None, the latest checkpoint is evaluated, by default ``None``
 
         Returns
         -------
@@ -989,10 +992,10 @@ class ModelWrapper(ModelBase):
         metrics : Metrics
             The metrics to use for validation.
         subsample : float
-            The fraction of the dataloader to use for validation. By default = 1.0.
+            The fraction of the dataloader to use for validation, by default ``1.0``.
         smoke_test : bool
             Whether to execute this function as a smoke test. If ``True``, only one iteration will be performed,
-            which is useful for quickly checking if the code runs without errors. Default is ``False``.
+            which is useful for quickly checking if the code runs without errors, by default ``False``.
 
         Returns
         -------
@@ -1056,13 +1059,13 @@ class ModelWrapper(ModelBase):
 
     def evaluation_functions(self) -> dict[str, Callable] | None:
         """
-        You can overwrite this function and return the evaluation functions callables
+        You can overwrite this function and return the evaluation functions' callables
         that will be used to evaluate experiment metrics.
 
         Returns
         -------
         dict[str, Callable] | None
-            The evaluation functions to use. Also see ``Metrics`` for details.
+            The evaluation functions to use.
 
         Examples
         --------
@@ -1202,9 +1205,9 @@ class ModelWrapper(ModelBase):
 
         Examples
         --------
-        For example, in GPT2 model, we need to resize its vocabulary size to match the tokenizer's
+        For example, in GPT2 models, sometimes we need to resize its vocabulary size to match the tokenizer's
         vocabulary size depending on the tokenizer used. This is decided only after the experiment has
-        been launched. The reason for this is that you might want to run ablation study on different tokenizers:
+        been launched. The reason for this is that you might want to run an ablation study on different tokenizers:
 
         >>> class MyLMWrapper(ModelWrapper):
         ...    def config_parser(self, run_config: RunConfig):
@@ -1237,7 +1240,7 @@ class ModelWrapper(ModelBase):
         Parameters
         ----------
         is_best : bool
-            Whether this is the best model so far. By default ``False``
+            Whether this is the best model so far, by default ``False``.
         """
         self.logger.checkpoint(
             self.current_state,
@@ -1248,7 +1251,7 @@ class ModelWrapper(ModelBase):
 
     def save_dict(self) -> dict[str, ty.Any]:
         """
-        Save the current state of the trainer, including model parameters, the current states of the optimizer,
+        Save the current state of the trainer, including model parameters, and the current states of the optimizer,
         scaler, and scheduler. You can overwrite this function and ``create_model()`` to customize the saving and
         loading of the model, optimizer, and scheduler to your needs. An example of this is shown in
         `Saving and loading multi-module models <./notebooks/Multi-Modules.ipynb>`_ tutorial.
@@ -1257,9 +1260,13 @@ class ModelWrapper(ModelBase):
         -------
         dict[str, ty.Any]
             The current state of the trainer.
+
             - model: the model's state
+
             - optimizer: the state of optimizer
+
             - scheduler: the scheduler's state
+
             - scaler: the state of gradScaler.
         """
         model_state_dict = self.model.state_dict()

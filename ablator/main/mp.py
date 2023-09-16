@@ -30,12 +30,12 @@ from ablator.config.types import Optional
 
 class ParallelTrainer(ProtoTrainer):
     """
-    A class for parallelizing training and hyperparameter optimization of models of different configurations with ray.
+    A class for parallelizing multiple training processes of models of different configurations with ray.
 
     Parameters
     ----------
     wrapper : ModelWrapper
-        The model wrapper for the ParallelTrainer
+        The model wrapper for the ``ParallelTrainer``.
     run_config : ParallelConfig
         The runtime configuration for this trainer.
 
@@ -43,16 +43,20 @@ class ParallelTrainer(ProtoTrainer):
     ----------
     run_config : ParallelConfig
         Running configuration for parallel training.
-    device : str
-        The device to use for training.
-    experiment_dir : Path
-        The directory that stores experiment information (optuna storage, experiment state database).
     logger : RemoteFileLogger
         A centralized logger that writes messages to a file and prints them to the console.
     experiment_state : ExperimentState
         This attribute manages optuna trials.
+    gpu_manager : ty.Optional[GPUManager]
+        A GPU manager that manages GPU resources in the cluster.
+    available_resources : dict[str, Resource]
+        A dictionary of available resources on each node.
+    node_manager : NodeManager
+        A node manager that manages nodes and their resources.
+    ray_address : str
+        The address of the ray cluster.
     total_trials : int
-        Number of trials to run.
+        Total number of trials to run.
 
     Examples
     --------
@@ -61,15 +65,14 @@ class ParallelTrainer(ProtoTrainer):
 
     - Define training config:
 
-    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_optimizer_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
     >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
     >>> train_config = TrainConfig(
     ...     dataset="[Dataset Name]",
     ...     batch_size=32,
     ...     epochs=10,
     ...     optimizer_config = my_optimizer_config,
-    ...     scheduler_config = my_scheduler_config,
-    ...     rand_weights_init = True
+    ...     scheduler_config = my_scheduler_config
     ... )
 
     - Define model config, we want to run HPO on activation functions and model hidden size:
@@ -78,7 +81,7 @@ class ParallelTrainer(ProtoTrainer):
     >>> class CustomModelConfig(ModelConfig):
     >>>     hidden_size: int
     >>>     activation: str
-    >>> model_config = CustomModelConfig(num_filter1 =32, num_filter2 = 64, activation = "relu")
+    >>> model_config = CustomModelConfig(hidden_size=100, activation="relu")
 
     - Define search space:
 
@@ -91,8 +94,8 @@ class ParallelTrainer(ProtoTrainer):
     ...     "model_config.activation": SearchSpace(categorical_values = ["relu", "elu", "leakyRelu"]),
     ... }
 
-    - Define run config (remember to redefine the parallel config to
-    update the model config type to be ``CustomModelConfig``):
+    - Define run config (remember to redefine the parallel config to update the model config type to
+      be ``CustomModelConfig``):
 
     >>> @configclass
     >>> class CustomParallelConfig(ParallelConfig):
@@ -107,11 +110,11 @@ class ParallelTrainer(ProtoTrainer):
     ...     amp=True,
     ...     random_seed = 42,
     ...     total_trials = 20,
-    ...     concurrent_trials = 20,
+    ...     concurrent_trials = 3,
     ...     search_space = search_space,
     ...     optim_metrics = {"val_loss": "min"},
-    ...     gpu_mb_per_experiment = 1024,
-    ...     cpus_per_experiment = 1,
+    ...     optim_metric_name = "val_loss",
+    ...     gpu_mb_per_experiment = 1024
     ... )
 
     - Create model wrapper:
@@ -120,10 +123,10 @@ class ParallelTrainer(ProtoTrainer):
     >>>     def __init__(self, *args, **kwargs):
     >>>         super().__init__(*args, **kwargs)
     >>>
-    >>>     def make_dataloader_train(self, run_config: CustomRunConfig):
+    >>>     def make_dataloader_train(self, run_config: CustomParallelConfig):
     >>>         return torch.utils.data.DataLoader(<train_dataset>, batch_size=32, shuffle=True)
     >>>
-    >>>     def make_dataloader_val(self, run_config: CustomRunConfig):
+    >>>     def make_dataloader_val(self, run_config: CustomParallelConfig):
     >>>         return torch.utils.data.DataLoader(<val_dataset>, batch_size=32, shuffle=False)
 
     - After gathering all configurations and model wrapper, we can initialize and launch the parallel trainer:
@@ -135,7 +138,7 @@ class ParallelTrainer(ProtoTrainer):
     ...     wrapper=wrapper,
     ...     run_config=parallel_config,
     ... )
-    >>> ablator.launch(working_directory = os.getcwd(), ray_head_address="auto")
+    >>> ablator.launch(working_directory = os.getcwd(), ray_head_address=None)
     """
 
     def __init__(self, wrapper: ModelWrapper, run_config: ParallelConfig):
@@ -240,9 +243,7 @@ class ParallelTrainer(ProtoTrainer):
             num_cpus=self._cpu,
             max_calls=1,
             max_retries=max_error_retries,
-        )(
-            train_main_remote
-        ).options(
+        )(train_main_remote).options(
             resources={f"node:{node_ip}": 0.001}, name=trial_uuid
         )
         run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
@@ -470,20 +471,20 @@ class ParallelTrainer(ProtoTrainer):
         excluding_files: list[str] | None = None,
     ):
         """
-        Set up and launch the parallel ablation process. This sets up a ray cluster, and trials of different
-        hyperparameters initialized (or retrieved) will be pushed to ray nodes so they can be executed in parallel.
+        Set up and launch the parallel ablation experiment. This sets up a ray cluster, and trials of different
+        configuration initialized (or retrieved) will be pushed to the ray cluster to run in parallel.
 
         Parameters
         ----------
         working_directory : str
-            The working directory that stores codes, modules that will be used by ray.
+            The working directory that stores codes and modules that will be used by ray.
         auxilary_modules : list[tys.ModuleType] | None
             A list of modules to be used as ray clusters' working environment.
         ray_head_address : str | None
             Ray cluster address.
         resume : bool
             Whether to resume training the model from existing checkpoints and
-            existing experiment state. By default False
+            existing experiment state, by default ``False``.
         excluding_files : list[str] | None
             A list of files in `.gitignore` format, that will be excluded from being uploaded to the ray cluster.
             If unspecified it ignores `.git/**` folder.

@@ -38,11 +38,11 @@ class ExperimentState:
     config : ParallelConfig
         The configuration object that defines the experiment settings.
     logger : FileLogger | None
-        The logger for outputting experiment logs. If not specified, a dummy logger will be used. By Default ``None``.
+        The logger for outputting experiment logs. If not specified, a dummy logger will be used, by default ``None``.
     resume : bool
-        Whether to resume a previously interrupted experiment. By default ``False``.
+        Whether to resume a previously interrupted experiment, by default ``False``.
     sampler_seed : int | None
-        The seed to use for the trial sampler. By Default ``None``.
+        The seed to use for the trial sampler, by default ``None``.
 
     Raises
     ------
@@ -308,7 +308,7 @@ class ExperimentState:
         metrics : dict[str, float] | None
             The metrics of the trial. By default ``None``.
         state : TrialState
-            The state of the trial, by default ``TrialState.RUNNING``. (Optional)
+            The state of the trial, by default ``TrialState.RUNNING``.
 
         Raises
         ------
@@ -365,7 +365,7 @@ class ExperimentState:
                 raise RuntimeError(f"Trial {trial_id} was not found.")
             if metrics is not None:
                 res.metrics.append(metrics)
-            res.state = state # type: ignore[assignment]
+            res.state = state  # type: ignore[assignment]
             session.commit()
             session.flush()
 
@@ -418,11 +418,11 @@ class ExperimentState:
         trial_state : TrialState
             The state of the trial.
         _opt_distributions_kwargs : dict[str, ty.Any] | None
-            Optuna distribution kwargs, by default None.
+            Optuna distribution kwargs, by default ``None``.
         _opt_distributions_types : dict[str, str] | None
-            Optuna distribution types, by default None
+            Optuna distribution types, by default ``None``.
         _opt_params : dict[str, ty.Any] | None
-            Optuna params, by default None.
+            Optuna params, by default ``None``.
         """
         with Session(self.engine) as session:
             trial = Trial(

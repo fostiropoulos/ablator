@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class Plot(ABC):
     """
-    A base class for parsing experiment results and plotting them with pandas and matplotlib.
+    A base class for parsing experiment results and plotting them with ``pandas`` and ``matplotlib``.
 
     Parameters
     ----------
@@ -26,13 +26,13 @@ class Plot(ABC):
     metric_obj_fn : Optim
         The metric optimization direction.
     y_axis : str | None
-        The y-axis label (metric name), by default None.
+        The y-axis label (metric name), by default ``None``.
     x_axis : str | None
-        The x-axis label (attribute name), by default None.
+        The x-axis label (attribute name), by default ``None``.
     x_ticks : list[str] | None
-        The x-axis ticks, by default None.
+        The x-axis ticks, by default ``None``.
     ax : Axes | None
-        The axes to plot on, by default None.
+        The axes to plot on, by default ``None``.
 
     Attributes
     ----------
@@ -54,6 +54,7 @@ class Plot(ABC):
         The axes to plot on. If None, a new axis will be created as the first subplot
         in the first cell and first column of a 1x1 grid.
     """
+
     def __init__(
         self,
         metric: pd.Series,

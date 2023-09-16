@@ -15,7 +15,9 @@ class Dict(ty.Dict[str, T]):
     """
     A class for dictionary data type, with keys as strings. Used when you need to specify a config
     attribute as a dictionary (in fact, ablator defines ``search_space`` as a dictionary of ``SearchSpace``
-    in config class ``ParallelConfig``).
+    in config class ``ParallelConfig``). Remember to wrap the type of the dictionary elements in
+    ``Dict[]``, e.g ``Dict[str]`` is a dictionary which has string values, ``Dict[int]`` is a dictionary
+    which has integer values.
 
     Examples
     --------
@@ -34,23 +36,21 @@ class Dict(ty.Dict[str, T]):
     >>> int_dict = {"int1": 1, "int2": 2.5}
     >>> space_dict = {"space1": SearchSpace(value_range = [0, 10], value_type = 'int')}
     >>> MyConfig(my_str_dict=str_dict, my_int_dict=int_dict, my_space_dict=space_dict)
-    my_str_dict:
-    str1: val1
-    str2: '2'
-    my_int_dict:
-    int1: 1
-    int2: 2
-    my_space_dict:
-        space1:
-            value_range:
-            - '0'
-            - '10'
-            categorical_values: null
-            subspaces: null
-            sub_configuration: null
-            value_type: int
-            n_bins: null
-            log: false
+    MyConfig(
+        my_str_dict={'str1': 'val1', 'str2': '2'},
+        my_int_dict={'int1': 1, 'int2': 2},
+        my_space_dict={
+            'space1': {
+                'value_range': ('0', '10'),
+                'categorical_values': None,
+                'subspaces': None,
+                'sub_configuration': None,
+                'value_type': 'int',
+                'n_bins': None,
+                'log': False
+            }
+        }
+    )
 
     Notice that the value at key ``str2`` is cast to a string, and the value at key ``int2`` is
     cast to an integer.
@@ -61,8 +61,8 @@ class Dict(ty.Dict[str, T]):
 # pylint: disable=deprecated-typing-alias
 class List(ty.List[T]):
     """
-    A class for list data type, used when you need to specify a config attribute to be a list.
-    Remember to wrap the type of the list elements in ``List[]``, e.g ``List[str]``, ``List[int]``.
+    A class for list data type, used when you need to annotate an attribute as a list.
+    Remember to wrap the type of the list elements in ``List[]``, e.g. ``List[str]``, ``List[int]``.
 
     Examples
     --------
@@ -78,16 +78,10 @@ class List(ty.List[T]):
 
     >>> MyConfig(my_str_list=["a", "b", 1.5, 2],
     ...          my_int_list=[1, 2, -3.5, 4])
-    my_str_dict:
-    - a
-    - b
-    - '1.5'
-    - '2'
-    my_int_dict:
-    - 1
-    - 2
-    - -3
-    - 4
+    MyConfig(
+        my_str_list=['a', 'b', '1.5', '2'],
+        my_int_list=[1, 2, -3, 4]
+    )
 
     Notice that the value of ``my_str_list[2]`` and ``my_int_list[3]`` are cast to string,
     and the value of ``my_int_list[2]`` is cast to an integer.
@@ -98,7 +92,7 @@ class List(ty.List[T]):
 # pylint: disable=deprecated-typing-alias
 class Tuple(ty.Tuple[T]):
     """
-    A class for tuple data type, used when you need to specify a config attribute to be a tuple.
+    A class for tuple data type, used when you need to annotate an attribute as a tuple.
     Remember to wrap the type of the tuple elements in ``Tuple[]``. You also have the flexibility
     to specify the number of elements in the tuple and the data type for each of them.
 
@@ -108,35 +102,32 @@ class Tuple(ty.Tuple[T]):
 
     >>> @configclass
     >>> class MyConfig(ConfigBase):
-    >>>     my_str_int_tuple: Tuple[str, int]
-    >>>     my_2str_int_tuple: Tuple[str, int, str]
+    >>>     my_str_int_tuple: Tuple[str, int]   # Tuple of a string and an integer
+    >>>     my_2str_int_tuple: Tuple[str, int, str]   # Tuple of a string, an integer, and a string
 
     When initializing a config object, you can pass a tuple of proper values. In addition,
     ablator will automatically cast them to the correct type if possible. For example:
 
     >>> MyConfig(my_str_int_tuple=("a", 1.5), my_2str_int_tuple=("a", 1, 2))
-    my_str_int_tuple:
-    - a
-    - 1
-    my_2str_int_tuple:
-    - a
-    - 1
-    - '2'
+    MyConfig(
+        my_str_int_tuple=('a', 1),
+        my_2str_int_tuple=('a', 1, '2')
+    )
 
     Notice how data are cast in ``my_str_int_tuple[1]`` and ``my_2str_int_tuple[2]``.
 
     .. note::
-        The number of elements in the tuple must match the number of types specified in ``Tuple[]``.
-        So for the example above, ``my_str_int_tuple`` must have exactly 2 elements, and
-        ``my_2str_int_tuple`` must have exactly 3 elements.
+        The number of elements and their order in the tuple must match those types specified in
+        ``Tuple[]``. So for the example above, ``my_str_int_tuple`` must have exactly 2 elements
+        in that order, and ``my_2str_int_tuple`` must have exactly 3 elements in that order.
     """
 
 
 class Optional(ty.Generic[T]):
     """
     A class for optional data types. This is helpful when a config attribute is optional,
-    meaning that we can leave an optional config attribute empty. (in fact, ablator defines ``scheduler_config``
-    as optional in config class ``TrainConfig``).
+    meaning that we can leave an optional config attribute empty. (In fact, ablator defines
+    ``scheduler_config`` as optional in the config class ``TrainConfig``).
 
     Examples
     --------
@@ -146,14 +137,13 @@ class Optional(ty.Generic[T]):
     >>> class MyConfig(ConfigBase):
     >>>     my_optional_list: Optional[List[str]]
 
-    When initializing a config object, you can pass a ``List[str]`` value to ``a4``, or not passing
+    When initializing a config object, you can pass a ``List[str]`` value to ``my_optional_list``, or not passing
     values at all:
 
     >>> MyConfig(my_optional_list=["a"])
-    my_optional_list:
-    - a
+    MyConfig(my_optional_list=['a'])
     >>> MyConfig()
-    my_optional_list: null
+    MyConfig(my_optional_list=None)
     """
 
 
@@ -169,9 +159,9 @@ Literal = ty.Literal
 class Enum(_Enum):
     """
     A custom Enum class that provides additional equality and hashing methods. This is useful when creating
-    custom data types that take as value elements from a fixed set. In ablator, we use this class to define
-    ``Optim``, which specifies the optimization direction: ``Optim.min`` or ``Optim.max``. ``Optim`` is used
-    in config class ``ParallelConfig`` (``optim_metrics`` attribute).
+    custom data types that take as value elements from a fixed set. In ablator, we use ``Enum`` to define
+    ``Optim``, which specifies the optimization direction: ``Optim.min`` or ``Optim.max``. ``Optim`` is then
+    used in config class ``RunConfig`` (``optim_metrics`` attribute).
 
     Examples
     --------
@@ -190,7 +180,7 @@ class Enum(_Enum):
     >>> class MyConfig(ConfigBase):
     >>>     my_color: Color
     >>> MyConfig(my_color=Color.RED)
-    my_color: 1
+    MyConfig(my_color=1)
 
     """
 
@@ -454,7 +444,9 @@ def parse_type_hint(cls: ty.Any, type_hint: type[ty.Any]) -> Annotation:
     )
 
 
-def _parse_class(cls: ty.Any, args_kwargs: dict | object, debug: bool = False) -> object:
+def _parse_class(
+    cls: ty.Any, args_kwargs: dict | object, debug: bool = False
+) -> object:
     """
     Parse values whose types are not  a collection or in ALLOWED_TYPES
     eg. bool, added dict(tune configs)
@@ -466,7 +458,7 @@ def _parse_class(cls: ty.Any, args_kwargs: dict | object, debug: bool = False) -
     args_kwargs : dict | object
         The positional and keyword arguments or object to parse with the given type
     debug : bool, optional
-        Whether to load the configuration in debug mode, and ignore discrepancies/errors, by default ``False``
+        Whether to load the configuration in debug mode, and ignore discrepancies/errors, by default ``False``.
 
     Returns
     -------
@@ -527,7 +519,7 @@ def parse_value(
     name : str | None
         The name of the value, by default ``None``.
     debug : bool, optional
-        Whether to load the configuration in debug mode, and ignore discrepencies / errors, by default ``False``
+        Whether to load the configuration in debug mode, and ignore discrepencies / errors, by default ``False``.
 
     Returns
     -------
@@ -607,7 +599,7 @@ def parse_value(
 
 class Stateful(ty.Generic[T]):
     """
-    This is for attributes that are fixed between experiments. By default, we assume that unannotated attributes
+    This is for attributes that are fixed between experiments. By default, we assume that primitive-typed attributes
     are stateful. Unlike ``Derived`` and ``Stateless``, in which you have to annotate attributes with these classes,
     e.g. ``attr: Statess[int]`` or ``attr: Statess[List[str]]``, for stateful, just define them without
     ``Stateful``, e.g ``attr: int`` or ``attr: List[str]``.
@@ -615,36 +607,36 @@ class Stateful(ty.Generic[T]):
     Examples
     --------
     The below example defines a model config that has stateful embedding dimensions, which means that in
-    every experiment, the embedding dimension must be the same (and will be 100).
+    every experiment, the embedding dimension must be the same.
 
     >>> @configclass
     >>> class MyModelConfig(ModelConfig):
     >>>     embed_dim: int
-    >>> model_config = MyModelConfig(embed_dim=100) # Must provide values for ``embed_dim`` before launching experiment
+    >>> model_config = MyModelConfig(embed_dim=100)  # Must provide values for ``embed_dim`` before launching experiment
 
     .. note::
-        - In contrary to ``Derived``, when initializing config objects (aka before launching the experiment),
-        you have to assign values to their stateful attributes.
+        - In contrary to ``Derived``, when initializing config objects (aka before launching the experiment
+          ``trainer.launch()``), you have to assign values to their stateful attributes.
         - Stateful is only applied in the context of experiments. So a stateful attribute must be
-        the same between different run of the same experiment configurations. However, within each experiment,
-        a search space on stateful attributes can be defined to run HPO on them.
+          the same between different runs of the same experiment configurations. However, within each experiment,
+          a search space on stateful attributes can be defined to run HPO on them.
 
     """
 
 
 class Derived(ty.Generic[T]):
     """
-    This type is for attributes that are derived during the experiment (after launching the experiment).
-    To make an attribute derived, wrap ``Derived`` around its type definition, e.g ``Derived[List[int]]``,
-    ``Derived[str]``.
+    ``Derived`` is used for attributes that are derived during the experiment (after launching the experiment
+    ``trainer.launch()``). To make an attribute derived, wrap ``Derived`` around its type definition, e.g
+    ``Derived[List[int]]``, ``Derived[str]``.
 
     Examples
     --------
-    For example, you want to test how different pretrained word embeddings (e.g word2vec 100d, word2vec 300d) affect the
-    performance of a classification model, and you will use ablator to run ablation study on
+    For example, you want to test how different pre-trained word embeddings (e.g word2vec 100d, word2vec 300d)
+    affect the performance of a classification model, and you will use ablator to run ablation study on
     the effect of word embeddings. Plus, the classification model architecture depends on the size
-    of the embedding length of each pretrained set of word embeddings. In this case, the model architecture
-    is derived from the pretrained word embeddings. So you can define a model config class as follows:
+    of the embedding length of each pre-trained set of word embeddings. In this case, the model architecture
+    is derived from the pre-trained word embeddings. So you can define a model config class as follows:
 
     >>> @configclass
     >>> class MyModelConfig(ModelConfig):
@@ -657,8 +649,8 @@ class Derived(ty.Generic[T]):
     >>>         super().__init__()
     >>>         self.embed_dim = config.embed_dim
 
-    Finally, ``config_parser`` is used to set the value of Derived attribute ``embed_dim``
-    based on the pretrained word embeddings:
+    Finally, ``config_parser`` is used to set the value of the ``Derived`` attribute ``embed_dim``
+    based on the pre-trained word embeddings:
 
     >>> class MyLMWrapper(ModelWrapper):
     >>>     def config_parser(self, run_config: RunConfig):
@@ -686,6 +678,6 @@ class Stateless(ty.Generic[T]):
     >>> config = MyModelConfig(attr=[5,"6",7.25])  # Must provide values for ``attr`` before launching experiment
 
     .. note::
-        Unlike ``Derived``, when initializing config objects (aka before launching the experiment) that have stateless
-        attributes, you have to assign values to these attributes.
+        Unlike ``Derived``, when initializing config objects (before launching the experiment ``trainer.launch()``)
+        that have stateless attributes, you have to assign values to these attributes.
     """

@@ -96,11 +96,11 @@ def _sorted_nodes_by_util(
     resources : dict[str, Resource]
         a dictionary of the nodes with their available resources
     gpu_util_requirement : int | None
-        the gpu requirement for the task, by default None
+        the gpu requirement for the task, by default ``None``.
     memory_perc_limit : int
-        the percentage upper limit to memory utilization, by default 80
+        the percentage upper limit to memory utilization, by default ``80``.
     cpu_util_perc_limit : int
-        the percentage upper limit to cpu utilization, by default 80
+        the percentage upper limit to cpu utilization, by default ``80``.
 
     Returns
     -------

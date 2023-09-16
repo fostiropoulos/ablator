@@ -16,16 +16,16 @@ from ablator.config.proto import Optim, RunConfig
 
 def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame | None:
     """
-    Read the results of an experiment and return them as a pandas DataFrame.
+    Read the results of an experiment and return them as a pandas ``DataFrame``.
 
     The function reads the data from a JSON file, processes each row, and appends
-    experiment attributes from a YAML configuration file. The resulting DataFrame
+    experiment attributes from a YAML configuration file. The resulting ``DataFrame``
     is indexed and returned.
 
     Parameters
     ----------
     config_type : type[ConfigBase]
-        The type of the configuration class that is used to load the experiment
+        The type of configuration class that is used to load the experiment
         configuration from a YAML file.
     json_path : Path
         The path to the JSON file containing the results of the experiment.
@@ -33,13 +33,14 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
     Returns
     -------
     pd.DataFrame | None
-        A pandas DataFrame containing the processed experiment results.
-        Returns None if there was an error in reading the json_path results.
-
+        A pandas ``DataFrame`` containing the processed experiment results.
+        Returns ``None`` if there was an error in reading the ``json_path`` results.
 
     Examples
     --------
-    >>> result json file:
+    Suppose result json file ``/tmp/myexperiment/results.json`` contains:
+
+    >>> json.load("results.json")
     [{
     "train_loss": 10.35,
     "val_loss": NaN,
@@ -50,13 +51,38 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
     "val_loss": 7.04,
     "current_epoch": 2,
     }]
-    >>> config file
-    experiment_dir: "\\tmp\\results\\experiment_8925_9991\"
-    device: cpu
-    >>> return value
-    #   current_epoch   train_loss  val_loss            experiment_dir               device
-    0            1          10.35      NaN     "\\tmp\\results\\experiment_8925_9991\"    cpu
-    1            2          3.89       7.04    "\\tmp\\results\\experiment_8925_9991\"    cpu
+
+    And the corresponding configuration object ``run_config`` is created as:
+
+    >>> config = {
+    ...     "model_config": {},
+    ...     "train_config": {
+    ...         'dataset': 'Fashion-mnist',
+    ...         'batch_size': 32,
+    ...         'epochs': 20,
+    ...         'optimizer_config': {
+    ...             'name': 'adam',
+    ...             'arguments': {
+    ...                 'betas': (0.9, 0.999), 'weight_decay': 0.0, 'lr': 0.001
+    ...             }
+    ...         },
+    ...         'scheduler_config': None
+    ...     },
+    ...     "experiment_dir": '/tmp/experiments',
+    ...     "random_seed": 42,
+    ...     # ... other configs
+    ...     "optim_metrics": None,
+    ...     "optim_metric_name": None
+    ... }
+    >>> run_config = RunConfig(**config)
+
+    The function ``read_result`` will return a pandas data frame like below:
+
+    >>> read_result(run_config, Path("/tmp/myexperiment/results.json"))
+                            experiment_dir	        keep_n_checkpoints	...	train_loss	val_loss	current_epoch
+    trial_uid	    step
+    experiments_    0		C:/tmp/experiments	    3                	...	10.35	    NaN	        1
+                    1   	C:/tmp/experiments	    3                	...	3.89	    7.04	    2
     """
 
     try:
@@ -87,34 +113,6 @@ class Results:
     `Interpreting Results <./notebooks/Interpreting-results.ipynb>`_ tutorial for more details on plotting
     and interpreting experiment results.
 
-    Examples
-    --------
-
-    >>> directory_path = Path('<path to experiment output defined in experiment_dir>')
-    >>> results = Results(config = ParallelConfig, experiment_dir=directory_path, use_ray=True)
-    >>> df = results.read_results(config_type=ParallelConfig, experiment_dir=directory_path)
-
-    Pass ``df`` to ``PlotAnalysis`` to create an analysis object that's able to plot the correlation between
-    the hyperparameters and metrics and save the plots to an output directory. For example, the following
-    code snippet generates plots for each of the numerical and categorical hyperparameters and saves them to
-    ``./plots`` directory. Here "Validation Accuracy" is the name of the main metric.
-
-    >>> analysis = PlotAnalysis(
-    ...         df,
-    ...         save_dir="./plots",
-    ...         cache=True,
-    ...         optim_metrics={"val_accuracy": Optim.max},
-    ...         numerical_attributes=<numerical name remap keys names>,
-    ...         categorical_attributes=<categorical name remap keys names>,
-    ...     )
-    >>> analysis.make_figures(
-    ...     metric_name_remap={
-    ...         "val_accuracy": "Validation Accuracy",
-    ...     },
-    ...     attribute_name_remap= attribute_name_remap
-    ... )
-
-
     Parameters
     ----------
     config : type[ParallelConfig] | ParallelConfig
@@ -122,20 +120,20 @@ class Results:
     experiment_dir : str | Path
         The path to the experiment directory.
     cache : bool
-        Whether to cache the results, by default ``False``
+        Whether to cache the results, by default ``False``.
     use_ray : bool
-        Whether to use ray for parallel processing, by default ``False``
+        Whether to use ray for parallel processing, by default ``False``.
 
     Attributes
     ----------
     experiment_dir : Path
         The path to the experiment directory.
     config : type[ParallelConfig]
-        The configuration class used
+        The configuration class used.
     metric_map : dict[str, Optim]
-        A dictionary mapping optimize metric names to their optimization direction.
+        A dictionary mapping metric names to their optimization direction.
     data: pd.DataFrame
-        The processed results of the experiment. Refer ``read_results`` for more details.
+        The processed results of the experiment. Refer to ``read_results`` for more details.
     config_attrs: list[str]
         The list of all the optimizable hyperparameter names
     search_space: dict[str, ty.Any]
@@ -150,7 +148,38 @@ class Results:
     FileNotFoundError
         If the experiment directory doesn't exists.
     ValueError
-        If run-config is provided instead of parallel-config.
+        If ``RunConfig`` is provided instead of ``ParallelConfig``.
+
+    Examples
+    --------
+
+    Suppose you have an experiment output directory stored at ``<path to experiment output defined in
+    config experiment_dir>``. You can read the results from the directory as follows:
+
+    >>> directory_path = Path('<path to experiment output defined in config experiment_dir>')
+    >>> results = Results(config=ParallelConfig, experiment_dir=directory_path, use_ray=True)
+    >>> df = results.read_results(config_type=ParallelConfig, experiment_dir=directory_path)
+
+    Pass ``df`` to ``PlotAnalysis`` to create an analysis object for plotting the correlation between
+    the hyperparameters and the metrics and save the plots to an output directory. For example, the following
+    template generates plots for each of the numerical and categorical hyperparameters and saves them to
+    ``./plots`` directory. Here "Validation Accuracy" is the name of the main metric.
+
+    >>> analysis = PlotAnalysis(
+    ...     df,
+    ...     save_dir="./plots",
+    ...     cache=True,
+    ...     optim_metrics={"val_accuracy": Optim.max},
+    ...     numerical_attributes=<numerical name remap keys names>,
+    ...     categorical_attributes=<categorical name remap keys names>,
+    ... )
+    >>> analysis.make_figures(
+    ...     metric_name_remap={
+    ...         "val_accuracy": "Validation Accuracy",
+    ...     },
+    ...     attribute_name_remap= attribute_name_remap
+    ... )
+
     """
 
     def __init__(
@@ -288,22 +317,21 @@ class Results:
         num_cpus: float | None = None,
     ) -> pd.DataFrame:
         """
-        Read multiple results from experiment directory with ray to enable parallel processing.
-        This function calls ``read_result`` many times, refer to ``read_result`` for more details.
+        Read all experiment results from the experiment directory (with ray if specified when initializing ``Result``).
 
         Parameters
         ----------
         config_type : type[ConfigBase]
-            The configuration class
+            The configuration class.
         experiment_dir : Path | str
-            The experiment directory
+            The experiment directory.
         num_cpus : float | None
-            Number of CPUs to use for ray processing, by default ``None``
+            Number of CPUs to use for ray processing, by default ``None``.
 
         Returns
         -------
         pd.DataFrame
-            A dataframe of all the results
+            A data frame of all the results from all experiments in ``experiment_dir``.
 
         Raises
         ------

@@ -187,7 +187,7 @@ class SummaryLogger:
         summary_dir : Path
             Path to the summary directory.
         run_config : RunConfig | None
-            The run configuration, by default None.
+            The run configuration, by default ``None``.
 
         Returns
         -------
@@ -365,10 +365,10 @@ class SummaryLogger:
             The file name.
 
         itr : int | None
-            The iteration, by default None. If not provided, the current iteration is incremented by 1.
+            The iteration. If not provided, the current iteration is incremented by 1, by default ``None``.
 
         is_best : bool
-            Whether this is the best checkpoint, by default False.
+            Whether this is the best checkpoint, by default ``False``.
 
         """
         if self.experiment_dir is None:
@@ -423,12 +423,16 @@ class SummaryLogger:
         ----------
         *args : Any
             Positional arguments to be passed. These arguments are:
-            ``msg`` : ``str`` - The message to log,
-            ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``False``.
+
+            - ``msg`` : ``str`` - The message to log,
+
+            - ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``False``.
         **kwargs : Any
             Keyword arguments to be passed. These arguments are:
-            ``msg`` : ``str`` - The message to log,
-            ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``False``.
+
+            - ``msg`` : ``str`` - The message to log,
+
+            - ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``False``.
 
         """
         self.logger.info(*args, **kwargs)
@@ -442,12 +446,16 @@ class SummaryLogger:
         ----------
         *args : Any
             Positional arguments to be passed. These arguments are:
-            ``msg`` : ``str`` - The message to log,
-            ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``True``.
+
+            - ``msg`` : ``str`` - The message to log,
+
+            - ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``True``.
         **kwargs : Any
             Keyword arguments to be passed. These arguments are:
-            ``msg`` : ``str`` - The message to log,
-            ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``True``.
+
+            - ``msg`` : ``str`` - The message to log,
+
+            - ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``True``.
         """
         self.logger.warn(*args, **kwargs)
 
@@ -460,11 +468,13 @@ class SummaryLogger:
         ----------
         *args : Any
             Positional arguments to be passed. These arguments are:
-            ``msg`` : ``str`` - The message to log.
+
+            - ``msg`` : ``str`` - The message to log.
 
         **kwargs : Any
             Keyword arguments to be passed. These arguments are:
-            ``msg`` : ``str`` - The message to log.
+
+            - ``msg`` : ``str`` - The message to log.
 
         """
         self.logger.error(*args, **kwargs)

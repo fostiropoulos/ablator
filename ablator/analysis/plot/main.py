@@ -20,17 +20,32 @@ logger = logging.getLogger(__name__)
 class PlotAnalysis(Analysis):
     """
     Class for plotting experiment results. You can use this class and ``Results`` class to visualize the
-    relationship between any hyperparameter that you run ablation study on with the result metrics. This
+    relationship between the result metrics and any hyperparameter you run ablation study on. This
     valuable insight offers an intuitive understanding of how these parameters may influence your
     model's performance.
 
     Plots supported are linear plots for numerical data and violin plots for categorical data.
 
+    Parameters
+    ----------
+    results : pd.DataFrame | Results
+        The result dataframe.
+    categorical_attributes : list[str] | None
+        The list of all the categorical hyperparameter names
+    numerical_attributes : list[str] | None
+        The list of all the numerical hyperparameter names
+    optim_metrics : dict[str, Optim] | None
+        A dictionary mapping metric names to optimization directions.
+    save_dir : str | None
+        The directory to save analysis results to.
+    cache : bool
+        Whether to cache results.
+
     Examples
     --------
     - Data frame to be used:
 
-    >>> df2 = pd.DataFrame({'val_accuracy': np.random.uniform(0.8,0.9,10),
+    >>> df = pd.DataFrame({'val_accuracy': np.random.uniform(0.8,0.9,10),
     ...       'train_config.optimizer_config.arguments.lr': np.random.uniform(0.001, 0.1,10),
     ...       "index": range(10),
     ...       "path": range(10)})
@@ -38,10 +53,10 @@ class PlotAnalysis(Analysis):
     - Creating dictionaries that map the configuration parameters [categorical + numerical] to custom labels for plots:
 
     >>> numerical_name_remap = {
-    ...             "train_config.optimizer_config.arguments.lr": "Learning Rate",
-    ...         }
-    ...     categorical_name_remap = {}
-    ...     attribute_name_remap = {**categorical_name_remap, **numerical_name_remap}
+    ...     "train_config.optimizer_config.arguments.lr": "Learning Rate",
+    ... }
+    ... categorical_name_remap = {}
+    ... attribute_name_remap = {**categorical_name_remap, **numerical_name_remap}
 
     - Initalize the ``PlotAnalysis`` and plot the figures:
 
@@ -71,12 +86,12 @@ class PlotAnalysis(Analysis):
         file_format: ty.Literal["png", "pdf", "jpg"] = "png",
     ):
         """
-        Write images to a directory based on fig types.
+        Write images to a directory based on figure types.
 
         Parameters
         ----------
         fig_map : dict[str, ty.Union[Axes, Figure, Image.Image]]
-            A dictionary mapping names to matplotlib objects.
+            A dictionary mapping names to ``matplotlib`` objects.
         path : Path
             Path to save the images to.
         file_format : ty.Literal["png", "pdf", "jpg"]
@@ -113,24 +128,24 @@ class PlotAnalysis(Analysis):
         **kwargs,
     ) -> dict:
         """
-        Method level docstring goes here.
+        Create the attributes vs. metrics plots.
 
         Parameters
         ----------
         path : Path | None
-            A pathlib.Path object representing the directory to write images to.
+            A ``pathlib.Path`` object representing the directory to write images to.
         plot_cls : type[Plot]
-            A subclass of Plot representing the type of plot to make.
+            A subclass of ``Plot`` representing the type of plot to make.
         metrics : pd.DataFrame
-            A pandas DataFrame containing metric values.
+            A pandas ``DataFrame`` containing metric values.
         results : pd.DataFrame
-            A pandas DataFrame containing attribute values.
+            A pandas ``DataFrame`` containing attribute values.
         metric_map : dict[str, Optim]
             A dictionary mapping metric names to optimization functions.
         append : bool
             A boolean indicating whether to append plots to an existing axes object.
         ax : Axes | None
-            A matplotlib.axes.Axes object representing the axis to plot on.
+            A ``matplotlib.axes.Axes`` object representing the axis to plot on.
         metric_name_remap : dict[str, str] | None
             An optional dictionary mapping metric names to new metric names.
         attribute_name_remap : dict[str, str] | None
@@ -232,8 +247,8 @@ class PlotAnalysis(Analysis):
         **plt_kwargs,
     ):
         """
-        To make violinplots for the given attribute names (data type: discrete) v.s. the metrics
-        and saving the plots to the `save_dir` directory.
+        Make violin plots for the given attribute names (data type: discrete) v.s. the metrics
+        and save the plots to the `save_dir` directory.
 
         Parameters
         ----------
@@ -266,7 +281,7 @@ class PlotAnalysis(Analysis):
     ) -> dict:
         """
         To make linear plots for the given attribute names (data type: numerical) v.s. the metrics
-          and saving the plots to the `save_dir` directory.
+        and save the plots to the `save_dir` directory.
 
         Parameters
         ----------
@@ -302,19 +317,22 @@ class PlotAnalysis(Analysis):
         **plt_kwargs: ty.Any,
     ):
         """
-        The function to generate violinplots for categorical values and linear plots for numerical values.
+        Generate violin plots for categorical values and linear plots for numerical values.
         Plots are created as metrics vs. attributes.
 
         Parameters
         ----------
         metric_name_remap : dict[str, str] | None
-            mappings for config's metrics keys to user defined names. By default, None
+            mappings for config's metrics keys to user defined names, by default, ``None``.
         attribute_name_remap : dict[str, str] | None
-            mappings for config's searchspace names to user defined names for attributes. By default, None
+            mappings for config's searchspace names to user defined names for attributes, by default, ``None``.
         **plt_kwargs : ty.Any
-            Additional keyword arguments to pass to the plot method. These includes `ax` (`Axes | None` - A
-            matplotlib.axes.Axes object representing the axis to plot on), `append` (A boolean indicating
-            whether to append plots to an existing axes object) and extra arguments for creating the plots.
+            Additional keyword arguments to pass to the plot method. These include:
+
+            - ``ax`` : ``Axes | None`` - A ``matplotlib.axes.Axes`` object representing the axis to plot on),
+
+            - ``append`` : ``bool`` - A boolean indicating whether to append plots to an existing axes object)
+              and extra arguments for creating the plots.
         """
         cat_attrs = list(self.categorical_attributes)
         num_attrs = list(self.numerical_attributes)
