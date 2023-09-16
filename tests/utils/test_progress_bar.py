@@ -134,6 +134,63 @@ def _test_tui_remote(tmp_path: Path):
         dis.refresh()
         time.sleep(random.random() / 10)
 
+from ablator.utils.progress_bar import in_notebook
+def test_in_notebook():
+    result=in_notebook()
+    assert result==False,"The in_notebook function cannot correctly determine whether it is a terminal."
+    with mock.patch('ablator.utils.progress_bar.in_notebook', side_effect=ImportError):
+        result = in_notebook()
+        assert result == False
+    with mock.patch('ablator.utils.progress_bar.in_notebook',side_effect=AttributeError):
+        result=in_notebook()
+        assert result==False
+
+from ablator.utils.progress_bar import get_last_line
+def test_get_last_line():
+    result=get_last_line(Path("hhhh.txt"))
+    assert result==None
+    result=get_last_line(None)
+    assert result==None
+    result=get_last_line(Path("/Users/vivi/Documents/USC/实习/Ablator/ablator_v0.0.1-mp/test2.txt"))
+    assert result=="This is the last line."
+
+def test_display_class():
+    #test __init__ function of Display class
+    display=Display()
+    assert hasattr(display,"nrows") and hasattr(display,"ncols") and not hasattr(display,"html_value")
+
+    #test _display function of Display class
+    mock_display_instance = Display()
+    mock_display_instance.ncols = None
+    mock_display_instance._display("12345",0)
+    last_line = mock_display_instance.stdscr.instr(0, 0, 5)
+    assert last_line.decode('utf-8')=="     "
+    display._display("12345",0)
+    last_line=display.stdscr.instr(0,0,5)
+    assert last_line.decode('utf-8')=="12345"
+    display._refresh()
+
+    #test _refresh function of Display class
+    display._refresh()
+    last_line = display.stdscr.instr(0, 0, 5)
+    assert last_line.decode('utf-8')=="     "
+
+    #test _update_screen_dims function of Display class
+    nrows=display.nrows
+    ncols=display.ncols
+    display.stdscr.resize(nrows+1, ncols+1)
+    display._update_screen_dims()
+    nrows_update=display.nrows
+    ncols_update=display.ncols
+    assert nrows_update!=nrows and ncols_update!=ncols
+
+    #test print_texts function of Display class
+    #mainly to test the function of print_texts() could work well
+    #this test has not completed!
+    texts=["hello","world","!"]
+    assert display.stdscr.instr(1,0,5)=="world"
+    display.print_texts(texts)
+
 
 if __name__ == "__main__":
     tmp_path = Path("/tmp/")
