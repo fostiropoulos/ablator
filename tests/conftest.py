@@ -461,7 +461,7 @@ def run_tests_local(test_fns, kwargs=None, unpickable_kwargs=None):
                     default_kwargs[k] = v
 
         for k, v in kwargs.items():
-            default_kwargs[k] = lambda: copy.deepcopy(kwargs[k])
+            unpickable_kwargs[k] = lambda: copy.deepcopy(kwargs[k])
 
         _run_args = [{}]
 

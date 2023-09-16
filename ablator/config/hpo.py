@@ -53,6 +53,13 @@ class SubConfiguration:
 
         return {k: _parse_nested_value(v) for k, v in self.arguments.items()}
 
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, d):
+        cls = self.__class__
+        self.arguments = cls(**d).arguments
+
     def __copy__(self):
         cls = self.__class__
         result = cls.__new__(cls)
