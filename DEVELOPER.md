@@ -236,19 +236,19 @@ In the main directory (after activating the correct environment):
 
 
 ```bash
-$ bash scripts/run_tests.sh
+$ make test
 ```
 
 It is always a good idea to run tests **with** and without GPU support
 
 ```bash
-$ bash scripts/run_tests.sh --cpu
+$ make test-cpu
 ```
 
 Before committing, make sure that the static code checks pass.
 
 ```bash
-$ bash scripts/run_lint.sh
+$ make static-checks
 ```
 ### Testing individual changes
 
