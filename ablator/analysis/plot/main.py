@@ -1,3 +1,4 @@
+from collections import abc
 import logging
 import typing as ty
 from pathlib import Path
@@ -12,6 +13,7 @@ from ablator.analysis.main import Analysis
 from ablator.analysis.plot import Plot
 from ablator.analysis.plot.cat_plot import ViolinPlot
 from ablator.analysis.plot.num_plot import LinearPlot
+from ablator.analysis.plot.utils import get_axes_fig
 from ablator.config.proto import Optim
 
 logger = logging.getLogger(__name__)
@@ -66,7 +68,7 @@ class PlotAnalysis(Analysis):
     @classmethod
     def _write_images(
         cls,
-        fig_map: dict[str, ty.Union[Axes, Figure, Image.Image]],
+        fig_map: abc.Mapping[str, ty.Union[Axes, Figure, Image.Image]],
         path: Path,
         file_format: ty.Literal["png", "pdf", "jpg"] = "png",
     ):
@@ -92,7 +94,7 @@ class PlotAnalysis(Analysis):
         for name, fig in fig_map.items():
             img_path = path.joinpath(f"{name}.{file_format}")
             if isinstance(fig, Axes):
-                fig.figure.savefig(img_path)
+                get_axes_fig(fig).savefig(img_path)
             elif isinstance(fig, Figure):
                 fig.savefig(img_path)
             elif isinstance(fig, Image.Image):
@@ -183,7 +185,7 @@ class PlotAnalysis(Analysis):
                 p = path.joinpath(original_metric_name)
                 cls._write_images(axes_map, p)
             for axe in axes_map.values():
-                plt.close(axe.figure)
+                plt.close(get_axes_fig(axe))
             axes[metric_name] = axes_map
         return axes
 
@@ -326,7 +328,8 @@ class PlotAnalysis(Analysis):
             num_attrs = list(set(attribute_name_remap.keys()).intersection(num_attrs))
         if (save_dir := save_dir if save_dir is not None else self.save_dir) is None:
             raise ValueError(
-                "Must specify a `save_dir` either as an argument to `make_figures` or during class instantiation"
+                "Must specify a `save_dir` either as an argument to `make_figures` or"
+                " during class instantiation"
             )
         if len(cat_attrs) > 0:
             for plot_fn in ("make_violinplot",):

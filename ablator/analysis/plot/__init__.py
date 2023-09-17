@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from ablator.analysis.plot.utils import get_axes_fig
 
 from ablator.config.proto import Optim
 
@@ -32,11 +33,13 @@ class Plot(ABC):
         self.x_ticks = x_ticks
         self.figure, self.ax = self._make_figure(ax)
 
-    def _make_figure(self, ax: Axes | None = None) -> tuple[Figure | None, Axes]:
+    def _make_figure(self, ax: Axes | None = None) -> tuple[Figure, Axes]:
         figure = None
         if ax is None:
             figure = plt.figure(figsize=(4, 4))
             ax = figure.add_subplot(1, 1, 1)
+        else:
+            figure = get_axes_fig(ax)
         return figure, ax
 
     def _parse_attributes(self, metric: pd.Series, attributes: pd.Series) -> pd.Series:
@@ -70,7 +73,7 @@ class Plot(ABC):
         ax.set_xticklabels(ax.get_xticklabels(), fontsize=12)
         ax.set_yticklabels(ax.get_yticklabels(), fontsize=12)
 
-        ax.figure.tight_layout()
+        get_axes_fig(ax).tight_layout()
 
     def make(self, **kwargs: ty.Any) -> tuple[Figure, Axes]:
         fig, ax = self._make(**kwargs)
