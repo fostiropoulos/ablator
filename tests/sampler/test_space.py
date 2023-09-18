@@ -1,5 +1,5 @@
 import copy
-from typing import Type
+import pickle
 import pytest
 from ablator.config.hpo import SearchSpace
 
@@ -124,6 +124,11 @@ def test_copy(optim_config: SearchSpace):
     _assert_nested_equal(_optim_config.__dict__, optim_config.__dict__)
     _optim_config = copy.copy(optim_config)
     _assert_nested_equal(_optim_config.__dict__, optim_config.__dict__)
+
+
+def test_pickle(optim_config: SearchSpace):
+    pickled_config = pickle.loads(pickle.dumps(optim_config))
+    _assert_nested_equal(pickled_config.__dict__, optim_config.__dict__)
 
 
 if __name__ == "__main__":
