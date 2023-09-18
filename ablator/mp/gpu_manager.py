@@ -75,11 +75,11 @@ def wait_get_gpu(
     manager : GPUManager
         the manager to request resources from.
     expected_util_mb : int | None
-        the expected memory utilization in MB, by default ``None``
+        the expected memory utilization in MB, by default ``None``.
     process_name : str | None
-        the name of the process to use to identify memory utilization, by default ``None``
+        the name of the process to use to identify memory utilization, by default ``None``.
     max_timeouts : int
-        the seconds of timeouts after which to throw an error, by default 60
+        the seconds of timeouts after which to throw an error, by default ``60``.
 
     Returns
     -------
@@ -131,7 +131,7 @@ class GPUManager:
     """
     GPUManager class helps manage GPU resources on a given machine.
     It maintains a state of the current GPUs available on the device,
-    with their available memory. The class is meant to be be used
+    with their available memory. The class is meant to be used
     for synchronized request and management of resources between ray.remotes
     """
 
@@ -175,7 +175,7 @@ class GPUManager:
         expected_util_mb : int | None
             the expected utilization of the cuda process.
         process_name : str | None
-            the name of the process requesting the GPU resources, by default ``None``
+            the name of the process requesting the GPU resources, by default ``None``.
 
         Returns
         -------

@@ -16,18 +16,70 @@ logger = logging.getLogger(__name__)
 
 class Categorical(Plot):
     """
-    Class for categorical plots
-
-    Attributes
-    ----------
-    DATA_TYPE : str
-        The type of data
-    figsize: tuple
-        A tuple represent size of figure in terms of axes (x, y).
+    This class is for preparing the results that are associated with each categorical attribute to be studied
+    (e.g., grouping metric results with each of the attributes). Its constructor takes in as input positional
+    arguments or keyword arguments from the base class `Plot`. Possible arguments are listed in the Parameters
+    section. The Attributes section lists its own attributes as well as those that are inherited.
 
     Parameters
     ----------
-    TODO{hieu} inherit from Plot
+    *args : ty.Any
+        Positional arguments to pass to the base class ``Plot``. These arguments are:
+
+        - ``metric`` : ``pd.Series`` -  The ablation study metric values to plot,
+
+        - ``attributes`` : ``pd.Series`` -  The ablation study attributes values to plot,
+
+        - ``metric_obj_fn`` : ``Optim`` -  The metric optimization direction,
+
+        - ``y_axis`` : ``str, optional`` -  The y-axis label (metric name), by default ``None``,
+
+        - ``x_axis`` : ``str, optional`` -  The x-axis label (attribute name), by default ``None``,
+
+        - ``x_ticks`` : ``list[str], optional`` -  The x-axis ticks, by default ``None``,
+
+        - ``ax`` : ``Axes, optional`` -  The axes to plot on, by default ``None``.
+    **kwargs : ty.Any
+        Keyword arguments to pass to the base class ``Plot``. These arguments are:
+
+        - ``metric`` : ``pd.Series`` -  The ablation study metric values to plot,
+
+        - ``attributes`` : ``pd.Series`` -  The ablation study attributes values to plot,
+
+        - ``metric_obj_fn`` : ``Optim`` -  The metric optimization direction,
+
+        - ``y_axis`` : ``str, optional`` -  The y-axis label (metric name), by default ``None``,
+
+        - ``x_axis`` : ``str, optional`` -  The x-axis label (attribute name), by default ``None``,
+
+        - ``x_ticks`` : ``list[str], optional`` -  The x-axis ticks, by default ``None``,
+
+        - ``ax`` : ``Axes, optional`` -  The axes to plot on, by default ``None``.
+
+    Attributes
+    ----------
+    metric : pd.Series
+        The ablation study metric values to plot (with null value removed).
+    attributes : pd.Series
+        The ablation study attributes values to plot (with null metric value removed).
+    metric_obj_fn : Optim
+        The metric optimization direction.
+    y_axis : str
+        The y-axis label (metric name).
+    x_axis : str
+        The x-axis label (attribute name).
+    x_ticks : list[str]
+        The x-axis ticks.
+    figure : Figure
+        The figure to plot on. If `None`, a new figure of size ``(4,4)`` will be created.
+    ax : Axes
+        The axes to plot on. If `None`, a new axis will be created as the first subplot
+        in the first cell and first column of a `1x1` grid.
+    DATA_TYPE : str
+        The attribute data type. In this case, it is ``"categorical"``.
+    attribute_metric_map : dict[str, pd.Series]
+        A dictionary mapping attribute values to metric values.
+
     """
 
     DATA_TYPE: str = "categorical"
@@ -84,11 +136,72 @@ class Categorical(Plot):
 
 class ViolinPlot(Categorical):
     """
-    Class for constructing violinplots.
+    Class for constructing violinplots. Its constructor takes in as input positional arguments or keyword
+    arguments from the base class `Categorical`. Possible arguments are listed in the Parameters section.
+    The Attributes section lists its own attributes as well as those that are inherited.
 
     Parameters
     ----------
-    TODO{hieu} inherit from Plot
+    *args : ty.Any
+        Positional arguments to pass to the base class ``Categorical``. These arguments are:
+
+        - ``metric`` : ``pd.Series`` - The ablation study metric values to plot,
+
+        - ``attributes`` : ``pd.Series`` - The ablation study attributes values to plot,
+
+        - ``metric_obj_fn`` : ``Optim`` - The metric optimization direction,
+
+        - ``y_axis`` : ``str, optional`` - The y-axis label (metric name), by default ``None``,
+
+        - ``x_axis`` : ``str, optional`` - The x-axis label (attribute name), by default ``None``,
+
+        - ``x_ticks`` : ``list[str], optional`` - The x-axis ticks, by default ``None``,
+
+        - ``ax`` : ``Axes, optional`` - The axes to plot on, by default ``None``.
+
+    **kwargs : ty.Any
+        Keyword arguments to pass to the base class ``Categorical``. These arguments are:
+
+        - ``metric`` : ``pd.Series`` - The ablation study metric values to plot,
+
+        - ``attributes`` : ``pd.Series`` - The ablation study attributes values to plot,
+
+        - ``metric_obj_fn`` : ``Optim`` - The metric optimization direction,
+
+        - ``y_axis`` : ``str, optional`` - The y-axis label (metric name), by default ``None``,
+
+        - ``x_axis`` : ``str, optional`` - The x-axis label (attribute name), by default ``None``,
+
+        - ``x_ticks`` : ``list[str], optional`` - The x-axis ticks, by default ``None``,
+
+        - ``ax`` : ``Axes, optional`` - The axes to plot on, by default ``None``.
+
+    Attributes
+    ----------
+    metric : pd.Series
+        The ablation study metric values to plot (with null value removed).
+    attributes : pd.Series
+        The ablation study attributes values to plot (with null metric value removed).
+    metric_obj_fn : Optim
+        The metric optimization direction.
+    y_axis : str
+        The y-axis label (metric name).
+    x_axis : str
+        The x-axis label (attribute name).
+    x_ticks : list[str]
+        The x-axis ticks.
+    figure : Figure
+        The figure to plot on. If `None`, a new figure of size `(4,4)` will be created.
+    ax : Axes
+        The axes to plot on. If `None`, a new axis will be created as the first subplot
+        in the first cell and first column of a `1x1` grid.
+    DATA_TYPE : str
+        The attribute data type. In this case, it is `"categorical"`.
+    attribute_metric_map : dict[str, pd.Series]
+        A dictionary mapping attribute values to metric values.
+    figsize: tuple
+        A tuple representing the size of the figure in terms of axes `(x, y)`.
+
     """
 
     def __init__(self, *args: ty.Any, **kwargs: ty.Any) -> None:

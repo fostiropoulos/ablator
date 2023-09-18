@@ -9,9 +9,9 @@ class SearchAlgo(Enum):
     """
     Type of search algorithm.
 
-    Grid Sampling: Discretizes the search space into even intervals `n_bins`.
-    TPE Sampling: Tree-Structured Parzen Estimator [1] is a hyper-parameter optimization algorithm.
-    Random Sampling: Naively samples from the search space with a random probability.
+    - Grid Sampling: Discretizes the search space into even intervals `n_bins`.
+    - TPE Sampling: Tree-Structured Parzen Estimator [1] is a hyper-parameter optimization algorithm.
+    - Random Sampling: Naively samples from the search space with a random probability.
 
     The behavior of each algorithm depends highly on the budget allocated for each trial. For example,
     Grid Sampling will repeat sampled configurations only after it has exhaustively evaluated the current
@@ -37,7 +37,7 @@ class ParallelConfig(RunConfig):
 
     ``ParallelConfig`` encapsulates every configuration (model config, optimizer-scheduler config, train config,
     and the search space) needed to run a parallel experiment. The entire umbrella of configuration is then passed
-    to ``ParallelTrainer`` that launches the experiment.
+    to ``ParallelTrainer`` which launches the experiment.
 
     Attributes
     ----------
@@ -48,8 +48,6 @@ class ParallelConfig(RunConfig):
     search_space: Dict[SearchSpace]
         search space for hyperparameter search,
         eg. ``{"train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 10], value_type="int"),}``
-    optim_metrics: Optional[Dict[Optim]]
-        metrics to optimize, eg. ``{"val_loss": "min"}``
     gpu_mb_per_experiment: int
         CUDA memory requirement per experimental trial in MB. e.g. a value of 100 is equivalent to 100MB
     search_algo: SearchAlgo = SearchAlgo.tpe
@@ -72,8 +70,7 @@ class ParallelConfig(RunConfig):
     ...     batch_size=32,
     ...     epochs=10,
     ...     optimizer_config = my_optimizer_config,
-    ...     scheduler_config = my_scheduler_config,
-    ...     rand_weights_init = True
+    ...     scheduler_config = my_scheduler_config
     ... )
 
     - Define model config, we want to run HPO on activation functions and model hidden size:
@@ -114,8 +111,8 @@ class ParallelConfig(RunConfig):
     ...     concurrent_trials = 20,
     ...     search_space = search_space,
     ...     optim_metrics = {"val_loss": "min"},
-    ...     gpu_mb_per_experiment = 1024,
-    ...     cpus_per_experiment = 1,
+    ...     optim_metric_name = "val_loss",
+    ...     gpu_mb_per_experiment = 1024
     ... )
     """
 

@@ -20,30 +20,28 @@ class Optim(Enum):
 class TrainConfig(ConfigBase):
     """
     Training configuration that defines the training setting, e.g., batch size, number of epochs,
-    the optimizer to use, etc. This configuration is required when creating the run configuration
-    (``RunConfig`` and ``ParallelConfig``), which sets up the running environment of the experiment.
+    the optimizer to use, etc. This configuration is required when creating the run configurations
+    (``RunConfig`` and ``ParallelConfig``, which set up the running environment of the experiment).
 
     Attributes
     ----------
     dataset: str
-        dataset name. maybe used in custom dataset loader functions.
+        Dataset name. maybe used in custom dataset loader functions.
     batch_size: int
-        batch size.
+        Batch size.
     epochs: int
-        number of epochs to train.
+        Number of epochs to train.
     optimizer_config: OptimizerConfig
-        optimizer configuration. (check ``OptimizerConfig`` for more details)
+        Optimizer configuration.
     scheduler_config: Optional[SchedulerConfig]
-        scheduler configuration. (check ``SchedulerConfig`` for more details)
-    rand_weights_init: bool = True
-        whether to initialize model weights randomly.
+        Scheduler configuration.
 
     Examples
     --------
     The following example shows all the steps towards configuring an experiment:
 
-    - Define model config, here we use default one with no custom hyperparameters (so we're not
-      running ablation study on the model architecture):
+    - Define model config: for simplicity, we use the default one with no custom hyperparameters
+      (so we're not running an ablation study on the model architecture):
 
     >>> my_model_config = ModelConfig()
 
@@ -55,20 +53,19 @@ class TrainConfig(ConfigBase):
 
     - Define training config:
 
-    >>> my_train_config = CustomTrainConfig(
+    >>> my_train_config = TrainConfig(
     ...     dataset="[Your Dataset]",
     ...     batch_size=32,
     ...     epochs=10,
     ...     optimizer_config = my_optimizer_config,
-    ...     scheduler_config = my_scheduler_config,
-    ...     rand_weights_init = True
+    ...     scheduler_config = my_scheduler_config
     ... )
 
     - We now define the run config for prototype training, which is the last configuration step.
-    Refer to :ref:`Configurations for single model experiments <run_config>` and
-    :ref:`Configurations for parallel models experiments <parallel_config>` for more details on running configs.
+      Refer to :ref:`Configurations for single model experiments <run_config>` and
+      :ref:`Configurations for parallel models experiments <parallel_config>` for more details on running configs.
 
-    >>> run_config = CustomRunConfig(
+    >>> run_config = RunConfig(
     ...     train_config=my_train_config,
     ...     model_config=my_model_config,
     ...     metrics_n_batches = 800,
@@ -92,12 +89,12 @@ class TrainConfig(ConfigBase):
 class ModelConfig(ConfigBase):
     """
     A base class for model configuration. This is used for defining model hyperparameters,
-    so when initializing a model, this config is passed to the model constructor. The attributes
+    so when initializing a model, it is passed to the model module constructor. The attributes
     from the model config object will be used to construct the model.
 
     Examples
     --------
-    Define custom model configuration class for your model:
+    Define a custom model configuration class for your model:
 
     >>> @configclass
     >>> class CustomModelConfig(ModelConfig):
@@ -116,63 +113,70 @@ class ModelConfig(ConfigBase):
     >>>     def forward(self, x):
     >>>         # code for forward pass
     >>>         return x
+
+    ``RunConfig`` later requires a model config object, so we will create one, remember to pass values
+    to the hyperparameters as we defined them to be Stateful:
+
+    >>> model_config = CustomModelConfig(input_size=512, hidden_size=100, num_classes=10)
     """
 
 
 @configclass
 class RunConfig(ConfigBase):
     """
-    The base configuration that defines the setting of an experiment (experiment main directory, number of
-    checkpoints to maintain, hardware device to use, etc.). You can use this to configure the experiment
-    of running a single prototype model.
+    The base run configuration that defines the setting of an experiment (experiment main directory, number of
+    checkpoints to maintain, hardware device to use, etc.). You can use this to configure the experiment of a
+    single prototype model.
 
-    ``RunConfig`` encapsulates every configuration (model config, optimizer-scheduler config,
-    train config) needed for a prototype experiment. The entire umbrella of configurations is then passed
-    to ``ProtoTrainer`` which launches the prototype experiment.
+    ``RunConfig`` encapsulates every configuration (model config, optimizer-scheduler config, train config)
+    needed for an experiment. This entire umbrella of configurations is then passed to ``ProtoTrainer`` which
+    launches the prototype experiment.
 
     Attributes
     ----------
-    experiment_dir: Optional[str] = None
-        location to store experiment artifacts.
-    random_seed: Optional[int] = None
-        random seed.
+    experiment_dir: Stateless[Optional[str]]
+        Location to store experiment artifacts, by default ``None``.
+    random_seed: Optional[int]
+        Random seed, by default ``None``.
     train_config: TrainConfig
-        training configuration. (check ``TrainConfig`` for more details)
+        Training configuration.
     model_config: ModelConfig
-        model configuration. (check ``ModelConfig`` for more details)
-    keep_n_checkpoints: int = 3
-        number of latest checkpoints to keep.
-    tensorboard: bool = True
-        whether to use tensorboardLogger.
-    amp: bool = True
-        whether to use automatic mixed precision when running on gpu.
-    device: str = "cuda" or "cpu"
-        device to run on.
-    verbose: Literal["console", "progress", "silent"] = "console"
-        verbosity level.
-    eval_subsample: float = 1
-        fraction of the dataset to use for evaluation.
-    metrics_n_batches: int = 32
-        max number of batches stored in every tag(train, eval, test) for evaluation.
-    metrics_mb_limit: int = 100
-        max number of megabytes stored in every tag(train, eval, test) for evaluation.
-    early_stopping_iter: Optional[int] = None
+        Model configuration.
+    keep_n_checkpoints: Stateless[int]
+        Number of latest checkpoints to keep, by default ``3``.
+    tensorboard: Stateless[bool]
+        Whether to use tensorboardLogger, by default ``True``.
+    amp: Stateless[bool]
+        Whether to use automatic mixed precision when running on gpu, by default ``True``.
+    device: Stateless[str]
+        Device to run on, by default ``"cuda"``.
+    verbose: Stateless[Literal["console", "progress", "silent"]]
+        Verbosity level, by default ``"console"``.
+    eval_subsample: Stateless[float]
+        Fraction of the dataset to use for evaluation, by default ``1``.
+    metrics_n_batches: Stateless[int]
+        Max number of batches stored in every tag(train, eval, test) for evaluation, by default ``32``.
+    metrics_mb_limit: Stateless[int]
+        Max number of megabytes stored in every tag(train, eval, test) for evaluation, by default ``10_000  # 10GB``.
+    early_stopping_iter: Stateless[Optional[int]]
         The maximum allowed difference between the current iteration and the last iteration
         with the best metric before applying early stopping.
         Early stopping will be triggered if the difference ``(current_itr - best_itr)`` exceeds ``early_stopping_iter``.
-        If set to ``None``, early stopping will not be applied.
-    eval_epoch: float = 1
-        The epoch interval between two evaluations.
-    log_epoch: float = 1
-        The epoch interval between two logging.
-    init_chkpt: Optional[str] = None
-        path to a checkpoint to initialize the model with.
-    warm_up_epochs: float = 0
-        number of epochs marked as warm up epochs.
-    divergence_factor: float = 100
-        if ``cur_loss > best_metric > divergence_factor``, the model is considered to have diverged.
-    optim_metric: tuple[str, Optim]
-        the optimization metric to use for meta-training procedures, such as for model saving and lr scheduling.
+        If set to ``None``, early stopping will not be applied. By default ``None``.
+    eval_epoch: Stateless[float]
+        The epoch interval between two evaluations, by default ``1``.
+    log_epoch: Stateless[float]
+        The epoch interval between two logging, by default ``1``.
+    init_chkpt: Stateless[Optional[str]]
+        Path to a checkpoint to initialize the model with, by default ``None``.
+    warm_up_epochs: Stateless[float]
+        Number of epochs marked as warm up epochs, by default ``1``.
+    divergence_factor: Stateless[Optional[float]]
+        If ``cur_loss > best_metric > divergence_factor``, the model is considered to have diverged, by default ``10``.
+    optim_metrics: Stateless[Optional[Dict[Optim]]]
+        The optimization metric to use for meta-training procedures, such as for model saving and lr scheduling.
+    optim_metric_name: Stateless[Optional[str]]
+        The name of the metric to be optimized.
 
     Examples
     --------

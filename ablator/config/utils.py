@@ -63,7 +63,7 @@ def dict_hash(
     *dictionaries : list[dict[str, ty.Any]] | dict[str, ty.Any]
         One or more dictionaries to calculate the hash for.
     hash_len : int
-        The length of the hash to return, by default = 4.
+        The length of the hash to return, by default ``4``.
 
     Returns
     -------
