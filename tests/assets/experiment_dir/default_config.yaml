@@ -1,0 +1,84 @@
+model_config:
+  num_filter1: 32
+  num_filter2: 64
+  activation: relu
+experiment_dir: /tmp/experiments-3/
+random_seed: 42
+train_config:
+  dataset: Fashion-mnist
+  batch_size: 32
+  epochs: 10
+  optimizer_config:
+    name: adam
+    arguments:
+      betas:
+      - 0.9
+      - 0.999
+      weight_decay: 0.0
+      lr: 0.001
+  scheduler_config: null
+keep_n_checkpoints: 3
+tensorboard: true
+amp: true
+device: cuda
+verbose: console
+eval_subsample: 1.0
+metrics_n_batches: 800
+metrics_mb_limit: 10000
+early_stopping_iter: null
+eval_epoch: 1.0
+log_epoch: 1.0
+init_chkpt: null
+warm_up_epochs: 1.0
+divergence_factor: 10.0
+optim_metrics:
+  val_loss: min
+optim_metric_name: val_loss
+total_trials: 5
+concurrent_trials: 2
+search_space:
+  model_config.num_filter1:
+    value_range:
+    - '32'
+    - '64'
+    categorical_values: null
+    subspaces: null
+    sub_configuration: null
+    value_type: int
+    n_bins: null
+    log: false
+  model_config.num_filter2:
+    value_range:
+    - '64'
+    - '128'
+    categorical_values: null
+    subspaces: null
+    sub_configuration: null
+    value_type: int
+    n_bins: null
+    log: false
+  train_config.optimizer_config.arguments.lr:
+    value_range:
+    - '0.001'
+    - '0.01'
+    categorical_values: null
+    subspaces: null
+    sub_configuration: null
+    value_type: float
+    n_bins: null
+    log: false
+  model_config.activation:
+    value_range: null
+    categorical_values:
+    - relu
+    - elu
+    - leakyRelu
+    subspaces: null
+    sub_configuration: null
+    value_type: null
+    n_bins: null
+    log: false
+gpu_mb_per_experiment: 1024
+search_algo: random
+ignore_invalid_params: false
+remote_config: null
