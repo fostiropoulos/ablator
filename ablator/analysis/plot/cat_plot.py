@@ -13,6 +13,7 @@ from ablator.config.proto import Optim
 
 logger = logging.getLogger(__name__)
 
+
 # flake8: noqa: DOC102
 class Categorical(Plot):
     """
@@ -114,6 +115,7 @@ class Categorical(Plot):
         if Optim(obj_fn) == Optim.min:
             return vals.sort_values(na_position="last").values
         return vals.sort_values(ascending=False, na_position="last").values
+
 
 # flake8: noqa: DOC102
 class ViolinPlot(Categorical):

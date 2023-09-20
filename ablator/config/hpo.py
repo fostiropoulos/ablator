@@ -131,6 +131,7 @@ class FieldType(Enum):
     discrete = "int"
     continuous = "float"
 
+
 # flake8: noqa: DOC102
 @configclass
 class SearchSpace(ConfigBase):

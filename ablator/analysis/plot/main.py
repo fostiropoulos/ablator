@@ -309,6 +309,7 @@ class PlotAnalysis(Analysis):
             metric_map=metric_map,
             **plt_kwargs,
         )
+
     # flake8: noqa: DOC102
     def make_figures(
         self,
