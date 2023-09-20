@@ -16,7 +16,9 @@ from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Optional
 
 
-def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> Optional[str]:
+def run_cmd_wait(
+    cmd: str, timeout: int = 300, raise_errors: bool = False
+) -> Optional[str]:
     """
     Run a command and wait for it to finish.
     If the command takes longer than ``timeout`` seconds, kill it.
@@ -27,13 +29,18 @@ def run_cmd_wait(cmd, timeout=300, raise_errors=False) -> Optional[str]:
     cmd : str
         The command to run.
     timeout : int
-        The timeout in seconds.
+        The timeout in seconds, by default ``300``.
     raise_errors : bool
-        Whether to raise errors.
+        Whether to raise errors, by default ``False``.
+
+    Raises
+    ------
+    subprocess.TimeoutExpired
+        If the command takes longer than ``timeout`` seconds and ``raise_errors`` is ``True``.
 
     Returns
     -------
-    str
+    Optional[str]
         The output of the command.
     """
     # timeout is in seconds
@@ -82,7 +89,7 @@ class RemoteConfig(ConfigBase):
     exclude_glob: Optional[str] = None
     exclude_chkpts: bool = False
 
-    def _make_cmd_up(self, local_path: Path, destination: str):
+    def _make_cmd_up(self, local_path: Path, destination: str) -> str:
         """
         Make the rsync command to upload files to the remote storage.
 
@@ -113,7 +120,9 @@ class RemoteConfig(ConfigBase):
         cmd += f" {local_path}  {username}@{host}:{path}"
         return cmd
 
-    def _make_cmd_down(self, local_path: Path, destination: str, verbose=True):
+    def _make_cmd_down(
+        self, local_path: Path, destination: str, verbose: bool = True
+    ) -> str:
         """
         Make the rsync command to download files from the remote storage.
 
@@ -124,7 +133,7 @@ class RemoteConfig(ConfigBase):
         destination : str
             The destination path in the remote storage.
         verbose : bool
-            Whether to print the output.
+            Whether to print the output, by default ``True``.
 
         Returns
         -------
@@ -149,7 +158,7 @@ class RemoteConfig(ConfigBase):
         local_path: Path,
         destination: str,
         timeout_s: int | None = None,
-        run_async=False,
+        run_async: bool = False,
     ):
         """
         start a new process and upload files to the remote storage.
@@ -161,9 +170,9 @@ class RemoteConfig(ConfigBase):
         destination : str
             The destination path in the remote storage.
         timeout_s : int | None
-            The timeout in seconds.
+            The timeout in seconds, by default ``None``.
         run_async : bool
-            Whether to run the command asynchronously.
+            Whether to run the command asynchronously, by default ``False``.
         """
         cmd = self._make_cmd_up(local_path=local_path, destination=destination)
         p = Process(target=run_cmd_wait, args=(cmd, timeout_s))
@@ -176,7 +185,7 @@ class RemoteConfig(ConfigBase):
         local_path: Path,
         destination: str,
         timeout_s: int | None = None,
-        run_async=False,
+        run_async: bool = False,
     ):
         """
         start a new process and download files from the remote storage.
@@ -188,9 +197,9 @@ class RemoteConfig(ConfigBase):
         destination : str
             The destination path in the remote storage.
         timeout_s : int | None
-            The timeout in seconds.
+            The timeout in seconds, by default ``None``.
         run_async : bool
-            Whether to run the command asynchronously.
+            Whether to run the command asynchronously, by default ``False``.
         """
         cmd = self._make_cmd_down(local_path=local_path, destination=destination)
         p = Process(target=run_cmd_wait, args=(cmd, timeout_s))

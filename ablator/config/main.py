@@ -30,7 +30,7 @@ from ablator.config.utils import dict_hash, flatten_nested_dict, parse_repr_to_k
 
 def configclass(cls: type["ConfigBase"]) -> type["ConfigBase"]:
     """
-    Decorator for ConfigBase subclasses, adds the ``config_class`` attribute to the class.
+    Decorator for ``ConfigBase`` subclasses, adds the ``config_class`` attribute to the class.
 
     Parameters
     ----------
@@ -99,30 +99,31 @@ class ConfigBase:
     """
 
     This class is the building block for all configuration objects within ablator. It serves as the base class for
-    configurations such as ``ModelConfig``, ``TrainConfig``, ``OptimizerConfig``, and more.
+    configurations such as ``ModelConfig``, ``TrainConfig``, ``OptimizerConfig``, and more. Together with
+    ``@configclass``, it allows for the creation of config classes of customized attributes without the need to
+    define a constructor. ``ConfigBase`` and ``@configclass`` take care of the initialization and parsing of the
+    attributes. The example section below shows this in more detail.
 
-    To customize configurations for specific needs, you can create your own configuration class by
-    inheriting from ``ConfigBase``. It's essential to annotate it with ``@configclass``. For instance, in the tutorial
-    `Search space for different types of optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_,
-    a custom optimizer config class is created to enable ablation study on various optimizers and schedulers.
-    You can refer to this tutorial for an example of how to create your custom configuration class.
+    In summary, to customize configurations for specific needs, you can create your own configuration class by
+    inheriting it from ``ConfigBase``. It's essential to annotate it with ``@configclass``. In the tutorial
+    `Search space for different types of optimizers and scheduler
+    <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_, a custom optimizer config class is created to enable
+    ablation study on various optimizers and schedulers. You can refer to this tutorial for a realistic example of
+    how to create your custom configuration class.
 
-    Examples
-    --------
-
-    >>> @configclass
-    >>> class MyCustomConfig(ConfigBase):
-    ...     attr1: int = 1
-    ...     attr2: Tuple[str, int, str]
+    .. note::
+        One key takeaway is that when initializing a config object, you can look into the list of attributes defined
+        in the config class to see what arguments you can pass.
 
     Parameters
     ----------
     *args : Any
-        Positional arguments.
+        This argument is just for disabling passing by positional arguments.
     debug : bool, optional
-        Whether to load the configuration in debug mode, and ignore discrepancies/errors, by default ``False``
+        Whether to load the configuration in debug mode and ignore discrepancies/errors, by default ``False``.
     **kwargs : Any
-        Keyword arguments.
+        Keyword arguments. Possible arguments are from the annotations of the configuration class. You can look into the
+        Examples section for more details.
 
     Attributes
     ----------
@@ -139,7 +140,23 @@ class ConfigBase:
         If the class is not decorated with ``@configclass``.
 
     .. note::
-       All config class must be decorated with ``@configclass``.
+       All config classes must be decorated with ``@configclass``.
+
+    Examples
+    --------
+
+    >>> @configclass
+    >>> class MyCustomConfig(ConfigBase):
+    ...     attr1: int = 1
+    ...     attr2: Tuple[str, int, str]
+    >>> my_config = MyCustomConfig(attr1=4, attr2=("hello", 1, "world"))  # Pass by named arguments
+    >>> kwargs = {"attr1": 4, "attr2": ("hello", 1, "world")}   # Pass by keyword arguments
+    >>> my_config = MyCustomConfig(**kwargs)
+
+    Note that since we defined ``MyCustomConfig`` as a config class with two annotated attributes ``attr1``
+    and ``attr2`` (without a constructor, which is automatically handled by ``ConfigBase`` and
+    ``@configclass``), when creating the config object, you can directly pass ``attr1`` and ``attr2``. You
+    can also pass these arguments as keyword arguments.
 
     """
     config_class = type(None)
@@ -298,8 +315,9 @@ class ConfigBase:
         ----------
         path : Union[Path, str]
             The path to the configuration file.
-        debug : bool, optional, default=False
-            Whether to load the configuration in debug mode, and ignore discrepancies/errors.
+        debug : bool, optional
+            Whether to load the configuration in debug mode, and ignore discrepancies/errors,
+            by default ``False``.
 
         Returns
         -------
@@ -414,9 +432,9 @@ class ConfigBase:
         annotations : dict[str, Annotation]
             A dictionary of annotations.
         ignore_stateless : bool
-            Whether to ignore stateless values. By default = False
+            Whether to ignore stateless values, by default ``False``.
         flatten : bool
-            Whether to flatten nested dictionaries. By default = False
+            Whether to flatten nested dictionaries, by default ``False``.
 
         Returns
         -------
@@ -487,7 +505,7 @@ class ConfigBase:
         config : ConfigBase
             The configuration object to compare.
         ignore_stateless : bool
-            Whether to ignore stateless values. By default ``False``.
+            Whether to ignore stateless values, by default ``False``.
 
         Returns
         -------
@@ -513,7 +531,7 @@ class ConfigBase:
         config : ConfigBase
             The configuration object to compare.
         ignore_stateless : bool
-            Whether to ignore stateless values. By default ``False``
+            Whether to ignore stateless values, by default ``False``
 
         Returns
         -------
@@ -582,7 +600,7 @@ class ConfigBase:
         Parameters
         ----------
         ignore_stateless : bool
-            Whether to ignore stateless values. By default ``False``
+            Whether to ignore stateless values, by default ``False``.
 
         Returns
         -------
@@ -613,7 +631,7 @@ class ConfigBase:
         Parameters
         ----------
         ignore_stateless : bool
-            Whether to ignore stateless values. by default ``False``
+            Whether to ignore stateless values, by default ``False``.
 
         Returns
         -------

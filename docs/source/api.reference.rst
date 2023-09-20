@@ -3,9 +3,8 @@ API Reference
 =============
 
 This is the class and function reference of ablator. Please refer to
-the tutorials for further details, as the class and
-function raw specifications may not be enough to give full guidelines on their
-uses.
+the tutorials for further details, as the class and function raw
+specifications may not be enough to give full guidelines on their uses.
 
 
 :mod:`ablator.analysis`: Analysis module
@@ -67,6 +66,7 @@ Prototype Config classes
    config.proto.ModelConfig
    config.proto.RunConfig
    config.proto.TrainConfig
+   config.proto.Optim
 
 Config Type classes
 ---------------------
@@ -86,6 +86,7 @@ HPO Config classes
 
    config.hpo.FieldType
    config.hpo.SearchSpace
+   config.hpo.SubConfiguration
 
 Parallel Config classes
 ------------------------
@@ -94,7 +95,6 @@ Parallel Config classes
 
 .. autosummary::
 
-   config.mp.Optim
    config.mp.ParallelConfig
    config.mp.SearchAlgo
 
@@ -157,11 +157,6 @@ Multi-process Trainer classes
 .. currentmodule:: ablator
 .. autosummary::
    main.mp.ParallelTrainer
-   main.mp.train_main_remote
-
-
-
-
 
 
 
@@ -227,18 +222,16 @@ Base utilities
 
 .. currentmodule:: ablator
 .. autosummary::
-   utils.base.apply_lambda_to_iter
-   utils.base.debugger_is_active
-   utils.base.get_gpu_mem
-   utils.base.get_latest_chkpts
-   utils.base.get_lr
-   utils.base.init_weights
-   utils.base.is_oom_exception
-   utils.base.iter_to_device
    utils.base.iter_to_numpy
-   utils.base.num_format
-   utils.base.parse_device
+   utils.base.iter_to_device
+   utils.base.apply_lambda_to_iter
    utils.base.set_seed
+   utils.base.get_lr
+   utils.base.debugger_is_active
+   utils.base.get_latest_chkpts
+   utils.base.parse_device
+   utils.base.is_oom_exception
+   utils.base.num_format
 
 File utilities
 -----------------------

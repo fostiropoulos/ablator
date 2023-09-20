@@ -14,6 +14,47 @@ logger = logging.getLogger(__name__)
 
 
 class Plot(ABC):
+    """
+    A base class for parsing experiment results and plotting them with ``pandas`` and ``matplotlib``.
+
+    Parameters
+    ----------
+    metric : pd.Series
+        The ablation study metric values to plot.
+    attributes : pd.Series
+        The ablation study attributes values to plot.
+    metric_obj_fn : Optim | str
+        The metric optimization direction.
+    y_axis : str | None
+        The y-axis label (metric name), by default ``None``.
+    x_axis : str | None
+        The x-axis label (attribute name), by default ``None``.
+    x_ticks : list[str] | None
+        The x-axis ticks, by default ``None``.
+    ax : Axes | None
+        The axes to plot on, by default ``None``.
+
+    Attributes
+    ----------
+    metric : pd.Series
+        The ablation study metric values to plot (with null value removed).
+    attributes : pd.Series
+        The ablation study attributes values to plot (with null metric value removed).
+    metrics_obj_fn : Optim
+        The metric optimization direction.
+    y_axis : str
+        The y-axis label (metric name).
+    x_axis : str
+        The x-axis label (attribute name).
+    x_ticks : list[str]
+        The x-axis ticks.
+    figure : Figure
+        The figure to plot on. If None, new figure of size (4,4) will be created.
+    ax : Axes
+        The axes to plot on. If None, a new axis will be created as the first subplot
+        in the first cell and first column of a 1x1 grid.
+    """
+
     def __init__(
         self,
         metric: pd.Series,

@@ -42,7 +42,16 @@ class SchedulerConfig(ConfigBase):
     A class that defines a configuration for a learning rate scheduler. This scheduler config
     will be provided to ``TrainConfig`` (optional) as part of the training setting of the experiment.
 
-    Arguments
+    Parameters
+    ----------
+    name : str
+        The name of the scheduler, this can be any in ``['None', 'step', 'cycle', 'plateau']``.
+    arguments : dict[str, ty.Any]
+        The arguments for the scheduler, specific to a certain type of scheduler. Refer to  `Configuration
+        Basics scheduler <./notebooks/Configuration-Basics.ipynb>`_ tutorial for more details on each
+        scheduler's arguments.
+
+    Attributes
     ----------
     name : str
         The name of the scheduler.
@@ -51,8 +60,9 @@ class SchedulerConfig(ConfigBase):
 
     Examples
     --------
-    The following example shows how to create a scheduler config and use it in
-    ``TrainConfig`` to define the training setting of the experiment.
+    The following example shows how to create a scheduler config and use it in ``TrainConfig`` to define
+    the training setting of the experiment. ``scheduler_config`` will initialize property ``arguments``
+    of type ``StepLRConfig``, setting ``step_size=1``, ``gamma=0.99`` as its properties.
 
     >>> optim_config = OptimizerConfig("sgd", {"lr": 0.5})
     >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
@@ -61,22 +71,15 @@ class SchedulerConfig(ConfigBase):
     ...     batch_size=32,
     ...     epochs=20,
     ...     optimizer_config=optim_config,
-    ...     scheduler_config=scheduler_config,
-    ...     rand_weights_init = True
+    ...     scheduler_config=scheduler_config
     ... )
-    >>> # ... create running config (proto/parallel), model wrapper, trainer and launch experiment
-
-    In the following example, ``scheduler_config`` will initialize property ``arguments`` of type ``StepLRConfig``,
-    setting ``step_size=1``, ``gamma=0.99`` as its properties. We also have access to ``init_scheduler()`` method
-    of the property, which initalizes an StepLR scheduler. This method is actually called in ``make_scheduler()``
-
-    >>> scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
+    >>> # ... create the run config (proto/parallel), model wrapper, trainer and launch the experiment
 
     .. note::
         A common use case is to run ablation studies on different schedulers to learn about their
         effects on the model performance. However, ``SchedulerConfig`` only configures one single
         scheduler for the experiment. But you can run experiments on different schedulers by creating
-        a custom config class and add an extra method called ``make_scheduler``. Go to this tutorial on
+        a custom config class and adding an extra method called ``make_scheduler``. Go to this tutorial on
         `Search space for different types of
         optimizers and scheduler <./notebooks/Searchspace-for-diff-optimizers.ipynb>`_
         for more details.
@@ -242,9 +245,9 @@ class StepLRConfig(SchedulerArgs):
     Parameters
     ----------
     step_size : int
-        Period of learning rate decay, by default 1.
+        Period of learning rate decay, by default ``1``.
     gamma : float
-        Multiplicative factor of learning rate decay, by default 0.99.
+        Multiplicative factor of learning rate decay, by default ``0.99``.
     step_when : StepType
         The step type at which the scheduler should be invoked: ``'train'``, ``'val'``, or ``'epoch'``.
 
