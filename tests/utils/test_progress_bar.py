@@ -1,9 +1,19 @@
+import sys
+import unittest
+from unittest.mock import MagicMock
+
+import pytest
+from mock.mock import patch, Mock
+
 from ablator.mp.utils import ray_init
 from ablator.utils.progress_bar import (
     num_format,
     ProgressBar,
     RemoteProgressBar,
     RemoteDisplay,
+    Display,
+    in_notebook,
+    get_last_line
 )
 import numpy as np
 from pathlib import Path
@@ -11,6 +21,7 @@ import time
 from collections import defaultdict
 import ray
 from multiprocessing import Process
+import mock
 
 
 def _assert_num_format(num, width):
@@ -134,48 +145,90 @@ def _test_tui_remote(tmp_path: Path):
         dis.refresh()
         time.sleep(random.random() / 10)
 
-from ablator.utils.progress_bar import in_notebook
 def test_in_notebook():
-    result=in_notebook()
-    assert result==False,"The in_notebook function cannot correctly determine whether it is a terminal."
-    with mock.patch('ablator.utils.progress_bar.in_notebook', side_effect=ImportError):
-        result = in_notebook()
-        assert result == False
-    with mock.patch('ablator.utils.progress_bar.in_notebook',side_effect=AttributeError):
-        result=in_notebook()
-        assert result==False
+    # test case of simulating jupyter notebook environment
+    ipython_mock = MagicMock()
+    ipython_mock.config = {"IPKernelApp": True}
+    with pytest.MonkeyPatch.context():
+        pytest.MonkeyPatch().setattr("IPython.get_ipython", lambda: ipython_mock)
+    assert in_notebook() is True
 
-from ablator.utils.progress_bar import get_last_line
-def test_get_last_line():
-    result=get_last_line(Path("hhhh.txt"))
-    assert result==None
-    result=get_last_line(None)
-    assert result==None
-    result=get_last_line(Path("/Users/vivi/Documents/USC/实习/Ablator/ablator_v0.0.1-mp/test2.txt"))
-    assert result=="This is the last line."
+def test_in_notebook_with_no_ipkernel_attr():
+    # test case of standard python env: IPython module could not be imported
+    ipython_mock = MagicMock()
+    ipython_mock.config = {}
+    with pytest.MonkeyPatch.context():
+        pytest.MonkeyPatch().setattr("IPython.get_ipython", lambda: ipython_mock)
+    assert in_notebook() is False
 
-def test_display_class():
-    #test __init__ function of Display class
+def test_in_notebook_with_import_error():
+    with patch('IPython.get_ipython', side_effect=ImportError("Cannot import get_ipython")):
+        assert in_notebook() is False
+
+def test_in_notebook_with_attribute_error():
+    with patch('IPython.get_ipython', return_value=None):
+        assert in_notebook() is False
+
+def test_get_last_line(tmpdir):
+    # create a temporary file
+    test_file=Path(tmpdir,"test.txt")
+    # create test cases
+    lines=["This is the first line\n","This is the second line\n","This is the last line"]
+    # write test cases into the temporary file
+    with open(test_file,"w") as test_file:
+        test_file.writelines(lines)
+    # test if the function could return the last line of file correctly
+    assert get_last_line(test_file)=="This is the last line"
+
+def test_get_last_line_with_edge_cases(tmpdir):
+    # edge test case: filename is None
+    assert get_last_line(None)==None
+
+    # edge test case: file does not exist
+    temp_path=Path(tmpdir,"not_exist.txt")
+    assert get_last_line(temp_path) == None
+
+    # edge test case: only one line exists in the file.
+    one_line_file=Path(tmpdir,"one_line.txt")
+    with open(one_line_file,"w") as file:
+        file.writelines("This is the last line without the new line character")
+    assert get_last_line(one_line_file)=="This is the last line without the new line character"
+
+    # edge test case: empty file
+    empty_file=Path(tmpdir,"empty.txt")
+    empty_file.touch()
+    assert get_last_line(empty_file)==""
+
+def test_display_class_init_function():
+    # test __init__ function of Display class
     display=Display()
     assert hasattr(display,"nrows") and hasattr(display,"ncols") and not hasattr(display,"html_value")
 
-    #test _display function of Display class
+def test_display_class_display_function():
     mock_display_instance = Display()
     mock_display_instance.ncols = None
     mock_display_instance._display("12345",0)
     last_line = mock_display_instance.stdscr.instr(0, 0, 5)
     assert last_line.decode('utf-8')=="     "
+
+    display=Display()
     display._display("12345",0)
     last_line=display.stdscr.instr(0,0,5)
     assert last_line.decode('utf-8')=="12345"
-    display._refresh()
 
-    #test _refresh function of Display class
+def test_display_class_refresh_function():
+    # test _refresh function of Display class
+    display = Display()
+    display._display("12345", 0)
+    last_line = display.stdscr.instr(0, 0, 5)
+    assert last_line.decode('utf-8') == "12345"
     display._refresh()
     last_line = display.stdscr.instr(0, 0, 5)
     assert last_line.decode('utf-8')=="     "
 
-    #test _update_screen_dims function of Display class
+def test_display_class_update_screen_dims_function():
+    # test _update_screen_dims function of Display class
+    display=Display()
     nrows=display.nrows
     ncols=display.ncols
     display.stdscr.resize(nrows+1, ncols+1)
@@ -184,13 +237,13 @@ def test_display_class():
     ncols_update=display.ncols
     assert nrows_update!=nrows and ncols_update!=ncols
 
-    #test print_texts function of Display class
-    #mainly to test the function of print_texts() could work well
-    #this test has not completed!
-    texts=["hello","world","!"]
-    assert display.stdscr.instr(1,0,5)=="world"
+def test_display_class_print_texts_function():
+    # test print_texts function of Display class
+    # mainly to test the function of print_texts() could work well
+    display=Display()
+    texts = ["hello", "world", "!"]
     display.print_texts(texts)
-
+    assert display.stdscr.instr(0, 0, 5) == b"     "
 
 if __name__ == "__main__":
     tmp_path = Path("/tmp/")
