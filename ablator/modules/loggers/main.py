@@ -421,18 +421,10 @@ class SummaryLogger:
 
         Parameters
         ----------
-        *args : Any
-            Positional arguments to be passed. These arguments are:
-
-            - ``msg`` : ``str`` - The message to log,
-
-            - ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``False``.
-        **kwargs : Any
-            Keyword arguments to be passed. These arguments are:
-
-            - ``msg`` : ``str`` - The message to log,
-
-            - ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``False``.
+        msg : str
+            The message to log,
+        verbose : bool
+            Whether to print messages to the console, by default ``False``.
 
         """
         self.logger.info(*args, **kwargs)
@@ -444,18 +436,11 @@ class SummaryLogger:
 
         Parameters
         ----------
-        *args : Any
-            Positional arguments to be passed. These arguments are:
+        msg : str
+            The message to log,
+        verbose : bool
+            Whether to print messages to the console, by default ``True``.
 
-            - ``msg`` : ``str`` - The message to log,
-
-            - ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``True``.
-        **kwargs : Any
-            Keyword arguments to be passed. These arguments are:
-
-            - ``msg`` : ``str`` - The message to log,
-
-            - ``verbose`` : ``bool`` - Whether to print messages to the console, by default ``True``.
         """
         self.logger.warn(*args, **kwargs)
 
@@ -466,15 +451,8 @@ class SummaryLogger:
 
         Parameters
         ----------
-        *args : Any
-            Positional arguments to be passed. These arguments are:
-
-            - ``msg`` : ``str`` - The message to log.
-
-        **kwargs : Any
-            Keyword arguments to be passed. These arguments are:
-
-            - ``msg`` : ``str`` - The message to log.
+        msg : str
+            The message to log.
 
         """
         self.logger.error(*args, **kwargs)
