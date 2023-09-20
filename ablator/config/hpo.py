@@ -131,7 +131,7 @@ class FieldType(Enum):
     discrete = "int"
     continuous = "float"
 
-
+# flake8: noqa: DOC102
 @configclass
 class SearchSpace(ConfigBase):
     """
@@ -141,25 +141,21 @@ class SearchSpace(ConfigBase):
 
     Parameters
     ----------
-    *args : ty.Any
-        This argument is just for disabling passing by positional arguments.
-    **kwargs : ty.Any
-        Keyword arguments to be passed. These arguments are:
-
-        - ``value_range`` : ``Optional[Tuple[str, str]]`` - value range of the parameter,
-
-        - ``categorical_values`` : ``Optional[List[str]]`` - categorical values for the parameter,
-
-        - ``subspaces`` : ``Optional[List[Self]]`` - A list of search spaces,
-
-        - ``sub_configuration``: ``Optional[SubConfiguration]`` - Subconfiguration for a ``SearchSpace``,
-
-        - ``value_type`` : ``FieldType`` - value type of the parameter's values (continuous or discrete),
-          by default ``FieldType.continuous``,
-
-        - ``n_bins`` : ``Optional[int]`` - Total bins for grid sampling, optional,
-
-        - ``log`` : ``bool`` - To log, by default ``False``.
+    value_range : Optional[Tuple[str, str]]
+        value range of the parameter.
+    categorical_values : Optional[List[str]]
+        categorical values for the parameter.
+    subspaces : Optional[List[Self]]
+        A list of search spaces,
+    sub_configuration : Optional[SubConfiguration]
+        Subconfiguration for a ``SearchSpace``.
+    value_type : FieldType
+        value type of the parameter's values (continuous or discrete), by
+        default ``FieldType.continuous``.
+    n_bins : Optional[int]
+        Total bins for grid sampling, optional.
+    log : bool
+        To log, by default ``False``.
 
     Attributes
     ----------

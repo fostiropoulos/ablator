@@ -13,7 +13,7 @@ from ablator.config.proto import Optim
 
 logger = logging.getLogger(__name__)
 
-
+# flake8: noqa: DOC102
 class Categorical(Plot):
     """
     This class is for preparing the results that are associated with each categorical attribute to be studied
@@ -23,38 +23,20 @@ class Categorical(Plot):
 
     Parameters
     ----------
-    *args : ty.Any
-        Positional arguments to pass to the base class ``Plot``. These arguments are:
-
-        - ``metric`` : ``pd.Series`` -  The ablation study metric values to plot,
-
-        - ``attributes`` : ``pd.Series`` -  The ablation study attributes values to plot,
-
-        - ``metric_obj_fn`` : ``Optim`` -  The metric optimization direction,
-
-        - ``y_axis`` : ``str, optional`` -  The y-axis label (metric name), by default ``None``,
-
-        - ``x_axis`` : ``str, optional`` -  The x-axis label (attribute name), by default ``None``,
-
-        - ``x_ticks`` : ``list[str], optional`` -  The x-axis ticks, by default ``None``,
-
-        - ``ax`` : ``Axes, optional`` -  The axes to plot on, by default ``None``.
-    **kwargs : ty.Any
-        Keyword arguments to pass to the base class ``Plot``. These arguments are:
-
-        - ``metric`` : ``pd.Series`` -  The ablation study metric values to plot,
-
-        - ``attributes`` : ``pd.Series`` -  The ablation study attributes values to plot,
-
-        - ``metric_obj_fn`` : ``Optim`` -  The metric optimization direction,
-
-        - ``y_axis`` : ``str, optional`` -  The y-axis label (metric name), by default ``None``,
-
-        - ``x_axis`` : ``str, optional`` -  The x-axis label (attribute name), by default ``None``,
-
-        - ``x_ticks`` : ``list[str], optional`` -  The x-axis ticks, by default ``None``,
-
-        - ``ax`` : ``Axes, optional`` -  The axes to plot on, by default ``None``.
+    metric : pd.Series
+        The ablation study metric values to plot.
+    attributes : pd.Series
+        The ablation study attributes values to plot.
+    metric_obj_fn : Optim
+        The metric optimization direction.
+    y_axis : str, optional
+        The y-axis label (metric name), by default ``None``.
+    x_axis : str, optional
+        The x-axis label (attribute name), by default ``None``.
+    x_ticks : list[str], optional
+        The x-axis ticks, by default ``None``.
+    ax : Axes, optional
+        The axes to plot on, by default ``None``.
 
     Attributes
     ----------
@@ -133,7 +115,7 @@ class Categorical(Plot):
             return vals.sort_values(na_position="last").values
         return vals.sort_values(ascending=False, na_position="last").values
 
-
+# flake8: noqa: DOC102
 class ViolinPlot(Categorical):
     """
     Class for constructing violinplots. Its constructor takes in as input positional arguments or keyword
@@ -142,39 +124,20 @@ class ViolinPlot(Categorical):
 
     Parameters
     ----------
-    *args : ty.Any
-        Positional arguments to pass to the base class ``Categorical``. These arguments are:
-
-        - ``metric`` : ``pd.Series`` - The ablation study metric values to plot,
-
-        - ``attributes`` : ``pd.Series`` - The ablation study attributes values to plot,
-
-        - ``metric_obj_fn`` : ``Optim`` - The metric optimization direction,
-
-        - ``y_axis`` : ``str, optional`` - The y-axis label (metric name), by default ``None``,
-
-        - ``x_axis`` : ``str, optional`` - The x-axis label (attribute name), by default ``None``,
-
-        - ``x_ticks`` : ``list[str], optional`` - The x-axis ticks, by default ``None``,
-
-        - ``ax`` : ``Axes, optional`` - The axes to plot on, by default ``None``.
-
-    **kwargs : ty.Any
-        Keyword arguments to pass to the base class ``Categorical``. These arguments are:
-
-        - ``metric`` : ``pd.Series`` - The ablation study metric values to plot,
-
-        - ``attributes`` : ``pd.Series`` - The ablation study attributes values to plot,
-
-        - ``metric_obj_fn`` : ``Optim`` - The metric optimization direction,
-
-        - ``y_axis`` : ``str, optional`` - The y-axis label (metric name), by default ``None``,
-
-        - ``x_axis`` : ``str, optional`` - The x-axis label (attribute name), by default ``None``,
-
-        - ``x_ticks`` : ``list[str], optional`` - The x-axis ticks, by default ``None``,
-
-        - ``ax`` : ``Axes, optional`` - The axes to plot on, by default ``None``.
+    metric : pd.Series
+        The ablation study metric values to plot.
+    attributes : pd.Series
+        The ablation study attributes values to plot.
+    metric_obj_fn : Optim
+        The metric optimization direction.
+    y_axis : str, optional
+        The y-axis label (metric name), by default ``None``.
+    x_axis : str, optional
+        The x-axis label (attribute name), by default ``None``.
+    x_ticks : list[str], optional
+        The x-axis ticks, by default ``None``.
+    ax : Axes, optional
+        The axes to plot on, by default ``None``.
 
     Attributes
     ----------

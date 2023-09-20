@@ -309,7 +309,7 @@ class PlotAnalysis(Analysis):
             metric_map=metric_map,
             **plt_kwargs,
         )
-
+    # flake8: noqa: DOC102
     def make_figures(
         self,
         metric_name_remap: dict[str, str] | None = None,
@@ -319,7 +319,8 @@ class PlotAnalysis(Analysis):
     ):
         """
         Generate violin plots for categorical values and linear plots for numerical values.
-        Plots are created as metrics vs. attributes.
+        Plots are created as metrics vs. attributes. Additional keyword arguments to pass to
+        the plot method are ``ax`` and ``append``:
 
         Parameters
         ----------
@@ -330,13 +331,11 @@ class PlotAnalysis(Analysis):
         save_dir : str | Path | None
             optional directory of where to save the results, when unspecified, it expects one set during
             class initialization, by default ``None``.
-        **plt_kwargs : ty.Any
-            Additional keyword arguments to pass to the plot method. These include:
-
-            - ``ax`` : ``Axes | None`` - A ``matplotlib.axes.Axes`` object representing the axis to plot on),
-
-            - ``append`` : ``bool`` - A boolean indicating whether to append plots to an existing axes object)
-              and extra arguments for creating the plots.
+        ax : Axes | None
+            A ``matplotlib.axes.Axes`` object representing the axis to plot on),
+        append : bool
+            A boolean indicating whether to append plots to an existing axes object)
+            and extra arguments for creating the plots.
         """
         cat_attrs = list(self.categorical_attributes)
         num_attrs = list(self.numerical_attributes)
