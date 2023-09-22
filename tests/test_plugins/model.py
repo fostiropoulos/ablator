@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import time
 from multiprocessing import Lock
@@ -8,6 +9,7 @@ import pytest
 import ray
 import torch
 from torch import nn
+import yaml
 
 from ablator import (
     Derived,
@@ -56,6 +58,9 @@ class MyParallelConfig(ParallelConfig):
     model_config: CustomModelConfig
     train_config: CustomTrainConfig
 
+@pytest.fixture
+def parallel_config():
+    return MyParallelConfig
 
 class TestWrapper(ModelWrapper):
     def make_dataloader_train(self, run_config: RunConfig):
@@ -275,3 +280,119 @@ def _make_config(
         gpu_mb_per_experiment=gpu_util,
     )
     return copy.deepcopy(config)
+
+
+def generate_mock_configs(tmp_path: Path):
+    #Generate mock configurations and store them in tmp_path.
+    
+    # Common configuration details
+    base_config = {
+        'model_config': {
+            'lr': 0.01, 
+            'lr_error_limit': 5,
+            'mock_param': 0,
+        },
+        'experiment_dir': '/tmp/experiments-3/',
+        'train_config': {
+            'dataset': 'Random',
+            'batch_size': 32,
+            'epochs': 10,
+            'optimizer_config': {
+                'name': 'adam',
+                'arguments': {
+                    'lr': 0.007415560539335152
+                }
+            },
+            'scheduler_config': None,
+        },   
+        'device': 'cuda',
+        'optim_metrics': {'val_loss': 'min'},
+        'optim_metric_name': 'val_loss',
+        'total_trials': 5,
+        'concurrent_trials': 2,
+        'search_space':{
+        'train_config.optimizer_config.arguments.lr': {
+            'value_range': [0, 19],
+            'value_type': 'float',
+            'n_bins': None
+            },
+        'model_config.mock_param': {
+            'categorical_values': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        }
+       },
+        'gpu_mb_per_experiment': 1024,
+    }
+
+    # Specific details for default_config
+    default_config = base_config.copy()
+
+    # Specific details for config
+    config = base_config.copy()
+    config.update({        
+        'model_config': {
+            'lr': 0.01,
+            'lr_error_limit': 7,  
+            'mock_param': 3, 
+        },
+        'experiment_dir': 'C:/tmp/experiments-3/trail1',
+        'train_config': {
+            **base_config['train_config'],
+            'optimizer_config': {
+                **base_config['train_config']['optimizer_config'],
+                'arguments': {
+                    **base_config['train_config']['optimizer_config']['arguments'],
+                    'lr': 0.001
+                }
+            }
+        },
+    })
+
+    # Write the configurations to their respective files
+    with open(tmp_path / "config.yaml", 'w') as file:
+        yaml.dump(config, file)
+
+    with open(tmp_path / "default_config.yaml", 'w') as file:
+        yaml.dump(default_config, file)
+
+
+
+def generate_mock_results(tmp_path):
+    #Generate a synthetic results.json and store it in tmp_path.
+    
+    base_timestamp = 1695160885.8836067
+    base_val_loss = 0.4
+    base_train_loss = 0.5
+    base_train_accuracy = 0.8
+    base_val_accuracy = 0.85
+    
+    results = []
+
+    for i in range(10):
+        mock_result = {
+            "val_loss": base_val_loss - i * 0.03,
+            "val_accuracy": base_val_accuracy + i * 0.0025,
+            "train_loss": base_train_loss + (i % 3 - 1) * 0.05,
+            "best_iteration": (i+1) * 1875,
+            "best_val_loss": base_val_loss - i * 0.03,
+            "current_epoch": i + 1,
+            "current_iteration": (i + 1) * 1875,
+            "epochs": 10,
+            "learning_rate": 0.007415560539335152,
+            "total_steps": 18750,
+            "train_accuracy": base_train_accuracy + i * 0.005,
+            "timestamp": base_timestamp + i * 22.2
+        }
+
+        results.append(mock_result)
+
+    # Write the results list to a JSON file
+    with open(tmp_path / "results.json", 'w') as file:
+        json.dump(results, file, indent=4)
+
+
+@pytest.fixture
+def mock_experiment_directory(tmp_path):
+    #Pytest fixture to generate mock configurations and results in tmp_path.
+    generate_mock_configs(tmp_path)
+    generate_mock_results(tmp_path)
+    return tmp_path
