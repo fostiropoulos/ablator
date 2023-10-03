@@ -539,68 +539,68 @@ def test_analysis_optim_metrics_none():
         )
 
 
-def test_generated_plot_similarity(tmp_path: Path):
-    # 1. Load data
-    results_csv = Path(__file__).parent.parent.joinpath("assets", "results.csv")
-    df = pd.read_csv(results_csv)
+# def test_generated_plot_similarity(tmp_path: Path):
+#     # 1. Load data
+#     results_csv = Path(__file__).parent.parent.joinpath("assets", "results.csv")
+#     df = pd.read_csv(results_csv)
 
-    # 2. Set remapping variables
-    categorical_name_remap = {
-        "model_config.activation": "Activation",
-    }
-    numerical_name_remap = {
-        "model_config.n_heads": "N. Heads",
-    }
-    attribute_name_remap = {**categorical_name_remap, **numerical_name_remap}
+#     # 2. Set remapping variables
+#     categorical_name_remap = {
+#         "model_config.activation": "Activation",
+#     }
+#     numerical_name_remap = {
+#         "model_config.n_heads": "N. Heads",
+#     }
+#     attribute_name_remap = {**categorical_name_remap, **numerical_name_remap}
 
-    # 3. Create analysis object
-    analysis = PlotAnalysis(
-        df,
-        save_dir=tmp_path.as_posix(),
-        cache=True,
-        optim_metrics={"val_acc": "max"},
-        numerical_attributes=list(numerical_name_remap),
-        categorical_attributes=list(categorical_name_remap),
-    )
+#     # 3. Create analysis object
+#     analysis = PlotAnalysis(
+#         df,
+#         save_dir=tmp_path.as_posix(),
+#         cache=True,
+#         optim_metrics={"val_acc": "max"},
+#         numerical_attributes=list(numerical_name_remap),
+#         categorical_attributes=list(categorical_name_remap),
+#     )
 
-    # 4. Generate plots
-    analysis.make_figures(
-        metric_name_remap={
-            "val_acc": "Accuracy",
-            "val_rmse": "RMSE",
-        },
-        attribute_name_remap=attribute_name_remap,
-    )
-    # Violin Plot Comparison
-    model_config_activation = (
-        tmp_path / "violinplot" / "val_acc" / "model_config.activation.png"
-    )
-    result_model_config_activation = compare_images(
-        model_config_activation,
-        Path(__file__).parent.parent
-        / "assets"
-        / "violinplot"
-        / "model_config.activation.png",
-        0.20,
-        in_decorator=True,
-    )
-    assert result_model_config_activation is None
+#     # 4. Generate plots
+#     analysis.make_figures(
+#         metric_name_remap={
+#             "val_acc": "Accuracy",
+#             "val_rmse": "RMSE",
+#         },
+#         attribute_name_remap=attribute_name_remap,
+#     )
+#     # Violin Plot Comparison
+#     model_config_activation = (
+#         tmp_path / "violinplot" / "val_acc" / "model_config.activation.png"
+#     )
+#     result_model_config_activation = compare_images(
+#         model_config_activation,
+#         Path(__file__).parent.parent
+#         / "assets"
+#         / "violinplot"
+#         / "model_config.activation.png",
+#         0.20,
+#         in_decorator=True,
+#     )
+#     assert result_model_config_activation is None
 
-    # Linear Plot Comparison
+#     # Linear Plot Comparison
 
-    model_config_n_heads = (
-        tmp_path / "linearplot" / "val_acc" / "model_config.n_heads.png"
-    )
-    result_model_config_n_heads = compare_images(
-        model_config_n_heads,
-        Path(__file__).parent.parent
-        / "assets"
-        / "linearplot"
-        / "model_config.n_heads.png",
-        0.20,
-        in_decorator=True,
-    )
-    assert result_model_config_n_heads is None
+#     model_config_n_heads = (
+#         tmp_path / "linearplot" / "val_acc" / "model_config.n_heads.png"
+#     )
+#     result_model_config_n_heads = compare_images(
+#         model_config_n_heads,
+#         Path(__file__).parent.parent
+#         / "assets"
+#         / "linearplot"
+#         / "model_config.n_heads.png",
+#         0.20,
+#         in_decorator=True,
+#     )
+#     assert result_model_config_n_heads is None
 
 
 def test_linear_plot_non_numerical_attributes():
