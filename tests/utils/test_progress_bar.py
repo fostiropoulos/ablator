@@ -1,5 +1,9 @@
+import curses
+import os
+import select
 import sys
 import unittest
+import pyte
 from unittest.mock import MagicMock
 
 import pytest
@@ -240,10 +244,119 @@ def test_display_class_update_screen_dims_function():
 def test_display_class_print_texts_function():
     # test print_texts function of Display class
     # mainly to test the function of print_texts() could work well
-    display=Display()
-    texts = ["hello", "world", "!"]
-    display.print_texts(texts)
-    assert display.stdscr.instr(0, 0, 5) == b"     "
+    def child_process_print_texts_function():
+        display = Display()
+        texts = ["hello", "world", "!"]
+        display.print_texts(texts)
+    keys={"hello":0,"world":1,"!":2}
+    tui(child_process_print_texts_function,keys)
+
+def display_class_close_function():
+    display = Display()
+    assert display.is_terminal==True
+    # display._curses.initscr()
+    # display._curses.cbreak()
+    display.close()
+    assert display.is_terminal==False
+
+def tui(test_func,keys):
+    pid, f_d = os.forkpty()
+    # print(pid)
+    # print(f_d)
+    if pid == 0:
+        # child process spawns TUI
+        # curses.wrapper(test_progress_bar_class_init_function())
+        # curses.wrapper(ProgressBar)
+        # print('child_process!!')
+        test_func()
+        # print(keys)
+        # os.kill(pid, 9)  # 发送 SIGKILL 信号强制终止进程
+    else:
+        screen = pyte.Screen(80, 10)
+        stream = pyte.ByteStream(screen)
+        # progress_bar = ProgressBar(10, 2, None, 1, None, "111111")
+        # progress_bar.display.print_texts(["hello world"])
+        # print("xxxxxx")
+        # parent process sets up virtual screen of
+        # identical size
+        # scrape pseudo-terminal's screen
+        # while True:
+        #     print("true while loop")
+        try:
+            [f_d], _, _ = select.select(
+                [f_d], [], [], 1)
+            # print("try section")
+        except (KeyboardInterrupt, ValueError):
+            # either test was interrupted or the
+            # file descriptor of the child process
+            # provides nothing to be read
+            print("ValueError")
+            # break
+        except select.error as e:
+            print(e)
+        else:
+            print("read from screen")
+            try:
+                # scrape screen of child process
+                data = os.read(f_d, 1024)
+                print("input stream")
+                stream.feed(data)
+                # for line in screen.display:
+                #     print(line)
+            except OSError:
+                print("OSError")
+                # reading empty
+                # break
+        print("Terminal Start")
+        for line in screen.display:
+            print(line)
+        print("Terminal End")
+        # print(screen.display[1])
+        # print(keys)
+        # assertion(screen,keys)
+        # print("assertion function")
+        for key, value in keys.items():
+            assert key in screen.display[value]
+
+def test_progress_bar_class_init_function(tmpdir):
+    log_file = Path(tmpdir, "test.log")
+    progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
+    assert progress_bar is not None
+    assert progress_bar.total_steps == 10
+    assert progress_bar.epoch_len == 2
+    assert progress_bar.logfile == log_file
+    assert progress_bar.update_interval == 1
+    assert progress_bar.remote_display == None
+    assert isinstance(progress_bar.display, Display)
+    assert progress_bar.display.ncols != 0
+    assert progress_bar.display.nrows != 0
+    assert progress_bar.uid == "111111"
+
+def test_progress_bar_class_init_function_display(tmpdir):
+    def child_process_progress_bar_init_function():
+        log_file=Path(tmpdir,"test.log")
+        progress_bar=ProgressBar(10,2,log_file,1,None,"111111")
+
+    tui(child_process_progress_bar_init_function,{"111111":1})
+
+def test_progress_bar_class_reset_function(tmpdir):
+    log_file = Path(tmpdir, "test.log")
+    progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
+    progress_bar.current_iteration=3
+    assert progress_bar.current_iteration==3
+    progress_bar.reset()
+    assert progress_bar.current_iteration==0
+
+def test_progress_bar_class_make_bar_function(tmpdir):
+    def child_process_of_make_bar_function():
+        log_file = Path(tmpdir, "test.log")
+        progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
+        bar=progress_bar.make_bar(current_iteration=3, start_time=time.time() - 10, epoch_len=progress_bar.epoch_len,
+                                total_steps=progress_bar.total_steps, ncols=progress_bar.display.ncols)
+        print("bar:"+bar)
+        progress_bar.display.print_texts([bar])
+    tui(child_process_of_make_bar_function,{"111111":0})
+
 
 if __name__ == "__main__":
     tmp_path = Path("/tmp/")
