@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from mock.mock import patch, Mock
+import re
 
 from ablator.mp.utils import ray_init
 from ablator.utils.progress_bar import (
@@ -166,10 +167,14 @@ def test_in_notebook_with_no_ipkernel_attr():
     assert in_notebook() is False
 
 def test_in_notebook_with_import_error():
+    # test case of standard python env:
+    # when there is an import error which means it's not in notebook, the return value should be False
     with patch('IPython.get_ipython', side_effect=ImportError("Cannot import get_ipython")):
         assert in_notebook() is False
 
 def test_in_notebook_with_attribute_error():
+    # test case of standard python env:
+    # when there is an
     with patch('IPython.get_ipython', return_value=None):
         assert in_notebook() is False
 
@@ -209,12 +214,14 @@ def test_display_class_init_function():
     assert hasattr(display,"nrows") and hasattr(display,"ncols") and not hasattr(display,"html_value")
 
 def test_display_class_display_function():
+    # test _display function when display instance's nclos or nrows is None
     mock_display_instance = Display()
     mock_display_instance.ncols = None
     mock_display_instance._display("12345",0)
     last_line = mock_display_instance.stdscr.instr(0, 0, 5)
     assert last_line.decode('utf-8')=="     "
 
+    # test _display function when display instance's nclos and nrows is not None
     display=Display()
     display._display("12345",0)
     last_line=display.stdscr.instr(0,0,5)
@@ -242,8 +249,9 @@ def test_display_class_update_screen_dims_function():
     assert nrows_update!=nrows and ncols_update!=ncols
 
 def test_display_class_print_texts_function():
-    # test print_texts function of Display class
-    # mainly to test the function of print_texts() could work well
+    # test case of display class's print_texts function
+    # since the texts are displayed in the terminal by using this function
+    #   need to use pseudo-terminal to test if the result is correct
     def child_process_print_texts_function():
         display = Display()
         texts = ["hello", "world", "!"]
@@ -251,74 +259,46 @@ def test_display_class_print_texts_function():
     keys={"hello":0,"world":1,"!":2}
     tui(child_process_print_texts_function,keys)
 
+#
 def display_class_close_function():
     display = Display()
     assert display.is_terminal==True
-    # display._curses.initscr()
-    # display._curses.cbreak()
     display.close()
     assert display.is_terminal==False
 
-def tui(test_func,keys):
+
+def tui(test_func,assertion_func):
     pid, f_d = os.forkpty()
-    # print(pid)
-    # print(f_d)
     if pid == 0:
-        # child process spawns TUI
-        # curses.wrapper(test_progress_bar_class_init_function())
-        # curses.wrapper(ProgressBar)
-        # print('child_process!!')
         test_func()
-        # print(keys)
-        # os.kill(pid, 9)  # 发送 SIGKILL 信号强制终止进程
     else:
         screen = pyte.Screen(80, 10)
         stream = pyte.ByteStream(screen)
-        # progress_bar = ProgressBar(10, 2, None, 1, None, "111111")
-        # progress_bar.display.print_texts(["hello world"])
-        # print("xxxxxx")
-        # parent process sets up virtual screen of
-        # identical size
-        # scrape pseudo-terminal's screen
-        # while True:
-        #     print("true while loop")
         try:
             [f_d], _, _ = select.select(
                 [f_d], [], [], 1)
-            # print("try section")
         except (KeyboardInterrupt, ValueError):
-            # either test was interrupted or the
-            # file descriptor of the child process
-            # provides nothing to be read
             print("ValueError")
-            # break
-        except select.error as e:
-            print(e)
+        except Exception:
+            print("exception 1")
         else:
             print("read from screen")
             try:
-                # scrape screen of child process
-                data = os.read(f_d, 1024)
+                data = os.read(f_d, 10000)
                 print("input stream")
                 stream.feed(data)
-                # for line in screen.display:
-                #     print(line)
-            except OSError:
-                print("OSError")
-                # reading empty
-                # break
+                for line in screen.display:
+                    print(line)
+            except Exception:
+                print("exception 2")
         print("Terminal Start")
         for line in screen.display:
             print(line)
         print("Terminal End")
-        # print(screen.display[1])
-        # print(keys)
-        # assertion(screen,keys)
-        # print("assertion function")
-        for key, value in keys.items():
-            assert key in screen.display[value]
+        assertion_func(screen)
 
 def test_progress_bar_class_init_function(tmpdir):
+    # test case: if the attributes of an instance have all been initiated
     log_file = Path(tmpdir, "test.log")
     progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
     assert progress_bar is not None
@@ -333,13 +313,20 @@ def test_progress_bar_class_init_function(tmpdir):
     assert progress_bar.uid == "111111"
 
 def test_progress_bar_class_init_function_display(tmpdir):
+    # test case: if the texts of progress_bar have been correctly display after initiating( current_iteration=0)
     def child_process_progress_bar_init_function():
         log_file=Path(tmpdir,"test.log")
         progress_bar=ProgressBar(10,2,log_file,1,None,"111111")
 
-    tui(child_process_progress_bar_init_function,{"111111":1})
+    def assertion(screen):
+        for key, value in keys.items():
+            assert key in screen.display[value] or key==screen.display[value]
+
+    keys={"111111":1}
+    tui(child_process_progress_bar_init_function,assertion)
 
 def test_progress_bar_class_reset_function(tmpdir):
+    # test case: if the current_iteration attribute of instance is resetting to 0 correctly
     log_file = Path(tmpdir, "test.log")
     progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
     progress_bar.current_iteration=3
@@ -347,16 +334,151 @@ def test_progress_bar_class_reset_function(tmpdir):
     progress_bar.reset()
     assert progress_bar.current_iteration==0
 
-def test_progress_bar_class_make_bar_function(tmpdir):
-    def child_process_of_make_bar_function():
+def test_progress_bar_class_make_bar_function():
+    # test if the make_bar function return correctly when current_iteration>0
+    bar = ProgressBar.make_bar(current_iteration=1, start_time=time.time() - 10, epoch_len=2,
+                                total_steps=10, ncols=100)
+    assert re.match(r'\s*50%\|█████     \| 1/2 \[00:10+<\d+:\d+, \d+\.\d+s/it, Remaining: \d+:\d+\]\s+',bar)
+
+    # test if the make_bar function return correctly when current_iteration=0
+    bar = ProgressBar.make_bar(current_iteration=0, start_time=time.time() - 10, epoch_len=2,
+                                total_steps=10, ncols=100)
+    assert re.match(r'\s*0%\|\s*\| 0/2 \[00:10<\?, \?it/s, Remaining: \?\?\]\s*',bar)
+
+def progress_bar_class_make_metrics_message():
+    # test case: if metrics could be converted to correct format when nrows and ncols are None
+    metrics = {
+        "metric1":123,
+        "metric2":456.789,
+        "metric3":"value",
+    }
+    expected_result = 'metric1:  00000123 | metric2:  456.7890 | metric3:      value'
+    result = ProgressBar.make_metrics_message(metrics)
+    assert re.match(result[0],expected_result)
+
+    # test case: if metrics could be converted to separate lines when ncols attribute is given
+    metrics={
+        "metric1":123,
+        "metric2":456.789,
+        "metric3":"value1",
+        "metric4":"value2"
+    }
+    expected_result1="metric1:  00000123 | metric2:  456.7890"
+    expected_result2="metric3:    value1 | metric4:    value2"
+    result=ProgressBar.make_metrics_message(metrics,ncols=50)
+    assert re.match(result[0],expected_result1)
+    assert re.match(result[1],expected_result2)
+
+    # test case: if metrics could be cut off by the given nrows attribute
+    metrics = {
+        "metric1": 123,
+        "metric2": 456.789,
+        "metric3": "value1",
+        "metric4": "value2"
+    }
+    expected_result = "metric1:  00000123 | metric2:  456.7890"
+    result = ProgressBar.make_metrics_message(metrics, ncols=50, nrows=1)
+    assert re.match(result[0],expected_result) and len(result)==1
+
+def test_progress_bar_class_ncols():
+    # test case: if ncols is returned correctly when display is not None
+    progress_bar=ProgressBar(10)
+    assert progress_bar.display is not None
+    assert progress_bar.ncols==progress_bar.display.ncols
+
+    # test case: if ncols is returned as None when display is None
+    progress_bar.display=None
+    assert progress_bar.ncols==None
+
+def test_progress_bar_class_nrows():
+    # test case: if nrows is returned correctly when display is not None
+    progress_bar=ProgressBar(10)
+    assert progress_bar.display is not None
+    assert progress_bar.nrows==progress_bar.display.nrows
+
+    # test case: if nrows is returned as None when display is None
+    progress_bar.display=None
+    assert progress_bar.nrows==None
+
+def test_progress_bar_class_make_print_message(tmpdir):
+    # test case of make_print_message when uid is not None
+    keys_uid={"":0,r'111111:\s*0%\|\s*\| 0/2 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*':1}
+    def child_process_uid():
         log_file = Path(tmpdir, "test.log")
         progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
-        bar=progress_bar.make_bar(current_iteration=3, start_time=time.time() - 10, epoch_len=progress_bar.epoch_len,
-                                total_steps=progress_bar.total_steps, ncols=progress_bar.display.ncols)
-        print("bar:"+bar)
-        progress_bar.display.print_texts([bar])
-    tui(child_process_of_make_bar_function,{"111111":0})
+    def assertion_uid(screen):
+        for key,value in keys_uid.items():
+            if value==0:
+                assert screen.display[0].isspace()
+            elif value==1:
+                assert re.match(key,screen.display[value])
 
+    tui(child_process_uid,assertion_uid)
+
+    # test case of make_print_message when uid is None
+    keys={r'\s*0%\|\s*\| 0/2 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*':1}
+    def child_process():
+        log_file = Path(tmpdir, "test.log")
+        progress_bar = ProgressBar(10, 2, log_file, 1, None)
+    def assertion(screen):
+        for key,value in keys.items():
+            if value==0:
+                assert screen.display[0].isspace()
+            elif value==1:
+                assert re.match(key,screen.display[value])
+    tui(child_process,assertion)
+
+
+def test_progress_bar_class_update(tmpdir):
+    # test case: if the texts have been displayed after running _update function
+    def child_process():
+        log_file = Path(tmpdir, "test.log")
+        progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
+    def assertion(screen):
+        assert screen.display[1].isspace() is False
+
+    tui(child_process, assertion)
+
+def test_progress_bar_class_update_metrics(tmpdir):
+    # test case: if the _update function is executed when current_iteration is 0
+    keys={r'metric:\s+value':0,r'111111:\s+0%\|█*\s*\| 0/2 \[\d+:\d+<\?, \?it/s, Remaining: \?\?\]\s*':1}
+    log_file = Path(tmpdir, "test.log")
+    progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
+    def child_process_update_metrics_1():
+        progress_bar.update_metrics({"metric":"value"},current_iteration=0)
+    def assertion_update_metrics_1(screen):
+        for key, value in keys.items():
+            assert re.match(key, screen.display[value])
+    tui(child_process_update_metrics_1,assertion_update_metrics_1)
+
+def test_progress_bar_class_update_metrics_interval(tmpdir):
+    # test case: if the _update function is executed when time.time() - self._prev_update_time > self.update_interval
+    log_file = Path(tmpdir, "test.log")
+    keys_interval={r'metric:\s+value':0,r'111111:\s+100%\|██████████\| 2/2 \[\d+:\d+<\d+:\d+, \d+\.\d+it/s, Remaining: \d+:\d+\]\s*':1}
+    def child_process_update_metrics_2():
+        progress_bar_interval.update_metrics({"metric":"value"},current_iteration=2)
+    def assertion_update_metrics_2(screen):
+        for key, value in keys_interval.items():
+            print("key")
+            print(key)
+            assert re.match(key, screen.display[value])
+    progress_bar_interval = ProgressBar(10, 2, log_file, 0, None, "111111")
+    tui(child_process_update_metrics_2, assertion_update_metrics_2)
+
+def test_progress_bar_class_update_metrics_current_iteration(tmpdir):
+    # test case: if the _update function is executed when current_iteration equals epoch_len-1
+    log_file = Path(tmpdir, "test.log")
+    keys={r'metric:\s+value':0,r'111111:\s+50%\|█████     \| 1/2 \[\d+:\d+<\d+:\d+, \d+\.\d+it/s, Remaining: \d+:\d+\]\s*':1}
+    def child_process_update_metrics_2():
+        progress_bar.update_metrics({"metric":"value"},current_iteration=progress_bar.epoch_len-1)
+    def assertion_update_metrics_2(screen):
+        for key, value in keys.items():
+            print("key")
+            print(key)
+            print(screen.display[value])
+            assert re.match(key, screen.display[value])
+    progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
+    tui(child_process_update_metrics_2, assertion_update_metrics_2)
 
 if __name__ == "__main__":
     tmp_path = Path("/tmp/")
