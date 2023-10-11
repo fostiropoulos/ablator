@@ -85,9 +85,21 @@
                                           <img height="100%" width="100%" src="./_static/img/copy-icon.png" alt="copy">
                                        </div>
                                     </div>
-                                    <a href="https://github.com/fostiropoulos/ablator" target="_blank">
-                                       <img class="banner-icon" src="./_static/img/github-mark.png" alt="github">
-                                    </a>
+                                    <div class="banner-badges-stack">
+                                       <a href="https://github.com/fostiropoulos/ablator" target="_blank">
+                                          <img class="banner-icon" src="./_static/img/github-mark.png" alt="github">
+                                       </a>
+                                       <a href="https://join.slack.com/t/ablator/shared_invite/zt-23ak9ispz-HObgZSEZhyNcTTSGM_EERw"
+                                          target="_blank">
+                                          <img class="banner-icon" src="./_static/img/slack.png" alt="github">
+                                       </a>
+                                       <a href="https://discord.gg/QGdYYAR9" target="_blank">
+                                          <img class="banner-icon" src="./_static/img/discord.svg" alt="github">
+                                       </a>
+                                       <a href="https://twitter.com/ABLATOR_ORG" target="_blank">
+                                          <img class="banner-icon" src="./_static/img/twitter.png" alt="github">
+                                       </a>
+                                    </div>
                               </div>
                            </div>
                         </div>
@@ -297,11 +309,15 @@
                            </div>
 
                            <div class="contents-grid">
-                              <div class="contents-card community-card">
+                              <div class="contents-card community-card"
+                                    onclick="window.open('https://github.com/fostiropoulos/ablator')">
                                     <div class="card-title">
-                                       <h5>
-                                          Visit Ablator on Github
-                                       </h5>
+                                       <div style="display: flex; align-items: center; gap: 1rem">
+                                          <img src="./_static/img/github-mark.png" alt="github" style="height: 40px; width: 40px;">
+                                          <h5>
+                                                Visit Ablator on Github
+                                          </h5>
+                                       </div>
                                     </div>
                                     <div class="card-texts">
                                        <p>
@@ -310,17 +326,16 @@
                                           make your contributions.
                                        </p>
                                     </div>
-                                    <div>
-                                       <button class="custom-btn custom-btn-block"
-                                          onclick="window.open('https://github.com/fostiropoulos/ablator')">Github
-                                          Repository</button>
-                                    </div>
+
                               </div>
-                              <div class="contents-card community-card">
+                              <div class="contents-card community-card" onclick="window.open('https://deep.usc.edu')">
                                     <div class="card-title">
-                                       <h5>
-                                          Meet the developers
-                                       </h5>
+                                       <div style="display: flex; align-items: center; gap: 1rem">
+                                          <img src="./_static/img/group_logo.png" alt="github" style="height: 40px; width: 45px;">
+                                          <h5>
+                                                Meet the developers
+                                          </h5>
+                                       </div>
                                     </div>
                                     <div class="card-texts">
                                        <p>
@@ -328,9 +343,43 @@
                                           Southern California.
                                        </p>
                                     </div>
-                                    <div>
-                                       <button class="custom-btn custom-btn-block"
-                                          onclick="window.open('https://deep.usc.edu')">DeepUSC Research Group</button>
+                              </div>
+                           </div>
+                           <h5>
+                              Follow Ablator on social media
+                           </h5>
+                           <div class="features-grid social-grid">
+                              <div class="contents-card social-card"
+                                    onclick="window.open('https://join.slack.com/t/ablator/shared_invite/zt-23ak9ispz-HObgZSEZhyNcTTSGM_EERw', '_blank')">
+                                    <div class="card-title">
+                                       <img src="./_static/img/slack.png" alt="slack">
+                                    </div>
+                                    <div class="card-texts">
+                                       <p>
+                                          Slack Workspace
+                                       </p>
+                                    </div>
+                              </div>
+                              <div class="contents-card social-card"
+                                    onclick="window.open('https://discord.gg/QGdYYAR9', '_blank')">
+                                    <div class="card-title">
+                                       <img src="./_static/img/discord.svg" alt="slack">
+                                    </div>
+                                    <div class="card-texts">
+                                       <p>
+                                          Discord Community
+                                       </p>
+                                    </div>
+                              </div>
+                              <div class="contents-card social-card"
+                                    onclick="window.open('https://twitter.com/ABLATOR_ORG', '_blank')">
+                                    <div class="card-title">
+                                       <img src="./_static/img/twitter.png" alt="slack">
+                                    </div>
+                                    <div class="card-texts">
+                                       <p>
+                                          Ablator Official Twitter
+                                       </p>
                                     </div>
                               </div>
                            </div>

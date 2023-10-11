@@ -413,7 +413,16 @@ ul {
   filter: drop-shadow(0 0 0.75rem var(--primary-500));
 }
 
-.banner a {
+.banner-badges-stack {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1rem;
+  /* border: 1px solid black; */
+}
+
+.banner-badges-stack a {
   display: inline-block;
 }
 
@@ -588,4 +597,25 @@ ul {
   gap: 1rem;
 
   padding-bottom: 2rem;
+}
+
+.social-grid {
+  padding-top: 0rem;
+  margin-top: 0rem;
+  padding-bottom: 2rem;
+}
+
+.social-card {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1rem;
+}
+
+.social-card img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 10px;
 }
