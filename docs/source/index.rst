@@ -93,7 +93,7 @@
                                           target="_blank">
                                           <img class="banner-icon" src="./_static/img/slack.png" alt="github">
                                        </a>
-                                       <a href="https://discord.gg/QGdYYAR9" target="_blank">
+                                       <a href="https://discord.gg/9dqThvGnUW" target="_blank">
                                           <img class="banner-icon" src="./_static/img/discord.svg" alt="github">
                                        </a>
                                        <a href="https://twitter.com/ABLATOR_ORG" target="_blank">
@@ -361,7 +361,7 @@
                                     </div>
                               </div>
                               <div class="contents-card social-card"
-                                    onclick="window.open('https://discord.gg/QGdYYAR9', '_blank')">
+                                    onclick="window.open('https://discord.gg/9dqThvGnUW', '_blank')">
                                     <div class="card-title">
                                        <img src="./_static/img/discord.svg" alt="slack">
                                     </div>
