@@ -26,6 +26,7 @@ import time
 from collections import defaultdict
 import ray
 from multiprocessing import Process
+from tests.conftest import run_tests_local
 import mock
 
 
@@ -387,7 +388,6 @@ def progress_bar_class_make_metrics_message():
     }
     expected_result = "metric1:  00000123 | metric2:  456.7890"
     result = ProgressBar.make_metrics_message(metrics, ncols=50, nrows=1)
-    print(result)
     assert re.match(result[0],expected_result) and len(result)==1
 
 
@@ -413,23 +413,19 @@ def test_progress_bar_class_nrows():
 
 def test_progress_bar_class_make_print_message(tmpdir):
     # test case of make_print_message when uid is not None
-    keys_uid=[r'111111:\s*0%\|\s*\| 0/2 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*']
+    re_uid=r'111111:\s*0%\|\s*\| 0/2 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*'
     log_file = Path(tmpdir, "test.log")
     progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
     texts=progress_bar.make_print_message()
-    print('texts texts texts texts')
-    print(texts)
     assert texts[0]==''
-    assert re.match(keys_uid[0], texts[1])
+    assert re.match(re_uid, texts[1])
 
     # test case of make_print_message when uid is None
-    keys=[r'\s*0%\|\s*\| 0/2 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*']
+    re_no_uid=r'\s*0%\|\s*\| 0/2 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*'
     progress_bar = ProgressBar(10, 2, log_file, 1, None)
     texts = progress_bar.make_print_message()
-    print('texts texts texts texts')
-    print(texts)
     assert texts[0]==''
-    assert re.match(keys[0], texts[1])
+    assert re.match(re_no_uid, texts[1])
 
 def test_progress_bar_class_update(tmpdir):
     # test case: if the texts have been displayed after running _update function
@@ -474,43 +470,73 @@ def test_progress_bar_class_update_metrics_current_iteration(tmpdir):
         progress_bar.update_metrics({"metric":"value"},current_iteration=progress_bar.epoch_len-1)
     def assertion_update_metrics_2(screen):
         for key, value in keys.items():
-            print("key")
-            print(key)
-            print(screen.display[value])
             assert re.match(key, screen.display[value])
     progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
     tui(child_process_update_metrics_2, assertion_update_metrics_2)
 
-@pytest.fixture(scope="module")
-def ray_start():
-    ray.init(local_mode=True)
-
-# def test_remote_progress_bar_init_function(ray_start):
-#     remote_progress_bar=RemoteProgressBar.remote(10)
-#     bar_id=ray.put(remote_progress_bar)
-#     remote_progress_bar=ray.get(bar_id)
-#     print(type(remote_progress_bar))
-#     assert isinstance(ray.get(remote_progress_bar),RemoteProgressBar)
-#     assert isinstance(ray.get(remote_progress_bar.start_time.remote()),float)
-#     assert ray.get(remote_progress_bar.total_trials.remote())==10
-#     assert ray.get(remote_progress_bar.closed.remote())["not_existed_value"]==False
-#     assert ray.get(remote_progress_bar.texts.remote())["not_existed_value"]==[]
-#     assert ray.get(remote_progress_bar.finished_trials.remote())==0
-
-def test_remote_progress_bar_make_bar_function(ray_start):
+def test_remote_progress_bar_make_bar_function(ray_cluster):
+    # test case: test make_bar function of RemoteProgressBar class.
     remote_progress_bar=RemoteProgressBar.remote(10)
     bar=ray.get(remote_progress_bar.make_bar.remote())
     assert re.match(r'\s*0%\|\s*\| 0/10 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*',bar)
 
-def remote_progress_bar_current_iteration_function(ray_start):
-    remote_progress_bar=RemoteProgressBar.remote(10)
-    iteration=ray.get(remote_progress_bar.current_iteration)
-    assert iteration==0
+def test_remote_progress_bar_make_print_texts(ray_cluster):
+    # test case: test make_print_texts function of RemoteProgressBar class
+    # test if the output message includes the metrics message of uid="111111"
+    remote_progress_bar = RemoteProgressBar.remote(10)
+    remote_progress_bar.update_status.remote("111111",["status","good"])
+    texts = ray.get(remote_progress_bar.make_print_texts.remote())
+    assert len(texts) == 2
+    assert re.match(r'\s*0%\|\s*\| 0/10 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*',texts[0])
+    assert texts[1] == "good | status"
 
+    # test if the output message includes the metrics message of both uid="111111" and uid="222222"
+    remote_progress_bar.update_status.remote("222222",["status","bad","really"])
+    texts = ray.get(remote_progress_bar.make_print_texts.remote())
+    assert len(texts) == 4
+    assert re.match(r'\s*0%\|\s*\| 0/10 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*',texts[0])
+    assert texts[1] == "good | status"
+    assert texts[2] == "bad | status"
+    assert texts[3] == "     really"
 
+def test_remote_progress_bar_close_function(ray_cluster):
+    # test case: test close funtion of RemoteProgressBar class
+    remote_progress_bar = RemoteProgressBar.remote(10)
+    remote_progress_bar.update_status.remote("111111", ["status", "good"])
+    texts = ray.get(remote_progress_bar.make_print_texts.remote())
+    assert len(texts) == 2
+    remote_progress_bar.close.remote("111111")
+    texts = ray.get(remote_progress_bar.make_print_texts.remote())
+    assert len(texts) == 1
+
+def test_progress_bar_close_remote_progress_bar(tmpdir,ray_cluster):
+    # test case: test if the close function of RemoteProgressBar class could be correctly used in Progress class
+    log_file = Path(tmpdir, "test.log")
+    remote_display = RemoteProgressBar.remote(10)
+    progress_bar = ProgressBar(10, 2, log_file, 1, remote_display, "111111")
+    remote_display.update_status.remote("111111", ["status", "good"])
+    texts = ray.get(remote_display.make_print_texts.remote())
+    assert len(texts) == 2
+    progress_bar.close()
+    texts = ray.get(remote_display.make_print_texts.remote())
+    assert len(texts) == 1
+
+def test_progress_bar_update_remote_progress_bar_hh(tmpdir,ray_cluster):
+    # test case: test if the update_status function of RemoteProgressBar class could be correctly used in _update function of Progress class
+    log_file = Path(tmpdir, "test.log")
+    lines=["This is the first line\n","This is the second line\n","This is the last line"]
+    with open(log_file,"w") as file:
+        file.writelines(lines)
+    remote_progress_bar = RemoteProgressBar.remote(10)
+    progress_bar = ProgressBar(10, 2, log_file, 1, remote_progress_bar, "111111")
+    progress_bar.update_metrics({"metric": "value"}, 0)
+    remote_display = RemoteDisplay(remote_progress_bar, 1)
+    remote_display.refresh(True)
 
 
 if __name__ == "__main__":
-    tmp_path = Path("/tmp/")
-    # _test_tui(tmp_path)
-    # _test_tui_remote(tmp_path)
+    l = locals()
+    fn_names = [fn for fn in l if fn.startswith("test_")]
+    test_fns = [l[fn] for fn in fn_names]
+    run_tests_local(test_fns)
+
