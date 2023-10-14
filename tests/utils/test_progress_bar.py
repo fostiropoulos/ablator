@@ -26,7 +26,7 @@ import time
 from collections import defaultdict
 import ray
 from multiprocessing import Process
-from tests.conftest import run_tests_local
+from tests.conftest import run_tests_local, DockerRayCluster
 import mock
 
 
@@ -36,7 +36,6 @@ def _assert_num_format(num, width):
     relative_error = (num - float_num) / (num + 1e-5)
     assert len(str_num) == width
     assert relative_error < 1e-5
-    print(str_num)
 
 
 def test_num_format():
@@ -175,7 +174,7 @@ def test_in_notebook_with_import_error():
 
 def test_in_notebook_with_attribute_error():
     # test case of standard python env:
-    # when there is an
+    # there is no return value when call IPython.get_ipython
     with patch('IPython.get_ipython', return_value=None):
         assert in_notebook() is False
 
@@ -274,33 +273,26 @@ def tui(test_func,assertion_func):
         except (KeyboardInterrupt, ValueError):
             print("ValueError")
         else:
-            print("read from screen")
             try:
                 data = os.read(f_d, 10000)
-                print("input stream")
                 stream.feed(data)
-                for line in screen.display:
-                    print(line)
             except Exception:
                 raise Exception
-        print("Terminal Start")
-        for line in screen.display:
-            print(line)
-        print("Terminal End")
         assertion_func(screen)
 
 def test_display_class_print_texts_function():
     # test case of display class's print_texts function
     # since the texts are displayed in the terminal by using this function
     #   need to use pseudo-terminal to test if the result is correct
+    keys = {"hello": 0, "world": 1, "!": 2}
     display = Display()
-    keys={'hello':0,'world':1,'!':2}
+    texts = ["hello", "world", "!"]
     def child_process_print_texts_function():
-        texts = ["hello", "world", "!"]
         display.print_texts(texts)
     def assertion_print_texts_function(screen):
         for key,value in keys.items():
             assert key in screen.display[value]
+
     tui(child_process_print_texts_function,assertion_print_texts_function)
 
 def test_progress_bar_class_init_function(tmpdir):
@@ -440,7 +432,7 @@ def test_progress_bar_class_update(tmpdir):
 
 def test_progress_bar_class_update_metrics(tmpdir):
     # test case: if the _update function is executed when current_iteration is 0
-    keys={r'metric:\s+value':0,r'111111:\s+0%\|█*\s*\| 0/2 \[\d+:\d+<\?, \?it/s, Remaining: \?\?\]\s*':1}
+    keys={r'metric:\s+value':0,r'111111:\s+0%\|\s*\| 0/2 \[\d+:\d+<\?, \?it/s, Remaining: \?\?\]\s*':1}
     log_file = Path(tmpdir, "test.log")
     progress_bar = ProgressBar(10, 2, log_file, 1, None, "111111")
     def child_process_update_metrics_1():
@@ -505,9 +497,12 @@ def test_remote_progress_bar_close_function(ray_cluster):
     remote_progress_bar.update_status.remote("111111", ["status", "good"])
     texts = ray.get(remote_progress_bar.make_print_texts.remote())
     assert len(texts) == 2
+    assert re.match(r'\s*0%\|\s*\| 0/10 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*',texts[0])
+    assert texts[1] == "good | status"
     remote_progress_bar.close.remote("111111")
     texts = ray.get(remote_progress_bar.make_print_texts.remote())
     assert len(texts) == 1
+    assert re.match(r'\s*10%\|█         \| 1/10 \[00:00<\d+:\d+, \d+\.\d+it/s, Remaining: \d+:\d+\]\s*',texts[0])
 
 def test_progress_bar_close_remote_progress_bar(tmpdir,ray_cluster):
     # test case: test if the close function of RemoteProgressBar class could be correctly used in Progress class
@@ -517,11 +512,14 @@ def test_progress_bar_close_remote_progress_bar(tmpdir,ray_cluster):
     remote_display.update_status.remote("111111", ["status", "good"])
     texts = ray.get(remote_display.make_print_texts.remote())
     assert len(texts) == 2
+    assert re.match(r'\s*0%\|\s*\| 0/10 \[00:00<\?, \?it/s, Remaining: \?\?\]\s*',texts[0])
+    assert texts[1] == "good | status"
     progress_bar.close()
     texts = ray.get(remote_display.make_print_texts.remote())
     assert len(texts) == 1
+    assert re.match(r'\s*10%\|█         \| 1/10 \[00:00<\d+:\d+, \d+\.\d+it/s, Remaining: \d+:\d+\]\s*',texts[0])
 
-def test_progress_bar_update_remote_progress_bar_hh(tmpdir,ray_cluster):
+def test_progress_bar_update_remote_progress_bar(tmpdir,ray_cluster):
     # test case: test if the update_status function of RemoteProgressBar class could be correctly used in _update function of Progress class
     log_file = Path(tmpdir, "test.log")
     lines=["This is the first line\n","This is the second line\n","This is the last line"]
@@ -539,4 +537,3 @@ if __name__ == "__main__":
     fn_names = [fn for fn in l if fn.startswith("test_")]
     test_fns = [l[fn] for fn in fn_names]
     run_tests_local(test_fns)
-
