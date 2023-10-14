@@ -136,7 +136,8 @@ def test_no_grads(config: RunConfig, capture_output):
     wrapper = TestWrapper(MyWrongCustomModel)
     stdout, stderr = capture_output(lambda: wrapper.train(config))
     assert (
-        "The loss returned by the model is `None` and no optimization parameter contains gradients. "
+        "The loss returned by the model is `None` and no optimization parameter"
+        " contains gradients. "
         in stdout
     )
     assert wrapper._is_partially_optimized
@@ -144,7 +145,8 @@ def test_no_grads(config: RunConfig, capture_output):
     wrapper = TestWrapper(MyInternalCustomModel)
     stdout, stderr = capture_output(lambda: wrapper.train(config))
     assert (
-        "The loss returned by the model is `None` and no optimization parameter contains gradients. "
+        "The loss returned by the model is `None` and no optimization parameter"
+        " contains gradients. "
         not in stdout
     )
     assert not wrapper._is_partially_optimized
@@ -152,7 +154,8 @@ def test_no_grads(config: RunConfig, capture_output):
     wrapper = TestWrapper(MyWrongPolarCustomModel)
     stdout, stderr = capture_output(lambda: wrapper.train(config))
     assert (
-        "The loss returned by the model is `None` and no optimization parameter contains gradients. "
+        "The loss returned by the model is `None` and no optimization parameter"
+        " contains gradients. "
         in stdout
     )
     assert not wrapper._is_partially_optimized
@@ -160,7 +163,8 @@ def test_no_grads(config: RunConfig, capture_output):
     wrapper = TestWrapper(MyPolarCustomModel)
     stdout, stderr = capture_output(lambda: wrapper.train(config))
     assert (
-        "The loss returned by the model is `None` and no optimization parameter contains gradients. "
+        "The loss returned by the model is `None` and no optimization parameter"
+        " contains gradients. "
         not in stdout
     )
     assert "Not all optimization parameters contain gradients. " in stdout

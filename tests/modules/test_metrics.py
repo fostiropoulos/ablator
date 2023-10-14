@@ -21,7 +21,7 @@ def test_metrics(assert_error_msg):
                 moving_aux_metrics={"mean"},
             ),
             (
-                "Duplicate metric names {'mean'}, for \n"
+                f"Duplicate metric names {{'mean'}}, for \n"
                 f"`evaluation_functions`=['mean'], \n"
                 f"`moving_aux_metrics`=['mean'], \n"
                 f"`static_aux_metrics`=['some']."
@@ -37,7 +37,7 @@ def test_metrics(assert_error_msg):
                 moving_aux_metrics={"mean"},
             ),
             (
-                "Duplicate metric names {'some'}, for \n"
+                f"Duplicate metric names {{'some'}}, for \n"
                 f"`evaluation_functions`=['some'], \n"
                 f"`moving_aux_metrics`=['mean'], \n"
                 f"`static_aux_metrics`=['some']."
@@ -53,7 +53,7 @@ def test_metrics(assert_error_msg):
                 moving_aux_metrics={"mean"},
             ),
             (
-                "Duplicate metric names {'mean'}, for \n"
+                f"Duplicate metric names {{'mean'}}, for \n"
                 f"`evaluation_functions`=['some'], \n"
                 f"`moving_aux_metrics`=['mean'], \n"
                 f"`static_aux_metrics`=['mean']."
@@ -78,15 +78,18 @@ def test_metrics(assert_error_msg):
     }
     assert_error_msg(
         lambda: m.update_ma_metrics({"ma_some": 0.1, "ma_some_2": 2}),
-        "There are difference in the class metrics: ['ma_some'] and parsed metrics ['ma_some', 'ma_some_2']",
+        "There are difference in the class metrics: ['ma_some'] and parsed metrics"
+        " ['ma_some', 'ma_some_2']",
     )
     assert_error_msg(
         lambda: m.update_ma_metrics({"a": 0.1}),
-        "There are difference in the class metrics: ['ma_some'] and parsed metrics ['a']",
+        "There are difference in the class metrics: ['ma_some'] and parsed metrics"
+        " ['a']",
     )
     assert_error_msg(
         lambda: m.update_static_metrics({"some_2": 1}),
-        "There are difference in the class metrics: ['some'] and updated metrics ['some_2']",
+        "There are difference in the class metrics: ['some'] and updated metrics"
+        " ['some_2']",
     )
     assert_error_msg(
         lambda: m.update_ma_metrics({"ma_some": ""}),
@@ -143,7 +146,8 @@ def test_metrics(assert_error_msg):
 
     assert (
         msg
-        == "Inhomogeneous keys from the prediction store update. Expected: ['labels', 'preds'], received ['preds']"
+        == "Inhomogeneous keys from the prediction store update. Expected: ['labels',"
+        " 'preds'], received ['preds']"
     )
 
     msg = assert_error_msg(
@@ -230,9 +234,10 @@ def test_prediction_store_reset(assert_error_msg):
 
     # Test evaluate when predictions have been appended.
     res = ps.evaluate()
-    assert res == {
-        "mean": 3.0
-    }, "Evaluate should return the correct evaluation when predictions have been appended."
+    assert res == {"mean": 3.0}, (
+        "Evaluate should return the correct evaluation when predictions have been"
+        " appended."
+    )
 
     # Test that the reset function clears the appended predictions.
     ps.reset()

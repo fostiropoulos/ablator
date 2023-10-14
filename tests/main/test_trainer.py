@@ -154,7 +154,10 @@ def test_missing_val_dataloader(config: ParallelConfig, assert_error_msg):
     msg = assert_error_msg(lambda: TestWrapper2(MyCustomModel3).train(config))
     assert (
         msg
-        == "optim_metric_name=`val_loss` not found in metrics ['best_iteration', 'best_val_loss', 'current_epoch', 'current_iteration', 'epochs', 'learning_rate', 'loss', 'total_steps']. Make sure your validation loader and validation loop are configured correctly."
+        == "optim_metric_name=`val_loss` not found in metrics ['best_iteration',"
+        " 'best_val_loss', 'current_epoch', 'current_iteration', 'epochs',"
+        " 'learning_rate', 'loss', 'total_steps']. Make sure your validation loader"
+        " and validation loop are configured correctly."
     )
     metrics = TestWrapper(MyCustomModel3).train(config)
     assert metrics["current_iteration"] == 200
@@ -171,7 +174,10 @@ def test_custom_scheduler(config: ParallelConfig):
     _config = MyParallelConfig(**kwargs)
     with pytest.raises(
         EvaluationError,
-        match="A validation optimization argument is required with ReduceLROnPlateau scheduler. Try setting a `optim_metric_name`",
+        match=(
+            "A validation optimization argument is required with ReduceLROnPlateau"
+            " scheduler. Try setting a `optim_metric_name`"
+        ),
     ):
         metrics = TestWrapper(MyCustomModel3).train(_config)
 
@@ -188,14 +194,20 @@ def test_invalid_optim_metrics(config: ParallelConfig):
     _config.optim_metrics = None
     with pytest.raises(
         ValueError,
-        match="Invalid configuration. Must specify both `optim_metrics` and `optim_metric_name` or neither.",
+        match=(
+            "Invalid configuration. Must specify both `optim_metrics` and"
+            " `optim_metric_name` or neither."
+        ),
     ):
         metrics = TestWrapper(MyCustomModel3).train(_config)
     _config = copy.deepcopy(config)
     _config.optim_metric_name = None
     with pytest.raises(
         ValueError,
-        match="Invalid configuration. Must specify both `optim_metrics` and `optim_metric_name` or neither.",
+        match=(
+            "Invalid configuration. Must specify both `optim_metrics` and"
+            " `optim_metric_name` or neither."
+        ),
     ):
         metrics = TestWrapper(MyCustomModel3).train(_config)
 
@@ -273,7 +285,8 @@ def test_git_diffs(
     msg = ablator._get_diffs(repo_path)
     assert (
         msg
-        == f"No git repository was detected at {repo_path}. We recommend setting the working directory to a git repository to keep track of changes."
+        == f"No git repository was detected at {repo_path}. We recommend setting the"
+        " working directory to a git repository to keep track of changes."
     )
     remote_repo = git.Repo.init(
         remote_path,

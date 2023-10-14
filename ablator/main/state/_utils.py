@@ -99,8 +99,8 @@ def parse_metrics(
     for k in sorted(metric_directions):
         if k not in metrics:
             raise KeyError(
-                f"Expected to find {k} in returned model metrics. "
-                f"Make sure that `optim_metric_name` corresponds to one of: {set(metrics.keys())}"
+                f"Expected to find {k} in returned model metrics. Make sure that"
+                f" `optim_metric_name` corresponds to one of: {set(metrics.keys())}"
             )
         v = metric_directions[k]
         val = metrics[k]

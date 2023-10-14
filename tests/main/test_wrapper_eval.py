@@ -111,19 +111,22 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg, capture_output):
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config))
     assert (
         msg
-        == f"Val {metric_name} 1.00e+02 has diverged by a factor larger than {large_div_factor} to best_{metric_name} 0.00e+00"
+        == f"Val {metric_name} 1.00e+02 has diverged by a factor larger than"
+        f" {large_div_factor} to best_{metric_name} 0.00e+00"
     )
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config, resume=True))
     assert (
         msg
-        == f"Val {metric_name} 1.00e+02 has diverged by a factor larger than {large_div_factor} to best_{metric_name} 0.00e+00"
+        == f"Val {metric_name} 1.00e+02 has diverged by a factor larger than"
+        f" {large_div_factor} to best_{metric_name} 0.00e+00"
     )
     small_div_factor = 10
     new_config.divergence_factor = small_div_factor
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config, resume=True))
     assert (
         msg
-        == f"Val {metric_name} 1.00e+02 has diverged by a factor larger than {small_div_factor} to best_{metric_name} 0.00e+00"
+        == f"Val {metric_name} 1.00e+02 has diverged by a factor larger than"
+        f" {small_div_factor} to best_{metric_name} 0.00e+00"
     )
     new_config.divergence_factor = large_div_factor + 1
     TestWrapper(MyModel).train(new_config, resume=True)
@@ -167,7 +170,8 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg, capture_output):
 
     assert (
         str(exc_info.value.__cause__)
-        == "Mismatching loaded and current configurations. \ntrain_config.epochs:(int)5->(int)6"
+        == "Mismatching loaded and current configurations."
+        " \ntrain_config.epochs:(int)5->(int)6"
     )
 
 

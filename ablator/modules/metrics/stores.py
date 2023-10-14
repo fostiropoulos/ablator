@@ -40,20 +40,20 @@ def _parse_array_store_val(
         np_val = val
     if len(np_val.shape) < 2:
         raise ValueError(
-            (
-                "Missing batch dimension. If supplying a single value array, "
-                "reshape to [B, 1] or if suppling a single a batch reshape to [1, N]."
-            )
+            "Missing batch dimension. If supplying a single value array, "
+            "reshape to [B, 1] or if suppling a single a batch reshape to [1, N]."
         )
     if store_type is not None and np_val.dtype != store_type:
         raise RuntimeError(
-            f"Inhomogeneous types between stored values {store_type} and provided value {np_val.dtype}."
+            f"Inhomogeneous types between stored values {store_type} and provided value"
+            f" {np_val.dtype}."
         )
     # skipping batch dim
     data_shape = np_val.shape[1:]
     if shape is not None and data_shape != shape:
         raise RuntimeError(
-            f"Inhomogeneous shapes between stored values  {shape} and provided value {data_shape}"
+            f"Inhomogeneous shapes between stored values  {shape} and provided value"
+            f" {data_shape}"
         )
     return np_val
 
@@ -166,8 +166,8 @@ class ArrayStore(Sequence):
                 else memory_limit
             )
             logging.warning(
-                "Memory limit %s reached for ArrayStore. Consider increasing `memory_limit`. "
-                "Will prune to %s samples.",
+                "Memory limit %s reached for ArrayStore. Consider increasing"
+                " `memory_limit`. Will prune to %s samples.",
                 self._memory_limit,
                 limit,
             )
@@ -422,7 +422,7 @@ class PredictionStore:
             assert self._batch_keys is not None
         sizes = {}
         assert self._batch_keys == batch_keys, (
-            f"Inhomogeneous keys from the prediction store update. "
+            "Inhomogeneous keys from the prediction store update. "
             f"Expected: {sorted(self._batch_keys)}, received {sorted(batch_keys)}"
         )
         for k, v in batches.items():
@@ -484,9 +484,10 @@ class PredictionStore:
         for k, v in self.__evaluation_functions__.items():
             fn_args = set(inspect.signature(v).parameters.keys())
             intersecting_args = set(self._batch_keys).intersection(fn_args)
-            assert (
-                len(intersecting_args) > 0
-            ), f"Evaluation function arguments {fn_args} different than stored predictions: {self._batch_keys}"
+            assert len(intersecting_args) > 0, (
+                f"Evaluation function arguments {fn_args} different than stored"
+                f" predictions: {self._batch_keys}"
+            )
             metric = v(**{k: v for k, v in batches.items() if k in intersecting_args})
             metric = _parse_moving_average_val(metric)
             metrics[k] = metric
@@ -494,7 +495,8 @@ class PredictionStore:
                 self.metrics[k].append(metric)
             except Exception as exc:
                 raise ValueError(
-                    f"Invalid value {metric} returned by evaluation function {v.__name__}. Must be numeric scalar."
+                    f"Invalid value {metric} returned by evaluation function"
+                    f" {v.__name__}. Must be numeric scalar."
                 ) from exc
         return metrics
 

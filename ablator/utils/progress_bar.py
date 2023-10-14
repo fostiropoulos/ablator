@@ -92,9 +92,10 @@ class Display:
             self.stdscr.clear()
             self.nrows, self.ncols = self.stdscr.getmaxyx()
         else:
-            assert (
-                widgets is not None
-            ), "Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html"
+            assert widgets is not None, (
+                "Please update jupyter and ipywidgets. See"
+                " https://ipywidgets.readthedocs.io/en/stable/user_install.html"
+            )
             self.ncols = int(1e3)
             self.nrows = int(1e3)
             self.html_widget = widgets.HTML(value="")
@@ -137,8 +138,12 @@ class Display:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
+    # pylint: disable=broad-exception-caught
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except Exception:
+            ...
 
     def _update_screen_dims(self):
         if self.is_terminal:

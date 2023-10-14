@@ -11,6 +11,8 @@ import pandas as pd
 from PIL import Image
 import math
 
+import pytest
+
 from ablator import ModelConfig, OptimizerConfig, RunConfig, TrainConfig
 from ablator.modules.loggers.main import SummaryLogger
 
@@ -68,7 +70,11 @@ def test_backup_config(tmp_path: Path, capture_output):
     assert loaded_config.train_config.dataset == "x" and loaded_config == config
 
     # test incremental naming of backup configuration
-    msg = f"Differences between provided configuration and stored configuration. Creating a configuration backup at {experiment_dir.joinpath(l.BACKUP_CONFIG_FILE_NAME)}"
+    msg = (
+        "Differences between provided configuration and stored configuration. Creating"
+        " a configuration backup at"
+        f" {experiment_dir.joinpath(l.BACKUP_CONFIG_FILE_NAME)}"
+    )
     prev_config = copy.deepcopy(config)
     for i in range(10):
         config.train_config.dataset = str(i)
@@ -116,10 +122,12 @@ def test_summary_logger(tmp_path: Path):
     # logpath.unlink()
     tmp_path = tmp_path.joinpath(f"{random.random()}")
     l = SummaryLogger(c, tmp_path)
-    assert_error_msg(
-        lambda: SummaryLogger(c, tmp_path),
-        f"SummaryLogger: Resume is set to False but {tmp_path} exists.",
-    )
+    with pytest.raises(
+        FileExistsError,
+        match=f"SummaryLogger: Resume is set to False but {tmp_path} is not empty.",
+    ):
+        SummaryLogger(c, tmp_path)
+
     assert l.uid == c.uid
     assert_iter_equals(
         [p.name for p in tmp_path.glob("*")],
@@ -140,7 +148,8 @@ def test_summary_logger(tmp_path: Path):
 
     assert_error_msg(
         lambda: l.checkpoint(save_dict, "b", itr=0),
-        f"Checkpoint iteration 1 >= training iteration 0. Can not overwrite checkpoint.",
+        f"Checkpoint iteration 1 >= training iteration 0. Can not overwrite"
+        f" checkpoint.",
     )
     del l.checkpoint_iteration["recent"]["b"]
     assert_error_msg(
@@ -203,7 +212,8 @@ def test_summary_logger(tmp_path: Path):
             l.dashboard.backend_logger.flush()
             if time.time() - start_time > max_wait_time:
                 raise RuntimeError(
-                    f"Timed out waiting for the latest value of {tag} to appear in TensorBoard."
+                    f"Timed out waiting for the latest value of {tag} to appear in"
+                    " TensorBoard."
                 )
             event_acc.Reload()
             if tag in event_acc.Tags()[tag_type]:
@@ -250,7 +260,8 @@ def test_summary_logger(tmp_path: Path):
     wait_for_tensorboard(event_acc, "test_arr/text_summary", tag_type="tensors")
     event_acc.Reload()
     assert str(event_acc.Tensors("test_arr/text_summary")[0]).endswith(
-        'dtype: DT_STRING\ntensor_shape {\n  dim {\n    size: 1\n  }\n}\nstring_val: "100 100"\n)'
+        "dtype: DT_STRING\ntensor_shape {\n  dim {\n    size: 1\n  }\n}\nstring_val:"
+        ' "100 100"\n)'
     )
 
     l.update({"arr": np.array([100, 101])})
@@ -280,7 +291,8 @@ def test_summary_logger(tmp_path: Path):
     wait_for_tensorboard(event_acc, "df/text_summary", tag_type="tensors")
     event_acc.Reload()
     assert str(event_acc.Tensors("df/text_summary")[0]).endswith(
-        'string_val: "|    |   0 |\\n|---:|----:|\\n|  0 |   0 |\\n|  1 |   0 |\\n|  2 |   0 |"\n)'
+        'string_val: "|    |   0 |\\n|---:|----:|\\n|  0 |   0 |\\n|  1 |   0 |\\n|  2'
+        ' |   0 |"\n)'
     )
 
     img = Image.fromarray(np.zeros((5, 5, 3), dtype=np.uint8))

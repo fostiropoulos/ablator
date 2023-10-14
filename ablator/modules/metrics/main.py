@@ -226,8 +226,9 @@ class Metrics:
         metric_keys = set(metric_dict)
         diff_metrics = metric_keys.difference(set(self.__moving_aux_attributes__))
         assert len(diff_metrics) == 0, (
-            "There are difference in the class metrics: "
-            f"{self.__moving_aux_attributes__} and parsed metrics {sorted(list(metric_keys))}"
+            "There are difference in the class metrics:"
+            f" {self.__moving_aux_attributes__} and parsed metrics"
+            f" {sorted(list(metric_keys))}"
         )
         self._update_ma_metrics(metric_dict)
 

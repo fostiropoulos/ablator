@@ -210,7 +210,8 @@ def test_prediction_store(assert_error_msg):
     )
     assert (
         msg
-        == "Missing batch dimension. If supplying a single value array, reshape to [B, 1] or if suppling a single a batch reshape to [1, N]."
+        == "Missing batch dimension. If supplying a single value array, reshape to [B,"
+        " 1] or if suppling a single a batch reshape to [1, N]."
     )
     preds = []
     labels = []
@@ -228,12 +229,14 @@ def test_prediction_store(assert_error_msg):
     )
     assert (
         msg
-        == "Inhomogeneous keys from the prediction store update. Expected: ['labels', 'preds'], received ['labels', 'preds', 'xx']"
+        == "Inhomogeneous keys from the prediction store update. Expected: ['labels',"
+        " 'preds'], received ['labels', 'preds', 'xx']"
     )
     msg = assert_error_msg(lambda: store.append(preds=np.array([4, 3, 0])))
     assert (
         msg
-        == "Inhomogeneous keys from the prediction store update. Expected: ['labels', 'preds'], received ['preds']"
+        == "Inhomogeneous keys from the prediction store update. Expected: ['labels',"
+        " 'preds'], received ['preds']"
     )
 
     msg = assert_error_msg(
@@ -273,7 +276,8 @@ def test_prediction_store(assert_error_msg):
     )
     assert (
         msg
-        == "Inhomogeneous keys from the prediction store update. Expected: ['labels', 'preds'], received ['labels', 'preds', 'xx']"
+        == "Inhomogeneous keys from the prediction store update. Expected: ['labels',"
+        " 'preds'], received ['labels', 'preds', 'xx']"
     )
     msg = assert_error_msg(
         lambda: store.append(
@@ -302,7 +306,8 @@ def test_prediction_store_eval_fns(assert_error_msg):
         lambda: store.append(preds=np.array([4, 3, 0]), labels=np.array([5, 1, 1]))
     )
     assert (
-        "Batch keys do not match any function arguments: accuracy: ['y_true', 'y_pred', 'normalize', 'sample_weight']"
+        "Batch keys do not match any function arguments: accuracy: ['y_true', 'y_pred',"
+        " 'normalize', 'sample_weight']"
         == msg
     )
     store = PredictionStore(
@@ -351,7 +356,8 @@ def test_prediction_store_eval_fns(assert_error_msg):
         )
     )
     assert (
-        "Batch keys do not match any function arguments: my_eval_fn: ['args', 'a1', 'a2', 'kwargs']"
+        "Batch keys do not match any function arguments: my_eval_fn: ['args', 'a1',"
+        " 'a2', 'kwargs']"
         == msg
     )
 

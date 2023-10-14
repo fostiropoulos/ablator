@@ -38,11 +38,13 @@ def _parse_results(
 
     if _categorical_attributes is None:
         raise ValueError(
-            "Must provide `categorical_attributes` when supplying a DataFrame. Otherwise provide a ``Results`` object. "
+            "Must provide `categorical_attributes` when supplying a DataFrame."
+            " Otherwise provide a ``Results`` object. "
         )
     if _numerical_attributes is None:
         raise ValueError(
-            "Must provide `_numerical_attributes` when supplying a DataFrame. Otherwise provide a ``Results`` object. "
+            "Must provide `_numerical_attributes` when supplying a DataFrame. Otherwise"
+            " provide a ``Results`` object. "
         )
     if _optim_metrics is None:
         raise ValueError(

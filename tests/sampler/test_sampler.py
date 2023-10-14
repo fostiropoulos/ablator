@@ -402,7 +402,8 @@ def test_grid_sampler(assert_error_msg):
     )
     assert (
         msg
-        == "Invalid search space for b. `n_bins` must be specified for SearchSpace(value_range=(-10.0, 10.0), value_type='float')."
+        == "Invalid search space for b. `n_bins` must be specified for"
+        " SearchSpace(value_range=(-10.0, 10.0), value_type='float')."
     )
     search_space_size = 10
     space = {
