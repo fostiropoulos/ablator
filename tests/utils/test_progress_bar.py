@@ -271,7 +271,7 @@ def tui(test_func,assertion_func):
             [f_d], _, _ = select.select(
                 [f_d], [], [], 1)
         except (KeyboardInterrupt, ValueError):
-            print("ValueError")
+            raise ValueError("Error occurred in the tui function.")
         else:
             try:
                 data = os.read(f_d, 10000)
@@ -317,7 +317,6 @@ def test_progress_bar_class_init_function_display(tmpdir):
 
     def assertion_init_function_display(screen):
         for key, value in keys.items():
-            # breakpoint()
             assert re.match(key,screen.display[value])
 
     log_file=Path(tmpdir,"test.log")
