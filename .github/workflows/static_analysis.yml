@@ -17,7 +17,7 @@ jobs:
         run: |
           pip install -e .[dev] -v
       - name: Run pylint
-        run: pylint --fail-under=9 ablator
+        run: pylint ablator
 
   mypy:
     runs-on: ubuntu-latest
@@ -62,4 +62,4 @@ jobs:
           pip install -e .[dev] -v
       - name: Check formatting with black
         run: |
-          black --check .
+          black --check --preview .
