@@ -5,7 +5,8 @@ LABEL maintainer="mail@iordanis.me"
 LABEL description="Running environment for Ablator"
 
 RUN apt-get update
-RUN apt-get install -y openssh-server rsync
+RUN apt-get install -y openssh-server rsync fuse
+RUN apt-get install -y fuse3
 RUN apt-get install -y gcc python3-dev build-essential
 RUN ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
 RUN cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
@@ -22,5 +23,3 @@ COPY . .
 EXPOSE 22
 RUN chmod a+x ./scripts/docker-entrypoint.sh
 ENTRYPOINT ["./scripts/docker-entrypoint.sh"]
-
-CMD ["pytest","."]
