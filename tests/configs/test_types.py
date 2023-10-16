@@ -184,7 +184,7 @@ def test_error_configs(assert_error_msg):
 
 def test_hierarchical(assert_error_msg):
     c = SimpleConfig(a1="10")
-    assert type(c.a1) == int and c.a1 == int("10")
+    assert type(c.a1) is int and c.a1 == int("10")
     # Should fail
     # pc = ParentTestConfig(0,c,c,0)
     # Should not fail
@@ -193,7 +193,7 @@ def test_hierarchical(assert_error_msg):
     pc.c.a1 = 2
     assert pc.c2.a1 == pc.c.a1, "Lost reference"
     pc = ParentTestConfig(a1=0, c={"a1": 10}, c2={"a1": "2"}, a2=0)
-    assert type(pc.c) == SimpleConfig
+    assert type(pc.c) is SimpleConfig
     assert pc.c2.a1 == 2
     pc_dict = ParentTestTestConfig(c=pc.to_dict())
     pc_obj = ParentTestTestConfig(c=pc)
@@ -220,7 +220,7 @@ def test_iterable(assert_error_msg):
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
     run_tests_local(test_fns)

@@ -21,10 +21,10 @@ def test_metrics(assert_error_msg):
                 moving_aux_metrics={"mean"},
             ),
             (
-                f"Duplicate metric names {{'mean'}}, for \n"
-                f"`evaluation_functions`=['mean'], \n"
-                f"`moving_aux_metrics`=['mean'], \n"
-                f"`static_aux_metrics`=['some']."
+                "Duplicate metric names {'mean'}, for \n"
+                "`evaluation_functions`=['mean'], \n"
+                "`moving_aux_metrics`=['mean'], \n"
+                "`static_aux_metrics`=['some']."
             ),
         ),
         (
@@ -37,10 +37,10 @@ def test_metrics(assert_error_msg):
                 moving_aux_metrics={"mean"},
             ),
             (
-                f"Duplicate metric names {{'some'}}, for \n"
-                f"`evaluation_functions`=['some'], \n"
-                f"`moving_aux_metrics`=['mean'], \n"
-                f"`static_aux_metrics`=['some']."
+                "Duplicate metric names {'some'}, for \n"
+                "`evaluation_functions`=['some'], \n"
+                "`moving_aux_metrics`=['mean'], \n"
+                "`static_aux_metrics`=['some']."
             ),
         ),
         (
@@ -53,10 +53,10 @@ def test_metrics(assert_error_msg):
                 moving_aux_metrics={"mean"},
             ),
             (
-                f"Duplicate metric names {{'mean'}}, for \n"
-                f"`evaluation_functions`=['some'], \n"
-                f"`moving_aux_metrics`=['mean'], \n"
-                f"`static_aux_metrics`=['mean']."
+                "Duplicate metric names {'mean'}, for \n"
+                "`evaluation_functions`=['some'], \n"
+                "`moving_aux_metrics`=['mean'], \n"
+                "`static_aux_metrics`=['mean']."
             ),
         ),
     ]
@@ -78,18 +78,24 @@ def test_metrics(assert_error_msg):
     }
     assert_error_msg(
         lambda: m.update_ma_metrics({"ma_some": 0.1, "ma_some_2": 2}),
-        "There are difference in the class metrics: ['ma_some'] and parsed metrics"
-        " ['ma_some', 'ma_some_2']",
+        (
+            "There are difference in the class metrics: ['ma_some'] and parsed metrics"
+            " ['ma_some', 'ma_some_2']"
+        ),
     )
     assert_error_msg(
         lambda: m.update_ma_metrics({"a": 0.1}),
-        "There are difference in the class metrics: ['ma_some'] and parsed metrics"
-        " ['a']",
+        (
+            "There are difference in the class metrics: ['ma_some'] and parsed metrics"
+            " ['a']"
+        ),
     )
     assert_error_msg(
         lambda: m.update_static_metrics({"some_2": 1}),
-        "There are difference in the class metrics: ['some'] and updated metrics"
-        " ['some_2']",
+        (
+            "There are difference in the class metrics: ['some'] and updated metrics"
+            " ['some_2']"
+        ),
     )
     assert_error_msg(
         lambda: m.update_ma_metrics({"ma_some": ""}),
@@ -119,8 +125,9 @@ def test_metrics(assert_error_msg):
     )
     for i in range(1000):
         m.update_ma_metrics({"ma_some": int(i)})
+    lower = -m._get_ma("ma_some").limit
     assert m.to_dict() == {
-        "ma_some": np.arange(1000)[-m._get_ma("ma_some").limit :].mean(),
+        "ma_some": np.arange(1000)[lower:].mean(),
         "mean": np.nan,
         "some": 0,
     }
@@ -180,7 +187,7 @@ def test_metrics(assert_error_msg):
     )
     assert (
         m3.evaluate() == {}
-    ), f"Expected None when there are no predictions to evaluate"
+    ), "Expected None when there are no predictions to evaluate"
     m3.append_batch(somex=np.array([[100]]))
     m3.evaluate(reset=False, update=True)
     m3.append_batch(somex=np.array([[0]] * 3))  # +3
@@ -252,8 +259,8 @@ def test_prediction_store_reset(assert_error_msg):
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
 
     run_tests_local(test_fns)

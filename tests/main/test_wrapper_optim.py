@@ -2,21 +2,17 @@ import copy
 import inspect
 from pathlib import Path
 
-import numpy as np
 import pytest
 import torch
 from torch import nn
 
 from ablator import (
-    Derived,
     ModelConfig,
     ModelWrapper,
     OptimizerConfig,
     RunConfig,
     TrainConfig,
 )
-from ablator.modules.scheduler import SchedulerConfig
-from ablator.utils.base import Dummy
 
 _train_config = TrainConfig(
     dataset="test",
@@ -194,9 +190,9 @@ if __name__ == "__main__":
 
     from tests.conftest import _assert_error_msg, _capture_output
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
 
     for fn in test_fns:
         parameters = inspect.signature(fn).parameters

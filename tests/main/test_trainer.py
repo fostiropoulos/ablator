@@ -273,7 +273,6 @@ def test_git_diffs(
 ):
     config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
     ablator = ProtoTrainer(wrapper=TestWrapper(MyCustomModel3), run_config=config)
-    working_dir = config.experiment_dir
     repo_path = tmp_path.joinpath("repo_path")
     remote_path = tmp_path.joinpath("remote_path.git")
     with pytest.raises(
@@ -381,9 +380,9 @@ def test_proto_custom_eval(tmp_path: Path, config):
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
     kwargs = {
         "scheduler_name": list(SCHEDULER_CONFIG_MAP.keys()) + [None],
         "trainer_class": [ProtoTrainer, ParallelTrainer],

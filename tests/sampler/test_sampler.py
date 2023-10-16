@@ -5,10 +5,9 @@ import numpy as np
 import optuna
 import pandas as pd
 import pytest
-import torch
 
 # NOTE these appear unused but are used by eval(kwargs[*])
-from optuna.distributions import (
+from optuna.distributions import (  # noqa: F401
     BaseDistribution,
     CategoricalDistribution,
     FloatDistribution,
@@ -295,7 +294,7 @@ def test_update_tpe_error():
     trial_id, *_ = sampler.eager_sample()
     try:
         trial_id, *_ = sampler.eager_sample()
-    except:
+    except Exception:
         sampler.unlock(drop=True)
 
     assert len(sampler._study.trials) == 0
@@ -380,7 +379,9 @@ def test_random():
 
 
 def test_update_tpe():
-    # Test whether lazy updates of TPE cause reduction in performance (Expected as it samples at random when not available) however not exactly random as it does not sample from approx close configurations
+    # Test whether lazy updates of TPE cause reduction in performance
+    # (Expected as it samples at random when not available) however
+    # not exactly random as it does not sample from approx close configurations
     update_tpe = pd.concat([_update_tpe() for i in range(REPETITIONS)])
     rand_df = pd.concat([_ablator_sampler("random") for i in range(REPETITIONS)])
     tpe_df = pd.concat([_ablator_sampler("tpe") for i in range(REPETITIONS)])
@@ -432,7 +433,7 @@ def test_grid_sampler(assert_error_msg):
         assert trial_id == 0
         sampler.eager_sample()
         assert False
-    except:
+    except Exception:
         sampler.unlock(drop=False)
         trial_id, *_ = sampler.eager_sample()
         idx += 1
@@ -499,14 +500,14 @@ def test_optuna():
         ValueError,
         match=re.escape("Need to specify 'optim_metrics' with sampler = `tpe`"),
     ):
-        s = OptunaSampler(
+        OptunaSampler(
             search_space={},
             optim_metrics={},
             search_algo=SearchAlgo.tpe,
             trials=[],
         )
     with pytest.raises(ValueError, match="'xxx' is not a valid SearchAlgo"):
-        s = OptunaSampler(
+        OptunaSampler(
             search_space={},
             optim_metrics={"test": "test"},
             search_algo="xxx",
@@ -539,7 +540,7 @@ def test_expand_search_space():
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
     run_tests_local(test_fns)

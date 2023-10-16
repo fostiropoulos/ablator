@@ -11,7 +11,6 @@ from sklearn.metrics import accuracy_score
 from torch import nn
 
 from ablator import ModelConfig, ModelWrapper, OptimizerConfig, RunConfig, TrainConfig
-from ablator.config.proto import RunConfig
 from ablator.modules.metrics.main import LossDivergedError, Metrics
 from ablator.modules.scheduler import SchedulerConfig
 from ablator.utils.base import Lock
@@ -92,7 +91,7 @@ def test_scheduler(tmp_path: Path, config: RunConfig):
     wrapper.init_state(config, debug=True)
     assert wrapper._scheduler_step_when is None
 
-    ## EPOCH SCHEDULER
+    # EPOCH SCHEDULER
     config.train_config.scheduler_config = SchedulerConfig("step", arguments={})
     wrapper.init_state(config, debug=True)
     assert wrapper._scheduler_step_when == "epoch"
@@ -104,7 +103,7 @@ def test_scheduler(tmp_path: Path, config: RunConfig):
     wrapper.scheduler_step()
     assert wrapper.scheduler._step_count == step_count + 1
 
-    ## VAL SCHEDULER
+    # VAL SCHEDULER
     config.train_config.scheduler_config = SchedulerConfig("plateau", arguments={})
     config.optim_metric_name = "val_loss"
     config.optim_metrics = {"val_loss": "min"}
@@ -128,7 +127,7 @@ def test_scheduler(tmp_path: Path, config: RunConfig):
     wrapper.scheduler_step(0.01, is_val_step=True)
     assert wrapper.scheduler.last_epoch == step_count + 2
 
-    ## TRAIN SCHEDULER
+    # TRAIN SCHEDULER
     config.train_config.scheduler_config = SchedulerConfig(
         "cycle", arguments={"max_lr": 0.01, "total_steps": 100}
     )
@@ -565,9 +564,9 @@ def test_save_dict(wrapper: DeterminiticWrapper, config: RunConfig):
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
 
     _config.experiment_dir = Path("/tmp/test_exp")
     kwargs = {

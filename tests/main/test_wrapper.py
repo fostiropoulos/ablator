@@ -1,6 +1,5 @@
 import copy
 from functools import cached_property
-import inspect
 import re
 import typing
 from pathlib import Path
@@ -198,8 +197,10 @@ class DummyScreen(Dummy):
 def test_error_models(assert_error_msg, config: RunConfig):
     assert_error_msg(
         lambda: TestWrapper(BadMyModel).train(config),
-        "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
-        " torch.Tensor | None.",
+        (
+            "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
+            " torch.Tensor | None."
+        ),
     )
     assert_error_msg(
         lambda: TestWrapper(MyUnstableModel).train(config),
@@ -292,8 +293,10 @@ def test_state(
 
     assert_error_msg(
         lambda: wrapper.init_state(run_config=config),
-        "Ambiguous configuration `AmbigiousModelConfig`. Must provide value for"
-        " ambigious_var",
+        (
+            "Ambiguous configuration `AmbigiousModelConfig`. Must provide value for"
+            " ambigious_var"
+        ),
     )
     disambigious_wrapper = DisambigiousTestWrapper(MyCustomModel)
     disambigious_wrapper.init_state(run_config=config)
@@ -333,7 +336,7 @@ def test_train_stats(config: RunConfig):
         and wrapper.current_state["eval_metrics"] == {"loss": np.nan}
     )
     assert str(wrapper.model.param.device) == "cpu"
-    assert wrapper.model.param.requires_grad == True
+    assert wrapper.model.param.requires_grad
     assert wrapper.current_checkpoint is None
     assert wrapper.best_metrics["val_loss"] == float("inf")
     assert isinstance(wrapper.model, MyCustomModel)
@@ -341,7 +344,7 @@ def test_train_stats(config: RunConfig):
     assert wrapper.scheduler is None
     assert wrapper.logger is not None
     assert wrapper.device == "cpu"
-    assert wrapper.amp == False
+    assert not wrapper.amp
     assert wrapper.random_seed == 100
 
     res = wrapper.train()
@@ -403,8 +406,10 @@ def test_load_save(tmp_path: Path, assert_error_msg, config: RunConfig):
         wrapper.init_state(run_config=config, resume=True)
         assert_error_msg(
             lambda: wrapper.checkpoint(),
-            f"Checkpoint iteration {wrapper.current_iteration} >= training iteration"
-            f" {wrapper.current_iteration}. Can not overwrite checkpoint.",
+            (
+                f"Checkpoint iteration {wrapper.current_iteration} >= training"
+                f" iteration {wrapper.current_iteration}. Can not overwrite checkpoint."
+            ),
         )
         wrapper._inc_iter()
         wrapper.checkpoint()
@@ -418,8 +423,10 @@ def test_train_loop(assert_error_msg, config):
     wrapper.init_state(run_config=config)
     assert_error_msg(
         lambda: wrapper.train_loop(),
-        "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
-        " torch.Tensor | None.",
+        (
+            "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
+            " torch.Tensor | None."
+        ),
     )
 
 
@@ -570,9 +577,9 @@ def test_derived_stats_names(tmp_path: Path, config: RunConfig):
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
 
     kwargs = {
         "config": copy.deepcopy(_config),

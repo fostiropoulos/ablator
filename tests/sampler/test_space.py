@@ -62,7 +62,7 @@ def _assert_nested_equal(reference, sample):
         return
     for k, v in reference.items():
         if k == "value_range" and v is not None:
-            assert sample[k] == type(sample[k])(str(_v) for _v in v)
+            assert sample[k] == (type(sample[k])(str(_v) for _v in v))
         elif isinstance(v, dict):
             _assert_nested_equal(v, sample[k])
         elif isinstance(v, list):
@@ -134,9 +134,9 @@ def test_pickle(optim_config: SearchSpace):
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
     kwargs = {"optim_config": copy.deepcopy(_optim_config)}
 
     run_tests_local(test_fns, kwargs)
