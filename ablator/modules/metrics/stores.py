@@ -166,8 +166,10 @@ class ArrayStore(Sequence):
                 else memory_limit
             )
             logging.warning(
-                "Memory limit %s reached for ArrayStore. Consider increasing"
-                " `memory_limit`. Will prune to %s samples.",
+                (
+                    "Memory limit %s reached for ArrayStore. Consider increasing"
+                    " `memory_limit`. Will prune to %s samples."
+                ),
                 self._memory_limit,
                 limit,
             )

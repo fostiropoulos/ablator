@@ -20,6 +20,7 @@ from ablator.config.proto import Optim, RunConfig
 from ablator.modules.loggers.main import SummaryLogger
 from ablator.modules.metrics.main import Metrics
 from ablator.utils.base import Dummy, Lock
+from ablator.utils.file import expand_path
 from ablator.utils.progress_bar import ProgressBar, RemoteProgressBar
 
 
@@ -544,7 +545,8 @@ class ModelBase(ABC):
         ]
         if any(missing_metrics) and not all(missing_metrics):
             raise ValueError(
-                "Invalid configuration. Must specify both `optim_metrics` and `optim_metric_name` or neither."
+                "Invalid configuration. Must specify both `optim_metrics` and"
+                " `optim_metric_name` or neither."
             )
         optim_metric_name = str(optim_metric_name)
         if (
@@ -566,11 +568,13 @@ class ModelBase(ABC):
         )
         if all(missing_metrics) and scheduler_requires_metric:
             raise ValueError(
-                f"Must provide `optim_metrics` when using Scheduler = `{getattr(scheduler_config,'name', 'N/A')}`."
+                "Must provide `optim_metrics` when using Scheduler ="
+                f" `{getattr(scheduler_config,'name', 'N/A')}`."
             )
         if all(missing_metrics) and run_config.early_stopping_iter is not None:
             raise ValueError(
-                f"Must provide `optim_metrics` when using early_stopping_iter = `{run_config.early_stopping_iter}`."
+                "Must provide `optim_metrics` when using early_stopping_iter ="
+                f" `{run_config.early_stopping_iter}`."
             )
         if all(missing_metrics):
             return None, None
@@ -578,8 +582,9 @@ class ModelBase(ABC):
             mode = scheduler_config.arguments.mode  # type: ignore[union-attr]
             if (direction := optim_direction.value) != mode:
                 self.logger.warn(
-                    f"Different optim_metric_direction {direction} than "
-                    f"scheduler.arguments.mode {mode}. Overwriting scheduler.arguments.mode."
+                    f"Different optim_metric_direction {direction} than"
+                    f" scheduler.arguments.mode {mode}. Overwriting"
+                    " scheduler.arguments.mode."
                 )
         return optim_direction, optim_metric_name
 
@@ -612,7 +617,8 @@ class ModelBase(ABC):
         self.amp = run_config.amp
         if self.device == "cpu" and self.amp:
             self.logger.warn(
-                "Automatic Mixed Precision (AMP) is not supported for CPU. Setting `amp` to False."
+                "Automatic Mixed Precision (AMP) is not supported for CPU. Setting"
+                " `amp` to False."
             )
             self.amp = False
 
@@ -620,9 +626,9 @@ class ModelBase(ABC):
             self.train_dataloader
         ) * 0.2:
             self.logger.warn(
-                f"Metrics batch-limit {batch_lim} is larger than "
-                f"20% of the train dataloader length {len(self.train_dataloader)}. "
-                "You might experience slow-down during training. Consider decreasing `metrics_n_batches`."
+                f"Metrics batch-limit {batch_lim} is larger than 20% of the train"
+                f" dataloader length {len(self.train_dataloader)}. You might experience"
+                " slow-down during training. Consider decreasing `metrics_n_batches`."
             )
         self._autocast = torch.autocast(
             enabled=self.amp,
@@ -638,9 +644,10 @@ class ModelBase(ABC):
             run_config.early_stopping_iter is not None
             and run_config.early_stopping_iter > 0
         ):
-            assert (
-                self.val_dataloader is not None
-            ), "dataloader function has to return validation set when setting early stopping to True"
+            assert self.val_dataloader is not None, (
+                "dataloader function has to return validation set when setting early"
+                " stopping to True"
+            )
 
         self.train_metrics = Metrics(
             batch_limit=run_config.metrics_n_batches,
@@ -691,7 +698,8 @@ class ModelBase(ABC):
             # Loads only the weights
             self.current_checkpoint = Path(self.run_config.init_chkpt)
             self.logger.info(
-                f"Initializing model weights ONLY from checkpoint. {self.current_checkpoint}"
+                "Initializing model weights ONLY from checkpoint."
+                f" {self.current_checkpoint}"
             )
 
             self._load_model(self.current_checkpoint, model_only=True)
@@ -770,9 +778,7 @@ class ModelBase(ABC):
         self.__setattr__internal("epochs", v)
 
         if self.run_config.experiment_dir is not None:
-            self.experiment_dir = (
-                Path(self.run_config.experiment_dir).resolve().absolute()
-            )
+            self.experiment_dir = expand_path(self.run_config.experiment_dir)
             self.run_config.experiment_dir = self.experiment_dir.as_posix()
 
         self.run_config.assert_unambigious()
@@ -787,9 +793,9 @@ class ModelBase(ABC):
         self._init_class_attributes()
         if debug and self.experiment_dir is not None:
             self.logger.warn(
-                f"Experiment Directory specified {self.experiment_dir} while running on debug mode. "
-                "If saving artifacts is unnecessary you can disable the file system by setting "
-                "`run_config.experiment_dir=None`. "
+                f"Experiment Directory specified {self.experiment_dir} while running on"
+                " debug mode. If saving artifacts is unnecessary you can disable the"
+                " file system by setting `run_config.experiment_dir=None`. "
             )
         self._init_model_state(resume, smoke_test or debug, from_chkpt=from_chkpt)
         if self.verbose == "progress" and not smoke_test:
@@ -837,7 +843,8 @@ class ModelBase(ABC):
 
                     # ignore exception
                     self.logger.error(
-                        f"Error loading checkpoint {_checkpoint}. Trying another....\n{traceback.format_exc()}"
+                        f"Error loading checkpoint {_checkpoint}. Trying"
+                        f" another....\n{traceback.format_exc()}"
                     )
         if current_checkpoint is None:
             raise CheckpointNotFoundError(
@@ -868,7 +875,8 @@ class ModelBase(ABC):
 
         if not hasattr(self, "run_config") or self.run_config is None:
             raise NotImplementedError(
-                "Can not load model on an uninitialized model state. Consider run init_experiment_state function first"
+                "Can not load model on an uninitialized model state. Consider run"
+                " init_experiment_state function first"
             )
         try:
             save_dict = torch.load(checkpoint_path, map_location="cpu")
@@ -892,7 +900,8 @@ class ModelBase(ABC):
         )
         if len(diffs) > 0:
             self.logger.warn(
-                f"Differences between initial configuration and current configuration. \n{diffs}"
+                "Differences between initial configuration and current configuration."
+                f" \n{diffs}"
             )
         self._load_stats(save_dict)
         self.load_checkpoint(save_dict, model_only=model_only)
@@ -990,8 +999,9 @@ class ModelBase(ABC):
             _init_function_names = []
         if name not in _init_function_names and not _ignore_init:
             raise RuntimeError(
-                f"Can not read property {name} of unitialized {self.__class__.__name__}. "
-                "It must be initialized with `init_state` before using."
+                f"Can not read property {name} of unitialized"
+                f" {self.__class__.__name__}. It must be initialized with `init_state`"
+                " before using."
             )
         return super().__getattribute__(name)
 
@@ -1014,8 +1024,9 @@ class ModelBase(ABC):
                 # We skip assigning this metric as it will be derived by other metrics.
                 if getattr(self, k, None) != metrics[k]:
                     self.logger.warn(
-                        f"Current attribute {k} value derived to {getattr(self, k)} and "
-                        f"is different than loaded value {metrics[k]}. Will use the current value."
+                        f"Current attribute {k} value derived to {getattr(self, k)} and"
+                        f" is different than loaded value {metrics[k]}. Will use the"
+                        " current value."
                     )
                 del metrics[k]
 

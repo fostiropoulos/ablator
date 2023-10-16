@@ -179,8 +179,9 @@ def parse_repr_to_kwargs(
     except:
         pass
     raise RuntimeError(
-        f"Could not parse {type(obj)} from its representation `{str_repr}`. Please make sure that one of "
-        "`to_dict`, `as_dict`, `__dict__`, `__repr__`  is correctly implemented (evaluated in the same order)"
-        " and the object can be reconstructed e.g. `eval(value.__repr__())==value` or "
-        "`type(value)(**value.to_dict())==value`"
+        f"Could not parse {type(obj)} from its representation `{str_repr}`. Please make"
+        " sure that one of `to_dict`, `as_dict`, `__dict__`, `__repr__`  is correctly"
+        " implemented (evaluated in the same order) and the object can be"
+        " reconstructed e.g. `eval(value.__repr__())==value` or"
+        " `type(value)(**value.to_dict())==value`"
     )

@@ -335,9 +335,12 @@ class Results:
         for json_path in json_paths:
             if ray.is_initialized():
                 futures.append(
-                    ray.remote(num_cpus=num_cpus)(read_result).remote(
-                        config_type, json_path
-                    )
+                    ray.remote(
+                        num_cpus=num_cpus,
+                        max_calls=1,
+                    )(
+                        read_result
+                    ).remote(config_type, json_path)
                 )
             else:
                 results.append(read_result(config_type, json_path))

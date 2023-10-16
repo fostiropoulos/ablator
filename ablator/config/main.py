@@ -164,8 +164,10 @@ class ConfigBase:
                 v = getattr(self, k, None)
             if k in missing_vals:
                 logging.warning(
-                    "Loading %s in `debug` mode. Setting missing required value %s to"
-                    " `None`.",
+                    (
+                        "Loading %s in `debug` mode. Setting missing required value %s"
+                        " to `None`."
+                    ),
                     self._class_name,
                     k,
                 )
@@ -178,8 +180,10 @@ class ConfigBase:
                     if not debug:
                         raise e
                     logging.warning(
-                        "Loading %s in `debug` mode. Unable to parse `%s` value %s."
-                        " Setting to `None`.",
+                        (
+                            "Loading %s in `debug` mode. Unable to parse `%s` value %s."
+                            " Setting to `None`."
+                        ),
                         self._class_name,
                         k,
                         v,
