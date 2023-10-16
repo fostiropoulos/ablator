@@ -1,67 +1,150 @@
-# ABLATOR
+# 🚀 ABLATOR
 
-<img src="assets/ablator_architecture.png">
-A distributed experiment execution framework for ablation studies. ABLATOR provides a wrapper for your model and a Trainer class for you to prototype on your method and scale to thousands of experimental trials with 1 code change.
+|<img src="docs/source/_static/logo.png" alt="logo" width="200"/>|  [Website](https://ablator.org) \| [Docs](https://docs.ablator.org) </br></br><a href="https://join.slack.com/t/ablator/shared_invite/zt-23ak9ispz-HObgZSEZhyNcTTSGM_EERw" target="_blank"> <img class="banner-icon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Slack_Technologies_Logo.svg/1200px-Slack_Technologies_Logo.svg.png" height="20px" alt="Slack"> </a> <a href="https://twitter.com/ablator_org" target="_blank"> <img class="banner-icon" src="https://img.shields.io/twitter/url/https/twitter.com/ablator_org.svg?style=social&label=Follow%20%40ablator_org" height="20px" alt="Twitter"> </a> <a href="https://discord.gg/9dqThvGnUW" target="_blank"> <img class="banner-icon" src="https://dcbadge.vercel.app/api/server/9dqThvGnUW" height="20px" alt="Twitter"> </a> <br></br>[![Python 3.10](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![codecov](https://codecov.io/gh/fostiropoulos/ablator/graph/badge.svg?token=LUGKC1R8CG)](https://codecov.io/gh/fostiropoulos/ablator) </br>[![CI](https://github.com/fostiropoulos/ablator/actions/workflows/_linux_test.yml/badge.svg)](https://github.com/fostiropoulos/ablator/actions/workflows/_linux_test.yml) [![CI](https://github.com/fostiropoulos/ablator/actions/workflows/_mac_test.yml/badge.svg)](https://github.com/fostiropoulos/ablator/actions/workflows/_mac_test.yml)[![CI](https://github.com/fostiropoulos/ablator/actions/workflows/_wsl_test.yml/badge.svg)](https://github.com/fostiropoulos/ablator/actions/workflows/_wsl_test.yml) |
+|--|--|
 
 
-Ablation studies are experiments used to identify the causal effects on a method performance. For example, `does your novel layer really improve performance?`
+A distributed experiment execution framework for deep learning models.
 
-## What are Ablators?
-Ablators are materials that are depleted during operation ([NASA](https://www.nasa.gov/centers/ames/thermal-protection-materials/tps-materials-development/low-density-ablators.html)). An experimental ABLATOR should not interfere with the experimental result.
+ABLATOR provides an *auto-trainer* (or bring your own) for your deep learning model to help you prototype.
 
-<img src="assets/ablator.png" width="250" height="250">
+Once you are confident there are no bugs in your code, you can launch 🚀 many experiments across many machines and evaluate thousands of model variants with 1 code change.
+
+
+
+```python
+ProtoTrainer -> ParallelTrainer
+```
+
+
+ABLATOR is designed with ablation experiments first. Ablation experiments can be used to design, improve and learn on how each component of a neural network affects performance. For example, `does X layer improve performance?`
+
+<!-- [figure] in progress  -->
 
 ## Why ABLATOR?
+
  1. Strictly typed configuration system prevents errors.
- 2. Seamless prototyping to production
+ 2. Seamless prototyping to production.
  3. Stateful experiment design. Stop, Resume, Share your experiments
  4. Automated analysis artifacts
- 5. Template Training
-
-### What is the difference with using `xxx`
-
-Comparison table with existing framework:
-
-| Framework      | HPO            | Configuration  | Training       | Tuning         | Analysis       |
-|----------------|----------------|----------------|----------------|----------------|----------------|
-| Ray            | :white_check_mark:     | :x:         | :x:         | :white_check_mark:     | :x:         |
-| Lighting       | :x:         | :x:         | :white_check_mark:     | :x:         | :x:         |
-| Optuna         | :white_check_mark:     | :x:         | :x:         | :x:         | :white_check_mark:     |
-| Hydra          | :x:         | :white_check_mark:     | :x:         | :x:         | :x:         |
-| **ABLATOR** | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-
-Features compared, hyperparameter selection (`HPO`), removing boilerplate code for configuring experiments (`Configuration`), removing boiler plate code for running experiments at scale (`Tuning`) and performing analysis on the hyperparameter selection (`Analysis`).
-
-Using:
-1. Ray: You will need to write boiler-plate code for integrating with a configuration system (i.e. Hydra), saving experiments artifacts or logging (i.e. integrate with Wandb).
-
-2. Lighting: You will need to write boiler-plate code for HPO (i.e. using Optuna), Configuring experiments (i.e. Hydra) and horizontal distributed execution (i.e. integrate with Ray)
-
-3. Hydra: The configuration system is not strongly typed (ABLATOR), and does not provide support for common ML use-cases where configuration attributes are **Derived** (inferred during run-time) or **Stateless** (change between trials). Additionally, ABLATOR provides support for custom objects that are dynamically inferred and initialized during execution.
-
-4. ABLATOR: Combines Ray back-end, with Optuna for HPO and removes boiler-plate code for fault tollerant strategies, training, and analyzing the results.
-
-Integrating different tools, for distributed execution, fault tollerance, training, checkpointing and analysis is **error prone**! Poor compatibility between tools, verisioning errors will lead to errors in your analysis.
+ 5. Auto-Trainer: Remove boiler-plate code
 
 
-You can use ABLATOR with any other library i.e. PyTorch Lighting. Just wrap a Lighting model with ModelWrapper. For examples please look [examples](examples)
+## Install
+For **MacOS** and **Linux** you can directly install via pip. If you are using **Windows**, you will need to install WSL. [Using the official guide](https://learn.microsoft.com/en-us/windows/wsl/install). WSL is a Linux subsystem and for ABLATOR purposes is identical to using Linux.
 
 
-Spend more time in the creative process of ML research and less time on dev-ops.
+Use a python virtual environment to avoid version conflicts.
 
-### Pre-Release - Phase
+```bash
+pip install ablator
+```
 
-The library is under active development and a lot of the API endpoints will be removed / renamed or their functionality changed without notice.
 
-### Install
+### Multi-Node Cluster
 
-Use a python virtual enviroment to avoid version conflicts.
+ABLATOR uses a distributed framework [Ray](https://ray.io) to launch experiments in Parallel. It is possible to connect several servers (nodes) in a single network to distribute the experimental trials among them. This is currently only supported for Linux servers (or Linux containers). Installing and setting up a ray cluster is an endeavor of its own and we recommend the [official guide](https://docs.ray.io/en/latest/cluster/getting-started.html) for detailed instructions.
 
-`pip install git+https://github.com/fostiropoulos/ablator.git`
+## Usage
 
-For Development
+### 1. Create your Configuration
 
-1. `git clone git@github.com:fostiropoulos/ablator.git`
-2. `cd ablator`
-3. `pip install -e .[dev]`
+```python
+from torch import nn
+import torch
+from ablator import (
+    ModelConfig,
+    ModelWrapper,
+    OptimizerConfig,
+    TrainConfig,
+    configclass,
+    Literal,
+    ParallelTrainer,
+    SearchSpace,
+)
+from ablator.config.mp import ParallelConfig
+
+
+@configclass
+class TrainConfig(TrainConfig):
+    dataset: str = "random"
+    dataset_size: int
+
+
+@configclass
+class ModelConfig(ModelConfig):
+    layer: Literal["layer_a", "layer_b"] = "layer_a"
+
+
+@configclass
+class ParallelConfig(ParallelConfig):
+    model_config: ModelConfig
+    train_config: TrainConfig
+
+
+config = ParallelConfig(
+    experiment_dir="ablator-exp",
+    train_config=TrainConfig(
+        batch_size=128,
+        epochs=2,
+        dataset_size=100,
+        optimizer_config=OptimizerConfig(name="sgd", arguments={"lr": 0.1}),
+        scheduler_config=None,
+    ),
+    model_config=ModelConfig(),
+    device="cpu",
+    search_space={
+        "model_config.layer": SearchSpace(categorical_values=["layer_a", "layer_b"])
+    },
+    total_trials=2,
+)
+
+```
+
+### 2. Define your Model
+
+```python
+
+class SimpleModel(nn.Module):
+    def __init__(self, config: ModelConfig) -> None:
+        super().__init__()
+        if config.layer == "layer_a":
+            self.param = nn.Parameter(torch.ones(100, 1))
+        else:
+            self.param = nn.Parameter(torch.randn(200, 1))
+
+    def forward(self, x: torch.Tensor):
+        x = self.param
+        return {"preds": x}, x.sum().abs()
+
+
+class SimpleWrapper(ModelWrapper):
+    def make_dataloader_train(self, run_config: ParallelConfig):
+        dl = [torch.rand(100) for i in range(run_config.train_config.dataset_size)]
+        return dl
+
+    def make_dataloader_val(self, run_config: ParallelConfig):
+        dl = [torch.rand(100) for i in range(run_config.train_config.dataset_size)]
+        return dl
+```
+
+### 3. Launch 🚀
+
+```python
+mywrapper = SimpleWrapper(SimpleModel)
+with ParallelTrainer(mywrapper, config) as ablator:
+    ablator.launch(".")
+```
+
+## Tutorials
+
+There are several tutorials and examples on how to use ABLATOR.
+
+We have created a [dedicated repository with them](https://github.com/fostiropoulos/ablator-tutorials)
+
+Or simply get started
+
+<a target="_blank" href="https://colab.research.google.com/github/fostiropoulos/ablator-tutorials/blob/6d79f47703b05f99655a717662f717d238f5dbfc/notebooks/HPO.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
 
