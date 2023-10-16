@@ -103,7 +103,8 @@ disable=
     fixme,
     ; R6002,
     consider-alternative-union-syntax, # R6003
-    unsupported-binary-operation # E1131
+    unsupported-binary-operation, # E1131
+    duplicate-code # R0801
 
 
 [REPORTS]

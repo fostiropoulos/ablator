@@ -1,4 +1,4 @@
-name: wsl-test
+name: mac-test
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   pytest:
-    runs-on: [self-hosted, wsl]
+    runs-on: [self-hosted, macOS]
     defaults:
       run:
         shell: bash -l {0}
@@ -20,11 +20,12 @@ jobs:
         run: |
           conda activate test-env
           pip install -e ."[dev]" -v
+          pip uninstall grpcio; conda install grpcio
       - name: Make Docker
         run: |
           conda activate test-env
-          bash ./scripts/make_docker.sh ablator-test
+          make docker docker_tag="ablator-test"
       - name: Test with pytest
         run: |
           conda activate test-env
-          pytest --runslow --docker-tag ablator-test
+          make test docker_tag="ablator-test"

@@ -15,9 +15,9 @@ jobs:
           python-version: '3.10'
       - name: Install dependencies
         run: |
-          pip install -e .[dev] -v
+          make install
       - name: Run pylint
-        run: pylint ablator
+        run: make pylint
 
   mypy:
     runs-on: ubuntu-latest
@@ -29,9 +29,9 @@ jobs:
           python-version: '3.10'
       - name: Install dependencies
         run: |
-          pip install -e .[dev] -v
+          make install
       - name: Run mypy
-        run: mypy ablator
+        run: make mypy
 
   flake8:
     runs-on: ubuntu-latest
@@ -43,12 +43,10 @@ jobs:
           python-version: '3.10'
       - name: Install dependencies
         run: |
-          pip install -e .[dev] -v
+          make install
       - name: Lint with flake8
         run: |
-          flake8 ./ablator/ --count --show-source --statistics
-          flake8 ./ablator/ --count --max-complexity=10 --max-line-length=127 --statistics
-
+          make flake8
   black:
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +57,7 @@ jobs:
           python-version: '3.10'
       - name: Install dependencies
         run: |
-          pip install -e .[dev] -v
+          make install
       - name: Check formatting with black
         run: |
-          black --check --preview .
+          make black

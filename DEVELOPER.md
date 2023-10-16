@@ -1,6 +1,6 @@
 # Developer Guide
 
-This guide is meant for those interested in developing on ABLATOR library.
+This guide is meant for those interested in contributing to the ABLATOR library.
 
 The current document is in progress. The document explains how to set up the development environment and run tests. The repository follows a test-driven development where every PR must include one or more corresponding tests.
 
@@ -230,7 +230,7 @@ As the tests are slow (especially the ones that test for multi-processing) when 
 
 To avoid polluting the commit history, each commit should be tested before pushing. Each commit should pass the tests, pylint, mypy and flake8 and have a specific purpose i.e. you should not be making *test commits*, you can experiment in a different branch and then use a separate branch for committing your working changes. This can help other people track the commit history to specific issues in the future.
 
-**NOTE** As there is currently no GPU support in Github actions, you **must** test your code on a machine that has GPUs as well as run your tests inside a Docker container without GPUS. It might seem unnecessary but there have been many cases where test cases fail either when CUDA is present or not present, even if your changes seem unrelated to the entire workflow of the app.
+**NOTE** As there is currently no widely available GPU support in Github actions, you **must** test your code on a machine that has GPUs as well as run your tests inside a Docker container without GPUS. It might seem unnecessary but there have been many cases where test cases fail either when CUDA is present or not present, even if your changes seem unrelated to the entire workflow of the app.
 
 In the main directory (after activating the correct environment):
 
@@ -250,9 +250,30 @@ Before committing, make sure that the static code checks pass.
 ```bash
 $ make static-checks
 ```
+
+**On Linux** you can also run docker tests which will set-up a clean environment for the tests to execute and will test mp functions (especially important if using WSL)
+
+```bash
+$ make docker-test
+```
+
+Please inspect [Makefile](Makefile) for additional targets.
+
 ### Testing individual changes
 
-The above workflow is very slow to execute every time you make a change to the code. It is better to reserve it for the very end of your development process. To execute a specific test you can run
+There are two test categories, fast tests and mp (slow) tests. To run mp tests you can specify `--mp` flag and to run fast tests you can specify `--fast` flag.
+
+```bash
+$ pytest --fast
+```
+or
+
+```bash
+$ pytest --mp
+```
+**NOTE** The MP tests are naturally flaky. Distributed systems can have many things go wrong. Many of the tests are end-to-end and try to cover as much ground as possible. If for whatever reason a test is failing you can execute it isolated. If the test passes isolated but not when run together with other tests it could mean that a test or code change you made makes the tests flaky, which is not a good sign. In a realistic scenario, we want to reduce flakyness of our distributed library.
+
+Tests are slow and the above workflow is very slow to execute every time you make a change to the code. It is better to reserve it for the very end of your development process. To execute a specific test you can run
 
 ```bash
 $ pytest tests/<test_folder>/<test_file.py>::<test_function_name>
@@ -263,11 +284,11 @@ To debug a test you can execute the debugger in the same file, there is logic im
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
     # OR a specific test
     fn_names = ["test_name"]
-    test_fns = [l[fn] for fn in fn_names]
+    test_fns = [_locals[fn] for fn in fn_names]
     # Special locally defined fixtures or function parameters.
     kwargs = {
         "config": copy.deepcopy(_config),
