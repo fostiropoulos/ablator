@@ -1,6 +1,5 @@
 import random
-from pathlib import Path
-
+import ray
 import numpy as np
 import torch
 
@@ -34,14 +33,7 @@ def test_conftest_order():
 
 def test_ray_cluster(ray_cluster):
     ray_cluster.setUp()
-    assert len(ray_cluster.node_ips()) == ray_cluster.nodes + 1
-    ray_cluster.tearDown()
-
-
-if __name__ == "__main__":
-    from tests.conftest import run_tests_local
-
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
-    run_tests_local(test_fns)
+    assert len(ray_cluster.node_ips()) == ray_cluster.nodes
+    ray.shutdown()
+    ray_cluster.setUp()
+    assert len(ray_cluster.node_ips()) == ray_cluster.nodes
