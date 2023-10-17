@@ -1,8 +1,7 @@
 from ablator.config.hpo import SearchSpace
 from ablator.config.main import configclass
 from ablator.config.proto import RunConfig
-from ablator.config.types import Dict, Enum, Optional, Stateless
-from ablator.modules.storage.remote import RemoteConfig
+from ablator.config.types import Dict, Enum, Optional, Stateless, Literal
 
 
 class SearchAlgo(Enum):
@@ -52,7 +51,7 @@ class ParallelConfig(RunConfig):
         metrics to optimize, eg. ``{"val_loss": "min"}``
     gpu_mb_per_experiment: int
         CUDA memory requirement per experimental trial in MB. e.g. a value of 100 is equivalent to 100MB
-    search_algo: SearchAlgo = SearchAlgo.tpe
+    search_algo: SearchAlgo = SearchAlgo.grid
         type of search algorithm.
     ignore_invalid_params: bool = False
         whether to ignore invalid parameters when sampling or raise an error.
@@ -122,7 +121,7 @@ class ParallelConfig(RunConfig):
     total_trials: Optional[int]
     concurrent_trials: Stateless[Optional[int]]
     search_space: Dict[SearchSpace]
+    verbose: Stateless[Literal["console", "silent"]] = "console"
     gpu_mb_per_experiment: Stateless[Optional[int]] = None
-    search_algo: Stateless[SearchAlgo] = SearchAlgo.random
+    search_algo: Stateless[SearchAlgo] = SearchAlgo.grid
     ignore_invalid_params: Stateless[bool] = False
-    remote_config: Stateless[Optional[RemoteConfig]] = None
