@@ -1,3 +1,4 @@
+from ablator.config.remote import RemoteConfig
 from ablator.config.main import ConfigBase, configclass
 from ablator.config.types import Dict, Optional, Stateless, Literal, Enum
 from ablator.modules.optimizer import OptimizerConfig
@@ -212,6 +213,7 @@ class RunConfig(ConfigBase):
 
     # location to store experiment artifacts
     experiment_dir: Stateless[Optional[str]] = None
+    experiment_id: Stateless[Optional[str]] = None
     random_seed: Optional[int] = None
     train_config: TrainConfig
     model_config: ModelConfig
@@ -231,6 +233,7 @@ class RunConfig(ConfigBase):
     divergence_factor: Stateless[Optional[float]] = 10
     optim_metrics: Stateless[Optional[Dict[Optim]]]
     optim_metric_name: Stateless[Optional[str]]
+    remote_config: Stateless[Optional[RemoteConfig]]
 
     @property
     def uid(self) -> str:
