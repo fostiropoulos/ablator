@@ -179,7 +179,7 @@ class Results:
         # Need a way to derived MPConfig implementation from a pickled file.
         # We need the types of the configuration, metric map.
         self.experiment_dir = Path(experiment_dir)
-        run_config_path = self.experiment_dir.joinpath("default_config.yaml")
+        run_config_path = self.experiment_dir.joinpath("master_config.yaml")
         if not run_config_path.exists():
             raise FileNotFoundError(f"{run_config_path}")
         self.config = config_type.load(run_config_path)
