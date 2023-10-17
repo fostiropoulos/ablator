@@ -1,7 +1,6 @@
 import ast
 import copy
 import io
-import logging
 from pathlib import Path
 from typing import Callable
 
@@ -163,6 +162,15 @@ class NestedParentConfig2(ConfigBase):
     b1: ParentTestConfig3
 
 
+class ForwardConfig(NestedParentConfig2):
+    forward_ref: "NestedParentConfigInit"
+
+
+# missing decorator
+class NestedParentConfigInit(NestedParentConfig2):
+    b1: ParentTestConfig2 = ParentTestConfig2()
+
+
 @configclass
 class DictEnumConfig(ConfigBase):
     a: Dict[myEnum]
@@ -251,10 +259,12 @@ def test_attrs(tmp_path: Path, assert_error_msg: Callable[..., str]):
         loaded_p.to_dot_path()
         == "a10: 2\na1: 10\na2: '10'\na8: '10'\na9: null\na6: a\na5.a: 10\nc2.a1: 4\n"
     )
-    # TODO do we want them immutable?
     assert loaded_p.get_val_with_dot_path("a10") == 2
     assert loaded_p.get_type_with_dot_path("a10") == int
     assert loaded_p.get_annot_type_with_dot_path("a10") == int
+    assert loaded_p.get_val_with_dot_path("c2.a1") == 4
+    assert loaded_p.get_type_with_dot_path("c2.a1") == int
+    assert loaded_p.get_annot_type_with_dot_path("c2.a1") == int
     assert p.get_val_with_dot_path("a10") == "10"
     assert p.get_type_with_dot_path("a10") == str
 
@@ -272,6 +282,11 @@ def test_attrs(tmp_path: Path, assert_error_msg: Callable[..., str]):
     p_prime.c2.a1 = 100
     assert loaded_p.c2.a1 == 2 and p_prime.c2.a1 == 100
 
+    p = NestedParentConfigInit()
+    assert p.annotations["b1"].variable_type == ParentTestConfig2
+    with pytest.raises(ValueError, match="Does not support forward"):
+        fp = ForwardConfig(forward_ref=p)
+
 
 def test_set_attr(assert_error_msg: Callable[..., str]):
     c = ParentTestConfig(a10="")
@@ -288,7 +303,8 @@ def test_set_attr(assert_error_msg: Callable[..., str]):
 
     assert (
         msg
-        == f"{Pass} provided args or kwargs (0) must be formatted as (args, kwargs) or (args) or (kwargs)."
+        == f"{Pass} provided args or kwargs (0) must be formatted as (args, kwargs) or"
+        " (args) or (kwargs)."
     )
     c.a5 = {"a": 1}
     assert c.a5.a == 1
@@ -342,7 +358,10 @@ def test_parse_repr():
     for error_class in error_representation_classes:
         with pytest.raises(
             RuntimeError,
-            match=f"Could not parse <class '{__name__}.{error_class.__name__}'> from its representation ",
+            match=(
+                f"Could not parse <class '{__name__}.{error_class.__name__}'> from its"
+                " representation "
+            ),
         ):
             parse_repr_to_kwargs(error_class(a=10))
 
@@ -387,13 +406,15 @@ def test_debug_load(
     last_line = out.getvalue().split("\n")[-2]
     assert (
         last_line
-        == "Loading ParentTestConfig in `debug` mode. Setting missing required value a10 to `None`."
+        == "Loading ParentTestConfig in `debug` mode. Setting missing required value"
+        " a10 to `None`."
     )
     p = ParentTestConfig(debug=True, a123=123, a543=543)
     last_line = out.getvalue().split("\n")[-2]
     assert (
         last_line
-        == "Loading ParentTestConfig in `debug` mode. Ignoring unexpected arguments: `a123, a543`"
+        == "Loading ParentTestConfig in `debug` mode. Ignoring unexpected arguments:"
+        " `a123, a543`"
     )
     yaml_p = tmp_path.joinpath("test.yaml")
     p.write(yaml_p)
@@ -403,14 +424,24 @@ def test_debug_load(
     last_line = out.getvalue().split("\n")[-2]
     assert (
         last_line
-        == "Loading ParentTestConfig in `debug` mode. Setting missing required value a10 to `None`."
+        == "Loading ParentTestConfig in `debug` mode. Setting missing required value"
+        " a10 to `None`."
     )
     ParentTestConfig4.load(yaml_p, debug=True)
     args = out.getvalue().split("\n")[-4:-1]
     msgs = [
-        "Loading ParentTestConfig4 in `debug` mode. Setting missing required value b1 to `None`.",
-        "Loading ParentTestConfig4 in `debug` mode. Unable to parse `a10` value None. Setting to `None`.",
-        "Loading ParentTestConfig4 in `debug` mode. Unable to parse `a6` value a. Setting to `None`.",
+        (
+            "Loading ParentTestConfig4 in `debug` mode. Setting missing required value"
+            " b1 to `None`."
+        ),
+        (
+            "Loading ParentTestConfig4 in `debug` mode. Unable to parse `a10` value"
+            " None. Setting to `None`."
+        ),
+        (
+            "Loading ParentTestConfig4 in `debug` mode. Unable to parse `a6` value a."
+            " Setting to `None`."
+        ),
     ]
     assert all(msg in args for msg in msgs)
     msg = assert_error_msg(lambda: ParentTestConfig4.load(yaml_p, debug=False))
@@ -418,7 +449,8 @@ def test_debug_load(
     msg = assert_error_msg(lambda: ParentTestConfig3.load(yaml_p, debug=False))
     assert (
         msg
-        == f"{Pass} provided args or kwargs (a) must be formatted as (args, kwargs) or (args) or (kwargs)."
+        == f"{Pass} provided args or kwargs (a) must be formatted as (args, kwargs) or"
+        " (args) or (kwargs)."
     )
     pconfig_3 = ParentTestConfig3.load(yaml_p, debug=True)
     pconfig_4 = ParentTestConfig4.load(yaml_p, debug=True)
@@ -426,14 +458,17 @@ def test_debug_load(
     nested_c = NestedParentConfig(b1=pconfig_4, a1="")
     msg = assert_error_msg(lambda: NestedParentConfig(b1=pconfig_3, a1=""))
 
-    assert msg == (
-        f"{ParentTestConfig4} provided args or kwargs (ParentTestConfig3(a6=None, a2=10, a1='10', a10=None, a8='10', "
-        "a9=None, a5={'a': 10}, c2={'a1': 10})) must be formatted as (args, kwargs) or (args) or (kwargs)."
+    assert (
+        msg
+        == f"{ParentTestConfig4} provided args or kwargs (ParentTestConfig3(a6=None,"
+        " a2=10, a1='10', a10=None, a8='10', a9=None, a5={'a': 10}, c2={'a1':"
+        " 10})) must be formatted as (args, kwargs) or (args) or (kwargs)."
     )
     nested_c = NestedParentConfig(b1=pconfig_3, a1="", debug=True)
     assert (
         out.getvalue().split("\n")[-2]
-        == f"Loading NestedParentConfig in `debug` mode. Unable to parse `b1` value {pconfig_3}. Setting to `None`."
+        == "Loading NestedParentConfig in `debug` mode. Unable to parse `b1` value"
+        f" {pconfig_3}. Setting to `None`."
     )
     nested_c = NestedParentConfig(b1=pconfig_4, a1="")
     assert nested_c.b1.a6 is None
@@ -447,7 +482,7 @@ def test_debug_load(
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
     run_tests_local(test_fns)
