@@ -74,6 +74,12 @@ def test_run_lambda():
         cuda=False,
         node_ip=head_ip,
     )
+
+
+@pytest.mark.mp
+@pytest.mark.skipif(not IS_CUDA_AVAILABLE, reason="Meant to test GPU allocation")
+def test_run_lambda_cuda():
+    head_ip = get_node_ip()
     assert run_lambda(
         lambda: torch.cuda.is_available(),
         cuda=True,
