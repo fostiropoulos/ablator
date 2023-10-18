@@ -1,18 +1,77 @@
+import logging
+import multiprocessing
+import struct
+import threading
+import time
+import typing as ty
 from pathlib import Path
 from typing import Union
-import logging
-import typing as ty
+
 import numpy as np
 import pandas as pd
 from omegaconf import OmegaConf
 from tensorboardX import SummaryWriter
+from tensorboardX.event_file_writer import EventsWriter
+from tensorboardX.proto import event_pb2
+from tensorboardX.record_writer import masked_crc32c
 
 from ablator.config.main import ConfigBase
 from ablator.config.utils import flatten_nested_dict
 from ablator.modules.loggers import LoggerBase
 
-
 logging.getLogger("tensorboardX").setLevel(logging.ERROR)
+
+
+class RecordWriter:
+    """
+    an extension to `tensorboardX.record_writer.RecordWriter` but removes
+    support for remote writing.
+
+    Parameters
+    ----------
+    path : Path
+        The path of where to write the records.
+    """
+
+    def __init__(self, path: Path):
+        self._name_to_tf_name: dict[str, str] = {}
+        self._tf_names: set[str] = set()
+        self.path = path
+        self._writer = None
+
+    def write(self, data):
+        with open(self.path, "ab") as writer:
+            w = writer.write
+            header = struct.pack("Q", len(data))
+            w(header)
+            w(struct.pack("I", masked_crc32c(header)))
+            w(data)
+            w(struct.pack("I", masked_crc32c(data)))
+
+    def flush(self):
+        ...
+
+    def close(self):
+        ...
+
+
+# Monkey-patching for faster writes to work with mount
+# pylint: disable=super-init-not-called,no-member
+class MyEventsWriter(EventsWriter):
+    def __init__(self, filename):
+        """
+        Events files have a name of the form
+        '/some/file/path/events.out.tfevents.[timestamp].[hostname]'
+        """
+        self._file_name = filename
+        self._num_outstanding_events = 0
+        self._py_recordio_writer = RecordWriter(self._file_name)
+        # Initialize an event instance.
+        self._event = event_pb2.Event()
+        self._event.wall_time = time.time()
+        self._event.file_version = "brain.Event:2"
+        self._lock = threading.Lock()
+        self.write_event(self._event)
 
 
 class TensorboardLogger(LoggerBase):
@@ -34,8 +93,19 @@ class TensorboardLogger(LoggerBase):
 
     def __init__(self, summary_dir: Union[str, Path]):
         # Initialize the TensorboardLogger with a summary directory.
+        self.thread_lock = threading.Lock()
         self.summary_dir = Path(summary_dir).as_posix()
-        self.backend_logger = SummaryWriter(log_dir=summary_dir)
+        self.backend_logger = SummaryWriter(
+            log_dir=summary_dir, max_queue=2, flush_secs=2
+        )
+        fw = self.backend_logger.file_writer.event_writer
+        fw.close()
+        filename = fw._ev_writer._file_name
+        fw._ev_writer = MyEventsWriter(filename)
+        fw._event_queue = multiprocessing.Queue(2)
+        fw.reopen()
+
+        super().__init__(update_interval=10)
 
     def add_image(
         self, k: str, v: np.ndarray, itr: int, dataformats: ty.Optional[str] = "CHW"
@@ -54,7 +124,9 @@ class TensorboardLogger(LoggerBase):
         dataformats : ty.Optional[str]
             The format of the image data, by default ``"CHW"``.
         """
-        self.backend_logger.add_image(k, v, itr, dataformats=dataformats)
+        with self.thread_lock:
+            self.backend_logger.add_image(k, v, itr, dataformats=dataformats)
+            self.backend_logger.flush()
 
     def add_table(self, k: str, v: pd.DataFrame, itr: int):
         """
@@ -69,7 +141,9 @@ class TensorboardLogger(LoggerBase):
         itr : int
             The iteration number.
         """
-        self.backend_logger.add_text(k, v.to_markdown(), itr)
+        with self.thread_lock:
+            self.backend_logger.add_text(k, v.to_markdown(), itr)
+            self.backend_logger.flush()
 
     def add_text(self, k: str, v: str, itr: int):
         """
@@ -84,7 +158,9 @@ class TensorboardLogger(LoggerBase):
         itr : int
             The iteration number.
         """
-        self.backend_logger.add_text(k, v, itr)
+        with self.thread_lock:
+            self.backend_logger.add_text(k, v, itr)
+            self.backend_logger.flush()
 
     def add_scalars(self, k: str, v: dict[str, float | int], itr: int):
         """
@@ -99,8 +175,10 @@ class TensorboardLogger(LoggerBase):
         itr : int
             The iteration number.
         """
-        for _k, _v in v.items():
-            self.backend_logger.add_scalar(f"{k}_{_k}", _v, itr)
+        with self.thread_lock:
+            for _k, _v in v.items():
+                self.backend_logger.add_scalar(f"{k}_{_k}", _v, itr)
+            self.backend_logger.flush()
         # NOTE this is buggy:
         # self.backend_logger.add_scalars(k, v_dict, itr)
 
@@ -117,10 +195,12 @@ class TensorboardLogger(LoggerBase):
         itr : int
             The iteration number.
         """
-        if v is None:
-            self.backend_logger.add_scalar(k, np.nan, itr)
-        else:
-            self.backend_logger.add_scalar(k, v, itr)
+        with self.thread_lock:
+            if v is None:
+                self.backend_logger.add_scalar(k, np.nan, itr)
+            else:
+                self.backend_logger.add_scalar(k, v, itr)
+            self.backend_logger.flush()
 
     def write_config(self, config: ConfigBase):
         """
@@ -131,9 +211,18 @@ class TensorboardLogger(LoggerBase):
         config : ConfigBase
             The configuration object.
         """
-        hparams = flatten_nested_dict(config.to_dict())
-        run_config = OmegaConf.to_yaml(OmegaConf.create(hparams)).replace("\n", "\n\n")
-        self.backend_logger.add_text("config", run_config, 0)
+        with self.thread_lock:
+            hparams = flatten_nested_dict(config.to_dict())
+            run_config = OmegaConf.to_yaml(OmegaConf.create(hparams)).replace(
+                "\n", "\n\n"
+            )
+            self.backend_logger.add_text("config", run_config, 0)
+            self.backend_logger.flush()
+
+    def heartbeat(self, timeout: int | None = None):
+        assert timeout is None
+        self._sync()
 
     def _sync(self):
-        pass
+        with self.thread_lock:
+            self.backend_logger.flush()

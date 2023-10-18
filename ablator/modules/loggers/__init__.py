@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from ablator.config.main import ConfigBase, configclass
+from ablator.mp.heart import Heart
 
 
 @configclass
@@ -10,7 +11,7 @@ class LoggerConfig(ConfigBase):
         raise NotImplementedError
 
 
-class LoggerBase(ABC):
+class LoggerBase(Heart):
     @abstractmethod
     def add_image(self, k, v, itr, dataformats="CHW"):
         pass
