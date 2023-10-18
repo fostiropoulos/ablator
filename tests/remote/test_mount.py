@@ -176,7 +176,7 @@ def test_mount(tmp_path: Path, volume_name):
 
 
 @pytest.mark.mp
-def test_mp_mount(tmp_path: Path, wrapper, make_config, volume_name):
+def test_mp_mount(tmp_path: Path, wrapper, make_config, ray_cluster, volume_name):
     if volume_name is not None:
         local_path = None
         folder_a = Path("/ablator")
@@ -213,7 +213,9 @@ def test_mp_mount(tmp_path: Path, wrapper, make_config, volume_name):
             ablator.launch(working_directory=tmp_path)
 
             nodes = ablator.cluster_manager.available_resources.keys()
-            assert len(nodes) == 2, "Check if the experiment run with 2 nodes"
+            assert (
+                len(nodes) == ray_cluster.nodes
+            ), "Check if the experiment run with same number of nodes as the cluster"
 
             folder_b = Path(config.experiment_dir)
 
@@ -284,17 +286,20 @@ if __name__ == "__main__":
     from tests.conftest import run_tests_local
     from tests.test_plugins.model import (
         TestWrapper,
+        MyCustomModel,
         _make_config,
     )
 
     if not IS_LINUX:
-        raise NotImplementedError("Tests in this file are not supported for non-linux platforms")
+        raise NotImplementedError(
+            "Tests in this file are not supported for non-linux platforms"
+        )
 
     _locals = locals()
     fn_names = [fn for fn in _locals if fn.startswith("test_")]
     test_fns = [_locals[fn] for fn in fn_names]
     kwargs = {
-        "wrapper": TestWrapper(TestWrapper),
+        "wrapper": TestWrapper(MyCustomModel),
         "make_config": _make_config,
         "volume_name": None,
     }
