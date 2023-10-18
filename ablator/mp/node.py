@@ -29,6 +29,10 @@ NODE_ID = str
 
 
 class DuplicateNodes(RuntimeError):
+    """
+    Error for when several nodes with the same IP but different
+    ID are found connected on the cluster.
+    """
     ...
 
 

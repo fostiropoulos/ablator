@@ -67,8 +67,10 @@ class Lock:
             n += 1
             if n % 10000 == 0:
                 logging.warning(
-                    "Lock(%s) takes an excessive time and it could be caused by a"
-                    " deadlock.",
+                    (
+                        "Lock(%s) takes an excessive time and it could be caused by a"
+                        " deadlock."
+                    ),
                     id(self),
                 )
 
