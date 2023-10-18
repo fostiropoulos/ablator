@@ -4,7 +4,6 @@ GPU=(--gpus all)
 CONTAINER_NAME="ablator"
 ARGS=("${@}")
 CMD=()
-CLEAN_FLAG=false
 
 for ((i=0;i<$#;i++))
 do
@@ -12,8 +11,6 @@ do
        # -- option
        --cpu )
        GPU=();;
-       --clean )
-       CLEAN_FLAG=true;;
        --docker-tag )
        ((i++))
        CONTAINER_NAME=${ARGS[$i]};;
@@ -23,11 +20,6 @@ do
 done
 
 
-if [ "$CLEAN_FLAG" = true ]; then
-   docker kill $(docker ps -q)
-   docker container prune
-   docker volume rm ${CONTAINER_NAME}-volume
-fi
 
 docker volume create --driver local \
    --opt type=tmpfs \
