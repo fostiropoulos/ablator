@@ -542,8 +542,17 @@ def test_train_main_remote(
     assert (
         "val_loss" in metrics and metrics["current_epoch"] == config.train_config.epochs
     )
-
     shutil.rmtree(experiment_dir)
+    # test specifying and not specifying resource_manager
+    with pytest.raises(ValueError, match="Must specify or leave unspecified"):
+        _new_uid, metrics, state = remote_fn(
+            run_config=config,
+            uid=uid,
+            model=copy.deepcopy(wrapper),
+            resource_manager="X",
+            gpu=None,
+        )
+
     # this lr causes an error
     config.train_config.optimizer_config.arguments.lr = 11.0
     uid = str(uuid.uuid4())

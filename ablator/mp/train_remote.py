@@ -36,7 +36,7 @@ def _apply_unlock_hook(
     ----------
     model : ModelWrapper
         The model to apply the hook to
-    resource_manager : ty.Union[ResourceManager, None]
+    resource_manager : ResourceManager
         The source manager to signal to release the resources.
     gpu : GPU
         The GPU resource to release.
@@ -132,8 +132,8 @@ def train_main_remote(
     model: ModelWrapper,
     run_config: ParallelConfig,
     mp_logger: RemoteFileLogger,
-    resource_manager: ResourceManager,
-    gpu: GPU,
+    resource_manager: ResourceManager | None,
+    gpu: GPU | None,
     uid: int,
     fault_tollerant: bool = True,
     crash_exceptions_types: list[type] | None = None,
@@ -154,9 +154,10 @@ def train_main_remote(
         Runtime configuration for this trial.
     mp_logger : RemoteFileLogger
         The file logger that's used to log training progress.
-    resource_manager : ResourceManager
-        The resource manager that is used to release resources after the training process starts
-    gpu : GPU
+    resource_manager : ResourceManager | None
+        The resource manager that is used to release resources after the training process starts.
+        When unspecified it also expects `gpu` to be `None`.
+    gpu : GPU | None
         The gpu to which to allocate the execution of the current remote.
     uid : int
         the trial unique identifier.
@@ -200,6 +201,10 @@ def train_main_remote(
     else:
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
+    if (resource_manager is not None) ^ (gpu is not None):
+        raise ValueError(
+            "Must specify or leave unspecified `resource_manager` and `gpu`."
+        )
     handle_exception = partial(
         _handle_exception,
         model=model,

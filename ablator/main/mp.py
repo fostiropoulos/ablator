@@ -231,9 +231,11 @@ class ParallelTrainer(ProtoTrainer):
         resume: bool = False,
     ):
         trial_uuid = f"{run_config.uid}_{str(uuid.uuid4())[:4]}"
-        gpu, manager = self.cluster_manager.get_gpu(
-            node_ip=node_ip, process_name=trial_uuid
-        )
+        gpu, manager = (None, None)
+        if self._gpu > 0:
+            gpu, manager = self.cluster_manager.get_gpu(
+                node_ip=node_ip, process_name=trial_uuid
+            )
         wrapper = copy.deepcopy(self.wrapper)
         # pylint: disable=protected-access
         wrapper._uid = trial_uuid
