@@ -19,7 +19,7 @@ ProtoTrainer -> ParallelTrainer
 
 ABLATOR is designed with ablation experiments first. Ablation experiments can be used to design, improve and learn on how each component of a neural network affects performance. For example, `does X layer improve performance?`
 
-<!-- [figure] in progress  -->
+![ablator](assets/ablator.png)
 
 ## Why ABLATOR?
 
