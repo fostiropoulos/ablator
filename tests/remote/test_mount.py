@@ -26,13 +26,14 @@ from ablator.mp.node import MountServer, run_actor_node
 
 IS_LINUX = "linux" in platform.system().lower()
 
-pytestmark = pytest.mark.skipif(
-    not IS_LINUX,
-    reason="RMount is only supported for Linux platforms.",
-)
-# must be imported after checking for OS. Otherwise
-# will throw an error.
-from rmount.server import RemoteServer  # noqa: E402
+if IS_LINUX:
+    # must be imported after checking for OS. Otherwise
+    # will throw an error.
+    from rmount.server import RemoteServer  # noqa: E402
+else:
+    pytestmark = pytest.mark.skip(
+        reason="RMount tests are only supported for Linux platforms."
+    )
 
 
 class SimpleModel(nn.Module):
@@ -285,6 +286,9 @@ if __name__ == "__main__":
         TestWrapper,
         _make_config,
     )
+
+    if not IS_LINUX:
+        raise NotImplementedError("Tests in this file are not supported for non-linux platforms")
 
     _locals = locals()
     fn_names = [fn for fn in _locals if fn.startswith("test_")]
