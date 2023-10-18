@@ -23,6 +23,17 @@ ABLATOR is designed with ablation experiments first. Ablation experiments can be
 
 ## Why ABLATOR?
 
+ABLATOR is meant to be used as:
+
+1. **Pedagogical tool**, for learning and understanding what helps improve a model's performance. A lot of the design choices of a Neural Network are ad-hoc. For example, the Transformer architecture was introduced in 2017 ([Attention Is All You Need](https://arxiv.org/abs/1706.03762)) but it wasn't until 2020 that the influence of the [layer-norm was thoroughly examined](https://arxiv.org/pdf/2002.04745.pdf).
+
+2. **Research**, for rapid development and prototyping of a new idea or novel component
+
+3. **Deployment**, for A / B testing of the ML model and whether the code changes improve the performance of an ML model during deployment i.e. as part of CI / CD pipeline.
+
+Doing all of the above **efficiently** and at **scale** requires cumbersome set-up and know-how. We remove boiler-plate code and details to help users achieve what they want.
+
+### Technical Details
  1. Strictly typed configuration system prevents errors.
  2. Seamless prototyping to production.
  3. Stateful experiment design. Stop, Resume, Share your experiments
