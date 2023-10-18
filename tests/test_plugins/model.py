@@ -1,7 +1,7 @@
 import copy
 import os
 import time
-from multiprocessing import Lock
+from collections import OrderedDict
 from pathlib import Path
 
 import pytest
@@ -18,16 +18,16 @@ from ablator import (
     Stateless,
     TrainConfig,
 )
-from ablator.analysis.results import Results
 from ablator.config.main import configclass
 from ablator.config.mp import ParallelConfig, SearchSpace
-from ablator.main.mp import ParallelTrainer
+from ablator.mp.gpu import GPU, ResourceManager
 from ablator.utils import base
 
-N_MOCK_NODES = 10
+N_GPUS = 3
+GPUS = {i: (i + 1) * 100 for i in range(N_GPUS)}
+
 
 N_BATCHES = 100
-DEVICE = "cpu"
 
 WORKING_DIR = Path(__file__).parent.parent.as_posix()
 
@@ -49,6 +49,14 @@ class CustomModelConfig(ModelConfig):
 
 class CustomTrainConfig(TrainConfig):
     epochs: Stateless[int]
+
+
+class MockActor:
+    def __init__(self):
+        ...
+
+    def is_alive(self):
+        return True
 
 
 @configclass
@@ -122,6 +130,11 @@ def wrapper():
 
 
 @pytest.fixture()
+def mock_actor():
+    return MockActor
+
+
+@pytest.fixture()
 def make_config():
     return _make_config
 
@@ -131,9 +144,10 @@ def working_dir():
     return WORKING_DIR
 
 
-def _remote_fn(gpu_id: int, gpu_manager=None):
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}"
-    t = torch.randn(300, 100, 300).to(f"cuda")
+def _remote_fn(gpu_id: int | None = None, gpu_manager: ResourceManager | None = None):
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}" if gpu_id is not None else ""
+    device = "cuda" if gpu_id is not None else "cpu"
+    t = torch.randn(300, 100, 300).to(device)
     time.sleep(5)
     if gpu_manager is not None:
         ray.get(gpu_manager.unlock.remote(gpu_id))
@@ -147,9 +161,10 @@ def _blocking_lock_remote(t: base.Lock):
     return True
 
 
+# noqa: F841
 def _locking_remote_fn(gpu_id: int, gpu_manager=None):
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}"
-    t = torch.randn(300, 100, 300).to(f"cuda")
+    t = torch.randn(300, 100, 300).to("cuda")
     start_time = time.time()
     while True:
         gpu_info = ray.get(gpu_manager._gpus.remote())[gpu_id]
@@ -161,42 +176,39 @@ def _locking_remote_fn(gpu_id: int, gpu_manager=None):
     return True
 
 
-def get_ablator(tmp_path, working_dir, main_ray_cluster):
-    main_ray_cluster.setUp()
-    assert len(main_ray_cluster.node_ips()) == main_ray_cluster.nodes + 1
-    n_trials = 9
-    error_wrapper = TestWrapper(MyErrorCustomModel)
-    config = _make_config(tmp_path, search_space_limit=n_trials)
-    config.experiment_dir = tmp_path
-    config.total_trials = n_trials
-    ablator = ParallelTrainer(wrapper=error_wrapper, run_config=config)
-    ablator.launch(working_dir)
-    return ablator
+def update_gpus(self: ResourceManager):
+    if not getattr(self, "_init_gpus", False):
+        self.gpus = OrderedDict()
+        for i in range(N_GPUS):
+            self.gpus[i] = GPU(
+                device_id=i,
+                free_mem=GPUS[i] - 1,
+                max_mem=GPUS[i],
+                lock_timeout=self._timeout,
+            )
+        self._init_gpus = True
+    self.mem = 10
+    self.cpu_usage = [0, 1]
+    self.cpu_count = 2
+    self.is_active = True
 
 
-test_lock = Lock()
+def update_no_gpus(self: ResourceManager, timeout=None):
+    self.gpus = OrderedDict()
+    self.mem = 10
+    self.cpu_usage = [0, 1]
+    self.cpu_count = 2
+    self.is_active = True
 
 
-@pytest.fixture(scope="session")
-def ablator(
-    tmpdir_factory,
-    working_dir,
-    main_ray_cluster,
-):
-    tmp_path = Path(tmpdir_factory.getbasetemp()).joinpath("ablator")
-
-    with test_lock:
-        yield get_ablator(
-            tmp_path,
-            working_dir,
-            main_ray_cluster,
-        )
+@pytest.fixture()
+def update_gpus_fixture():
+    return update_gpus
 
 
-@pytest.fixture(scope="session")
-def ablator_results(ablator):
-    config = ablator.run_config
-    return copy.deepcopy(Results(config, ablator.experiment_dir))
+@pytest.fixture()
+def update_no_gpus_fixture():
+    return update_no_gpus
 
 
 @pytest.fixture()
@@ -214,8 +226,13 @@ def blocking_lock_remote():
     return _blocking_lock_remote
 
 
+@pytest.fixture()
+def n_gpus():
+    return N_GPUS
+
+
 # Important NOTE
-# device= "cuda" if torch.cuda.is_available() else "cpu",
+# device= "cuda" if torch.cuda.is_available() else "cpu" in the parameter would cause errors.
 # For whatever reason the above would cause any remote function in this file
 # to not properly allocate cuda. I believe it is because the remote fn is coppied by ray and
 # torch is initialized in this file and messes up with environ "CUDA_VISIBLE_DEVICES"
@@ -227,7 +244,7 @@ def _make_config(
     search_space_limit: int | None = None,
     gpu_util: int = 100,
     search_space: dict | None = None,
-    device=None
+    device=None,
     # device= "cuda" if torch.cuda.is_available() else "cpu",
 ):
     optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})

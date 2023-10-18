@@ -139,7 +139,7 @@ class RemoteConfig(ConfigBase):
     Examples
     --------
     The following example defines a Remote configuration for connecting to `localhost`
-    via ssh. You will need to adapt it to your own personal credentials.
+    via SSH. You will need to adapt it to your credentials.
 
     >>> RemoteConfig(
     ...     ssh={
