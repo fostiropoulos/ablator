@@ -64,7 +64,11 @@ def ray_init(**kwargs) -> RuntimeContext:
             or os.environ["CUDA_VISIBLE_DEVICES"] != ""
         )
         and torch.cuda.is_available()
-        and ("address" not in kwargs or kwargs["address"] is None)
+        and (
+            "address" not in kwargs
+            or kwargs["address"] is None
+            or kwargs["address"] == "local"
+        )
     ):
         # this is because WSL and other systems work poorly
         # with ray.
