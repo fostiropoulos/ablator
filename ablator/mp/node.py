@@ -208,8 +208,8 @@ class MountServer:
             "ablator", *config.local_path.parts[1:]
         )
         self.config = config
-        self.remote_path: Path = config.remote_path
-        self.local_path: Path = config.local_path
+        self.remote_path: Path = Path(config.remote_path)
+        self.local_path: Path = Path(config.local_path)
         # MountServer would only execute for Linux
         # pylint: disable=import-outside-toplevel
         try:

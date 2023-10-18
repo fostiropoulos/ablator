@@ -154,8 +154,8 @@ class RemoteConfig(ConfigBase):
 
     ssh: Stateless[Optional[SSHConfig]]
     s3: Stateless[Optional[S3Config]]
-    remote_path: Derived[Path]
-    local_path: Derived[Path]
+    remote_path: Derived[str]
+    local_path: Derived[str]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -161,10 +161,19 @@ class ProtoTrainer:
                 f"The experiment directory `{local_path}` is not empty and it"
                 " will lead to errors when synchronizing with a remote storage."
             )
-
-        config = self.run_config.remote_config.get_config()
-        remote_path = Path("/ablator") / self.experiment_id
-        self.run_config.remote_config.remote_path = remote_path
+        remote_config = self.run_config.remote_config
+        config = remote_config.get_config()
+        if remote_config.ssh is not None and remote_config.remote_path is None:
+            # TODO allow specifying a directory
+            remote_path = Path("/ablator")
+        if remote_config.s3 is not None and remote_config.remote_path is None:
+            raise ValueError
+        else:
+            remote_path = remote_config.remote_path
+        self.run_config.remote_config.remote_path = (
+            Path(remote_path) / self.experiment_id
+        )
+        remote_path = self.run_config.remote_config.remote_path
         self.run_config.remote_config.local_path = local_path
         self.mount_server = RemoteMount(
             settings=config,
@@ -173,7 +182,6 @@ class ProtoTrainer:
             verbose=debug,
             timeout=timeout,
         )
-
         try:
             self.mount_server.mount()
         except RuntimeError as e:
