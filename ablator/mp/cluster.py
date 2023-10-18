@@ -309,7 +309,6 @@ class ClusterManager(Heart):
 
     @property
     def head_resources(self) -> Resource:
-        # TODO unit-test
         for _ in range(10):
             node_resources: Resource = ray.get(
                 self._resource_actor.resources.remote(), timeout=self._timeout

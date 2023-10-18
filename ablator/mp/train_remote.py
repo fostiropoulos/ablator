@@ -7,7 +7,7 @@ from functools import wraps
 from functools import partial
 
 
-from ablator.mp.gpu_manager import GPUManager, unlock_gpu
+from ablator.mp.gpu import GPU, ResourceManager, unlock_gpu
 import ablator.utils.base as butils
 from ablator.config.mp import ParallelConfig
 from ablator.main.model.main import CheckpointNotFoundError, TrainPlateauError
@@ -22,15 +22,31 @@ from ablator.utils.progress_bar import RemoteProgressBar
 
 # pylint: disable=protected-access
 def _apply_unlock_hook(
-    model: ModelWrapper, gpu_manager: ty.Union[GPUManager, None], gpu: int | None = None
-) -> ModelWrapper:
-    if gpu_manager is None:
-        return model
+    model: ModelWrapper,
+    resource_manager: ResourceManager,
+    gpu: GPU,
+):
+    """
+    Sets a hook on the model-wrapper to unlock the GPU resources once
+    the `train_step` function is called. This is to be able to ensure
+    that the correct GPU utilization has been recorded for the
+    train remote.
+
+    Parameters
+    ----------
+    model : ModelWrapper
+        The model to apply the hook to
+    resource_manager : ty.Union[ResourceManager, None]
+        The source manager to signal to release the resources.
+    gpu : GPU
+        The GPU resource to release.
+
+    """
     model._is_locked = True
 
     def lock_on_unlocked():
         if model._is_locked:
-            unlock_gpu(gpu_manager, gpu)
+            unlock_gpu(resource_manager, gpu)
             model._is_locked = False
 
     def hook_function(function, hook_fn):
@@ -46,53 +62,78 @@ def _apply_unlock_hook(
         model.__getattribute__("train_step", True), lock_on_unlocked
     )
     setattr(model, "train_step", _hook_fn)
-    return model
 
 
+# pylint: disable=broad-exception-raised
+def _raise_or_ignore(
+    exceptions: list[Exception],
+    fault_tollerant: bool,
+    logger: RemoteFileLogger,
+    raise_exceptions: list[type],
+):
+    if not fault_tollerant and len(exceptions) > 1:
+        raise Exception(exceptions)
+    if not fault_tollerant and len(exceptions) == 1:
+        raise exceptions[0]
+    if not fault_tollerant:
+        raise Exception("Unknown error")
+    for e in exceptions:
+        if isinstance(e, tuple(raise_exceptions)):
+            error_msg = (
+                f"Exception `{str(e)}` of type: `{type(e).__name__}` in"
+                f" crash_exceptions_types={[c.__name__ for c in raise_exceptions]}."
+                " Exiting."
+            )
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
+
+
+# pylint: disable=broad-exception-caught
 def _handle_exception(
     e: Exception,
     model: ModelWrapper,
     run_config: ParallelConfig,
     mp_logger: RemoteFileLogger,
-    gpu_manager: ty.Union[GPUManager, None],
-    gpu_id: int,
+    resource_manager: ResourceManager,
+    gpu: GPU | None,
     uid: int,
     fault_tollerant: bool,
     crash_exceptions_types: list[type] | None,
 ) -> tuple[int, dict[str, float] | None, TrialState]:
     if crash_exceptions_types is None:
         crash_exceptions_types = []
-
-    if gpu_manager is not None:
-        # gpu_manager is a ray-actor
-        unlock_gpu(gpu_manager, gpu_id)
-    exception_str = traceback.format_exc()
-    if hasattr(model, "logger"):
-        model.logger.error(exception_str)
-    else:
-        mp_logger.error(f"{run_config.uid}:\n{exception_str}")
-    mp_logger.error(f"Error Occured {run_config.uid}: {str(e)}")
-    if not fault_tollerant:
-        raise e
-    if isinstance(e, tuple(crash_exceptions_types)):
-        error_msg = (
-            f"Exception `{str(e)}` of type: `{type(e).__name__}` in crash_exceptions_types="
-            f"{{c.__name__ for c in crash_exceptions_types}}. Exiting."
+    exceptions = [e]
+    try:
+        if gpu is not None:
+            # gpu_manager is a ray-actor
+            unlock_gpu(resource_manager, gpu)
+        exception_str = traceback.format_exc()
+        if hasattr(model, "logger"):
+            model.logger.error(exception_str)
+        else:
+            mp_logger.error(f"{run_config.uid}:\n{exception_str}")
+        mp_logger.error(f"Error Occured {run_config.uid}: {str(e)}")
+    except Exception as _e:
+        exceptions.append(_e)
+    finally:
+        _raise_or_ignore(
+            exceptions,
+            fault_tollerant=fault_tollerant,
+            logger=mp_logger,
+            raise_exceptions=crash_exceptions_types,
         )
-        mp_logger.error(error_msg)
-        raise RuntimeError(error_msg) from e
 
     return uid, None, TrialState.FAIL
 
 
-# TODO refactor into a seperate file and reduce complexity
-# pylint: disable=broad-exception-caught,too-many-arguments
+# TODO refactor as an actor and reduce complexity
+# pylint: disable=broad-exception-caught,too-many-arguments,too-complex
 def train_main_remote(
     model: ModelWrapper,
     run_config: ParallelConfig,
     mp_logger: RemoteFileLogger,
-    gpu_manager: ty.Union[GPUManager, None],
-    gpu_id: int | None,
+    resource_manager: ResourceManager,
+    gpu: GPU,
     uid: int,
     fault_tollerant: bool = True,
     crash_exceptions_types: list[type] | None = None,
@@ -102,8 +143,8 @@ def train_main_remote(
     data_lock: ty.Optional[butils.Lock] = None,
 ) -> tuple[int, dict[str, float] | None, TrialState]:
     """
-    The trial job that will be executed remotely at a ray node. This is where model training happens.
-    In addition, experiment directory will be synchronized to the Cloud storage and remote nodes.
+    The trial job will be executed remotely at a ray node. This is where model training happens.
+    In addition, the experiment directory will be synchronized to the Cloud storage and remote nodes.
 
     Parameters
     ----------
@@ -113,10 +154,10 @@ def train_main_remote(
         Runtime configuration for this trial.
     mp_logger : RemoteFileLogger
         The file logger that's used to log training progress.
-    gpu_manager : ty.Union[GPUManager, None]
-        The gpu manager that is used to inform when the training progress starts
-    gpu_id : int | None
-        The gpu id to which to assign resources on the current remote.
+    resource_manager : ResourceManager
+        The resource manager that is used to release resources after the training process starts
+    gpu : GPU
+        The gpu to which to allocate the execution of the current remote.
     uid : int
         the trial unique identifier.
     fault_tollerant : bool
@@ -154,25 +195,29 @@ def train_main_remote(
             - If other types of error or ``CheckpointNotFoundError`` (with ``clean_reset=False``) is raised,
             returned state will be ``TrialState.FAIL``
     """
-    if gpu_id is not None:
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-        # We add a hook after the first train_step to update the gpu manager
-        _apply_unlock_hook(model, gpu_manager, gpu=gpu_id)
+    if gpu is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu.device_id)
     else:
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
     handle_exception = partial(
         _handle_exception,
         model=model,
         run_config=run_config,
         mp_logger=mp_logger,
-        gpu_manager=gpu_manager,
-        gpu_id=gpu_id,
+        resource_manager=resource_manager,
+        gpu=gpu,
         uid=uid,
         fault_tollerant=fault_tollerant,
         crash_exceptions_types=crash_exceptions_types,
     )
 
     try:
+        # We add a hook after the first train_step to release the resource from the resource
+        # manager
+        if resource_manager is not None and gpu is not None:
+            _apply_unlock_hook(model, resource_manager, gpu=gpu)
+
         # NOTE in order for os.environ to wotk CUDA must be unitialized
         # up to this point.
         model.init_state(

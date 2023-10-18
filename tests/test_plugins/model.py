@@ -21,6 +21,7 @@ from ablator import (
 from ablator.config.main import configclass
 from ablator.config.mp import ParallelConfig, SearchSpace
 from ablator.mp.gpu import GPU, ResourceManager
+from ablator.mp.utils import Resource
 from ablator.utils import base
 
 N_GPUS = 3
@@ -201,6 +202,16 @@ def update_no_gpus(self: ResourceManager, timeout=None):
     self.is_active = True
 
 
+def _inactive_resource(self: ResourceManager):
+    return Resource(
+        mem=self.mem,
+        cpu_usage=self.cpu_usage,
+        cpu_count=self.cpu_count,
+        gpu_free_mem=self.gpu_free_mem,
+        is_active=False,
+    )
+
+
 @pytest.fixture()
 def update_gpus_fixture():
     return update_gpus
@@ -229,6 +240,11 @@ def blocking_lock_remote():
 @pytest.fixture()
 def n_gpus():
     return N_GPUS
+
+
+@pytest.fixture()
+def inactive_resource():
+    return _inactive_resource
 
 
 # Important NOTE

@@ -1,28 +1,28 @@
 import copy
+import itertools
 import multiprocessing as mp
 import sys
-import time
 import traceback
 import types as tys
 import typing as ty
 import uuid
-from collections import OrderedDict
+from collections import defaultdict
 from functools import cached_property
 from pathlib import Path
+import numpy as np
 
 import ray
 import torch
 from ablator.modules.loggers.file import RemoteFileLogger
-from ablator.mp.gpu_manager import GPUError, GPUManager, wait_get_gpu
+from ablator.mp.gpu import GPUError
 
 import ablator.utils.base as butils
 from ablator.config.mp import ParallelConfig
 from ablator.main.model.wrapper import ModelWrapper
 from ablator.main.proto import ProtoTrainer
 from ablator.main.state import ExperimentState, TrialState
-from ablator.mp.node_manager import NodeManager
-from ablator.mp.utils import Resource
-from ablator.mp.utils import _sorted_nodes_by_util, ray_init
+from ablator.mp.cluster import ClusterManager
+from ablator.mp.utils import get_node_ip, ray_init
 from ablator.utils.progress_bar import RemoteDisplay, RemoteProgressBar
 from ablator.mp.train_remote import train_main_remote
 from ablator.config.types import Optional
@@ -59,6 +59,11 @@ class ParallelTrainer(ProtoTrainer):
         The number of cpu used per trial.
     gpu : float
         The number of gpu used per trial.
+    running_futures : dict[str, list]
+        A dictionary with keys the Node IP and values a list of Ray remote tasks executing
+        on the node aka `futures`.
+    cluster_manager : ClusterManager
+        The cluster manager responsible for scheduling tasks and managing resources
 
     Examples
     --------
@@ -149,24 +154,24 @@ class ParallelTrainer(ProtoTrainer):
 
         self.run_config: ParallelConfig
         super().__init__(wrapper=wrapper, run_config=run_config)
-        assert issubclass(
-            type(self.run_config), ParallelConfig
-        ), f"run_config must be of a type - { ParallelConfig.__name__} received {type(self.run_config)}"
+        assert issubclass(type(self.run_config), ParallelConfig), (
+            f"run_config must be of a type - { ParallelConfig.__name__} received"
+            f" {type(self.run_config)}"
+        )
 
-        assert issubclass(
-            type(self.wrapper), ModelWrapper
-        ), f"wrapper must be of a type - { ModelWrapper.__name__} received {self.wrapper}"
+        assert issubclass(type(self.wrapper), ModelWrapper), (
+            f"wrapper must be of a type - { ModelWrapper.__name__} received"
+            f" {self.wrapper}"
+        )
 
         self.logger: RemoteFileLogger
-        self.gpu_manager: ty.Optional[GPUManager]
         self.experiment_state: ExperimentState
         self.total_trials: int | None
         self.ray_address: str
-        self.available_resources: dict[str, Resource]
         self._progress_bar: ty.Optional[RemoteProgressBar] = None
         self._display: butils.Dummy | RemoteDisplay = butils.Dummy()
-        self.node_manager: NodeManager
-        self._last_update_resources = None
+        self.running_futures: dict[str, list] = defaultdict(lambda: [])
+        self.cluster_manager: ClusterManager
 
     @cached_property
     def _gpu(self) -> float:
@@ -189,7 +194,8 @@ class ParallelTrainer(ProtoTrainer):
             return 0
         if self.run_config.gpu_mb_per_experiment is None:
             raise ValueError(
-                "config attribute `gpu_mb_per_experiment` can not be `None` when device=`cuda`"
+                "config attribute `gpu_mb_per_experiment` can not be `None` when"
+                " device=`cuda`"
             )
         return 0.001
 
@@ -210,8 +216,8 @@ class ParallelTrainer(ProtoTrainer):
             or self.run_config.concurrent_trials > mp.cpu_count()
         ):
             self.logger.warn(
-                f"Expected CPU core util. can exceed system capacity {mp.cpu_count()}.\n"
-                "Consider adjusting `concurrent_trials`."
+                "Expected CPU core util. can exceed system capacity"
+                f" {mp.cpu_count()}.\nConsider adjusting `concurrent_trials`."
             )
 
         return 0.001
@@ -225,17 +231,9 @@ class ParallelTrainer(ProtoTrainer):
         resume: bool = False,
     ):
         trial_uuid = f"{run_config.uid}_{str(uuid.uuid4())[:4]}"
-        # TODO need to wait_get_gpu via node_ip
-        if self.gpu_manager is not None:
-            gpu_id = wait_get_gpu(
-                self.gpu_manager,
-                run_config.gpu_mb_per_experiment,
-                process_name=trial_uuid,
-            )
-            gpu_manager = self.gpu_manager
-        else:
-            gpu_id = None
-            gpu_manager = None
+        gpu, manager = self.cluster_manager.get_gpu(
+            node_ip=node_ip, process_name=trial_uuid
+        )
         wrapper = copy.deepcopy(self.wrapper)
         # pylint: disable=protected-access
         wrapper._uid = trial_uuid
@@ -249,11 +247,30 @@ class ParallelTrainer(ProtoTrainer):
         )(train_main_remote).options(
             resources={f"node:{node_ip}": 0.001}, name=trial_uuid
         )
-        run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
+        if node_ip == get_node_ip():
+            run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
+        elif run_config.remote_config is None:
+            # NOTE this should never happen during normal use-case
+            # the remote_config is automatically created on multi-node cluster
+            # to be the head node of the cluster.
+            raise RuntimeError(
+                "Could not identify remote_config. Critical error encountered. remote_config unspecified when scheduling remotes on multi-node cluster."
+            )
+        else:
+            run_config.experiment_dir = (
+                (Path("~") / "ablator").joinpath(
+                    *run_config.remote_config.local_path.parts[1:]
+                )
+                / trial_uuid
+            ).as_posix()
+
         list_diffs = self.run_config.diff_str(run_config)
         diffs = "\n\t".join(list_diffs)
         action = "Scheduling" if resume is False else "Resuming"
-        msg = f"{action} uid: {trial_uuid}\nParameters: \n\t{diffs}\n-----"
+        msg = (
+            f"{action} @ {node_ip} with uid: {trial_uuid}\nParameters:"
+            f" \n\t{diffs}\n-----"
+        )
         self.logger.info(msg)
         self.experiment_state.update_trial_state(trial_id, None, TrialState.RUNNING)
         data_lock = butils.Lock()
@@ -261,8 +278,8 @@ class ParallelTrainer(ProtoTrainer):
             model=model_obj,
             run_config=copy.deepcopy(run_config),
             mp_logger=self.logger,
-            gpu_manager=gpu_manager,
-            gpu_id=gpu_id,
+            resource_manager=manager,
+            gpu=gpu,
             uid=trial_id,
             fault_tollerant=True,
             crash_exceptions_types=None,
@@ -274,82 +291,71 @@ class ParallelTrainer(ProtoTrainer):
 
     def _heartbeat(self):
         self._display.refresh(force=True)
-        if (
-            self._last_update_resources is None
-            or time.time() - self._last_update_resources > 5
-        ):
-            self.available_resources = self.node_manager.available_resources()
-        # TODO find which tasks have died from available_resources and update experiment_state
 
-    def _make_futures(
-        self, current_futures: list | None = None, soft_limit: int = 10
-    ) -> list:
+    # pylint: disable=too-complex
+    def _make_futures(self, soft_limit: int = 10) -> list:
         # make enough futures such that there are concurrent_trials running.
-        futures = [] if current_futures is None else current_futures
         concurrent_trial_limit: int | None = self.run_config.concurrent_trials
         gpu_util = self.run_config.gpu_mb_per_experiment if self._gpu > 0 else None
 
-        resources = self.available_resources
-        node_ips = _sorted_nodes_by_util(
-            resources=resources,
-            gpu_util_requirement=gpu_util,
-        )
-        n_running_tasks: dict[str, int] = {
-            node_ip: len(v.running_tasks) for node_ip, v in resources.items()
-        }
-        node_scheduled_tasks: dict[str, int] = OrderedDict()
-        for node_ip in node_ips:
-            node_scheduled_tasks[node_ip] = 0
-        # a soft limit to the number of trials to sample at a time.
-        # There is no benefit in sampling many trials at once as the function
-        # is called on every heart-beat.
-        while (
-            len(futures) < soft_limit
-            and (
-                self.total_trials is None
-                or len(self.experiment_state.valid_trials()) < self.total_trials
-            )
-            and len(node_scheduled_tasks) > 0
-        ):
-            # NOTE updating available_resources is slow, and better to keep it fixed and sort by least
-            # utilized node. It assumes that soft_limit is sufficiently
-            # small that it will not cause unexpected over-utilization in between sampling
-            # available_resources = self.node_manager.available_resources()
-            node_ip, scheduled_tasks = sorted(
-                node_scheduled_tasks.items(), key=lambda item: item[1]
-            )[0]
-            if (
-                concurrent_trial_limit is not None
-                and scheduled_tasks + n_running_tasks[node_ip] >= concurrent_trial_limit
-            ):
-                del node_scheduled_tasks[node_ip]
-                continue
-            if (
-                gpu_util is not None
-                and len(resources[node_ip].gpu_free_mem_arr) > 0
-                and resources[node_ip].gpu_free_mem_arr.max() > gpu_util
-            ):
-                least_util_gpu_name = resources[node_ip].least_used_gpu
-                resources[node_ip].gpu_free_mem[least_util_gpu_name] -= gpu_util
-            elif gpu_util is not None:
-                del node_scheduled_tasks[node_ip]
-                continue
+        starting_futures = np.array([len(v) for v in self.running_futures.values()])
 
-            node_scheduled_tasks[node_ip] += 1
-            try:
-                trial_id, trial = self.experiment_state.sample_trial()
-            except StopIteration:
-                self.logger.warn(
-                    f"Received StopIteration signal, trial limit possibly reached {self.total_trials}"
+        def is_limit(node_ip: str | None = None):
+            futures = np.array([len(v) for v in self.running_futures.values()])
+            return (
+                futures.sum() - starting_futures.sum() >= soft_limit
+                or (
+                    node_ip is not None
+                    and len(self.running_futures[node_ip]) > 0
+                    and concurrent_trial_limit is not None
+                    and (futures >= concurrent_trial_limit).all()
                 )
+                or (
+                    self.total_trials is not None
+                    and len(self.experiment_state.valid_trials()) >= self.total_trials
+                )
+            )
+
+        def interleaved_running_futures():
+            # interleaves the futures from all nodes that are running.
+            return [
+                x
+                for x in itertools.chain(
+                    *itertools.zip_longest(*self.running_futures.values())
+                )
+                if x is not None
+            ]
+
+        while not is_limit():
+            resources = self.cluster_manager.sorted_resources(gpu_mem=gpu_util)
+            remote_config = self.cluster_manager.remote_config
+            if len(resources) == 0:
                 break
-            try:
-                future = self._make_remote(trial_id, trial, node_ip)
-                futures.append(future)
-            except GPUError:
-                self.logger.warn("Not Enough GPU resources.")
-                break
-        return futures
+            for node_ip in resources:
+                if is_limit(node_ip):
+                    return interleaved_running_futures()
+
+                if (
+                    concurrent_trial_limit is not None
+                    and len(self.running_futures[node_ip]) >= concurrent_trial_limit
+                ):
+                    continue
+                try:
+                    trial_id, trial = self.experiment_state.sample_trial()
+                except StopIteration:
+                    self.logger.warn(
+                        "Received StopIteration signal, trial limit possibly reached"
+                        f" {self.total_trials}"
+                    )
+                    return interleaved_running_futures()
+                try:
+                    trial.remote_config = remote_config
+                    future = self._make_remote(trial_id, trial, node_ip)
+                    self.running_futures[node_ip].append(future)
+                except GPUError:
+                    self.logger.warn(f"Not Enough GPU resources for {node_ip}.")
+                    continue
+        return interleaved_running_futures()
 
     def pre_train_setup(self):
         """
@@ -359,7 +365,6 @@ class ParallelTrainer(ProtoTrainer):
         mock_wrapper = copy.deepcopy(self.wrapper)
         mock_config = copy.deepcopy(self.run_config)
         mock_config.experiment_dir = None
-        # pylint: disable=protected-access
         future = (
             ray.remote(
                 num_gpus=self._gpu,
@@ -367,7 +372,7 @@ class ParallelTrainer(ProtoTrainer):
                 max_calls=1,
                 max_retries=0,
             )(
-                lambda wrapper: wrapper._init_state(
+                lambda wrapper: wrapper.init_state(
                     run_config=mock_config, smoke_test=True, debug=True
                 )
             )
@@ -384,42 +389,21 @@ class ParallelTrainer(ProtoTrainer):
     def total_trials(self, value):
         self.run_config.total_trials = value
 
-    def _init_state(
+    def _init_ray(
         self,
         working_dir: str = "",
         address: str | None = None,
         modules: list[tys.ModuleType] | None = None,
-        resume: bool = False,
         excluding_files: list[str] | None = None,
+        verbose: ty.Literal["console", "progress", "silent"] = "silent",
     ):
-        verbose = self.run_config.verbose
-
-        if self.experiment_dir.exists() and not resume:
-            raise RuntimeError(f"Experiment Directory {self.experiment_dir} exists.")
-        self.logger = RemoteFileLogger(
-            path=self.experiment_dir / "mp.log", verbose=verbose == "console"
-        )
-        self.experiment_dir.joinpath("default_config.yaml").write_text(
-            self.run_config.to_yaml(), encoding="utf-8"
-        )
-        self.experiment_state = ExperimentState(
-            self.experiment_dir, self.run_config, self.logger, resume=resume
-        )
         if excluding_files is None:
             excluding_files = [".git/**"]
 
-        if verbose == "progress":
-            # pylint: disable=no-member
-            self._progress_bar = RemoteProgressBar.remote(self.total_trials)  # type: ignore[attr-defined]
-            self._display = RemoteDisplay(self._progress_bar)  # type: ignore[arg-type]
-
+        _is_ray_init = False
         if ray.is_initialized():
-            self.logger.warn(
-                "Ray is already initialized. Can not start another instance. "
-                "Unexpected behavior can occur. We recommend to perform `ray.shutdown()` "
-                "or `ray stop` before starting the experiment. "
-                "You can set 'address=\"local\"' on `.launch` to start another cluster."
-            )
+            _is_ray_init = True
+
             ray_context = ray.get_runtime_context()
             self.ray_address = ray_context.gcs_address
             # TODO find a way to set-up runtime env on running cluster
@@ -451,20 +435,66 @@ class ParallelTrainer(ProtoTrainer):
 
             ray_cluster = ray_init(**ray_kwargs)
             self.ray_address = ray_cluster.address_info["address"]
-        self.node_manager = NodeManager(private_key_home=Path.home())
+        return _is_ray_init
+
+    def _init_state(
+        self,
+        working_dir: str = "",
+        address: str | None = None,
+        modules: list[tys.ModuleType] | None = None,
+        resume: bool = False,
+        excluding_files: list[str] | None = None,
+        debug: bool = False,
+    ):
+        self.stop()
+        verbose = self.run_config.verbose
+        if self.experiment_dir.exists() and not resume:
+            raise RuntimeError(f"Experiment Directory {self.experiment_dir} exists.")
+        self._mount(resume=resume, debug=debug)
+        _is_ray_init = self._init_ray(
+            working_dir=working_dir,
+            address=address,
+            modules=modules,
+            excluding_files=excluding_files,
+            verbose=verbose,
+        )
+        self.cluster_manager = ClusterManager(
+            private_key_home=Path.home(),
+            sync_directory=self.experiment_dir,
+            ray_address=self.ray_address,
+            remote_config=self.run_config.remote_config,
+        )
+        self.logger = RemoteFileLogger(
+            path=self.experiment_dir / "mp.log", verbose=verbose == "console"
+        )
+        self.experiment_dir.joinpath("master_config.yaml").write_text(
+            self.run_config.to_yaml(), encoding="utf-8"
+        )
+        self.experiment_state = ExperimentState(
+            self.experiment_dir, self.run_config, self.logger, resume=resume
+        )
         self.logger.to_remote()
-        if self._gpu > 0:
-            # pylint: disable=no-member
-            self.gpu_manager = GPUManager.remote()  # type: ignore[attr-defined]
-        else:
-            self.gpu_manager = None
+
+        # TODO check if this causes an error because it was placed before the ray init
+        if verbose == "progress":
+            raise NotImplementedError(
+                "verbose='progress' currently not supported for mp-training."
+            )
+
+        if _is_ray_init:
+            self.logger.warn(
+                "Ray is already initialized. Can not start another instance. Unexpected"
+                " behavior can occur. We recommend to perform `ray.shutdown()` or `ray"
+                " stop` before starting the experiment. You can set 'address=\"local\"'"
+                " on `.launch` to start another cluster."
+            )
 
         # first heartbeat <3
         self._heartbeat()
         diffs = self._get_diffs(working_dir)
         self.logger.warn(diffs)
 
-    # pylint: disable=arguments-renamed
+    # pylint: disable=arguments-renamed,too-complex
     def launch(  # type: ignore[override]
         self,
         working_directory: str,
@@ -472,6 +502,7 @@ class ParallelTrainer(ProtoTrainer):
         ray_head_address: str | None = None,
         resume: bool = False,
         excluding_files: list[str] | None = None,
+        debug: bool = False,
     ):
         """
         Set up and launch the parallel ablation process. This sets up a ray cluster, and trials of different
@@ -491,21 +522,31 @@ class ParallelTrainer(ProtoTrainer):
         excluding_files : list[str] | None
             A list of files in `.gitignore` format, that will be excluded from being uploaded to the ray cluster.
             If unspecified it ignores `.git/**` folder.
+        debug : bool, optional
+            Whether to train model in debug mode. By default ``False``
 
+        Raises
+        -------
+        RuntimeError
+            If the `config.experiment_id` is unspecified but resuming an experiment or the
+            experiment directory is not empty but using a remote storage configuration.
         """
         try:
             torch.multiprocessing.set_start_method("spawn")
             mp.set_start_method("spawn", force=True)
         except RuntimeError:
             pass
-        # TODO move inside __init__
         self._init_state(
             working_dir=working_directory,
             address=ray_head_address,
             modules=auxilary_modules,
             resume=resume,
             excluding_files=excluding_files,
+            debug=debug,
         )
+        if debug:
+            self.pre_train_setup()
+
         valid_trials = self.experiment_state.valid_trials()
         if self.total_trials is not None and len(valid_trials) >= self.total_trials:
             self.logger.error(f"Trial limit {self.total_trials} was reached. Exiting.")
@@ -522,9 +563,13 @@ class ParallelTrainer(ProtoTrainer):
                     futures, num_returns=1, timeout=heart_beat_interval
                 )
                 if len(done_id) > 0:
-                    uid, metrics, trial_state = ray.get(done_id[0])
+                    done_future = done_id[0]
+                    for v in self.running_futures.values():
+                        if done_future in v:
+                            v.remove(done_future)
+                    uid, metrics, trial_state = ray.get(done_future)
                     self.experiment_state.update_trial_state(uid, metrics, trial_state)
-                futures = self._make_futures(futures)
+                futures = self._make_futures()
             except KeyboardInterrupt:
                 self.logger.warn("KeyboardInterrupt signal received.")
                 self._print_summary()
@@ -552,14 +597,22 @@ class ParallelTrainer(ProtoTrainer):
             c.id for c in self.experiment_state.get_trials_by_state(TrialState.FAIL)
         ]
         self.logger.info(
-            f"There are {len(complete_trials)} complete trials. with ids: {complete_trials}"
+            f"There are {len(complete_trials)} complete trials. with ids:"
+            f" {complete_trials}"
         )
 
         if len(pending_trials) > 0:
             self.logger.warn(
-                f"There are {len(pending_trials)} unfinished trials. with ids: {pending_trials}"
+                f"There are {len(pending_trials)} unfinished trials. with ids:"
+                f" {pending_trials}"
             )
         if len(errored_trials) > 0:
             self.logger.error(
-                f"There are {len(errored_trials)} errored trials. with ids: {errored_trials}"
+                f"There are {len(errored_trials)} errored trials. with ids:"
+                f" {errored_trials}"
             )
+
+    def stop(self):
+        super().stop()
+        if hasattr(self, "cluster_manager") and self.cluster_manager is not None:
+            self.cluster_manager.stop()

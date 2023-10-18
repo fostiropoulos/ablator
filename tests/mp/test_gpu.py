@@ -293,7 +293,7 @@ def test_gpu_properties():
 @pytest.mark.mp
 def test_wait_get_gpu(ray_cluster, update_gpus_fixture, update_no_gpus_fixture, n_gpus):
     head_ip = get_node_ip()
-    with mock.patch.object(ResourceManager, "update", update_no_gpus_fixture):
+    with mock.patch.object(ResourceManager, "heartbeat", update_no_gpus_fixture):
         manager = run_actor_node(
             ResourceManager,
             cuda=False,
@@ -308,7 +308,7 @@ def test_wait_get_gpu(ray_cluster, update_gpus_fixture, update_no_gpus_fixture, 
         with pytest.raises(GPUError, match="No available GPU."):
             gpu = wait_get_gpu(manager)
         ray.get(manager.stop.remote())
-    with mock.patch.object(ResourceManager, "update", update_gpus_fixture):
+    with mock.patch.object(ResourceManager, "heartbeat", update_gpus_fixture):
         manager = run_actor_node(
             ResourceManager,
             cuda=False,
@@ -357,7 +357,7 @@ def test_lock_unlock_train_main_remote(
     config = make_config(tmp_path.joinpath("mock_model"))
     config.device = "cpu"
     mp_logger = Dummy()
-    with mock.patch.object(ResourceManager, "update", update_gpus_fixture):
+    with mock.patch.object(ResourceManager, "heartbeat", update_gpus_fixture):
         manager = run_actor_node(
             ResourceManager,
             cuda=False,
@@ -427,7 +427,7 @@ def test_lock_unlock_hook(
     config = make_config(tmp_path.joinpath("mock_model"))
     config.device = "cpu"
     mp_logger = Dummy()
-    with mock.patch.object(ResourceManager, "update", update_gpus_fixture):
+    with mock.patch.object(ResourceManager, "heartbeat", update_gpus_fixture):
         manager = run_actor_node(
             ResourceManager,
             cuda=False,

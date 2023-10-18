@@ -191,5 +191,10 @@ def truncate_utf8_chars(filename: Path, last_char: str):
                 return
             offset += 1
         raise RuntimeError(
-            f"Could not truncate {filename} since `last_char`: {last_char} was not found in the file."
+            f"Could not truncate {filename} since `last_char`: {last_char} was not"
+            " found in the file."
         )
+
+
+def expand_path(directory: str | Path) -> Path:
+    return Path(directory).expanduser().resolve().absolute()
