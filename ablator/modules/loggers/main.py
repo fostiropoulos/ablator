@@ -111,9 +111,14 @@ class SummaryLogger:
         _log_msg = ""
         if experiment_dir is not None:
             self.experiment_dir = Path(experiment_dir)
-            if not resume and self.experiment_dir.exists():
+            if (
+                not resume
+                and self.experiment_dir.exists()
+                and len(list(self.experiment_dir.glob("[!.]*"))) > 0
+            ):
                 raise FileExistsError(
-                    f"SummaryLogger: Resume is set to {resume} but {self.experiment_dir} exists."
+                    f"SummaryLogger: Resume is set to {resume} but"
+                    f" {self.experiment_dir} is not empty."
                 )
             if resume and self.experiment_dir.exists():
                 _run_config = type(run_config).load(
@@ -134,7 +139,10 @@ class SummaryLogger:
                     )
                     backup_file_name.write_text(_run_config.to_yaml(), encoding="utf-8")
                     _log_msg += "Differences between provided configuration and "
-                    _log_msg += f"stored configuration. Creating a configuration backup at {backup_file_name}"
+                    _log_msg += (
+                        "stored configuration. Creating a configuration backup at"
+                        f" {backup_file_name}"
+                    )
 
                 metadata = json.loads(
                     self.experiment_dir.joinpath(self.METADATA_JSON).read_text(
@@ -384,9 +392,10 @@ class SummaryLogger:
                 itr = self.checkpoint_iteration[dir_name][file_name]
             else:
                 cur_iter = self.checkpoint_iteration[dir_name][file_name]
-                assert (
-                    itr > cur_iter
-                ), f"Checkpoint iteration {cur_iter} >= training iteration {itr}. Can not overwrite checkpoint."
+                assert itr > cur_iter, (
+                    f"Checkpoint iteration {cur_iter} >= training iteration {itr}. Can"
+                    " not overwrite checkpoint."
+                )
                 self.checkpoint_iteration[dir_name][file_name] = itr
 
             dir_path = self.experiment_dir.joinpath(self.CHKPT_DIRS[dir_name])
