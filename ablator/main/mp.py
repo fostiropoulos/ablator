@@ -220,7 +220,7 @@ class ParallelTrainer(ProtoTrainer):
                 f" {mp.cpu_count()}.\nConsider adjusting `concurrent_trials`."
             )
 
-        return 0.001
+        return 0.01
 
     def _make_remote(
         self,
@@ -236,6 +236,13 @@ class ParallelTrainer(ProtoTrainer):
             gpu, manager = self.cluster_manager.get_gpu(
                 node_ip=node_ip, process_name=trial_uuid
             )
+            for node in ray.nodes():
+                if (
+                    node["NodeManagerAddress"] == node_ip
+                    and "GPU" not in node["Resources"]
+                ):
+                    raise RuntimeError("Misconfigured Ray cluster.")
+
         wrapper = copy.deepcopy(self.wrapper)
         # pylint: disable=protected-access
         wrapper._uid = trial_uuid

@@ -64,8 +64,10 @@ def ray_init(**kwargs) -> RuntimeContext:
             or os.environ["CUDA_VISIBLE_DEVICES"] != ""
         )
         and torch.cuda.is_available()
-        and "address" not in kwargs
+        and ("address" not in kwargs or kwargs["address"] is None)
     ):
+        # this is because WSL and other systems work poorly
+        # with ray.
         kwargs["num_gpus"] = 1
     elif "address" in kwargs:
         kwargs["ignore_reinit_error"] = True
