@@ -281,9 +281,9 @@ def sort_resources(
     resources : dict[str, Resource]
         a dictionary of the nodes with their available resources
     gpu_util_requirement : int | None
-        the GPU requirement for the task, by default None
+        the GPU requirement for the task, by default ``None``.
     memory_perc_limit : int
-        the percentage upper limit to memory utilization, by default 80
+        the percentage upper limit to memory utilization, by default ``80``.
     cpu_util_perc_limit : int
         the percentage upper limit to CPU utilization, by default 80
 

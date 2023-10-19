@@ -49,7 +49,7 @@ numpydoc_class_members_toctree = False
 numpydoc_show_inherited_class_membersbool = False
 
 html_title = "Ablator Documentation"
-html_favicon = "_static/ablator-logo.svg"
+html_favicon = "_static/logo.png"
 
 html_theme_options = {
     "navbar_start": ["navbar-logo"],
@@ -62,8 +62,8 @@ html_theme_options = {
     "show_nav_level": 1,
     "show_toc_level": 2,
     "logo": {
-        "image_light": "_static/ablator-banner-light.svg",
-        "image_dark": "_static/ablator-banner-dark.svg",
+        "image_light": "_static/logo_text.png",
+        "image_dark": "_static/logo_text.png",
         "link": "index",
         "alt_text": "ablator",
     },

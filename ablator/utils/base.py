@@ -367,7 +367,7 @@ def num_format(
     value : str | int | float | np.integer | np.floating
         the value to format
     width : int
-        the width of the decimal places, by default 8
+        the width of the decimal places, by default ``8``.
 
     Returns
     -------

@@ -55,28 +55,29 @@ def _parse_results(
 
 class Analysis:
     """
-    A class for analyzing experimental results.
+    A class that stores and processes the attributes, metrics, and other data for the plotting
+    of the experiment result.
 
     Parameters
     ----------
     results : pd.DataFrame | Results
         The result dataframe.
     categorical_attributes : list[str] | None
-        The list of all the categorical hyperparameter names
+        The list of all the categorical hyperparameter names, by default ``None``.
     numerical_attributes : list[str] | None
-        The list of all the numerical hyperparameter names
+        The list of all the numerical hyperparameter names, by default ``None``.
     optim_metrics : dict[str, Optim] | None
-        A dictionary mapping metric names to optimization directions.
-    save_dir : str | None
-        The directory to save analysis results to.
+        A dictionary mapping metric names to optimization directions, by default ``None``.
+    save_dir : Path | str | None
+        The directory to save analysis results to, by default ``None``.
     cache : bool
-        Whether to cache results.
+        Whether to cache results, by default ``False``.
 
     Attributes
     ----------
     optim_metrics : dict[str, Optim]
         A dictionary mapping metric names to optimization directions.
-    save_dir : str | None
+    save_dir : Path | None
         The directory to save analysis results to.
     cache : Memory | None
         A joblib memory cache for saving results.
@@ -87,12 +88,14 @@ class Analysis:
     experiment_attributes : list[str]
         The list of all the hyperparameter names
     results : pd.DataFrame
-        The dataframe extracted from the results file based on given metrics names and hyperparameter names.
+        The dataframe extracted from the results file is based on given metrics names and hyperparameter names.
 
     Raises
     ------
     FileNotFoundError
-        if the provided `save_dir` to save plots don't exists.
+        if the provided ``save_dir`` to save plots doesn't exist.
+    ValueError
+        if ``cache`` is ``True`` but no ``save_dir`` is provided.
     """
 
     def __init__(
@@ -101,7 +104,7 @@ class Analysis:
         categorical_attributes: list[str] | None = None,
         numerical_attributes: list[str] | None = None,
         optim_metrics: dict[str, Optim] | None = None,
-        save_dir: str | None = None,
+        save_dir: Path | str | None = None,
         cache: bool = False,
     ) -> None:
         (

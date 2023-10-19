@@ -68,7 +68,7 @@ class Display:
     Class for handling display for terminal and notebook.
 
     Attributes
-    ---------
+    ----------
     _curses : curses
         curses object
     stdscr :  curses.initscr()

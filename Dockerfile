@@ -17,7 +17,7 @@ RUN conda install -y python=$PY_VERSION pip
 # This is done to avoid re-installing depedencies on code changes.
 COPY ./pyproject.toml ./pyproject.toml
 COPY ./README.md ./README.md
-RUN pip install -e .[dev]
+RUN pip install --no-cache-dir -e .[dev]
 COPY . .
 
 EXPOSE 22

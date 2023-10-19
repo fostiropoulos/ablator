@@ -162,14 +162,14 @@ def train_main_remote(
     uid : int
         the trial unique identifier.
     fault_tollerant : bool
-        Whether to tollerate crashes, aka to cease execution when the ray job crashes. By default ``True``
+        Whether to tollerate crashes, aka to cease execution when the ray job crashes, by default ``True``.
     crash_exceptions_types : list[type] | None
-        Types of exceptions that are considered as crashes. By default ``None``
+        Types of exceptions that are considered as crashes, by default ``None``.
     resume : bool
         Whether to resume training the model from existing checkpoints
-        and existing experiment state. By default ``False``
+        and existing experiment state, by default ``False``.
     clean_reset : bool
-        Whether to remove model directory when ``CheckpointNotFoundError`` is raised. By default ``False``
+        Whether to remove model directory when ``CheckpointNotFoundError`` is raised, by default ``False``.
     progress_bar : ty.Optional[RemoteProgressBar]
         Optionally, we can use a remote progress bar to update the results of the trial.
     data_lock : ty.Optional[butils.Lock], optional

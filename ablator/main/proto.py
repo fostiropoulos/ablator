@@ -20,7 +20,8 @@ from ablator.utils.file import expand_path
 
 class ProtoTrainer:
     """
-    Manages resources for Prototyping. This trainer runs an experiment of a single prototype model. (Therefore no HPO)
+    Manages resources for Prototyping. This trainer runs an experiment of a single
+    prototype model (Therefore no ablation study nor HPO).
 
     Parameters
     ----------
@@ -35,6 +36,8 @@ class ProtoTrainer:
         The main model wrapper.
     run_config : RunConfig
         Running configuration for the model.
+    experiment_dir : Path
+        The path object to the experiment directory.
 
     Raises
     ------
@@ -43,31 +46,31 @@ class ProtoTrainer:
 
     Examples
     --------
-    Below is a complete workflow on how to launch a prototype experiment with ``ProtoTrainer``, from defining config to
-    launching the experiment:
+    Below is a complete workflow on how to launch a prototype experiment with ``ProtoTrainer``,
+    from defining the config to launching the experiment:
 
     - Define training config:
 
-    >>> my_optim_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
+    >>> my_optimizer_config = OptimizerConfig("sgd", {"lr": 0.5, "weight_decay": 0.5})
     >>> my_scheduler_config = SchedulerConfig("step", arguments={"step_size": 1, "gamma": 0.99})
     >>> train_config = TrainConfig(
     ...     dataset="[Dataset Name]",
     ...     batch_size=32,
     ...     epochs=10,
     ...     optimizer_config = my_optimizer_config,
-    ...     scheduler_config = my_scheduler_config,
-    ...     rand_weights_init = True
+    ...     scheduler_config = my_scheduler_config
     ... )
 
-    - Define model config, here we use the default one with no custom hyperparameters (sometimes you would
-      want to customize the model config to run HPO on your model's hyperparameters in the parallel experiments,
-      which uses ``ParallelTrainer`` and ``ParallelConfig`` instead of ``ProtoTrainer`` and ``RunConfig``):
+    - Define model config: we use the default one with no custom hyperparameters (sometimes you would
+      want to customize it to run ablation study/ HPO on the model's hyperparameters in a parallel
+      experiment, which needs ``ParallelTrainer`` and ``ParallelConfig`` instead of ``ProtoTrainer``
+      and ``RunConfig``):
 
     >>> model_config = ModelConfig()
 
     - Define run config:
 
-    >>> run_config = CustomRunConfig(
+    >>> run_config = RunConfig(
     ...     train_config=train_config,
     ...     model_config=model_config,
     ...     metrics_n_batches = 800,
@@ -83,13 +86,15 @@ class ProtoTrainer:
     >>>     def __init__(self, *args, **kwargs):
     >>>         super().__init__(*args, **kwargs)
     >>>
-    >>>     def make_dataloader_train(self, run_config: CustomRunConfig):
+    >>>     def make_dataloader_train(self, run_config: RunConfig):
     >>>         return torch.utils.data.DataLoader(<train_dataset>, batch_size=32, shuffle=True)
     >>>
-    >>>     def make_dataloader_val(self, run_config: CustomRunConfig):
+    >>>     def make_dataloader_val(self, run_config: RunConfig):
     >>>         return torch.utils.data.DataLoader(<val_dataset>, batch_size=32, shuffle=False)
 
-    - After gathering all configurations and model wrapper, it's time we initialize and launch the prototype trainer:
+    - After gathering all configurations and model wrapper, it's time we initialize and launch the
+      prototype trainer. When launching the experiment, we must provide a working directory, which
+      points to a git repository that is used for keeping track of the code differences:
 
     >>> wrapper = MyModelWrapper(
     ...     model_class=<your_ModelModule_class>,
@@ -98,7 +103,7 @@ class ProtoTrainer:
     ...     wrapper=wrapper,
     ...     run_config=run_config,
     ... )
-    >>> metrics = ablator.launch()
+    >>> metrics = ablator.launch(working_directory=os.getcwd())  # suppose current directory is tracked by git
     """
 
     def __init__(
@@ -222,13 +227,13 @@ class ProtoTrainer:
         Parameters
         ----------
         working_directory : str
-            The working directory points to a git repository that is used for keeping track
+            The working directory points to a git repository that is used for keeping track of
             the code differences.
         resume : bool
             Whether to resume training the model from existing checkpoints and
             existing experiment state. By default False
         debug : bool, optional
-            Whether to train the model in debug mode. By default False
+            Whether to train models in debug mode, by default ``False``.
 
         Returns
         -------
