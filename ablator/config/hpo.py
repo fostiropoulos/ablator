@@ -72,11 +72,7 @@ class SubConfiguration:
             if issubclass(type(val), Type):
                 return _parse_nested_value(val.__dict__)
             if issubclass(type(val), ConfigBase):
-                return _parse_nested_value(
-                    val.make_dict(
-                        val.annotations, ignore_stateless=False, flatten=False
-                    )
-                )
+                return _parse_nested_value(val.make_dict(val.annotations, ignore_stateless=False, flatten=False))
             if isinstance(val, dict):
                 return {k: _parse_nested_value(v) for k, v in val.items()}
 
@@ -114,10 +110,7 @@ class SubConfiguration:
             if isinstance(v, dict) and not isinstance(arguments, dict):
                 return False
             if isinstance(v, dict):
-                return all(
-                    _contains_value(arguments[k], v[k]) if k in arguments else False
-                    for k in v
-                )
+                return all(_contains_value(arguments[k], v[k]) if k in arguments else False for k in v)
             return v == arguments
 
         return _contains_value(arguments=self.arguments, v=value)
@@ -222,13 +215,9 @@ class SearchSpace(ConfigBase):
             "'categorical_values' and / or 'sub_configurations' for SearchSpace."
         )
         if self.value_range is not None:
-            assert (
-                self.value_type is not None
-            ), "`value_type` is required for `value_range` of SearchSpace"
+            assert self.value_type is not None, "`value_type` is required for `value_range` of SearchSpace"
         else:
-            assert (
-                self.value_type is None
-            ), "Can not specify `value_type` without `value_range`."
+            assert self.value_type is None, "Can not specify `value_type` without `value_range`."
         if self.n_bins is not None:
             assert (
                 self.value_range is not None or self.categorical_values is not None
@@ -266,9 +255,7 @@ class SearchSpace(ConfigBase):
         ignore_stateless: bool = False,
         flatten: bool = False,
     ) -> dict:
-        return_dict = super().make_dict(
-            annotations=annotations, ignore_stateless=ignore_stateless, flatten=flatten
-        )
+        return_dict = super().make_dict(annotations=annotations, ignore_stateless=ignore_stateless, flatten=flatten)
 
         return return_dict
 

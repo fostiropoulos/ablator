@@ -29,27 +29,15 @@ def test_all(
     ablator = ParallelTrainer(wrapper=error_wrapper, run_config=config)
     ablator.launch(working_dir)
 
-    complete_configs = ablator.experiment_state.get_trial_configs_by_state(
-        TrialState.COMPLETE
-    )
-    failed_configs = ablator.experiment_state.get_trial_configs_by_state(
-        TrialState.FAIL
-    )
-    lrs = np.array(
-        [c.train_config.optimizer_config.arguments.lr for c in complete_configs]
-    )
-    bad_lrs = np.array(
-        [c.train_config.optimizer_config.arguments.lr for c in failed_configs]
-    )
+    complete_configs = ablator.experiment_state.get_trial_configs_by_state(TrialState.COMPLETE)
+    failed_configs = ablator.experiment_state.get_trial_configs_by_state(TrialState.FAIL)
+    lrs = np.array([c.train_config.optimizer_config.arguments.lr for c in complete_configs])
+    bad_lrs = np.array([c.train_config.optimizer_config.arguments.lr for c in failed_configs])
     config = ablator.run_config
     n_trials = config.total_trials
     LR_ERROR_LIMIT = config.model_config.lr_error_limit
-    n_complete = np.sum(
-        np.linspace(0, 19, int(n_trials**0.5)) < LR_ERROR_LIMIT
-    ) * int(n_trials**0.5)
-    n_failed = np.sum(np.linspace(0, 19, int(n_trials**0.5)) > LR_ERROR_LIMIT) * int(
-        n_trials**0.5
-    )
+    n_complete = np.sum(np.linspace(0, 19, int(n_trials**0.5)) < LR_ERROR_LIMIT) * int(n_trials**0.5)
+    n_failed = np.sum(np.linspace(0, 19, int(n_trials**0.5)) > LR_ERROR_LIMIT) * int(n_trials**0.5)
     assert len(complete_configs) == n_complete
     assert len(failed_configs) == n_failed
     assert (lrs < LR_ERROR_LIMIT).all()
@@ -58,11 +46,7 @@ def test_all(
     msg = assert_error_msg(
         lambda: ablator._init_state(working_dir),
     )
-    assert (
-        "Experiment Directory " in msg
-        and config.experiment_dir in msg
-        and "exists" in msg
-    )
+    assert "Experiment Directory " in msg and config.experiment_dir in msg and "exists" in msg
 
     prev_trials = len(ablator.experiment_state.valid_trials())
     ablator.launch(working_dir, resume=True)
@@ -97,13 +81,11 @@ def test_all(
         attribute_name_remap=attribute_name_remap,
     )
     assert all(
-        tmp_path.joinpath("violinplot", "val_loss", f"{file_name}.png").exists()
-        for file_name in categorical_name_remap
+        tmp_path.joinpath("violinplot", "val_loss", f"{file_name}.png").exists() for file_name in categorical_name_remap
     )
 
     assert all(
-        tmp_path.joinpath("linearplot", "val_loss", f"{file_name}.png").exists()
-        for file_name in numerical_name_remap
+        tmp_path.joinpath("linearplot", "val_loss", f"{file_name}.png").exists() for file_name in numerical_name_remap
     )
 
 

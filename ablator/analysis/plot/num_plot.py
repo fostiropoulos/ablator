@@ -51,9 +51,7 @@ class LinearPlot(Numerical):
             ],
             axis=1,
         )
-        sns.regplot(
-            df, x="x", y="y", ax=self.ax, marker=".", scatter_kws={"alpha": 0.3}, seed=0
-        )
+        sns.regplot(df, x="x", y="y", ax=self.ax, marker=".", scatter_kws={"alpha": 0.3}, seed=0)
         return self.figure, self.ax
 
     def _parse_legend(self, ax: Axes):

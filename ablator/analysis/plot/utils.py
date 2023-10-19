@@ -36,9 +36,7 @@ def get_axes_fig(ax: Axes) -> Figure:
     raise RuntimeError("Can not find an active plot.")
 
 
-def parse_name_remap(
-    defaults: list[str] | None = None, name_map: dict[str, str] | None = None
-) -> dict[str, str]:
+def parse_name_remap(defaults: list[str] | None = None, name_map: dict[str, str] | None = None) -> dict[str, str]:
     """
     Returns a dictionary mapping input attribute names to output attribute names,
     with optional remapping based on ``name_map``.

@@ -175,10 +175,7 @@ class ModelWrapper(ModelBase):
 
         if scheduler_state is not None:
             if scheduler is None:
-                self.logger.warn(
-                    "Supplied `scheduler_state` without `scheduler_config`. Ignoring"
-                    " scheduler."
-                )
+                self.logger.warn("Supplied `scheduler_state` without `scheduler_config`. Ignoring scheduler.")
                 return None
             scheduler.load_state_dict(scheduler_state)
         return scheduler
@@ -218,22 +215,15 @@ class ModelWrapper(ModelBase):
                 if "step" in optimizer_state["state"][k] and isinstance(
                     optimizer_state["state"][k]["step"], torch.Tensor
                 ):
-                    optimizer_state["state"][k]["step"] = optimizer_state["state"][k][
-                        "step"
-                    ].cpu()
+                    optimizer_state["state"][k]["step"] = optimizer_state["state"][k]["step"].cpu()
 
             optimizer.load_state_dict(optimizer_state)
         elif optimizer_state is not None:
-            self.logger.warn(
-                "Supplied `optimizer_state` without `optimizer_config`. Ignoring"
-                " optimizer."
-            )
+            self.logger.warn("Supplied `optimizer_state` without `optimizer_config`. Ignoring optimizer.")
 
         return optimizer
 
-    def create_scaler(
-        self, scaler_state: ty.Optional[dict[str, ty.Any]] = None
-    ) -> GradScaler:
+    def create_scaler(self, scaler_state: ty.Optional[dict[str, ty.Any]] = None) -> GradScaler:
         """
         Creates the scaler from the saved state or from config.
 
@@ -335,11 +325,7 @@ class ModelWrapper(ModelBase):
         self.current_iteration += 1
 
     def _is_step(self, step_interval: int) -> bool:
-        return (
-            step_interval > 0
-            and self.current_iteration > 0
-            and self.current_iteration % step_interval == 0
-        )
+        return step_interval > 0 and self.current_iteration > 0 and self.current_iteration % step_interval == 0
 
     def _train_evaluation_step(self, smoke_test: bool = False):
         # pylint: disable=too-complex
@@ -362,15 +348,9 @@ class ModelWrapper(ModelBase):
                 smoke_test=smoke_test,
             )
         else:
-            self.logger.warn(
-                "Validation dataloader and metrics were not set. Will be skipping"
-                " `validation_loop`."
-            )
+            self.logger.warn("Validation dataloader and metrics were not set. Will be skipping `validation_loop`.")
 
-        if (
-            self.optim_metric_name is not None
-            and self.optim_metric_name not in self.metrics
-        ):
+        if self.optim_metric_name is not None and self.optim_metric_name not in self.metrics:
             metric_names = sorted(list(self.metrics.keys()))
             raise RuntimeError(
                 f"optim_metric_name=`{self.optim_metric_name}` not found in metrics"
@@ -382,10 +362,7 @@ class ModelWrapper(ModelBase):
             optim_metric = self.metrics[self.optim_metric_name]
             optim_direction = self.optim_metric_direction
             best_metric = self.best_metrics[self.optim_metric_name]
-            is_warmup = (
-                self.current_iteration
-                <= self.epoch_len * self.run_config.warm_up_epochs
-            )
+            is_warmup = self.current_iteration <= self.epoch_len * self.run_config.warm_up_epochs
             if is_best := (
                 (optim_direction == Optim.min and optim_metric < best_metric)
                 or (optim_direction == Optim.max and optim_metric > best_metric)
@@ -394,12 +371,8 @@ class ModelWrapper(ModelBase):
                 self.best_metrics[self.optim_metric_name] = optim_metric
                 best_metric = optim_metric
             elif not is_warmup:
-                relative_change_a = (optim_metric - best_metric + 1e-5) / abs(
-                    best_metric + 1e-5
-                )
-                relative_change_b = (optim_metric - best_metric + 1e-5) / abs(
-                    optim_metric + 1e-5
-                )
+                relative_change_a = (optim_metric - best_metric + 1e-5) / abs(best_metric + 1e-5)
+                relative_change_b = (optim_metric - best_metric + 1e-5) / abs(optim_metric + 1e-5)
                 ratio = abs(relative_change_a + relative_change_b) / 2
 
                 div_factor = self.run_config.divergence_factor
@@ -435,8 +408,7 @@ class ModelWrapper(ModelBase):
         ):
             diff = self.current_iteration - self.best_iteration
             raise TrainPlateauError(
-                f"Early stopping. No improvement for {diff} > early_stopping_iter ="
-                f" `{early_stopping_iter}` iterations."
+                f"Early stopping. No improvement for {diff} > early_stopping_iter = `{early_stopping_iter}` iterations."
             )
 
     def _model_step(
@@ -447,23 +419,18 @@ class ModelWrapper(ModelBase):
 
         try:
             outputs, loss = out
-            assert isinstance(outputs, (dict, type(None))) and isinstance(
-                loss, (torch.Tensor, type(None))
-            )
+            assert isinstance(outputs, (dict, type(None))) and isinstance(loss, (torch.Tensor, type(None)))
             if outputs is not None:
                 for k, v in outputs.items():
                     assert isinstance(k, str) and isinstance(v, torch.Tensor)
         except Exception as exc:
             raise RuntimeError(
-                "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
-                " torch.Tensor | None."
+                "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None."
             ) from exc
         return outputs, loss
 
     @ty.final
-    def train_step(
-        self, batch: Iterable
-    ) -> tuple[dict[str, torch.Tensor] | None, dict[str, ty.Any]]:
+    def train_step(self, batch: Iterable) -> tuple[dict[str, torch.Tensor] | None, dict[str, ty.Any]]:
         """
         A single step for training.
         It also updates learning rate with scheduler.
@@ -520,9 +487,7 @@ class ModelWrapper(ModelBase):
         self.train_metrics.update_static_metrics(self.train_stats)
         if self.verbose != "progress":
             return
-        self.progress_bar.update_metrics(
-            self.metrics, self.current_iteration % self.epoch_len
-        )
+        self.progress_bar.update_metrics(self.metrics, self.current_iteration % self.epoch_len)
 
     @property
     def metrics(self) -> dict[str, float]:
@@ -572,10 +537,7 @@ class ModelWrapper(ModelBase):
         if self._is_step(self.log_itr):
             self.train_metrics.evaluate(reset=False)
             self.log_step()
-        elif (
-            self.verbose == "progress"
-            and time.time() - self._prev_update_time > update_interval
-        ):
+        elif self.verbose == "progress" and time.time() - self._prev_update_time > update_interval:
             self.update_status()
             self._prev_update_time = 1
 
@@ -606,11 +568,7 @@ class ModelWrapper(ModelBase):
                 self.logger.error(error)
                 raise e
             finally:
-                eval_step = (
-                    self.current_iteration
-                    if self.eval_itr == 0
-                    else self.current_iteration // self.eval_itr
-                )
+                eval_step = self.current_iteration if self.eval_itr == 0 else self.current_iteration // self.eval_itr
                 msg = self.status_message()
                 self.logger.info(f"Evaluation Step [{eval_step}] {msg}", verbose=False)
 
@@ -729,10 +687,7 @@ class ModelWrapper(ModelBase):
                 resume=resume,
             )
         elif not self._is_init:
-            raise ValueError(
-                f"{self.__class__.__name__} is not initialized. Must provide a"
-                " `run_config`."
-            )
+            raise ValueError(f"{self.__class__.__name__} is not initialized. Must provide a `run_config`.")
         elif debug or smoke_test:
             self.init_state(
                 run_config=self.run_config,
@@ -741,10 +696,7 @@ class ModelWrapper(ModelBase):
                 resume=resume,
             )
         elif run_config is not None:
-            raise ValueError(
-                "Can not provide `run_config` to already initialized"
-                f" `{self.__class__.__name__}`"
-            )
+            raise ValueError(f"Can not provide `run_config` to already initialized `{self.__class__.__name__}`")
         if self.current_iteration == self.total_steps:
             self.logger.warn(
                 f"Training is already complete: {self.current_iteration} /"
@@ -769,9 +721,7 @@ class ModelWrapper(ModelBase):
         return self.metrics
 
     @ty.final
-    def evaluate(
-        self, run_config: RunConfig, chkpt: str | Path | None = None
-    ) -> dict[str, dict[str, ty.Any]]:
+    def evaluate(self, run_config: RunConfig, chkpt: str | Path | None = None) -> dict[str, dict[str, ty.Any]]:
         """
         Evaluate the model after training on the test and validation sets.
 
@@ -793,9 +743,7 @@ class ModelWrapper(ModelBase):
         msg = self.metrics
         self.logger.info(f"Current metrics: {msg}")
         metrics = {}
-        for loader, tag in zip(
-            [self.test_dataloader, self.val_dataloader], ["test", "val"]
-        ):
+        for loader, tag in zip([self.test_dataloader, self.val_dataloader], ["test", "val"]):
             if loader is not None:
                 # NOTE we set max memory limit and let it crash because we do not want
                 # inaccurate metrics calculation. Possibly smarter ways to go about it.
@@ -819,9 +767,7 @@ class ModelWrapper(ModelBase):
         return metrics
 
     @ty.final
-    def backward(
-        self, loss: torch.Tensor, scaler: torch.cuda.amp.GradScaler | None = None
-    ):
+    def backward(self, loss: torch.Tensor, scaler: torch.cuda.amp.GradScaler | None = None):
         if scaler is not None:
             scaler.scale(loss).backward()
         else:
@@ -844,9 +790,7 @@ class ModelWrapper(ModelBase):
         else:
             optimizer.step()
         if self._is_partially_optimized is None and any(
-            p.grad is None
-            for param_group in optimizer.param_groups
-            for p in param_group["params"]
+            p.grad is None for param_group in optimizer.param_groups for p in param_group["params"]
         ):
             self.logger.warn(
                 "Not all optimization parameters contain gradients. "
@@ -934,9 +878,7 @@ class ModelWrapper(ModelBase):
             loss_value = self.backward(loss, scaler)
         else:
             if self._is_self_optim is None and all(
-                p.grad is None
-                for param_group in optimizer.param_groups
-                for p in param_group["params"]
+                p.grad is None for param_group in optimizer.param_groups for p in param_group["params"]
             ):
                 self.logger.error(
                     "The loss returned by the model is `None` and no optimization"
@@ -966,17 +908,13 @@ class ModelWrapper(ModelBase):
         was_training = model.training
         model.eval()
         _sampler = getattr(dataloader, "sampler", None)
-        is_random_sampling = isinstance(
-            _sampler, torch.utils.data.sampler.RandomSampler
-        )
+        is_random_sampling = isinstance(_sampler, torch.utils.data.sampler.RandomSampler)
         if subsample < 1.0 and not is_random_sampling:
             self.logger.warn(
                 f"Validating on a subsample=`{subsample}` without a random sampler,"
                 f"sampler=`{type(_sampler).__name__}`. The results can be biased. "
             )
-        metrics_dict = self.validation_loop(
-            model, dataloader, metrics, subsample, smoke_test
-        )
+        metrics_dict = self.validation_loop(model, dataloader, metrics, subsample, smoke_test)
         if was_training:
             model.train()
         return metrics_dict
@@ -1014,8 +952,7 @@ class ModelWrapper(ModelBase):
         cutoff_itr = len(dataloader) * subsample
         if model.training:
             self.logger.warn(
-                "Called `validation_loop` without setting the model to evaluation mode."
-                " i.e. `model.eval()`"
+                "Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`"
             )
         for i, batch in enumerate(dataloader):
             with torch.no_grad():

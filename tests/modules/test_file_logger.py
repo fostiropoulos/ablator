@@ -23,9 +23,7 @@ def assert_console_output(fn, assert_fn):
 def test_file_logger(tmp_path: Path):
     logpath = tmp_path.joinpath("test.log")
     logger = FileLogger(logpath, verbose=True, prefix="1")
-    assert_console_output(
-        lambda: logger.info("hello"), lambda s: s.endswith("1 - hello\n")
-    )
+    assert_console_output(lambda: logger.info("hello"), lambda s: s.endswith("1 - hello\n"))
     lines = logpath.read_text().split("\n")
     assert len(lines) == 3
     assert lines[0].startswith("Starting Logger")
@@ -33,18 +31,10 @@ def test_file_logger(tmp_path: Path):
 
     logger.verbose = False
     assert_console_output(lambda: logger.info("hello"), lambda s: len(s) == 0)
-    assert_console_output(
-        lambda: logger.info("hello", verbose=True), lambda s: s.endswith("hello\n")
-    )
-    assert_console_output(
-        lambda: logger.warn("hello"), lambda s: s.endswith("1 - \x1b[93mhello\x1b[0m\n")
-    )
-    assert_console_output(
-        lambda: logger.warn("hello", verbose=False), lambda s: len(s) == 0
-    )
-    assert_console_output(
-        lambda: logger.error("hello"), lambda s: s.endswith("\x1b[91mhello\x1b[0m\n")
-    )
+    assert_console_output(lambda: logger.info("hello", verbose=True), lambda s: s.endswith("hello\n"))
+    assert_console_output(lambda: logger.warn("hello"), lambda s: s.endswith("1 - \x1b[93mhello\x1b[0m\n"))
+    assert_console_output(lambda: logger.warn("hello", verbose=False), lambda s: len(s) == 0)
+    assert_console_output(lambda: logger.error("hello"), lambda s: s.endswith("\x1b[91mhello\x1b[0m\n"))
 
 
 @ray.remote(num_cpus=0.001)
@@ -65,9 +55,7 @@ def test_remote_file_logger(tmp_path: Path, ray_cluster):
     n_trials = 10
     ray.get(
         [
-            mock_remote.options(
-                resources={f"node:{random.choice(node_ips)}": 0.001}
-            ).remote(i, logger)
+            mock_remote.options(resources={f"node:{random.choice(node_ips)}": 0.001}).remote(i, logger)
             for i in range(n_trials)
         ]
     )
@@ -76,9 +64,7 @@ def test_remote_file_logger(tmp_path: Path, ray_cluster):
         _, trial_id, msg, _ = msg.split(" ")
         return {"trial_id": trial_id, "msg": msg}
 
-    df = pd.DataFrame(
-        list(map(clean_msg, re.findall("\\\\xx.*\\\\xx", logpath.read_text())))
-    )
+    df = pd.DataFrame(list(map(clean_msg, re.findall("\\\\xx.*\\\\xx", logpath.read_text()))))
     assert set(df["trial_id"].unique().astype(int)) == set(range(n_trials))
     assert df.nunique()["trial_id"] == n_trials
     assert df.nunique()["msg"] == 3

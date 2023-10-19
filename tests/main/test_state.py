@@ -107,24 +107,15 @@ def test_state(tmp_path: Path, search_algo, assert_error_msg):
         "Can not specify `n_bins` without `value_range` or `categorical_values`.",
     )
     assert_error_msg(
-        lambda: SearchSpace(
-            subspaces=[SearchSpace(value_range=[0, 2], value_type="int")], n_bins=10
-        ),
+        lambda: SearchSpace(subspaces=[SearchSpace(value_range=[0, 2], value_type="int")], n_bins=10),
         "Can not specify `n_bins` without `value_range` or `categorical_values`.",
     )
     assert_error_msg(
-        lambda: SearchSpace(
-            value_range=[0, 1, 2], categorical_values=[0, "1", 0.122], value_type="int"
-        ),
-        (
-            "Incompatible lengths for value_range between [0, 1, 2] and type_hint:"
-            " (<class 'str'>, <class 'str'>)"
-        ),
+        lambda: SearchSpace(value_range=[0, 1, 2], categorical_values=[0, "1", 0.122], value_type="int"),
+        "Incompatible lengths for value_range between [0, 1, 2] and type_hint: (<class 'str'>, <class 'str'>)",
     )
     assert_error_msg(
-        lambda: SearchSpace(
-            value_range=[0, 1], categorical_values=[0, "1", 0.122], value_type="float"
-        ),
+        lambda: SearchSpace(value_range=[0, 1], categorical_values=[0, "1", 0.122], value_type="float"),
         (
             "Must specify only one of 'value_range', 'subspaces', 'categorical_values'"
             " and / or 'sub_configurations' for SearchSpace."
@@ -145,15 +136,10 @@ def test_state(tmp_path: Path, search_algo, assert_error_msg):
     _clean_path(tmp_path)
     assert_error_msg(
         lambda: ExperimentState(tmp_path, config),
-        (
-            "SearchSpace parameter some_var was not found in the configuration"
-            f" {sorted(list(default_vals))}."
-        ),
+        f"SearchSpace parameter some_var was not found in the configuration {sorted(list(default_vals))}.",
     )
 
-    config.search_space = {
-        "train_config.optimizer_config.name": SearchSpace(categorical_values=[0])
-    }
+    config.search_space = {"train_config.optimizer_config.name": SearchSpace(categorical_values=[0])}
     config.ignore_invalid_params = False
 
     _clean_path(tmp_path)
@@ -165,9 +151,7 @@ def test_state(tmp_path: Path, search_algo, assert_error_msg):
 
 @pytest.mark.parametrize("search_algo", list(SearchAlgo.__members__.keys()))
 def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_output):
-    search_space = {
-        "train_config.optimizer_config.name": SearchSpace(categorical_values=[0])
-    }
+    search_space = {"train_config.optimizer_config.name": SearchSpace(categorical_values=[0])}
     config = make_config(search_space, search_algo)
     config.ignore_invalid_params = True
 
@@ -176,18 +160,11 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_ou
     _clean_path(tmp_path)
     assert_error_msg(
         lambda: ExperimentState(tmp_path, config).sample_trial(),
-        (
-            f"Reached maximum limit of misconfigured trials, {error_upper_bound} with"
-            f" {error_upper_bound} invalid trials."
-        ),
+        f"Reached maximum limit of misconfigured trials, {error_upper_bound} with {error_upper_bound} invalid trials.",
     )
 
     _clean_path(tmp_path)
-    config.search_space = {
-        "train_config.optimizer_config.arguments.lr": SearchSpace(
-            categorical_values=[0, 1]
-        )
-    }
+    config.search_space = {"train_config.optimizer_config.arguments.lr": SearchSpace(categorical_values=[0, 1])}
     state = ExperimentState(tmp_path, config, sampler_seed=1)
     for i in range(4):
         state.sample_trial()
@@ -195,18 +172,12 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_ou
     assert len(set([t.config_uid for t in state.valid_trials()])) == 2
     _clean_path(tmp_path)
     config.search_space = {
-        "train_config.optimizer_config.name": SearchSpace(
-            categorical_values=["sgd", 0]
-        ),
-        "train_config.optimizer_config.arguments.lr": SearchSpace(
-            value_range=[0, 1], value_type="float", n_bins=100
-        ),
+        "train_config.optimizer_config.name": SearchSpace(categorical_values=["sgd", 0]),
+        "train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 1], value_type="float", n_bins=100),
     }
     state = ExperimentState(tmp_path, config, logger=FileLogger())
     out, err = capture_output(lambda: [state.sample_trial() for i in range(10)])
-    assert (
-        "ignoring: {'train_config.optimizer_config.name': '0'," in out and len(err) == 0
-    )
+    assert "ignoring: {'train_config.optimizer_config.name': '0'," in out and len(err) == 0
 
     _clean_path(tmp_path)
     config.search_space = {
@@ -257,9 +228,7 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_ou
 @pytest.mark.parametrize("search_algo", list(SearchAlgo.__members__.keys()))
 def test_state_resume(tmp_path: Path, search_algo, assert_error_msg):
     search_space = {
-        "train_config.optimizer_config.arguments.lr": SearchSpace(
-            value_range=[0, 1], value_type="float", n_bins=100
-        ),
+        "train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 1], value_type="float", n_bins=100),
     }
 
     config = make_config(search_space, search_algo)
@@ -278,9 +247,7 @@ def test_state_resume(tmp_path: Path, search_algo, assert_error_msg):
 
     _clean_path(tmp_path)
     search_space = {
-        "train_config.optimizer_config.arguments.lr": SearchSpace(
-            value_range=[0, 1], value_type="float"
-        ),
+        "train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0, 1], value_type="float"),
     }
     config.to_dict()
     s = ExperimentState(tmp_path, config)
@@ -360,9 +327,7 @@ def _run_search_algo(s: ExperimentState):
             state=TrialState.COMPLETE,
         )
         perfs.append(perf)
-    state_metrics = pd.DataFrame(
-        [t.metrics[0] for t in s.get_trials_by_state(TrialState.COMPLETE)]
-    )
+    state_metrics = pd.DataFrame([t.metrics[0] for t in s.get_trials_by_state(TrialState.COMPLETE)])
     perf_df = pd.DataFrame(perfs)
     assert (perf_df[["val_acc"]] == state_metrics).all().all()
     return perf_df

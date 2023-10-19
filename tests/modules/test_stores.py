@@ -23,10 +23,7 @@ def test_array_store(assert_error_msg):
     assert (astore.get() == np.arange(50, 100)[:, None]).all() and astore._shape == (1,)
 
     msg = assert_error_msg(lambda: astore.append(np.array([[10.0]])))
-    assert (
-        msg
-        == "Inhomogeneous types between stored values int64 and provided value float64."
-    )
+    assert msg == "Inhomogeneous types between stored values int64 and provided value float64."
 
     astore = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
     assert astore._store_type is None
@@ -35,10 +32,7 @@ def test_array_store(assert_error_msg):
     astore.reset()
     # reseting should not reset the type of shape
     msg = assert_error_msg(lambda: astore.append(0.0))
-    assert (
-        msg
-        == "Inhomogeneous types between stored values int64 and provided value float64."
-    )
+    assert msg == "Inhomogeneous types between stored values int64 and provided value float64."
 
     astore = ArrayStore(batch_limit=batch_limit, memory_limit=memory_limit)
     assert astore.get().shape == (1, 0)
@@ -56,10 +50,7 @@ def test_array_store(assert_error_msg):
     astore.append(np.arange(10)[None, :])
     assert (astore.get() == np.stack([np.arange(10), np.arange(10)])).all()
     msg = assert_error_msg(lambda: astore.append(np.arange(5)[None, :]))
-    assert (
-        msg
-        == "Inhomogeneous shapes between stored values  (10,) and provided value (5,)"
-    )
+    assert msg == "Inhomogeneous shapes between stored values  (10,) and provided value (5,)"
     assert astore.get().shape == (2, 10)
     astore.append(np.arange(10)[None, :])
     assert astore.get().shape == (3, 10)
@@ -133,10 +124,7 @@ def test_moving_average(assert_error_msg):
     ma.append(np.array(0))
     ma.append(0)
     msg = assert_error_msg(lambda: ma.append(0.0))
-    assert (
-        msg
-        == "Inhomogeneous types between stored values int64 and provided value float64."
-    )
+    assert msg == "Inhomogeneous types between stored values int64 and provided value float64."
     ma.append(100)
     ma.append(100)
     assert ma == 50 and not ma != 50
@@ -186,9 +174,7 @@ def assert_store_unison_limits(n_labels, n_preds):
     store.append(preds=preds, labels=labels)
     assert store.limit is None
     for i in range(bottleneck - 2):
-        store.append(
-            preds=np.random.rand(1, n_preds), labels=np.random.rand(1, n_labels)
-        )
+        store.append(preds=np.random.rand(1, n_preds), labels=np.random.rand(1, n_labels))
     assert store.limit is None
     store.append(preds=np.random.rand(1, n_preds), labels=np.random.rand(1, n_labels))
     assert store.limit == bottleneck - 1
@@ -205,9 +191,7 @@ def test_prediction_store(assert_error_msg):
     assert store.evaluate() == {}
     msg = assert_error_msg(lambda: store.append())
     assert msg == "Must provide keyed batch arguments."
-    msg = assert_error_msg(
-        lambda: store.append(preds=np.array([4, 3, 0]), labels=np.array([5, 1, 1]))
-    )
+    msg = assert_error_msg(lambda: store.append(preds=np.array([4, 3, 0]), labels=np.array([5, 1, 1])))
     assert (
         msg
         == "Missing batch dimension. If supplying a single value array, reshape to [B,"
@@ -222,11 +206,7 @@ def test_prediction_store(assert_error_msg):
     data = store.get()
     assert (data["preds"] == np.concatenate(preds)).all()
     assert (data["labels"] == np.concatenate(labels)).all()
-    msg = assert_error_msg(
-        lambda: store.append(
-            preds=np.array([4, 3, 0]), labels=np.array([5, 1, 1]), xx=""
-        )
-    )
+    msg = assert_error_msg(lambda: store.append(preds=np.array([4, 3, 0]), labels=np.array([5, 1, 1]), xx=""))
     assert (
         msg
         == "Inhomogeneous keys from the prediction store update. Expected: ['labels',"
@@ -234,60 +214,27 @@ def test_prediction_store(assert_error_msg):
     )
     msg = assert_error_msg(lambda: store.append(preds=np.array([4, 3, 0])))
     assert (
-        msg
-        == "Inhomogeneous keys from the prediction store update. Expected: ['labels',"
-        " 'preds'], received ['preds']"
+        msg == "Inhomogeneous keys from the prediction store update. Expected: ['labels', 'preds'], received ['preds']"
     )
 
-    msg = assert_error_msg(
-        lambda: store.append(
-            preds=np.array([[4.0, 3, 0]]), labels=np.array([[5, 1, 1]])
-        )
-    )
-    assert (
-        msg
-        == "Inhomogeneous shapes between stored values  (100,) and provided value (3,)"
-    )
-    msg = assert_error_msg(
-        lambda: store.append(
-            preds=np.array([np.arange(100)]), labels=np.array([np.arange(200)])
-        )
-    )
-    assert (
-        msg
-        == "Inhomogeneous types between stored values float64 and provided value int64."
-    )
+    msg = assert_error_msg(lambda: store.append(preds=np.array([[4.0, 3, 0]]), labels=np.array([[5, 1, 1]])))
+    assert msg == "Inhomogeneous shapes between stored values  (100,) and provided value (3,)"
+    msg = assert_error_msg(lambda: store.append(preds=np.array([np.arange(100)]), labels=np.array([np.arange(200)])))
+    assert msg == "Inhomogeneous types between stored values float64 and provided value int64."
 
-    msg = assert_error_msg(
-        lambda: store.append(
-            preds=np.random.randn(10, 100), labels=np.random.randn(9, 200)
-        )
-    )
-    assert (
-        msg == "Inhomegenous batches between inputs. Sizes: {'preds': 10, 'labels': 9}"
-    )
+    msg = assert_error_msg(lambda: store.append(preds=np.random.randn(10, 100), labels=np.random.randn(9, 200)))
+    assert msg == "Inhomegenous batches between inputs. Sizes: {'preds': 10, 'labels': 9}"
     assert store.evaluate() == {}
     store.reset()
     assert all([v.shape == (1, 0) for k, v in store.get().items()])
-    msg = assert_error_msg(
-        lambda: store.append(
-            preds=np.array([4, 3, 0]), labels=np.array([5, 1, 1]), xx=""
-        )
-    )
+    msg = assert_error_msg(lambda: store.append(preds=np.array([4, 3, 0]), labels=np.array([5, 1, 1]), xx=""))
     assert (
         msg
         == "Inhomogeneous keys from the prediction store update. Expected: ['labels',"
         " 'preds'], received ['labels', 'preds', 'xx']"
     )
-    msg = assert_error_msg(
-        lambda: store.append(
-            preds=np.array([[4.0, 3, 0]]), labels=np.array([[5, 1, 1]])
-        )
-    )
-    assert (
-        msg
-        == "Inhomogeneous shapes between stored values  (100,) and provided value (3,)"
-    )
+    msg = assert_error_msg(lambda: store.append(preds=np.array([[4.0, 3, 0]]), labels=np.array([[5, 1, 1]])))
+    assert msg == "Inhomogeneous shapes between stored values  (100,) and provided value (3,)"
 
     assert_store_unison_limits(100, 10)
     assert_store_unison_limits(10, 100)
@@ -302,12 +249,9 @@ def test_prediction_store_eval_fns(assert_error_msg):
         evaluation_functions={"accuracy": accuracy_score},
     )
     assert store.evaluate() == {}
-    msg = assert_error_msg(
-        lambda: store.append(preds=np.array([4, 3, 0]), labels=np.array([5, 1, 1]))
-    )
+    msg = assert_error_msg(lambda: store.append(preds=np.array([4, 3, 0]), labels=np.array([5, 1, 1])))
     assert (
-        "Batch keys do not match any function arguments: accuracy: ['y_true', 'y_pred',"
-        " 'normalize', 'sample_weight']"
+        "Batch keys do not match any function arguments: accuracy: ['y_true', 'y_pred', 'normalize', 'sample_weight']"
         == msg
     )
     store = PredictionStore(
@@ -333,9 +277,7 @@ def test_prediction_store_eval_fns(assert_error_msg):
     assert len(metrics) == 1
     store.append(y_true=np.ones((50, 1), dtype=int), y_pred=np.ones((50, 1), dtype=int))
     assert store.evaluate()["accuracy"] > metrics["accuracy"]
-    store.append(
-        y_true=np.ones((150, 1), dtype=int), y_pred=np.ones((150, 1), dtype=int)
-    )
+    store.append(y_true=np.ones((150, 1), dtype=int), y_pred=np.ones((150, 1), dtype=int))
     assert store.evaluate()["accuracy"] == 1
 
     store = PredictionStore(
@@ -351,15 +293,9 @@ def test_prediction_store_eval_fns(assert_error_msg):
     assert "a1" in eval_args and "a2" in eval_args
     assert store.evaluate() == {}
     msg = assert_error_msg(
-        lambda: store.append(
-            y_true=np.ones((150, 1), dtype=int), y_pred=np.ones((150, 1), dtype=int)
-        )
+        lambda: store.append(y_true=np.ones((150, 1), dtype=int), y_pred=np.ones((150, 1), dtype=int))
     )
-    assert (
-        "Batch keys do not match any function arguments: my_eval_fn: ['args', 'a1',"
-        " 'a2', 'kwargs']"
-        == msg
-    )
+    assert "Batch keys do not match any function arguments: my_eval_fn: ['args', 'a1', 'a2', 'kwargs']" == msg
 
     store = PredictionStore(
         batch_limit=300,
@@ -411,9 +347,7 @@ def test_inhomegenous_limits(assert_error_msg):
 
 def time_speed(batch_limit=None, memory_limit=None):
     arr = np.random.randn(100, 200)
-    memory_limit = (
-        memory_limit * arr.itemsize * arr.size if memory_limit is not None else None
-    )
+    memory_limit = memory_limit * arr.itemsize * arr.size if memory_limit is not None else None
     store = PredictionStore(
         batch_limit=batch_limit,
         memory_limit=memory_limit,

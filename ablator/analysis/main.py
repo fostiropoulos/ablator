@@ -38,18 +38,14 @@ def _parse_results(
 
     if _categorical_attributes is None:
         raise ValueError(
-            "Must provide `categorical_attributes` when supplying a DataFrame."
-            " Otherwise provide a ``Results`` object. "
+            "Must provide `categorical_attributes` when supplying a DataFrame. Otherwise provide a ``Results`` object. "
         )
     if _numerical_attributes is None:
         raise ValueError(
-            "Must provide `_numerical_attributes` when supplying a DataFrame. Otherwise"
-            " provide a ``Results`` object. "
+            "Must provide `_numerical_attributes` when supplying a DataFrame. Otherwise provide a ``Results`` object. "
         )
     if _optim_metrics is None:
-        raise ValueError(
-            "Missing `optim_metrics` or unable to derive from supplied results."
-        )
+        raise ValueError("Missing `optim_metrics` or unable to derive from supplied results.")
     return df, _categorical_attributes, _numerical_attributes, _optim_metrics
 
 
@@ -127,9 +123,7 @@ class Analysis:
         if save_dir is not None:
             self.save_dir = Path(save_dir)
             if not self.save_dir.parent.exists():
-                raise FileNotFoundError(
-                    f"Save directory does not exist. `{self.save_dir.parent}`"
-                )
+                raise FileNotFoundError(f"Save directory does not exist. `{self.save_dir.parent}`")
             self.save_dir.mkdir(exist_ok=True)
             self.cache = Memory(Path(save_dir).joinpath(".cache"), verbose=0)
             if not cache:
@@ -137,13 +131,9 @@ class Analysis:
                 self.cache = None
         elif cache:
             raise ValueError("Must provide a `save_dir` when specifying `cache=True`.")
-        self.experiment_attributes: list[str] = (
-            self.categorical_attributes + self.numerical_attributes
-        )
+        self.experiment_attributes: list[str] = self.categorical_attributes + self.numerical_attributes
 
-        self.results: pd.DataFrame = df[
-            self.experiment_attributes + list(self.optim_metrics.keys())
-        ]
+        self.results: pd.DataFrame = df[self.experiment_attributes + list(self.optim_metrics.keys())]
 
     @property
     def metric_names(self) -> list[str]:
@@ -248,9 +238,7 @@ class Analysis:
         >>> assert updated_map == {"error": Optim.min, "acc": Optim.max}
         """
         metric_name_remap = parse_name_remap(metrics.columns, metric_name_remap)
-        attribute_name_remap = parse_name_remap(
-            attributes.columns, attribute_name_remap
-        )
+        attribute_name_remap = parse_name_remap(attributes.columns, attribute_name_remap)
         metric_map = {
             metric_name_remap[metric_name]: direction
             for metric_name, direction in metric_map.items()

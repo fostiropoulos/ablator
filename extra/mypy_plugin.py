@@ -7,18 +7,12 @@ prefix = "ablator.config.types"
 
 
 class AblatorPlugin(Plugin):
-    def get_type_analyze_hook(
-        self, fullname: str
-    ) -> Callable[[AnalyzeTypeContext], Type] | None:
+    def get_type_analyze_hook(self, fullname: str) -> Callable[[AnalyzeTypeContext], Type] | None:
         if fullname == f"{prefix}.Optional":
             return Optionalcallback
         elif fullname == f"{prefix}.Tuple":
             return Tuplecallback
-        elif (
-            fullname == f"{prefix}.Stateless"
-            or fullname == f"{prefix}.Derived"
-            or fullname == f"{prefix}.Stateful"
-        ):
+        elif fullname == f"{prefix}.Stateless" or fullname == f"{prefix}.Derived" or fullname == f"{prefix}.Stateful":
             return StatesCallback
         elif fullname == f"{prefix}.Literal":
             return LiteralCallback
@@ -72,9 +66,7 @@ def SelfCallback(ctx: AnalyzeTypeContext) -> Type:
         ctx.api.fail(f"Self type cannot be used in {ctx.api.prohibit_self_type}", t)
         return AnyType(TypeOfAny.from_error)
     if ctx.api.api.type is None:
-        ctx.api.fail(
-            "Self type is only allowed in annotations within class definition", t
-        )
+        ctx.api.fail("Self type is only allowed in annotations within class definition", t)
         return AnyType(TypeOfAny.from_error)
     if ctx.api.api.type.has_base("builtins.type"):
         ctx.api.fail("Self type cannot be used in a metaclass", t)

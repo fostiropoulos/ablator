@@ -28,6 +28,18 @@ class GPU:
     """
     A GPU class used to reserve resources for scheduling GPU-intensive tasks.
 
+    Parameters
+    ----------
+    device_id : int
+        The device ordinal number in the computer.
+    free_mem : int
+        The free memory available on the GPU.
+    max_mem : int
+        The maximum memory available on the GPU.
+    lock_timeout : int
+        The timeout after which the GPU will be considered
+        unlocked if it is not manually unlocked when requesting
+        it for use.
 
     Attributes
     ----------
@@ -37,11 +49,25 @@ class GPU:
         the free memory for the given GPU in MB
     is_locked : bool
         whether the GPU is currently pending memory allotment.
+    max_mem : int
+        The maximum available free memory on the GPU in MiB.
+    free_mem : int
+        The free available memory on the GPU in MiB.
+    locking_process_name : str | None
+        Optionally, the process name that requested to lock the GPU.
+        Can be ``None`` even when the GPU is locked.
+    lock_timestamp : float | None
+        The timestamp of when the GPU was locked. It is
+        ``None`` when the GPU is unlocked.
+
+    Raises
+    ------
+    ValueError
+        When incorrect parameters are provided to the GPU initialization, such
+        as `max_mem` and `free_mem`.
     """
 
-    def __init__(
-        self, device_id: int, free_mem: int, max_mem: int, lock_timeout: int
-    ) -> None:
+    def __init__(self, device_id: int, free_mem: int, max_mem: int, lock_timeout: int) -> None:
         self.device_id: int
         # immutable attributes
         super().__setattr__("device_id", device_id)
@@ -49,7 +75,7 @@ class GPU:
         super().__setattr__("max_mem", max_mem)
         self.free_mem: int = free_mem
         self.lock_timeout: int = lock_timeout
-        self.locking_process_id: str | None = None
+        self.locking_process_name: str | None = None
         self.lock_timestamp: float | None = None
         if self.free_mem > self.max_mem:
             raise ValueError("GPU `max_mem` must be > `free_mem`")
@@ -73,28 +99,24 @@ class GPU:
     def is_locked(self):
         self._refresh()
         return (
-            super().__getattribute__("locking_process_id") is not None
+            super().__getattribute__("locking_process_name") is not None
             or super().__getattribute__("lock_timestamp") is not None
         )
 
-    def lock(self, process_id):
-        super().__setattr__("locking_process_id", process_id)
+    def lock(self, process_name):
+        super().__setattr__("locking_process_name", process_name)
         super().__setattr__("lock_timestamp", time.time())
 
     def unlock(self):
-        super().__setattr__("locking_process_id", None)
+        super().__setattr__("locking_process_name", None)
         super().__setattr__("lock_timestamp", None)
 
     # pylint: disable=broad-exception-caught
     def _refresh(self):
         try:
-            if super().__getattribute__(
+            if super().__getattribute__("lock_timestamp") is not None and time.time() - super().__getattribute__(
                 "lock_timestamp"
-            ) is not None and time.time() - super().__getattribute__(
-                "lock_timestamp"
-            ) > super().__getattribute__(
-                "lock_timeout"
-            ):
+            ) > super().__getattribute__("lock_timeout"):
                 super().__getattribute__("unlock")()
         except Exception:
             ...
@@ -129,7 +151,7 @@ def wait_get_gpu(
 
     Returns
     -------
-    int
+    GPU
         the least used GPU number to be used with `.to(f"cuda:{i}")`
 
     Raises
@@ -144,17 +166,13 @@ def wait_get_gpu(
 
     least_used_gpu: GPU
     gpus: OrderedDict[int, GPU] = ray.get(manager.gpu_dict.remote())
-    matching_gpu = expected_util_mb is None or any(
-        gpu.max_mem >= expected_util_mb for gpu in gpus.values()
-    )
+    matching_gpu = expected_util_mb is None or any(gpu.max_mem >= expected_util_mb for gpu in gpus.values())
     if len(gpus) == 0 or not matching_gpu:
         raise GPUError("No available GPU.")
     for _ in range(max_timeouts):
         if (
             least_used_gpu := ray.get(
-                manager.request_gpu.remote(  # type: ignore[attr-defined]
-                    expected_util_mb, process_name
-                )
+                manager.request_gpu.remote(expected_util_mb, process_name)  # type: ignore[attr-defined]
             )
         ) is None:
             time.sleep(1)
@@ -255,17 +273,13 @@ class ResourceManager(Heart):
             )
         if cuda_visible_devices is not None:
             gpus = {i: gpus[i] for i in cuda_visible_devices}
-        self.gpus: OrderedDict[int, GPU] = OrderedDict(
-            (k, v) for k, v in sorted(gpus.items(), key=lambda x: x[0])
-        )
+        self.gpus: OrderedDict[int, GPU] = OrderedDict((k, v) for k, v in sorted(gpus.items(), key=lambda x: x[0]))
 
         self.mem: int = 0
         self.cpu_usage: list[float] = []
         self.cpu_count: int = 0
         self.is_active = True
-        super().__init__(
-            missed_heart_beats=MISSED_BEATS_LIMIT, update_interval=update_interval
-        )
+        super().__init__(missed_heart_beats=MISSED_BEATS_LIMIT, heartbeat_interval=update_interval)
 
     @property
     def gpu_free_mem(self) -> list[int]:
@@ -297,7 +311,7 @@ class ResourceManager(Heart):
                 "cpu_usage",
                 "cpu_count",
             }
-            for gpu_id, gpu_mem in util_dict["gpu_free_mem"].items():
+            for gpu_id, gpu_mem in util_dict["gpu_free_mem"].items():  # type: ignore[union-attr]
                 if gpu_id in self.gpus:
                     self.gpus[gpu_id].free_mem = gpu_mem
             del util_dict["gpu_free_mem"]
@@ -317,36 +331,32 @@ class ResourceManager(Heart):
                 traceback.format_exc(),
             )
 
-    def request_gpu(
-        self, expected_util_mb: int | None = None, process_id: str | None = None
-    ) -> GPU | None:
+    def request_gpu(self, expected_util_mb: int | None = None, process_name: str | None = None) -> GPU | None:
         """
         request an available GPU based on the expected utilization of the cuda
-        process. We associate the `process_id` with the requested GPU, but do
+        process. We associate the `process_name` with the requested GPU, but do
         not use in any way.
 
         Parameters
         ----------
         expected_util_mb : int | None
             the expected utilization of the cuda process.
-        process_id : str | None
+        process_name : str | None
             the id of the process requesting the GPU resources, by default ``None``
 
         Returns
         -------
-        int | None
+        GPU | None
             the cuda device or None if there is no available device.
         """
         sorted_gpus = sorted(
             [gpu for gpu in self.gpus.values() if not gpu.is_locked],
             key=lambda x: x.free_mem,
         )
-        if len(sorted_gpus) == 0 or (
-            expected_util_mb is not None and sorted_gpus[-1].free_mem < expected_util_mb
-        ):
+        if len(sorted_gpus) == 0 or (expected_util_mb is not None and sorted_gpus[-1].free_mem < expected_util_mb):
             return None
         least_used_gpu = sorted_gpus[-1]
-        self.gpus[least_used_gpu.device_id].lock(process_id)
+        self.gpus[least_used_gpu.device_id].lock(process_name)
         return self.gpus[least_used_gpu.device_id]
 
     def unlock(self, gpu: GPU):

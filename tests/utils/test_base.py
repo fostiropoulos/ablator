@@ -50,9 +50,7 @@ def test_is_oom_exception():
         "CUDA error: out of memory",
     ]
     for error in oom_errors:
-        assert (
-            base.is_oom_exception(RuntimeError(error)) is True
-        ), f"Expected True for error message '{error}'"
+        assert base.is_oom_exception(RuntimeError(error)) is True, f"Expected True for error message '{error}'"
 
     # Test that the function returns False for error messages not indicating out of memory
     non_oom_errors = [
@@ -60,9 +58,7 @@ def test_is_oom_exception():
         "CUDA error: unspecified launch failure",
     ]
     for error in non_oom_errors:
-        assert (
-            base.is_oom_exception(RuntimeError(error)) is False
-        ), f"Expected False for error message '{error}'"
+        assert base.is_oom_exception(RuntimeError(error)) is False, f"Expected False for error message '{error}'"
 
 
 # Test If the apply_lambda_to_iter function correctly applies a lambda function
@@ -82,9 +78,7 @@ def test_apply_lambda_to_iter():
 def test_num_format_with_non_numeric_value():
     value = "not_a_number"
     # Test `num_format` with non-numeric value
-    assert (
-        base.num_format(value) == value
-    ), "Non-numeric values should be returned as is"
+    assert base.num_format(value) == value, "Non-numeric values should be returned as is"
 
 
 if __name__ == "__main__":

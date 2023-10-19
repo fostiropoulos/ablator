@@ -33,7 +33,6 @@ class DuplicateNodes(RuntimeError):
     Error for when several nodes with the same IP but different
     ID are found connected on the cluster.
     """
-    ...
 
 
 @dataclass
@@ -51,6 +50,7 @@ class RayNode:
     is_alive: bool
         whether the node is alive.
     """
+
     node_ip: NODE_IP
     node_id: NODE_ID
     is_alive: bool
@@ -82,9 +82,7 @@ def run_actor_node(
     ray.ObjectRef
         a ray reference to the actor.
     """
-    return run_lambda_node(
-        fn=actor, cuda=cuda, node=node, fn_kwargs=kwargs, run_async=True, max_calls=None
-    )
+    return run_lambda_node(fn=actor, cuda=cuda, node=node, fn_kwargs=kwargs, run_async=True, max_calls=None)
 
 
 def run_lambda_node(
@@ -108,14 +106,14 @@ def run_lambda_node(
     ----------
     fn : abc.Callable
         the function to run. Must be pickable.
+    cuda : bool, optional
+        whether the function requires CUDA, by default False
     node : NODE_TYPE, optional
         the the node to run the ray function to, by default None
     timeout : int | None, optional
         the timeout to apply when waiting for the results, by default None
     run_async : bool, optional
         whether to wait for the lambda output or schedule asynchronously, by default False
-    cuda : bool, optional
-        whether the function requires CUDA, by default False
     fn_kwargs : dict[str, ty.Any] | None, optional
         the keyword arguments to pass to the function, by default None
     name : str | None, optional
@@ -150,6 +148,19 @@ def get_ray_nodes(
     """
     discovers the currently connected nodes that are also alive.
 
+    Parameters
+    ----------
+    ray_address: str | None, optional
+        The address of the ray cluster to discover nodes on.
+        When left unspecified it automatically discovers based on
+        the run-time context, by default ``None``.
+    timeout: int | None, optional
+        The timeout to apply when discovering nodes.
+        When left unspecified it uses ``ablator.mp.node.DEFAULT_TIMEOUT``, by default ``None``.
+    exclude_node_id: str | None, optional
+        When specified it excludes the specified Node from the list of returned Nodes.
+        Useful to exclude the head-node, by default ``None``.
+
     Returns
     -------
     list[RayNode]
@@ -178,8 +189,7 @@ def get_ray_nodes(
     node_ips = [n.node_ip for n in nodes]
     if len(node_ips) > len(set(node_ips)):
         raise DuplicateNodes(
-            "Several ray nodes were found with the same IP. This can lead to unexpected"
-            " behavior and is not supported."
+            "Several ray nodes were found with the same IP. This can lead to unexpected behavior and is not supported."
         )
     return sorted(nodes, key=lambda x: x.node_id)
 
@@ -204,9 +214,7 @@ class MountServer:
     """
 
     def __init__(self, config: RemoteConfig) -> None:
-        config.local_path = Path.home().joinpath(
-            "ablator", *config.local_path.parts[1:]
-        )
+        config.local_path = str(Path.home().joinpath("ablator", *Path(config.local_path).parts[1:]))
         self.config = config
         self.remote_path: Path = Path(config.remote_path)
         self.local_path: Path = Path(config.local_path)
@@ -215,9 +223,7 @@ class MountServer:
         try:
             from rmount import RemoteMount
         except ImportError as e:
-            raise ImportError(
-                "remote_config is only supported for Linux systems."
-            ) from e
+            raise ImportError("remote_config is only supported for Linux systems.") from e
 
         self.backend = RemoteMount(
             config.get_config(),
@@ -321,7 +327,7 @@ class Node:
             cuda=False,
             node=node_ip,
             timeout=timeout,
-            fn_kwargs={"key": public_key},
+            fn_kwargs={"public_key": public_key},
         )
         self.remote_dir: Path
         self.mount_server: MountServer | None = None
@@ -352,9 +358,7 @@ class Node:
     def resources(self) -> Resource:
         # pylint: disable=broad-exception-caught
         try:
-            node_resources: Resource = ray.get(
-                self.resource_actor.resources.remote(), timeout=self._timeout
-            )
+            node_resources: Resource = ray.get(self.resource_actor.resources.remote(), timeout=self._timeout)
             running_tasks = get_ray_tasks(
                 ray_address=self.ray_address,
                 node_id=self.node_id,
@@ -372,7 +376,7 @@ class Node:
             )
         return node_resources
 
-    def mount(self):
+    def mount(self) -> bool:
         """
         creates a background `mount_server` process.
 
@@ -387,8 +391,8 @@ class Node:
             node=self.node_ip,
             kwargs={"config": self._remote_config},
         )
-        self.remote_dir = ray.get(self.mount_server.get_local_path.remote())
-        self.mount_server.mount.remote()
+        self.remote_dir = ray.get(self.mount_server.get_local_path.remote())  # type: ignore[union-attr]
+        self.mount_server.mount.remote()  # type: ignore[union-attr]
         return self._get_is_mount_alive()
 
     def unmount(self):
@@ -409,10 +413,7 @@ class Node:
         if node_ids[node_idx] != self.node_id:
             self.node_id = node_ids[node_idx]
             logging.warning(
-                (
-                    "Node id was updated for node %s and could be a result of cluster"
-                    " instability."
-                ),
+                "Node id was updated for node %s and could be a result of cluster instability.",
                 self.node_ip,
             )
         return True
@@ -432,12 +433,10 @@ class Node:
         except ray_exc.GetTimeoutError:
             logging.error("mount for %s is dead. ", self.node_ip)
         except Exception:
-            logging.error(
-                "Unknown mount error for %s %s ", self.node_ip, traceback.format_exc()
-            )
+            logging.error("Unknown mount error for %s %s ", self.node_ip, traceback.format_exc())
         return False
 
-    def is_alive(self)-> bool:
+    def is_alive(self) -> bool:
         """
         tests whether both ray and the mount point are alive.
 
@@ -502,13 +501,16 @@ class Node:
         -------
         bool
             whether it successfully stopped the Node.
+
+        Raises
+        ------
+        TimeoutError
+            When it can not stop ray and unmount within a `timeout`.
+
         """
         try:
             self.unmount()
-            kill_cmd = (
-                "kill -9 $(ps -ef | awk '/[r]aylet .*--node_ip_address=%s/{print $2}')"
-                % self.node_ip
-            )
+            kill_cmd = "kill -9 $(ps -ef | awk '/[r]aylet .*--node_ip_address=%s/{print $2}')" % self.node_ip
             self.run_cmd(kill_cmd)
             for _ in range(self._timeout):
                 if not self.is_alive():

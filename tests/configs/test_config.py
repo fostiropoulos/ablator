@@ -180,26 +180,14 @@ class DictEnumConfig(ConfigBase):
 
 
 annotations = {
-    "a1": Annotation(
-        state=Stateful, optional=False, collection=None, variable_type=int
-    ),
-    "a2": Annotation(
-        state=Stateful, optional=False, collection=None, variable_type=str
-    ),
+    "a1": Annotation(state=Stateful, optional=False, collection=None, variable_type=int),
+    "a2": Annotation(state=Stateful, optional=False, collection=None, variable_type=str),
     "a8": Annotation(state=Derived, optional=True, collection=None, variable_type=str),
     "a9": Annotation(state=Derived, optional=True, collection=Dict, variable_type=str),
-    "a10": Annotation(
-        state=Stateless, optional=False, collection=None, variable_type=str
-    ),
-    "a5": Annotation(
-        state=Stateful, optional=False, collection=Type, variable_type=Pass
-    ),
-    "a6": Annotation(
-        state=Stateful, optional=False, collection=myEnum, variable_type=["a"]
-    ),
-    "c2": Annotation(
-        state=Stateful, optional=False, collection=Type, variable_type=SimpleConfig
-    ),
+    "a10": Annotation(state=Stateless, optional=False, collection=None, variable_type=str),
+    "a5": Annotation(state=Stateful, optional=False, collection=Type, variable_type=Pass),
+    "a6": Annotation(state=Stateful, optional=False, collection=myEnum, variable_type=["a"]),
+    "c2": Annotation(state=Stateful, optional=False, collection=Type, variable_type=SimpleConfig),
 }
 
 
@@ -241,13 +229,7 @@ def test_attrs(tmp_path: Path, assert_error_msg: Callable[..., str]):
     loaded_p.a10 = 2
     diffs = sorted(loaded_p.diff(p))
     var_name, (left_type, left_val), (right_type, right_val) = diffs[0]
-    assert (
-        var_name == "a10"
-        and left_val == 2
-        and left_type == int
-        and right_type == str
-        and right_val == "10"
-    )
+    assert var_name == "a10" and left_val == 2 and left_type == int and right_type == str and right_val == "10"
     loaded_p.c2.a1 = 4
     diff_str = loaded_p.diff_str(p)
     assert len(diff_str) == 2 and [
@@ -255,10 +237,7 @@ def test_attrs(tmp_path: Path, assert_error_msg: Callable[..., str]):
         "c2.a1:(int)4->(int)10",
     ] == sorted(diff_str)
 
-    assert (
-        loaded_p.to_dot_path()
-        == "a10: 2\na1: 10\na2: '10'\na8: '10'\na9: null\na6: a\na5.a: 10\nc2.a1: 4\n"
-    )
+    assert loaded_p.to_dot_path() == "a10: 2\na1: 10\na2: '10'\na8: '10'\na9: null\na6: a\na5.a: 10\nc2.a1: 4\n"
     assert loaded_p.get_val_with_dot_path("a10") == 2
     assert loaded_p.get_type_with_dot_path("a10") == int
     assert loaded_p.get_annot_type_with_dot_path("a10") == int
@@ -301,11 +280,7 @@ def test_set_attr(assert_error_msg: Callable[..., str]):
 
     msg = assert_error_msg(_error)
 
-    assert (
-        msg
-        == f"{Pass} provided args or kwargs (0) must be formatted as (args, kwargs) or"
-        " (args) or (kwargs)."
-    )
+    assert msg == f"{Pass} provided args or kwargs (0) must be formatted as (args, kwargs) or (args) or (kwargs)."
     c.a5 = {"a": 1}
     assert c.a5.a == 1
     c.a5 = {"a": 5}
@@ -320,25 +295,19 @@ def test_freeze_unfreeze(assert_error_msg: Callable[..., str]):
         c.a10 = "1"
 
     msg = assert_error_msg(_set)
-    assert (
-        msg == "Can not set attribute a10 on frozen configuration ``ParentTestConfig``."
-    )
+    assert msg == "Can not set attribute a10 on frozen configuration ``ParentTestConfig``."
     c._unfreeze()
     c.a10 = "1"
     c.freeze()
     msg = assert_error_msg(_set)
-    assert (
-        msg == "Can not set attribute a10 on frozen configuration ``ParentTestConfig``."
-    )
+    assert msg == "Can not set attribute a10 on frozen configuration ``ParentTestConfig``."
     # this should not be allowed.
 
     def _set():
         c.a5.a = 0
 
     msg = assert_error_msg(_set)
-    assert (
-        msg == "Can not set attribute a on a class of a frozen configuration ``Pass``."
-    )
+    assert msg == "Can not set attribute a on a class of a frozen configuration ``Pass``."
 
     def _set():
         c.c2.a1 = 0
@@ -358,10 +327,7 @@ def test_parse_repr():
     for error_class in error_representation_classes:
         with pytest.raises(
             RuntimeError,
-            match=(
-                f"Could not parse <class '{__name__}.{error_class.__name__}'> from its"
-                " representation "
-            ),
+            match=f"Could not parse <class '{__name__}.{error_class.__name__}'> from its representation ",
         ):
             parse_repr_to_kwargs(error_class(a=10))
 
@@ -398,60 +364,33 @@ def test_nested_load_no_depedencies():
         )
 
 
-def test_debug_load(
-    tmp_path: Path, assert_error_msg: Callable[..., str], capture_logger
-):
+def test_debug_load(tmp_path: Path, assert_error_msg: Callable[..., str], capture_logger):
     out: io.StringIO = capture_logger()
     ParentTestConfig(debug=True)
     last_line = out.getvalue().split("\n")[-2]
-    assert (
-        last_line
-        == "Loading ParentTestConfig in `debug` mode. Setting missing required value"
-        " a10 to `None`."
-    )
+    assert last_line == "Loading ParentTestConfig in `debug` mode. Setting missing required value a10 to `None`."
     p = ParentTestConfig(debug=True, a123=123, a543=543)
     last_line = out.getvalue().split("\n")[-2]
-    assert (
-        last_line
-        == "Loading ParentTestConfig in `debug` mode. Ignoring unexpected arguments:"
-        " `a123, a543`"
-    )
+    assert last_line == "Loading ParentTestConfig in `debug` mode. Ignoring unexpected arguments: `a123, a543`"
     yaml_p = tmp_path.joinpath("test.yaml")
     p.write(yaml_p)
     msg = assert_error_msg(lambda: p.load(yaml_p))
     assert msg == "Missing required values ['a10']."
     p.load(yaml_p, debug=True)
     last_line = out.getvalue().split("\n")[-2]
-    assert (
-        last_line
-        == "Loading ParentTestConfig in `debug` mode. Setting missing required value"
-        " a10 to `None`."
-    )
+    assert last_line == "Loading ParentTestConfig in `debug` mode. Setting missing required value a10 to `None`."
     ParentTestConfig4.load(yaml_p, debug=True)
     args = out.getvalue().split("\n")[-4:-1]
     msgs = [
-        (
-            "Loading ParentTestConfig4 in `debug` mode. Setting missing required value"
-            " b1 to `None`."
-        ),
-        (
-            "Loading ParentTestConfig4 in `debug` mode. Unable to parse `a10` value"
-            " None. Setting to `None`."
-        ),
-        (
-            "Loading ParentTestConfig4 in `debug` mode. Unable to parse `a6` value a."
-            " Setting to `None`."
-        ),
+        "Loading ParentTestConfig4 in `debug` mode. Setting missing required value b1 to `None`.",
+        "Loading ParentTestConfig4 in `debug` mode. Unable to parse `a10` value None. Setting to `None`.",
+        "Loading ParentTestConfig4 in `debug` mode. Unable to parse `a6` value a. Setting to `None`.",
     ]
     assert all(msg in args for msg in msgs)
     msg = assert_error_msg(lambda: ParentTestConfig4.load(yaml_p, debug=False))
     assert msg == "Missing required values ['b1']."
     msg = assert_error_msg(lambda: ParentTestConfig3.load(yaml_p, debug=False))
-    assert (
-        msg
-        == f"{Pass} provided args or kwargs (a) must be formatted as (args, kwargs) or"
-        " (args) or (kwargs)."
-    )
+    assert msg == f"{Pass} provided args or kwargs (a) must be formatted as (args, kwargs) or (args) or (kwargs)."
     pconfig_3 = ParentTestConfig3.load(yaml_p, debug=True)
     pconfig_4 = ParentTestConfig4.load(yaml_p, debug=True)
     # Testing nested configs.
@@ -467,8 +406,7 @@ def test_debug_load(
     nested_c = NestedParentConfig(b1=pconfig_3, a1="", debug=True)
     assert (
         out.getvalue().split("\n")[-2]
-        == "Loading NestedParentConfig in `debug` mode. Unable to parse `b1` value"
-        f" {pconfig_3}. Setting to `None`."
+        == f"Loading NestedParentConfig in `debug` mode. Unable to parse `b1` value {pconfig_3}. Setting to `None`."
     )
     nested_c = NestedParentConfig(b1=pconfig_4, a1="")
     assert nested_c.b1.a6 is None

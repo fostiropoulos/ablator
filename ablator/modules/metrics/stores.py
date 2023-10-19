@@ -44,17 +44,11 @@ def _parse_array_store_val(
             "reshape to [B, 1] or if suppling a single a batch reshape to [1, N]."
         )
     if store_type is not None and np_val.dtype != store_type:
-        raise RuntimeError(
-            f"Inhomogeneous types between stored values {store_type} and provided value"
-            f" {np_val.dtype}."
-        )
+        raise RuntimeError(f"Inhomogeneous types between stored values {store_type} and provided value {np_val.dtype}.")
     # skipping batch dim
     data_shape = np_val.shape[1:]
     if shape is not None and data_shape != shape:
-        raise RuntimeError(
-            f"Inhomogeneous shapes between stored values  {shape} and provided value"
-            f" {data_shape}"
-        )
+        raise RuntimeError(f"Inhomogeneous shapes between stored values  {shape} and provided value {data_shape}")
     return np_val
 
 
@@ -142,9 +136,7 @@ class ArrayStore(Sequence):
         4
         """
         # Appending by batch is faster than converting numpy to list
-        np_val = _parse_array_store_val(
-            val, shape=self._shape, store_type=self._store_type
-        )
+        np_val = _parse_array_store_val(val, shape=self._shape, store_type=self._store_type)
         self._arr.append(np_val)
         self._init_properties()
         np_val_len = len(np_val)
@@ -153,32 +145,19 @@ class ArrayStore(Sequence):
         if (
             self._memory_limit is not None
             and self._item_size is not None
-            and (
-                self.limit is None
-                or self.limit > int(max(self._memory_limit // self._item_size - 1, 1))
-            )
+            and (self.limit is None or self.limit > int(max(self._memory_limit // self._item_size - 1, 1)))
             and self._item_size * (self._len + 1) > self._memory_limit
         ):
             memory_limit = int(max(self._memory_limit // self._item_size - 1, 1))
-            limit: int = (
-                min(memory_limit, self.limit)
-                if self.limit is not None
-                else memory_limit
-            )
+            limit: int = min(memory_limit, self.limit) if self.limit is not None else memory_limit
             logging.warning(
-                (
-                    "Memory limit %s reached for ArrayStore. Consider increasing"
-                    " `memory_limit`. Will prune to %s samples."
-                ),
+                "Memory limit %s reached for ArrayStore. Consider increasing `memory_limit`. Will prune to %s samples.",
                 self._memory_limit,
                 limit,
             )
             self.limit = limit
             self._prune(limit)
-            assert (
-                self._len == 1
-                or self._item_size * (self._len + 1) <= self._memory_limit
-            )
+            assert self._len == 1 or self._item_size * (self._len + 1) <= self._memory_limit
         elif self.limit is not None and self._len > 1 and self._len > self.limit:
             self._prune(self.limit)
 
@@ -351,12 +330,8 @@ class PredictionStore:
         elif evaluation_functions is None:
             return
         else:
-            raise NotImplementedError(
-                f"Unrecognized evaluation functions {evaluation_functions}"
-            )
-        self.metrics = {
-            k: MovingAverage(moving_average_limit) for k in evaluation_functions_dict
-        }
+            raise NotImplementedError(f"Unrecognized evaluation functions {evaluation_functions}")
+        self.metrics = {k: MovingAverage(moving_average_limit) for k in evaluation_functions_dict}
         self.__evaluation_functions__ = evaluation_functions_dict
 
     def _init_arr(self, tag: str) -> ArrayStore:
@@ -381,9 +356,7 @@ class PredictionStore:
                 self._fn_keys[k] = list(batch_keys.intersection(v))
         if len(missing_keys) > 0:
             err_msg = "\n".join(missing_keys)
-            raise ValueError(
-                f"Batch keys do not match any function arguments: {err_msg}"
-            )
+            raise ValueError(f"Batch keys do not match any function arguments: {err_msg}")
         for k in batch_keys:
             self._init_arr(k)
 
@@ -431,9 +404,7 @@ class PredictionStore:
             np_arr = butils.iter_to_numpy(v)
             sizes[k] = len(np_arr)
             self._get_arr(k).append(np_arr)
-        assert (
-            len(set(sizes.values())) == 1
-        ), f"Inhomegenous batches between inputs. Sizes: {sizes}"
+        assert len(set(sizes.values())) == 1, f"Inhomegenous batches between inputs. Sizes: {sizes}"
         limits = []
         for k in self._batch_keys:
             if (_limit := self._get_arr(k).limit) is not None:
@@ -476,20 +447,15 @@ class PredictionStore:
         """
 
         metrics: dict[str, float] = {}
-        if (
-            self._batch_keys is None
-            or self.__evaluation_functions__ is None
-            or len(self._batch_keys) == 0
-        ):
+        if self._batch_keys is None or self.__evaluation_functions__ is None or len(self._batch_keys) == 0:
             return metrics
         batches = {k: self._get_arr(k).get() for k in self._batch_keys}
         for k, v in self.__evaluation_functions__.items():
             fn_args = set(inspect.signature(v).parameters.keys())
             intersecting_args = set(self._batch_keys).intersection(fn_args)
-            assert len(intersecting_args) > 0, (
-                f"Evaluation function arguments {fn_args} different than stored"
-                f" predictions: {self._batch_keys}"
-            )
+            assert (
+                len(intersecting_args) > 0
+            ), f"Evaluation function arguments {fn_args} different than stored predictions: {self._batch_keys}"
             metric = v(**{k: v for k, v in batches.items() if k in intersecting_args})
             metric = _parse_moving_average_val(metric)
             metrics[k] = metric
@@ -497,8 +463,7 @@ class PredictionStore:
                 self.metrics[k].append(metric)
             except Exception as exc:
                 raise ValueError(
-                    f"Invalid value {metric} returned by evaluation function"
-                    f" {v.__name__}. Must be numeric scalar."
+                    f"Invalid value {metric} returned by evaluation function {v.__name__}. Must be numeric scalar."
                 ) from exc
         return metrics
 
@@ -506,10 +471,7 @@ class PredictionStore:
     def evaluation_function_arguments(self) -> dict[str, list[str]]:
         if self.__evaluation_functions__ is None:
             return {}
-        return {
-            k: list(inspect.signature(v).parameters.keys())
-            for k, v in self.__evaluation_functions__.items()
-        }
+        return {k: list(inspect.signature(v).parameters.keys()) for k, v in self.__evaluation_functions__.items()}
 
     def get(self) -> dict[str, np.ndarray] | None:
         if self._batch_keys is None:

@@ -19,12 +19,7 @@ def test_fail_lock_ray(blocking_lock_remote):
     t = Lock(timeout=1)
     t.acquire()
     with pytest.raises(TimeoutError, match="Could not obtain lock within 1.00 seconds"):
-        ray.get(
-            [
-                ray.remote(num_cpus=0.001)(blocking_lock_remote).remote(t)
-                for i in range(10)
-            ]
-        )
+        ray.get([ray.remote(num_cpus=0.001)(blocking_lock_remote).remote(t) for i in range(10)])
     assert True
 
 

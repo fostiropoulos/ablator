@@ -36,10 +36,7 @@ def test_resource_manager_failing_gpu(ray_cluster):
     breakdown_time = 3
 
     def get_gpu_mem(*args, **kwargs):
-        if (
-            time.time() - start_time < MAX_TIMEOUT
-            or time.time() - start_time > MAX_TIMEOUT + breakdown_time
-        ):
+        if time.time() - start_time < MAX_TIMEOUT or time.time() - start_time > MAX_TIMEOUT + breakdown_time:
             return {}
         else:
             return None
@@ -199,11 +196,11 @@ def test_gpu_locking(ray_cluster, n_gpus):
         gpu = manager.request_gpu((n_gpus) * 100 - 1)
         assert gpu is not None
         assert gpu.device_id == n_gpus - 1
-        assert gpu.locking_process_id is None
+        assert gpu.locking_process_name is None
         assert manager.request_gpu((n_gpus) * 100 - 1) is None
         manager.unlock(gpu)
         gpu = manager.request_gpu(None, "x")
-        assert gpu.locking_process_id == "x"
+        assert gpu.locking_process_name == "x"
         manager.unlock(gpu)
         gpu_list = []
         for _ in range(n_gpus):
@@ -250,21 +247,21 @@ def test_gpu_properties():
     assert gpu.free_mem == 1000
     assert gpu.lock_timeout == timeout
     assert gpu.lock_timestamp is None
-    assert gpu.locking_process_id is None
+    assert gpu.locking_process_name is None
     assert not gpu.is_locked
     gpu.lock("X")
-    assert gpu.locking_process_id == "X"
+    assert gpu.locking_process_name == "X"
     time.sleep(timeout + 0.1)
-    assert gpu.locking_process_id is None
+    assert gpu.locking_process_name is None
 
     # test a longer timeout
     gpu = GPU(device_id=1, free_mem=1000, max_mem=1000, lock_timeout=1000)
     gpu.lock("X2")
-    assert gpu.locking_process_id == "X2"
+    assert gpu.locking_process_name == "X2"
     time.sleep(timeout + 0.1)
-    assert gpu.locking_process_id is not None
+    assert gpu.locking_process_name is not None
     gpu.unlock()
-    assert gpu.locking_process_id is None
+    assert gpu.locking_process_name is None
     assert not gpu.is_locked
 
     gpu = GPU(device_id=1, free_mem=1000, max_mem=1000, lock_timeout=1)
@@ -284,9 +281,7 @@ def test_gpu_properties():
     gpu.free_mem = 1
     with pytest.raises(
         ValueError,
-        match=re.escape(
-            "Can not specify larger `free_mem` than total GPU memory `max_mem` (1000)."
-        ),
+        match=re.escape("Can not specify larger `free_mem` than total GPU memory `max_mem` (1000)."),
     ):
         gpu.free_mem = 1001
     with pytest.raises(
@@ -329,9 +324,7 @@ def test_wait_get_gpu(ray_cluster, update_gpus_fixture, update_no_gpus_fixture, 
         start_time = time.time()
         # impossible request should return immediately
         with pytest.raises(GPUError, match="No available GPU."):
-            gpu = wait_get_gpu(
-                manager, expected_util_mb=n_gpus * 100 + 1, max_timeouts=5
-            )
+            gpu = wait_get_gpu(manager, expected_util_mb=n_gpus * 100 + 1, max_timeouts=5)
         end_time = time.time()
         # a single remote is scheduled for above which should take less than 10 seconds
         # and on an overloaded system. If this test fails it could mean
@@ -352,9 +345,7 @@ def test_wait_get_gpu(ray_cluster, update_gpus_fixture, update_no_gpus_fixture, 
 
 
 @pytest.mark.mp
-def test_lock_unlock_train_main_remote(
-    tmp_path: Path, ray_cluster, wrapper, make_config, update_gpus_fixture
-):
+def test_lock_unlock_train_main_remote(tmp_path: Path, ray_cluster, wrapper, make_config, update_gpus_fixture):
     """
     End-to-end test of the unlock hook.
     """
@@ -422,9 +413,7 @@ def test_lock_unlock_train_main_remote(
 
 
 @pytest.mark.mp
-def test_lock_unlock_hook(
-    tmp_path: Path, ray_cluster, wrapper, make_config, update_gpus_fixture
-):
+def test_lock_unlock_hook(tmp_path: Path, ray_cluster, wrapper, make_config, update_gpus_fixture):
     """
     targeted test to _handle_exception and _apply_unlock_hook.
     """

@@ -36,7 +36,7 @@ dependencies = [
     "GitPython>=3.1.32",
     "gpustat==1.0",                               # must stay fixed because https://github.com/ray-project/ray/issues/35384
     "windows-curses; platform_system=='Windows'",
-    'rmount>=0.0.5; platform_system=="Linux"',
+    'rmount>=0.0.6; platform_system=="Linux"',
 
 ]
 
@@ -58,7 +58,7 @@ dev = [
     "pydoclint>=0.1.0",
     "pytest-cov>=3.0.0",
     "codecov-cli>=0.2.2",
-    'rmount[server]>=0.0.5; platform_system == "Linux"',
+    'rmount[server]>=0.0.6; platform_system == "Linux"',
 ]
 
 

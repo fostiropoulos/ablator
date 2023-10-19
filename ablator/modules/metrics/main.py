@@ -77,30 +77,18 @@ class Metrics:
         assert len(args) == 0, "Metrics takes no positional arguments."
 
         _static_aux_metrics = {} if static_aux_metrics is None else static_aux_metrics
-        _moving_aux_metrics = (
-            set({}) if moving_aux_metrics is None else set(moving_aux_metrics)
-        )
+        _moving_aux_metrics = set({}) if moving_aux_metrics is None else set(moving_aux_metrics)
 
-        _evaluation_functions = (
-            {} if evaluation_functions is None else evaluation_functions
-        )
+        _evaluation_functions = {} if evaluation_functions is None else evaluation_functions
         self.__batch_limit__ = batch_limit
         self.__memory_limit__ = memory_limit
         self.__moving_average_limit__ = moving_average_limit
         self.__evaluation_functions__ = _evaluation_functions
-        self.__static_aux_attributes__: list[str] = sorted(
-            list(_static_aux_metrics.keys())
-        )
-        self.__moving_aux_attributes__: list[str] = sorted(
-            list(set(_moving_aux_metrics))
-        )
-        self.__moving_eval_attributes__: list[str] = sorted(
-            list(self.__evaluation_functions__)
-        )
+        self.__static_aux_attributes__: list[str] = sorted(list(_static_aux_metrics.keys()))
+        self.__moving_aux_attributes__: list[str] = sorted(list(set(_moving_aux_metrics)))
+        self.__moving_eval_attributes__: list[str] = sorted(list(self.__evaluation_functions__))
         _all_attr_names = (
-            self.__moving_aux_attributes__
-            + self.__moving_eval_attributes__
-            + self.__static_aux_attributes__
+            self.__moving_aux_attributes__ + self.__moving_eval_attributes__ + self.__static_aux_attributes__
         )
         duplicates = {x for x in _all_attr_names if _all_attr_names.count(x) > 1}
 
@@ -113,9 +101,7 @@ class Metrics:
 
         for name, v in _static_aux_metrics.items():
             setattr(self, name, v)
-        for name in set(self.__moving_aux_attributes__).union(
-            self.__moving_eval_attributes__
-        ):
+        for name in set(self.__moving_aux_attributes__).union(self.__moving_eval_attributes__):
             self._init_ma(name)
 
         self._preds = PredictionStore(
@@ -135,7 +121,7 @@ class Metrics:
 
         Raises
         ------
-        AssertionError:
+        RuntimeError:
             If metric_dict has metrics that are not in static_aux_attributes.
 
         Notes
@@ -167,14 +153,13 @@ class Metrics:
         }
 
         """
-        diff_metrics = set(metric_dict.keys()).difference(
-            self.__static_aux_attributes__
-        )
+        diff_metrics = set(metric_dict.keys()).difference(self.__static_aux_attributes__)
         metric_keys = sorted(list(metric_dict.keys()))
-        assert len(diff_metrics) == 0, (
-            "There are difference in the class metrics: "
-            f"{self.__static_aux_attributes__} and updated metrics {metric_keys}"
-        )
+        if len(diff_metrics) != 0:
+            raise RuntimeError(
+                "There are difference in the class metrics: "
+                f"{self.__static_aux_attributes__} and updated metrics {metric_keys}"
+            )
         metric_dict = butils.iter_to_numpy(metric_dict)
         for k, v in metric_dict.items():
             setattr(self, k, v)
@@ -236,6 +221,7 @@ class Metrics:
         for k, v in metric_dict.items():
             self._get_ma(k).append(v)
 
+    # flake8: noqa: DOC201
     def reset(self, reset_ma: bool = False):
         """
         Reset to empty all prediction sequences (e.g predictions, labels).
@@ -261,9 +247,7 @@ class Metrics:
         self._preds.reset()
         if not reset_ma:
             return
-        attrs = set(
-            list(self.__moving_eval_attributes__) + list(self.__moving_aux_attributes__)
-        )
+        attrs = set(list(self.__moving_eval_attributes__) + list(self.__moving_aux_attributes__))
         for k in attrs:
             _ma = self._get_ma(k)
             last = _ma.last

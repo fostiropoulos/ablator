@@ -139,11 +139,11 @@ class ProtoTrainer:
         shared between trainers.
         """
 
+    # pylint: disable=too-complex
     def _mount(self, resume: bool = False, debug: bool = False, timeout: int = 60):
         if resume and self._is_new_experiment:
             raise RuntimeError(
-                "Can not leave `experiment_id` unspecified in the configuration when"
-                " resuming an experiment."
+                "Can not leave `experiment_id` unspecified in the configuration when resuming an experiment."
             )
         if resume or not self._is_new_experiment:
             self.stop()
@@ -170,19 +170,15 @@ class ProtoTrainer:
         config = remote_config.get_config()
         if remote_config.ssh is not None and remote_config.remote_path is None:
             # TODO allow specifying a directory
-            remote_path = Path("/ablator")
+            self.run_config.remote_config.remote_path = "/ablator"
         if remote_config.s3 is not None and remote_config.remote_path is None:
             raise ValueError
-        else:
-            remote_path = remote_config.remote_path
-        self.run_config.remote_config.remote_path = (
-            Path(remote_path) / self.experiment_id
-        )
+
+        self.run_config.remote_config.local_path = str(local_path)
         remote_path = self.run_config.remote_config.remote_path
-        self.run_config.remote_config.local_path = local_path
         self.mount_server = RemoteMount(
             settings=config,
-            remote_path=remote_path,
+            remote_path=Path(remote_path) / self.experiment_id,
             local_path=local_path,
             verbose=debug,
             timeout=timeout,
@@ -218,6 +214,7 @@ class ProtoTrainer:
                 "to keep track of changes."
             )
 
+    # flake8: noqa: DOC502
     def launch(
         self, working_directory: str, resume: bool = False, debug: bool = False
     ) -> dict[str, float]:
@@ -237,14 +234,15 @@ class ProtoTrainer:
 
         Returns
         -------
-        metrics : dict[str, float]
+        dict[str, float]
             Metrics returned after training.
 
         Raises
-        -------
+        ------
         RuntimeError
             If the `config.experiment_id` is unspecified but resuming an experiment or the
             experiment directory is not empty but using a remote storage configuration.
+
         """
         self._mount(resume=resume, debug=debug)
         self.pre_train_setup()
@@ -264,14 +262,14 @@ class ProtoTrainer:
 
         Returns
         -------
-        metrics : dict[str, dict[str, ty.Any]]
+        dict[str, dict[str, ty.Any]]
             Metrics returned after evaluation.
         """
         # TODO load model if it is un-trained
         metrics = self.wrapper.evaluate(self.run_config)
         return metrics
 
-    def smoke_test(self, config: RunConfig | None = None):
+    def smoke_test(self, config: RunConfig | None = None) -> bool:
         """
         Run a smoke test training process on the model.
 
@@ -280,12 +278,17 @@ class ProtoTrainer:
         config : RunConfig | None
             Running configuration for the model.
 
+        Returns
+        -------
+        bool
+            Whether the smoke test was successful.
+
         Examples
         --------
-        try:
-            ablator.smoke_test(run_config)
-        except err:
-            raise err
+        >>> try:
+        ...    ablator.smoke_test(run_config)
+        ... except err:
+        ...    raise err
         """
         if config is None:
             config = self.run_config

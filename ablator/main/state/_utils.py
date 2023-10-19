@@ -13,18 +13,12 @@ def verify_metrics(metrics: dict[str, float] | None) -> None:
         return
     for k, v in metrics.items():
         if not isinstance(k, str):
-            raise ValueError(
-                f"Invalid metrics dictionary key ({type(k)}) {k}, expected `str`"
-            )
+            raise ValueError(f"Invalid metrics dictionary key ({type(k)}) {k}, expected `str`")
         if not isinstance(v, (int, float)):
-            raise ValueError(
-                f"Invalid metrics value ({type(v)}) {v} for {k}, expected `int | float`"
-            )
+            raise ValueError(f"Invalid metrics value ({type(v)}) {v} for {k}, expected `int | float`")
 
 
-def augment_trial_kwargs(
-    trial_kwargs: dict[str, ty.Any], augmentation: dict[str, ty.Any]
-) -> dict[str, ty.Any]:
+def augment_trial_kwargs(trial_kwargs: dict[str, ty.Any], augmentation: dict[str, ty.Any]) -> dict[str, ty.Any]:
     """
     Augment the ``trial_kwargs`` with additional key-value pairs specified in the augmentation dictionary.
 
@@ -51,9 +45,7 @@ def augment_trial_kwargs(
     config_dot_path: str
     dot_paths = list(augmentation.keys())
 
-    assert len(set(dot_paths)) == len(
-        dot_paths
-    ), f"Duplicate tune paths: {set(dot_paths).difference(dot_paths)}"
+    assert len(set(dot_paths)) == len(dot_paths), f"Duplicate tune paths: {set(dot_paths).difference(dot_paths)}"
     for config_dot_path, val in augmentation.items():
         path: list[str] = config_dot_path.split(".")
         trial_kwargs = nested_set(trial_kwargs, path, val)

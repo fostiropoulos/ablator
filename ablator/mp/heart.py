@@ -28,11 +28,12 @@ class Heart(ABC):
     heartbeat_interval : int
         the interval in seconds by which to perform a heart-beat
     """
-    def __init__(self, missed_heart_beats: int = 3, update_interval: int = 10):
+
+    def __init__(self, missed_heart_beats: int = 3, heartbeat_interval: int = 10):
         # the first heart-beat is for error-diagnosing
         self.heartbeat()
         self.missed_heart_beats = missed_heart_beats
-        self.heartbeat_interval = update_interval
+        self.heartbeat_interval = heartbeat_interval
         self._end_of_life = multiprocessing.Event()
         self._heart = threading.Thread(target=self._heartbeat)
         self._heart.daemon = True

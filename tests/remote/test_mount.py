@@ -31,9 +31,7 @@ if IS_LINUX:
     # will throw an error.
     from rmount.server import RemoteServer  # noqa: E402
 else:
-    pytestmark = pytest.mark.skip(
-        reason="RMount tests are only supported for Linux platforms."
-    )
+    pytestmark = pytest.mark.skip(reason="RMount tests are only supported for Linux platforms.")
 
 
 class SimpleModel(nn.Module):
@@ -127,9 +125,7 @@ def folders_equal(folder_a, folder_b):
                 if p.is_file() and p.name != ".rmount"
             ]
 
-            if all(a == b for a, b in zip(files_a, files_b)) and len(files_a) == len(
-                files_b
-            ):
+            if all(a == b for a, b in zip(files_a, files_b)) and len(files_a) == len(files_b):
                 return True
 
         except Exception:
@@ -273,9 +269,7 @@ def test_mount_actor(tmp_path, volume_name, ray_cluster):
             file_name = f"{random.randint(0,100)}"
             folder_a.joinpath(file_name).write_text(file_name)
             for _ in range(10):
-                file_names = [
-                    p.name for p in ray.get(mount_server.remote_files.remote())
-                ]
+                file_names = [p.name for p in ray.get(mount_server.remote_files.remote())]
                 if file_name in file_names:
                     break
                 time.sleep(1)
@@ -291,12 +285,11 @@ if __name__ == "__main__":
     )
 
     if not IS_LINUX:
-        raise NotImplementedError(
-            "Tests in this file are not supported for non-linux platforms"
-        )
+        raise NotImplementedError("Tests in this file are not supported for non-linux platforms")
 
     _locals = locals()
     fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    fn_names = ["test_mount"]
     test_fns = [_locals[fn] for fn in fn_names]
     kwargs = {
         "wrapper": TestWrapper(MyCustomModel),

@@ -107,23 +107,16 @@ class ClusterManager(Heart):
         update_interval: int = 10,
     ):
         self._private_key, self._public_key = make_private_key(private_key_home)
-        if (
-            ray.is_initialized()
-            and ray_address is not None
-            and ray_address != get_ray_address()
-        ):
+        if ray.is_initialized() and ray_address is not None and ray_address != get_ray_address():
             raise RuntimeError(
-                "`ray_address` does not match the currently running ray instance. Can"
-                " not initialize ray twice."
+                "`ray_address` does not match the currently running ray instance. Can not initialize ray twice."
             )
         if not ray.is_initialized():
             ray_init(address=ray_address)
 
         self._timeout = timeout
         self.ray_address = get_ray_address()
-        self._head_node = RayNode(
-            node_ip=get_node_ip(), node_id=get_node_id(), is_alive=True
-        )
+        self._head_node = RayNode(node_ip=get_node_ip(), node_id=get_node_id(), is_alive=True)
         self._username = get_username()
         self._healthy_nodes: list[Node] = []  # must be unique in terms of IP
         self._init_nodes: list[NODE_ID] = []  # must be unique in terms of ID
@@ -179,7 +172,7 @@ class ClusterManager(Heart):
         register_public_key(self._public_key)
         key_pem = private_key_to_str(self._private_key)
 
-        result = run_ssh_cmd(
+        result: str = run_ssh_cmd(  # type: ignore[assignment]
             self.head_ip,
             self._username,
             self._private_key,
@@ -303,16 +296,12 @@ class ClusterManager(Heart):
                 )
                 return gpu, resource_actor
 
-        raise RuntimeError(
-            f"Could not find {node_ip} in nodes {[ip for ip, _ in actors]}"
-        )
+        raise RuntimeError(f"Could not find {node_ip} in nodes {[ip for ip, _ in actors]}")
 
     @property
     def head_resources(self) -> Resource:
         for _ in range(10):
-            node_resources: Resource = ray.get(
-                self._resource_actor.resources.remote(), timeout=self._timeout
-            )
+            node_resources: Resource = ray.get(self._resource_actor.resources.remote(), timeout=self._timeout)
             if node_resources.is_active:
                 break
             time.sleep(1)
@@ -333,14 +322,10 @@ class ClusterManager(Heart):
 
     @property
     def available_resources(self) -> dict[NODE_IP, Resource]:
-        resource_dict = {self.head_ip: self.head_resources} | {
-            n.node_ip: n.resources for n in self._healthy_nodes
-        }
+        resource_dict = {self.head_ip: self.head_resources} | {n.node_ip: n.resources for n in self._healthy_nodes}
         return {k: v for k, v in resource_dict.items() if v.is_active}
 
-    def sorted_resources(
-        self, gpu_mem: int | None = None
-    ) -> OrderedDict[NODE_IP, Resource]:
+    def sorted_resources(self, gpu_mem: int | None = None) -> OrderedDict[NODE_IP, Resource]:
         """
         sort resources by utilization and optionally exclude the ones that do not meet
         a minimum requirement e.g. for `gpu_mem`.
@@ -427,9 +412,7 @@ class ClusterManager(Heart):
         """
         # we purposefully leave it open for `run_async` option
         # pylint: disable=consider-using-with
-        p = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-        )
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         if run_async:
             return p
 

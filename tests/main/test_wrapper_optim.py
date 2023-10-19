@@ -131,38 +131,22 @@ class MyCustomUnInitModel(nn.Module):
 def test_no_grads(config: RunConfig, capture_output):
     wrapper = TestWrapper(MyWrongCustomModel)
     stdout, stderr = capture_output(lambda: wrapper.train(config))
-    assert (
-        "The loss returned by the model is `None` and no optimization parameter"
-        " contains gradients. "
-        in stdout
-    )
+    assert "The loss returned by the model is `None` and no optimization parameter contains gradients. " in stdout
     assert wrapper._is_partially_optimized
     assert wrapper._is_self_optim
     wrapper = TestWrapper(MyInternalCustomModel)
     stdout, stderr = capture_output(lambda: wrapper.train(config))
-    assert (
-        "The loss returned by the model is `None` and no optimization parameter"
-        " contains gradients. "
-        not in stdout
-    )
+    assert "The loss returned by the model is `None` and no optimization parameter contains gradients. " not in stdout
     assert not wrapper._is_partially_optimized
     assert not wrapper._is_self_optim
     wrapper = TestWrapper(MyWrongPolarCustomModel)
     stdout, stderr = capture_output(lambda: wrapper.train(config))
-    assert (
-        "The loss returned by the model is `None` and no optimization parameter"
-        " contains gradients. "
-        in stdout
-    )
+    assert "The loss returned by the model is `None` and no optimization parameter contains gradients. " in stdout
     assert not wrapper._is_partially_optimized
     assert wrapper._is_self_optim
     wrapper = TestWrapper(MyPolarCustomModel)
     stdout, stderr = capture_output(lambda: wrapper.train(config))
-    assert (
-        "The loss returned by the model is `None` and no optimization parameter"
-        " contains gradients. "
-        not in stdout
-    )
+    assert "The loss returned by the model is `None` and no optimization parameter contains gradients. " not in stdout
     assert "Not all optimization parameters contain gradients. " in stdout
     assert wrapper._is_partially_optimized
     assert not wrapper._is_self_optim

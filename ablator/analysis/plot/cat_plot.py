@@ -69,9 +69,7 @@ class Categorical(Plot):
 
     def __init__(self, *args: ty.Any, **kwargs: ty.Any) -> None:
         super().__init__(*args, **kwargs)
-        self.attribute_metric_map = self._make_attribute_metric_map(
-            self.metric, self.attributes
-        )
+        self.attribute_metric_map = self._make_attribute_metric_map(self.metric, self.attributes)
 
     @classmethod
     def _make_attribute_metric_map(
@@ -90,22 +88,18 @@ class Categorical(Plot):
             none_name = "None"
             if "None" in unique_values:
                 logger.warning(
-                    "`None` is present as a categorical string value as"
-                    " well as None. Will rename None to Type(None)."
+                    "`None` is present as a categorical string value as well as None. Will rename None to Type(None)."
                 )
                 none_name = "Type(None)"
-                assert none_name not in unique_values, (
-                    f"{none_name}, and `None` are both present as categorical values. "
-                    "Unable to rename None value."
-                )
+                assert (
+                    none_name not in unique_values
+                ), f"{none_name}, and `None` are both present as categorical values. Unable to rename None value."
             metrics[none_name] = metric[attributes.apply(lambda x: x is None)]
 
         for i in np.argsort(unique_values):
             u = unique_values[i]
             if isinstance(u, float) and np.isnan(u):
-                metrics[u] = metric[
-                    attributes.apply(lambda x: isinstance(x, float) and np.isnan(x))
-                ]
+                metrics[u] = metric[attributes.apply(lambda x: isinstance(x, float) and np.isnan(x))]
             else:
                 metrics[u] = metric[attributes == u]
 
@@ -205,9 +199,7 @@ class ViolinPlot(Categorical):
 
         labels = [
             f"Mean: {mean:.2e}\nBest: {best:.2e}\n{name}"
-            for mean, best, name in zip(
-                mean_perf, best_perf, self.attribute_metric_map.keys()
-            )
+            for mean, best, name in zip(mean_perf, best_perf, self.attribute_metric_map.keys())
         ]
         self.ax.set_xticks(
             np.arange(len(self.attribute_metric_map)),

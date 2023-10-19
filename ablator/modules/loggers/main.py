@@ -3,7 +3,6 @@ import json
 import time
 from pathlib import Path
 import typing as ty
-from typing import Any
 from typing import Optional, Union
 
 import numpy as np
@@ -98,9 +97,7 @@ class SummaryLogger:
         # Initialize a SummaryLogger.
         run_config = copy.deepcopy(run_config)
         self.uid = run_config.uid
-        self.keep_n_checkpoints: int = (
-            keep_n_checkpoints if keep_n_checkpoints is not None else int(1e6)
-        )
+        self.keep_n_checkpoints: int = keep_n_checkpoints if keep_n_checkpoints is not None else int(1e6)
         self.log_iteration: int = 0
         self.checkpoint_iteration: dict[str, dict[str, int]] = {}
         self.log_file_path: Path | None = None
@@ -111,44 +108,22 @@ class SummaryLogger:
         _log_msg = ""
         if experiment_dir is not None:
             self.experiment_dir = Path(experiment_dir)
-            if (
-                not resume
-                and self.experiment_dir.exists()
-                and len(list(self.experiment_dir.glob("[!.]*"))) > 0
-            ):
+            if not resume and self.experiment_dir.exists() and len(list(self.experiment_dir.glob("[!.]*"))) > 0:
                 raise FileExistsError(
-                    f"SummaryLogger: Resume is set to {resume} but"
-                    f" {self.experiment_dir} is not empty."
+                    f"SummaryLogger: Resume is set to {resume} but {self.experiment_dir} is not empty."
                 )
             if resume and self.experiment_dir.exists():
-                _run_config = type(run_config).load(
-                    self.experiment_dir.joinpath(self.CONFIG_FILE_NAME)
-                )
+                _run_config = type(run_config).load(self.experiment_dir.joinpath(self.CONFIG_FILE_NAME))
 
                 diffs = run_config.diff_str(_run_config)
                 if len(diffs) > 0:
-                    i = len(
-                        list(
-                            self.experiment_dir.glob(
-                                self.BACKUP_CONFIG_FILE_NAME.format(i="*")
-                            )
-                        )
-                    )
-                    backup_file_name = self.experiment_dir.joinpath(
-                        self.BACKUP_CONFIG_FILE_NAME.format(i=f"{i:03d}")
-                    )
+                    i = len(list(self.experiment_dir.glob(self.BACKUP_CONFIG_FILE_NAME.format(i="*"))))
+                    backup_file_name = self.experiment_dir.joinpath(self.BACKUP_CONFIG_FILE_NAME.format(i=f"{i:03d}"))
                     backup_file_name.write_text(_run_config.to_yaml(), encoding="utf-8")
                     _log_msg += "Differences between provided configuration and "
-                    _log_msg += (
-                        "stored configuration. Creating a configuration backup at"
-                        f" {backup_file_name}"
-                    )
+                    _log_msg += f"stored configuration. Creating a configuration backup at {backup_file_name}"
 
-                metadata = json.loads(
-                    self.experiment_dir.joinpath(self.METADATA_JSON).read_text(
-                        encoding="utf-8"
-                    )
-                )
+                metadata = json.loads(self.experiment_dir.joinpath(self.METADATA_JSON).read_text(encoding="utf-8"))
                 self.checkpoint_iteration = metadata["checkpoint_iteration"]
                 self.log_iteration = metadata["log_iteration"]
 
@@ -184,9 +159,7 @@ class SummaryLogger:
             encoding="utf-8",
         )
 
-    def _make_dashboard(
-        self, summary_dir: Path, run_config: RunConfig | None = None
-    ) -> LoggerBase | None:
+    def _make_dashboard(self, summary_dir: Path, run_config: RunConfig | None = None) -> LoggerBase | None:
         """
         Make a dashboard logger.
 
@@ -218,9 +191,7 @@ class SummaryLogger:
         """
         if self.experiment_dir is None:
             return
-        self.experiment_dir.joinpath(self.CONFIG_FILE_NAME).write_text(
-            run_config.to_yaml(), encoding="utf-8"
-        )
+        self.experiment_dir.joinpath(self.CONFIG_FILE_NAME).write_text(run_config.to_yaml(), encoding="utf-8")
 
         if self.dashboard is not None:
             self.dashboard.write_config(run_config)
@@ -264,9 +235,7 @@ class SummaryLogger:
             self.dashboard.add_text(k, v, itr)
 
         elif isinstance(v, Image.Image):
-            self.dashboard.add_image(
-                k, np.array(v).transpose(2, 0, 1), itr, dataformats="CHW"
-            )
+            self.dashboard.add_image(k, np.array(v).transpose(2, 0, 1), itr, dataformats="CHW")
         elif isinstance(v, pd.DataFrame):
             self.dashboard.add_table(k, v, itr)
         elif isinstance(v, (int, float)):
@@ -326,9 +295,7 @@ class SummaryLogger:
             itr = self.log_iteration
             self.log_iteration += 1
         else:
-            assert (
-                itr > self.log_iteration
-            ), f"Current iteration > {itr}. Can not add metrics."
+            assert itr > self.log_iteration, f"Current iteration > {itr}. Can not add metrics."
             self.log_iteration = itr
         if isinstance(metrics, Metrics):
             dict_metrics = metrics.to_dict()
@@ -392,10 +359,9 @@ class SummaryLogger:
                 itr = self.checkpoint_iteration[dir_name][file_name]
             else:
                 cur_iter = self.checkpoint_iteration[dir_name][file_name]
-                assert itr > cur_iter, (
-                    f"Checkpoint iteration {cur_iter} >= training iteration {itr}. Can"
-                    " not overwrite checkpoint."
-                )
+                assert (
+                    itr > cur_iter
+                ), f"Checkpoint iteration {cur_iter} >= training iteration {itr}. Can not overwrite checkpoint."
                 self.checkpoint_iteration[dir_name][file_name] = itr
 
             dir_path = self.experiment_dir.joinpath(self.CHKPT_DIRS[dir_name])
@@ -423,7 +389,7 @@ class SummaryLogger:
             dir_path = self.experiment_dir.joinpath(chkpt_dir)
             futils.clean_checkpoints(dir_path, keep_n_checkpoints)
 
-    def info(self, *args: Any, **kwargs: Any):
+    def info(self, msg: str, verbose: bool = False):
         """
         Log an info to files and to console message using the logger. Here you can use
         positional or keyword arguments. Possible parameters are shown in the Parameters section.
@@ -436,9 +402,9 @@ class SummaryLogger:
             Whether to print messages to the console, by default ``False``.
 
         """
-        self.logger.info(*args, **kwargs)
+        self.logger.info(msg=msg, verbose=verbose)
 
-    def warn(self, *args: Any, **kwargs: Any):
+    def warn(self, msg: str, verbose: bool = True):
         """
         Log a warning message to files and to console using the logger. Here you can use
         positional or keyword arguments. Possible parameters are shown in the Parameters section.
@@ -451,9 +417,9 @@ class SummaryLogger:
             Whether to print messages to the console, by default ``True``.
 
         """
-        self.logger.warn(*args, **kwargs)
+        self.logger.warn(msg=msg, verbose=verbose)
 
-    def error(self, *args: Any, **kwargs: Any):
+    def error(self, msg: str):
         """
         Log an error message to files and to console using the logger. Here you can use
         positional or keyword arguments. Possible parameters are shown in the Parameters section.
@@ -464,4 +430,4 @@ class SummaryLogger:
             The message to log.
 
         """
-        self.logger.error(*args, **kwargs)
+        self.logger.error(msg)

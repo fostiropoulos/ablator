@@ -117,9 +117,7 @@ def test_scheduler(tmp_path: Path, config: RunConfig):
     assert wrapper.scheduler.last_epoch == step_count
     with pytest.raises(
         TypeError,
-        match=re.escape(
-            "ReduceLROnPlateau.step() missing 1 required positional argument: 'metrics'"
-        ),
+        match=re.escape("ReduceLROnPlateau.step() missing 1 required positional argument: 'metrics'"),
     ):
         wrapper.scheduler_step(is_val_step=True)
     wrapper.scheduler_step(0.01, is_val_step=True)
@@ -128,9 +126,7 @@ def test_scheduler(tmp_path: Path, config: RunConfig):
     assert wrapper.scheduler.last_epoch == step_count + 2
 
     # TRAIN SCHEDULER
-    config.train_config.scheduler_config = SchedulerConfig(
-        "cycle", arguments={"max_lr": 0.01, "total_steps": 100}
-    )
+    config.train_config.scheduler_config = SchedulerConfig("cycle", arguments={"max_lr": 0.01, "total_steps": 100})
     wrapper.init_state(config, debug=True)
     assert wrapper._scheduler_step_when == "train"
     step_count = wrapper.scheduler._step_count
@@ -228,33 +224,21 @@ def test_metrics(tmp_path: Path, wrapper: DeterminiticWrapper, config: RunConfig
     assert wrapper.metrics["train_loss"] == float("-inf")
 
 
-def test_validation_loop(
-    tmp_path: Path, wrapper: DeterminiticWrapper, config: RunConfig, capture_output
-):
+def test_validation_loop(tmp_path: Path, wrapper: DeterminiticWrapper, config: RunConfig, capture_output):
     tmp_path = tmp_path.joinpath("test_metrics")
     config.experiment_dir = tmp_path
     wrapper.init_state(config)
 
     stdout, stderr = capture_output(
-        lambda: wrapper.validation_loop(
-            wrapper.model, wrapper.val_dataloader, wrapper.eval_metrics
-        )
+        lambda: wrapper.validation_loop(wrapper.model, wrapper.val_dataloader, wrapper.eval_metrics)
     )
-    assert (
-        "Called `validation_loop` without setting the model to evaluation mode. i.e."
-        " `model.eval()`"
-        in stdout
-    )
+    assert "Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`" in stdout
     wrapper.model.eval()
     stdout, stderr = capture_output(
-        lambda: wrapper.validation_loop(
-            wrapper.model, wrapper.val_dataloader, wrapper.eval_metrics
-        )
+        lambda: wrapper.validation_loop(wrapper.model, wrapper.val_dataloader, wrapper.eval_metrics)
     )
     assert len(stdout) == 0 and len(stderr) == 0
-    metrics = wrapper.validation_loop(
-        wrapper.model, wrapper.val_dataloader, wrapper.eval_metrics
-    )
+    metrics = wrapper.validation_loop(wrapper.model, wrapper.val_dataloader, wrapper.eval_metrics)
     assert metrics == wrapper.eval_metrics.to_dict()
 
 
@@ -276,15 +260,12 @@ def test_config_parser(
     config.optim_metric_name = "loss"
     stdout, stderr = capture_output(lambda: wrapper.init_state(config, debug=True))
     assert (
-        "Different optim_metric_direction max than scheduler.arguments.mode min."
-        " Overwriting scheduler.arguments.mode."
+        "Different optim_metric_direction max than scheduler.arguments.mode min. Overwriting scheduler.arguments.mode."
         in stdout
     )
 
 
-def test_config_parser_plateau(
-    tmp_path: Path, wrapper: DeterminiticWrapper, config: RunConfig, capture_output
-):
+def test_config_parser_plateau(tmp_path: Path, wrapper: DeterminiticWrapper, config: RunConfig, capture_output):
     tmp_path = tmp_path.joinpath("test_config_parser_plateau")
     config.experiment_dir = tmp_path
     config.train_config.scheduler_config = SchedulerConfig("plateau", arguments={})
@@ -293,8 +274,7 @@ def test_config_parser_plateau(
     stdout, stderr = capture_output(lambda: wrapper.init_state(config))
 
     assert (
-        "Different optim_metric_direction max than scheduler.arguments.mode min."
-        " Overwriting scheduler.arguments.mode."
+        "Different optim_metric_direction max than scheduler.arguments.mode min. Overwriting scheduler.arguments.mode."
         not in stdout
     )
 
@@ -325,10 +305,7 @@ def test_wrapper_is_init(
     assert wrapper.current_iteration == 0
 
     msg = assert_error_msg(lambda: wrapper.train(config))
-    assert (
-        msg
-        == "Can not provide `run_config` to already initialized `DeterminiticWrapper`"
-    )
+    assert msg == "Can not provide `run_config` to already initialized `DeterminiticWrapper`"
     wrapper.train()
     msg = assert_error_msg(lambda: wrapper.init_state(config))
     assert msg == "DeterminiticWrapper is already initialized. "
@@ -342,9 +319,7 @@ def test_wrapper_is_init(
     assert metrics_a == metrics_b
 
     stdout, stderr = capture_output(lambda: wrapper.train())
-    assert (
-        "Training is already complete: 200 / 200. Returning current metrics." in stdout
-    )
+    assert "Training is already complete: 200 / 200. Returning current metrics." in stdout
 
     def _fn():
         wrapper.total_steps = None
@@ -372,8 +347,7 @@ def test_init_state(
     stdout, stderr = capture_output(lambda: wrapper.init_state(config, debug=True))
     assert len(stderr) == 0
     assert (
-        "If saving artifacts is unnecessary you can disable the file system by setting"
-        " `run_config.experiment_dir=None`"
+        "If saving artifacts is unnecessary you can disable the file system by setting `run_config.experiment_dir=None`"
         in stdout
     )
     msg = assert_error_msg(lambda: wrapper.init_state(config, resume=True))
@@ -381,8 +355,7 @@ def test_init_state(
     wrapper.init_state(config, smoke_test=True)
     wrapper.train()
     assert (
-        "If saving artifacts is unnecessary you can disable the file system by setting"
-        " `run_config.experiment_dir=None`"
+        "If saving artifacts is unnecessary you can disable the file system by setting `run_config.experiment_dir=None`"
         in stdout
     )
     msg = assert_error_msg(lambda: wrapper.init_state(config, resume=True))
@@ -390,8 +363,7 @@ def test_init_state(
     wrapper.init_state(config, debug=True)
     wrapper.train()
     assert (
-        "If saving artifacts is unnecessary you can disable the file system by setting"
-        " `run_config.experiment_dir=None`"
+        "If saving artifacts is unnecessary you can disable the file system by setting `run_config.experiment_dir=None`"
         in stdout
     )
     msg = assert_error_msg(lambda: wrapper.init_state(config, resume=True))
@@ -400,10 +372,7 @@ def test_init_state(
     wrapper.init_state(config, debug=True)
 
     stdout, stderr = capture_output(lambda: wrapper.train(debug=True))
-    assert (
-        "Training is already complete: 200 / 200. Returning current metrics."
-        not in stdout
-    )
+    assert "Training is already complete: 200 / 200. Returning current metrics." not in stdout
     msg = assert_error_msg(lambda: wrapper.init_state(config))
     assert msg == "DeterminiticWrapper is already initialized. "
     shutil.rmtree(config.experiment_dir)
@@ -412,30 +381,17 @@ def test_init_state(
     wrapper.train()
     wrapper.init_state(config, resume=True)
     stdout, stderr = capture_output(lambda: wrapper.train())
-    assert (
-        "Training is already complete: 200 / 200. Returning current metrics." in stdout
-    )
+    assert "Training is already complete: 200 / 200. Returning current metrics." in stdout
     wrapper.init_state(config, smoke_test=True)
     stdout, stderr = capture_output(lambda: wrapper.train())
-    assert (
-        "Training is already complete: 200 / 200. Returning current metrics."
-        not in stdout
-    )
+    assert "Training is already complete: 200 / 200. Returning current metrics." not in stdout
     wrapper.init_state(config, debug=True)
     stdout, stderr = capture_output(lambda: wrapper.train())
-    assert (
-        "Training is already complete: 200 / 200. Returning current metrics."
-        not in stdout
-    )
+    assert "Training is already complete: 200 / 200. Returning current metrics." not in stdout
     stdout, stderr = capture_output(lambda: wrapper.train())
-    assert (
-        "Training is already complete: 200 / 200. Returning current metrics." in stdout
-    )
+    assert "Training is already complete: 200 / 200. Returning current metrics." in stdout
     stdout, stderr = capture_output(lambda: wrapper.train(debug=True))
-    assert (
-        "Training is already complete: 200 / 200. Returning current metrics."
-        not in stdout
-    )
+    assert "Training is already complete: 200 / 200. Returning current metrics." not in stdout
 
 
 def test_dataloader_data_lock(
@@ -455,9 +411,7 @@ def test_dataloader_data_lock(
 
 
 @pytest.mark.parametrize("direction", ["min", "max"])
-def test_optim_metric_names(
-    tmp_path: Path, wrapper: DeterminiticWrapper, config: RunConfig, direction
-):
+def test_optim_metric_names(tmp_path: Path, wrapper: DeterminiticWrapper, config: RunConfig, direction):
     tmp_path = tmp_path.joinpath("test_init_state")
     config.experiment_dir = tmp_path
     sign = -1 if direction == "min" else 1

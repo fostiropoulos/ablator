@@ -484,9 +484,7 @@ class ModelBase(ABC):
         if self.experiment_dir is not None:
             self.logger.info(f"Model directory: {self.experiment_dir}")
 
-    def _make_dataloaders(
-        self, run_config: RunConfig, data_lock: ty.Optional[Lock] = None
-    ):
+    def _make_dataloaders(self, run_config: RunConfig, data_lock: ty.Optional[Lock] = None):
         """
         Creates the data loaders for the training process.
 
@@ -506,13 +504,9 @@ class ModelBase(ABC):
         with context_lock:
             self.make_dataloaders(run_config)
 
-        assert (
-            len(self.train_dataloader) > 0
-        ), "Must define a train dataloader in `make_dataloader`"
+        assert len(self.train_dataloader) > 0, "Must define a train dataloader in `make_dataloader`"
 
-    def _parse_optim_metrics(
-        self, run_config: RunConfig
-    ) -> tuple[Optim, str] | tuple[None, None]:
+    def _parse_optim_metrics(self, run_config: RunConfig) -> tuple[Optim, str] | tuple[None, None]:
         """
         parses the optimization metrics and their direction to validate they meet
         several training constraints. For example, the scheduler optimization mode
@@ -545,19 +539,11 @@ class ModelBase(ABC):
         ]
         if any(missing_metrics) and not all(missing_metrics):
             raise ValueError(
-                "Invalid configuration. Must specify both `optim_metrics` and"
-                " `optim_metric_name` or neither."
+                "Invalid configuration. Must specify both `optim_metrics` and `optim_metric_name` or neither."
             )
         optim_metric_name = str(optim_metric_name)
-        if (
-            optim_metric_name is not None
-            and optim_metrics is not None
-            and optim_metric_name not in optim_metrics
-        ):
-            raise ValueError(
-                f"optim_metric_name={optim_metric_name} "
-                f"was not found in optim_metrics={optim_metrics}"
-            )
+        if optim_metric_name is not None and optim_metrics is not None and optim_metric_name not in optim_metrics:
+            raise ValueError(f"optim_metric_name={optim_metric_name} was not found in optim_metrics={optim_metrics}")
         if optim_metric_name is not None and optim_metrics is not None:
             optim_direction = optim_metrics[optim_metric_name]
 
@@ -568,13 +554,11 @@ class ModelBase(ABC):
         )
         if all(missing_metrics) and scheduler_requires_metric:
             raise ValueError(
-                "Must provide `optim_metrics` when using Scheduler ="
-                f" `{getattr(scheduler_config,'name', 'N/A')}`."
+                f"Must provide `optim_metrics` when using Scheduler = `{getattr(scheduler_config,'name', 'N/A')}`."
             )
         if all(missing_metrics) and run_config.early_stopping_iter is not None:
             raise ValueError(
-                "Must provide `optim_metrics` when using early_stopping_iter ="
-                f" `{run_config.early_stopping_iter}`."
+                f"Must provide `optim_metrics` when using early_stopping_iter = `{run_config.early_stopping_iter}`."
             )
         if all(missing_metrics):
             return None, None
@@ -600,31 +584,20 @@ class ModelBase(ABC):
         run_config = self.run_config
         self.device = butils.parse_device(run_config.device)
 
-        self.optim_metric_direction, self.optim_metric_name = self._parse_optim_metrics(
-            run_config
-        )
+        self.optim_metric_direction, self.optim_metric_name = self._parse_optim_metrics(run_config)
         if self.optim_metric_direction is not None:
             self.best_metrics = {
-                self.optim_metric_name: (
-                    float("inf")
-                    if self.optim_metric_direction == Optim.min
-                    else float("-inf")
-                )
+                self.optim_metric_name: float("inf") if self.optim_metric_direction == Optim.min else float("-inf")
             }
         else:
             self.best_metrics = {}
 
         self.amp = run_config.amp
         if self.device == "cpu" and self.amp:
-            self.logger.warn(
-                "Automatic Mixed Precision (AMP) is not supported for CPU. Setting"
-                " `amp` to False."
-            )
+            self.logger.warn("Automatic Mixed Precision (AMP) is not supported for CPU. Setting `amp` to False.")
             self.amp = False
 
-        if (batch_lim := run_config.metrics_n_batches) > len(
-            self.train_dataloader
-        ) * 0.2:
+        if (batch_lim := run_config.metrics_n_batches) > len(self.train_dataloader) * 0.2:
             self.logger.warn(
                 f"Metrics batch-limit {batch_lim} is larger than 20% of the train"
                 f" dataloader length {len(self.train_dataloader)}. You might experience"
@@ -640,14 +613,10 @@ class ModelBase(ABC):
         if self.verbose == "silent":
             warnings.filterwarnings("ignore")
 
-        if (
-            run_config.early_stopping_iter is not None
-            and run_config.early_stopping_iter > 0
-        ):
-            assert self.val_dataloader is not None, (
-                "dataloader function has to return validation set when setting early"
-                " stopping to True"
-            )
+        if run_config.early_stopping_iter is not None and run_config.early_stopping_iter > 0:
+            assert (
+                self.val_dataloader is not None
+            ), "dataloader function has to return validation set when setting early stopping to True"
 
         self.train_metrics = Metrics(
             batch_limit=run_config.metrics_n_batches,
@@ -697,10 +666,7 @@ class ModelBase(ABC):
         elif self.run_config.init_chkpt is not None and not resume:
             # Loads only the weights
             self.current_checkpoint = Path(self.run_config.init_chkpt)
-            self.logger.info(
-                "Initializing model weights ONLY from checkpoint."
-                f" {self.current_checkpoint}"
-            )
+            self.logger.info(f"Initializing model weights ONLY from checkpoint. {self.current_checkpoint}")
 
             self._load_model(self.current_checkpoint, model_only=True)
 
@@ -843,15 +809,13 @@ class ModelBase(ABC):
 
                     # ignore exception
                     self.logger.error(
-                        f"Error loading checkpoint {_checkpoint}. Trying"
-                        f" another....\n{traceback.format_exc()}"
+                        f"Error loading checkpoint {_checkpoint}. Trying another....\n{traceback.format_exc()}"
                     )
         if current_checkpoint is None:
-            raise CheckpointNotFoundError(
-                f"Could not find a valid checkpoint in {chkpt_dir}"
-            )
+            raise CheckpointNotFoundError(f"Could not find a valid checkpoint in {chkpt_dir}")
         self.current_checkpoint = current_checkpoint
 
+    # flake8: noqa: DOC201
     def _load_model(self, checkpoint_path: Path, model_only: bool = False):
         """
         Loads the model and its state from the checkpoint file at the specified path.
@@ -875,34 +839,22 @@ class ModelBase(ABC):
 
         if not hasattr(self, "run_config") or self.run_config is None:
             raise NotImplementedError(
-                "Can not load model on an uninitialized model state. Consider run"
-                " init_experiment_state function first"
+                "Can not load model on an uninitialized model state. Consider run init_experiment_state function first"
             )
         try:
             save_dict = torch.load(checkpoint_path, map_location="cpu")
         except Exception as e:
-            raise RuntimeError(
-                f"{checkpoint_path} is not a valid checkpoint e.g. a `.pt` file. "
-            ) from e
+            raise RuntimeError(f"{checkpoint_path} is not a valid checkpoint e.g. a `.pt` file. ") from e
         if model_only:
             self.load_checkpoint(save_dict, model_only=model_only)
             return
         run_config = type(self.run_config)(**save_dict["run_config"])
         if run_config.uid != self.run_config.uid:
-            diffs = "\n\t".join(
-                run_config.diff_str(self.run_config, ignore_stateless=True)
-            )
-            raise RuntimeError(
-                f"Mismatching loaded and current configurations. \n{diffs}"
-            )
-        diffs = "\n\t".join(
-            run_config.diff_str(self.run_config, ignore_stateless=False)
-        )
+            diffs = "\n\t".join(run_config.diff_str(self.run_config, ignore_stateless=True))
+            raise RuntimeError(f"Mismatching loaded and current configurations. \n{diffs}")
+        diffs = "\n\t".join(run_config.diff_str(self.run_config, ignore_stateless=False))
         if len(diffs) > 0:
-            self.logger.warn(
-                "Differences between initial configuration and current configuration."
-                f" \n{diffs}"
-            )
+            self.logger.warn(f"Differences between initial configuration and current configuration. \n{diffs}")
         self._load_stats(save_dict)
         self.load_checkpoint(save_dict, model_only=model_only)
         self.current_state = save_dict
@@ -981,9 +933,7 @@ class ModelBase(ABC):
         except AttributeError:
             _derived_stats_names = []
         try:
-            _overridable_stats_names = super().__getattribute__(
-                "_overridable_stats_names"
-            )
+            _overridable_stats_names = super().__getattribute__("_overridable_stats_names")
         except AttributeError:
             _overridable_stats_names = []
         if k in _derived_stats_names and k not in _overridable_stats_names:

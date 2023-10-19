@@ -313,6 +313,7 @@ class PlotAnalysis(Analysis):
         )
 
     # flake8: noqa: DOC102
+    # pylint: disable=differing-type-doc,differing-param-doc
     def make_figures(
         self,
         metric_name_remap: dict[str, str] | None = None,
@@ -339,6 +340,8 @@ class PlotAnalysis(Analysis):
         append : bool
             A boolean indicating whether to append plots to an existing axes object)
             and extra arguments for creating the plots.
+        **plt_kwargs
+            Additional keyword arguments to pass to the plot.
         """
         cat_attrs = list(self.categorical_attributes)
         num_attrs = list(self.numerical_attributes)
@@ -347,8 +350,7 @@ class PlotAnalysis(Analysis):
             num_attrs = list(set(attribute_name_remap.keys()).intersection(num_attrs))
         if (save_dir := save_dir if save_dir is not None else self.save_dir) is None:
             raise ValueError(
-                "Must specify a `save_dir` either as an argument to `make_figures` or"
-                " during class instantiation"
+                "Must specify a `save_dir` either as an argument to `make_figures` or during class instantiation"
             )
         if len(cat_attrs) > 0:
             for plot_fn in ("make_violinplot",):

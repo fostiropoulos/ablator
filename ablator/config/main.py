@@ -52,8 +52,7 @@ def _freeze_helper(obj):
     def __setattr__(self, k, v):
         if getattr(self, "_freeze", False):
             raise RuntimeError(
-                f"Can not set attribute {k} on a class of a frozen configuration"
-                f" ``{type(self).__name__}``."
+                f"Can not set attribute {k} on a class of a frozen configuration ``{type(self).__name__}``."
             )
         super(type(self), self).__setattr__(k, v)
 
@@ -75,9 +74,7 @@ def _parse_reconstructor(val, ignore_stateless: bool, flatten: bool):
     if isinstance(val, (int, float, bool, str, type(None))):
         return val
     if issubclass(type(val), ConfigBase):
-        return val.make_dict(
-            val.annotations, ignore_stateless=ignore_stateless, flatten=flatten
-        )
+        return val.make_dict(val.annotations, ignore_stateless=ignore_stateless, flatten=flatten)
     if issubclass(type(val), Enum):
         return val.value
     args, kwargs = parse_repr_to_kwargs(val)
@@ -181,10 +178,7 @@ class ConfigBase:
                 v = getattr(self, k, None)
             if k in missing_vals:
                 logging.warning(
-                    (
-                        "Loading %s in `debug` mode. Setting missing required value %s"
-                        " to `None`."
-                    ),
+                    "Loading %s in `debug` mode. Setting missing required value %s to `None`.",
                     self._class_name,
                     k,
                 )
@@ -197,10 +191,7 @@ class ConfigBase:
                     if not debug:
                         raise e
                     logging.warning(
-                        (
-                            "Loading %s in `debug` mode. Unable to parse `%s` value %s."
-                            " Setting to `None`."
-                        ),
+                        "Loading %s in `debug` mode. Unable to parse `%s` value %s. Setting to `None`.",
                         self._class_name,
                         k,
                         v,
@@ -225,26 +216,13 @@ class ConfigBase:
             if not inspect.isfunction(item[1]) and not item[0].startswith("_")
         }
 
-        base_variables = {
-            item[0]
-            for item in inspect.getmembers(ConfigBase)
-            if not inspect.isfunction(item[1])
-        }
-        non_annotated_variables = (
-            added_variables - base_variables - set(self.annotations.keys())
-        )
-        assert (
-            len(non_annotated_variables) == 0
-        ), f"All variables must be annotated. {non_annotated_variables}"
+        base_variables = {item[0] for item in inspect.getmembers(ConfigBase) if not inspect.isfunction(item[1])}
+        non_annotated_variables = added_variables - base_variables - set(self.annotations.keys())
+        assert len(non_annotated_variables) == 0, f"All variables must be annotated. {non_annotated_variables}"
         if len(args) > 0:
-            raise ValueError(
-                f"{self._class_name} does not support positional arguments."
-            )
+            raise ValueError(f"{self._class_name} does not support positional arguments.")
         if not isinstance(self, self.config_class):  # type: ignore[arg-type]
-            raise RuntimeError(
-                f"You must decorate your Config class '{self._class_name}' with"
-                " ablator.configclass."
-            )
+            raise RuntimeError(f"You must decorate your Config class '{self._class_name}' with ablator.configclass.")
         missing_vals = self._validate_missing(**kwargs)
         if len(missing_vals) != 0 and not debug:
             raise ValueError(f"Missing required values {missing_vals}.")
@@ -256,10 +234,7 @@ class ConfigBase:
             if not annotation.optional and annotation.state not in [Derived]:
                 # make sure non-optional and derived values are not empty or
                 # without a default assignment
-                if not (
-                    (k in kwargs and kwargs[k] is not None)
-                    or getattr(self, k, None) is not None
-                ):
+                if not ((k in kwargs and kwargs[k] is not None) or getattr(self, k, None) is not None):
                     missing_vals.append(k)
         return missing_vals
 
@@ -268,10 +243,7 @@ class ConfigBase:
 
     def __setattr__(self, k, v):
         if self._freeze:
-            raise RuntimeError(
-                f"Can not set attribute {k} on frozen configuration"
-                f" ``{type(self).__name__}``."
-            )
+            raise RuntimeError(f"Can not set attribute {k} on frozen configuration ``{type(self).__name__}``.")
         annotation = self.annotations[k]
         v = parse_value(v, annotation, k, self._debug)
         self.__setattr__internal(k, v)
@@ -296,10 +268,7 @@ class ConfigBase:
             self._class_name
             + "("
             + ", ".join(
-                [
-                    f"{k}='{v}'" if isinstance(v, str) else f"{k}={v.__repr__()}"
-                    for k, v in self.to_dict().items()
-                ]
+                [f"{k}='{v}'" if isinstance(v, str) else f"{k}={v.__repr__()}" for k, v in self.to_dict().items()]
             )
             + ")"
         )
@@ -370,11 +339,7 @@ class ConfigBase:
             __annotations__ takes priority (aka) the `if not` statement
             and is supplemented with __dataclass_fields__
             """
-            dataclass_types = {
-                k: v.type
-                for k, v in self.__dataclass_fields__.items()
-                if k not in annotation_types
-            }
+            dataclass_types = {k: v.type for k, v in self.__dataclass_fields__.items() if k not in annotation_types}
             annotation_types.update(dataclass_types)
 
             annotations = {
@@ -465,9 +430,7 @@ class ConfigBase:
             If the type of annot.collection is not supported.
         """
         return_dict = {}
-        parse_reconstructor = partial(
-            _parse_reconstructor, ignore_stateless=ignore_stateless, flatten=flatten
-        )
+        parse_reconstructor = partial(_parse_reconstructor, ignore_stateless=ignore_stateless, flatten=flatten)
         for field_name, annot in annotations.items():
             if ignore_stateless and (annot.state in {Stateless, Derived}):
                 continue
@@ -482,9 +445,7 @@ class ConfigBase:
             elif annot.collection in [Dict]:
                 val = {k: parse_reconstructor(_dval) for k, _dval in _val.items()}
             elif issubclass(type(_val), ConfigBase):
-                val = _val.make_dict(
-                    _val.annotations, ignore_stateless=ignore_stateless, flatten=flatten
-                )
+                val = _val.make_dict(_val.annotations, ignore_stateless=ignore_stateless, flatten=flatten)
 
             elif annot.collection == Type:
                 if annot.optional and _val is None:
@@ -512,9 +473,7 @@ class ConfigBase:
         """
         Path(path).write_text(self.to_yaml(), encoding="utf-8")
 
-    def diff_str(
-        self, config: "ConfigBase", ignore_stateless: bool = False
-    ) -> list[str]:
+    def diff_str(self, config: "ConfigBase", ignore_stateless: bool = False) -> list[str]:
         """
         Get the differences between the current configuration object and another configuration object as strings.
 
@@ -580,13 +539,9 @@ class ConfigBase:
         """
         left_config = copy.deepcopy(self)
         right_config = copy.deepcopy(config)
-        left_dict = left_config.make_dict(
-            left_config.annotations, ignore_stateless=ignore_stateless, flatten=True
-        )
+        left_dict = left_config.make_dict(left_config.annotations, ignore_stateless=ignore_stateless, flatten=True)
 
-        right_dict = right_config.make_dict(
-            right_config.annotations, ignore_stateless=ignore_stateless, flatten=True
-        )
+        right_dict = right_config.make_dict(right_config.annotations, ignore_stateless=ignore_stateless, flatten=True)
         left_keys = set(left_dict.keys())
         right_keys = set(right_dict.keys())
         diffs: list[tuple[str, tuple[type, ty.Any], tuple[type, ty.Any]]] = []
@@ -601,9 +556,7 @@ class ConfigBase:
                 left_type = type(left_v)
                 diffs.append((k, (left_type, left_v), (Missing, None)))
 
-            elif left_dict[k] != right_dict[k] or not isinstance(
-                left_dict[k], type(right_dict[k])
-            ):
+            elif left_dict[k] != right_dict[k] or not isinstance(left_dict[k], type(right_dict[k])):
                 right_v = right_dict[k]
                 left_v = left_dict[k]
                 left_type = type(left_v)
@@ -657,9 +610,7 @@ class ConfigBase:
             The YAML representation of the configuration object in dot notation paths.
 
         """
-        _flat_dict = self.make_dict(
-            self.annotations, ignore_stateless=ignore_stateless, flatten=True
-        )
+        _flat_dict = self.make_dict(self.annotations, ignore_stateless=ignore_stateless, flatten=True)
         return OmegaConf.to_yaml(OmegaConf.create(_flat_dict))
 
     @property
@@ -681,16 +632,13 @@ class ConfigBase:
 
         Raises
         ------
-        AssertionError
+        RuntimeError
             If the configuration object is ambiguous or missing required values.
 
         """
         for k, annot in self.annotations.items():
-            if not annot.optional:
-                assert getattr(self, k) is not None, (
-                    f"Ambiguous configuration `{self._class_name}`. Must provide value"
-                    f" for {k}"
-                )
+            if not annot.optional and getattr(self, k) is None:
+                raise RuntimeError(f"Ambiguous configuration `{self._class_name}`. Must provide value for {k}")
         self._apply_lambda_recursively("assert_unambigious")
 
     def freeze(self):

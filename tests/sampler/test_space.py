@@ -81,32 +81,20 @@ def test_search_space(optim_config: SearchSpace):
         "train_config.optimizer_config": optim_config,
         "b": SearchSpace(value_range=(-10, 10), value_type="float"),
     }
-    lr_sp = (
-        space["train_config.optimizer_config"]
-        .subspaces[2]
-        .sub_configuration["arguments"]["lr"]
-    )
+    lr_sp = space["train_config.optimizer_config"].subspaces[2].sub_configuration["arguments"]["lr"]
     assert (
         isinstance(
             lr_sp,
             SearchSpace,
         )
-        and lr_sp.value_range
-        == ["0", "1"]  # this is because we cast to str for float safety
+        and lr_sp.value_range == ["0", "1"]  # this is because we cast to str for float safety
         and lr_sp.categorical_values is None
     )
     assert isinstance(
-        space["train_config.optimizer_config"]
-        .subspaces[1]
-        .sub_configuration["arguments"]["lr"],
+        space["train_config.optimizer_config"].subspaces[1].sub_configuration["arguments"]["lr"],
         float,
     )
-    assert (
-        space["train_config.optimizer_config"]
-        .subspaces[2]
-        .sub_configuration["arguments"]["wd"]
-        == 0.9
-    )
+    assert space["train_config.optimizer_config"].subspaces[2].sub_configuration["arguments"]["wd"] == 0.9
     optim_config.make_dict(space["train_config.optimizer_config"].annotations)
     converted_subspaces = optim_config.to_dict()["subspaces"]
 

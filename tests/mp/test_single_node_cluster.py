@@ -78,7 +78,7 @@ def test_get_gpu(tmp_path: Path, ray_cluster, update_gpus_fixture, n_gpus):
         for node_ip in ray_cluster.node_ips():
             for gpu_id in range(n_gpus):
                 gpu, actor = manager.get_gpu(node_ip, process_name=f"x_{gpu_id}")
-                assert gpu.locking_process_id == f"x_{gpu_id}"
+                assert gpu.locking_process_name == f"x_{gpu_id}"
                 assert gpu.device_id == n_gpus - gpu_id - 1
             with pytest.raises(GPUError):
                 gpu, actor = manager.get_gpu(node_ip, process_name=f"x_{gpu_id}")
@@ -92,9 +92,10 @@ def test_head_resource_error(tmp_path: Path, ray_cluster, inactive_resource):
     # we disable updating the other cluster nodes to avoid errors due
     # to inactive resources.
 
-    with mock.patch.object(
-        ClusterManager, "heartbeat", lambda self: None
-    ), mock.patch.object(ResourceManager, "resources", inactive_resource):
+    with (
+        mock.patch.object(ClusterManager, "heartbeat", lambda self: None),
+        mock.patch.object(ResourceManager, "resources", inactive_resource),
+    ):
         manager = ClusterManager(
             tmp_path,
             sync_directory=tmp_path,
@@ -102,9 +103,7 @@ def test_head_resource_error(tmp_path: Path, ray_cluster, inactive_resource):
             timeout=10,
             update_interval=1,
         )
-        with pytest.raises(
-            RuntimeError, match="Could not read the resources of the head node."
-        ):
+        with pytest.raises(RuntimeError, match="Could not read the resources of the head node."):
             manager.head_resources
     assert True
 

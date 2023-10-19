@@ -58,11 +58,12 @@ class RecordWriter:
 # Monkey-patching for faster writes to work with mount
 # pylint: disable=super-init-not-called,no-member
 class MyEventsWriter(EventsWriter):
+    """
+    Events files have a name of the form
+    '/some/file/path/events.out.tfevents.[timestamp].[hostname]'
+    """
+
     def __init__(self, filename):
-        """
-        Events files have a name of the form
-        '/some/file/path/events.out.tfevents.[timestamp].[hostname]'
-        """
         self._file_name = filename
         self._num_outstanding_events = 0
         self._py_recordio_writer = RecordWriter(self._file_name)
@@ -95,9 +96,7 @@ class TensorboardLogger(LoggerBase):
         # Initialize the TensorboardLogger with a summary directory.
         self.thread_lock = threading.Lock()
         self.summary_dir = Path(summary_dir).as_posix()
-        self.backend_logger = SummaryWriter(
-            log_dir=summary_dir, max_queue=2, flush_secs=2
-        )
+        self.backend_logger = SummaryWriter(log_dir=summary_dir, max_queue=2, flush_secs=2)
         fw = self.backend_logger.file_writer.event_writer
         fw.close()
         filename = fw._ev_writer._file_name
@@ -105,11 +104,9 @@ class TensorboardLogger(LoggerBase):
         fw._event_queue = multiprocessing.Queue(2)
         fw.reopen()
 
-        super().__init__(update_interval=10)
+        super().__init__(heartbeat_interval=10)
 
-    def add_image(
-        self, k: str, v: np.ndarray, itr: int, dataformats: ty.Optional[str] = "CHW"
-    ):
+    def add_image(self, k: str, v: np.ndarray, itr: int, dataformats: ty.Optional[str] = "CHW"):
         """
         Add an image to the TensorBoard dashboard.
 
@@ -213,9 +210,7 @@ class TensorboardLogger(LoggerBase):
         """
         with self.thread_lock:
             hparams = flatten_nested_dict(config.to_dict())
-            run_config = OmegaConf.to_yaml(OmegaConf.create(hparams)).replace(
-                "\n", "\n\n"
-            )
+            run_config = OmegaConf.to_yaml(OmegaConf.create(hparams)).replace("\n", "\n\n")
             self.backend_logger.add_text("config", run_config, 0)
             self.backend_logger.flush()
 

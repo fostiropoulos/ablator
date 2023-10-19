@@ -86,12 +86,8 @@ def read_result(config_type: type[ConfigBase], json_path: Path) -> pd.DataFrame 
     """
 
     try:
-        experiment_config = config_type.load(
-            json_path.parent.joinpath("config.yaml"), debug=True
-        )
-        experiment_attributes = experiment_config.make_dict(
-            experiment_config.annotations, flatten=True
-        )
+        experiment_config = config_type.load(json_path.parent.joinpath("config.yaml"), debug=True)
+        experiment_attributes = experiment_config.make_dict(experiment_config.annotations, flatten=True)
         df = pd.read_json(json_path)
         df = pd.concat([pd.DataFrame([experiment_attributes] * len(df)), df], axis=1)
         df.index.name = "step"
@@ -193,17 +189,13 @@ class Results:
             config_type = type(config)
         else:
             config_type = config
-        if issubclass(config_type, RunConfig) and not issubclass(
-            config_type, ParallelConfig
-        ):
+        if issubclass(config_type, RunConfig) and not issubclass(config_type, ParallelConfig):
             raise ValueError(
                 "Provided a ``RunConfig`` used for a single-trial. Analysis is not"
                 " meaningful for a single trial. Please provide a ``ParallelConfig``."
             )
         if not issubclass(config_type, ParallelConfig):
-            raise ValueError(
-                "Configuration must be subclassed from ``ParallelConfig``. "
-            )
+            raise ValueError("Configuration must be subclassed from ``ParallelConfig``. ")
         # TODO parse results from experiment directory as opposed to configuration.
         # Need a way to derived MPConfig implementation from a pickled file.
         # We need the types of the configuration, metric map.
@@ -219,12 +211,8 @@ class Results:
         self.config_attrs: list[str] = list(self.config.search_space.keys())
         self.search_space: dict[str, SearchSpace] = self.config.search_space
         # NOTE possibly a good idea to set small range integer attributes to categorical
-        self.numerical_attributes = [
-            k for k, v in self.search_space.items() if v.value_range is not None
-        ]
-        self.categorical_attributes = [
-            k for k, v in self.search_space.items() if v.categorical_values is not None
-        ]
+        self.numerical_attributes = [k for k, v in self.search_space.items() if v.value_range is not None]
+        self.categorical_attributes = [k for k, v in self.search_space.items() if v.categorical_values is not None]
         self._assert_cat_attributes(self.categorical_attributes)
 
     def _make_data(self, use_ray: bool = False, clean: bool = False):
@@ -257,14 +245,9 @@ class Results:
             value_counts = self.data[attr].value_counts()
             unique_values, counts = np.array(value_counts.index), value_counts.values
             imbalance_ratio_cut_off = 0.8
-            imbalanced_values = unique_values[
-                counts / counts.max() > (1 - imbalance_ratio_cut_off)
-            ]
+            imbalanced_values = unique_values[counts / counts.max() > (1 - imbalance_ratio_cut_off)]
             if len(imbalanced_values) == 1:
-                warning(
-                    f"Imbalanced trials for attr {attr} and values:"
-                    f" {unique_values} with counts {counts}."
-                )
+                warning(f"Imbalanced trials for attr {attr} and values: {unique_values} with counts {counts}.")
 
     @property
     def metric_names(self) -> list[str]:
@@ -303,10 +286,9 @@ class Results:
         pd.DataFrame
             Pandas Dataframe from read_results.
         """
-        assert experiment_dir.exists(), (
-            f"Experiment directory {experiment_dir} does not exist. You can provide one"
-            " as an argument `experiment_dir`"
-        )
+        assert (
+            experiment_dir.exists()
+        ), f"Experiment directory {experiment_dir} does not exist. You can provide one as an argument `experiment_dir`"
         if init_ray and not ray.is_initialized():
             ray.init(address="local")
         return self.read_results(type(self.config), experiment_dir)

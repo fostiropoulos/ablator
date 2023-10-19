@@ -8,10 +8,7 @@ def _repr(self):
         type(self).__name__
         + "("
         + ", ".join(
-            [
-                f"{k}='{v}'" if isinstance(v, str) else f"{k}={repr(v)}"
-                for k, v in self.to_dict(_repr=True).items()
-            ]
+            [f"{k}='{v}'" if isinstance(v, str) else f"{k}={repr(v)}" for k, v in self.to_dict(_repr=True).items()]
         )
         + ")"
     )
@@ -66,10 +63,17 @@ class SSHConfig:
         self.user: str = user
         self.port: int = port
 
-    def to_dict(self, _repr=False) -> dict[str, str]:
+    # pylint: disable=useless-type-doc,useless-param-doc
+    def to_dict(self, _repr: bool = False) -> dict[str, str]:
         """
         dictionary representation of the configuration
         that can be then parsed to be used for RClone.
+
+        Parameters
+        ----------
+        _repr : bool
+            Whether to return a dictionary representation that omits fixed
+            internal values.
 
         Returns
         -------
@@ -157,6 +161,7 @@ class RemoteConfig(ConfigBase):
     remote_path: Derived[str]
     local_path: Derived[str]
 
+    # flake8: noqa: DOC101,DOC106,DOC103,DOC109
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if (self.ssh is not None) ^ (self.s3 is None):

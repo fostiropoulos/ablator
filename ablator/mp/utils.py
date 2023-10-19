@@ -49,27 +49,25 @@ class Resource:
     is_active: bool = True
 
 
-def ray_init(**kwargs) -> RuntimeContext:
+def ray_init(**kwargs: ty.Any) -> RuntimeContext:
     """
     initialize ray with some reasonable defaults
+
+    Parameters
+    ----------
+    **kwargs : ty.Any
+        the keyword arguments to provide to initialize ray with. For full details
+        please consult https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html
 
     Returns
     -------
     RuntimeContext
         the ray run-time context
     """
-    if (
-        (
-            "CUDA_VISIBLE_DEVICES" not in os.environ
-            or os.environ["CUDA_VISIBLE_DEVICES"] != ""
-        )
-        and torch.cuda.is_available()
-        and (
-            "address" not in kwargs
-            or kwargs["address"] is None
-            or kwargs["address"] == "local"
-        )
-    ):
+    env_cuda = "CUDA_VISIBLE_DEVICES" not in os.environ or os.environ["CUDA_VISIBLE_DEVICES"] != ""
+    sys_cuda = torch.cuda.is_available()
+    remote_connect = "address" not in kwargs or kwargs["address"] is None or kwargs["address"] == "local"
+    if env_cuda and sys_cuda and remote_connect:
         # this is because WSL and other systems work poorly
         # with ray.
         kwargs["num_gpus"] = 1
@@ -141,13 +139,10 @@ def sort_resource_gpu_util(resources: list[Resource]) -> list[int]:
         the sorted list of the index from the least to the most used ``Resource``
     """
     free_gpu = np.array(
-        [
-            np.max(_resources.gpu_free_mem) if len(_resources.gpu_free_mem) else 0
-            for _resources in resources
-        ]
+        [np.max(_resources.gpu_free_mem) if len(_resources.gpu_free_mem) else 0 for _resources in resources]
     )
     if (free_gpu[0] == free_gpu).all():
-        return np.array([np.nan] * len(free_gpu))
+        return list(np.array([np.nan] * len(free_gpu)))
     return list(np.argsort(free_gpu)[::-1])
 
 
@@ -167,7 +162,7 @@ def sort_resource_cpu_util(resources: list[Resource]) -> list[int]:
     """
     cpu_usage = np.array([np.mean(_resources.cpu_usage) for _resources in resources])
     if (cpu_usage[0] == cpu_usage).all():
-        return np.array([np.nan] * len(cpu_usage))
+        return list(np.array([np.nan] * len(cpu_usage)))
     return list(np.argsort(cpu_usage))
 
 
@@ -188,7 +183,7 @@ def sort_resource_mem_util(resources: list[Resource]) -> list[int]:
     """
     mem_arr = np.array([_resources.mem for _resources in resources])
     if (mem_arr[0] == mem_arr).all():
-        return np.array([np.nan] * len(mem_arr))
+        return list(np.array([np.nan] * len(mem_arr)))
     return list(np.argsort(mem_arr))
 
 
@@ -206,17 +201,13 @@ def sort_resource_task_util(resources: list[Resource]) -> list[int]:
     list[int]
         the sorted list of index from the least to the most used ``Resource``
     """
-    n_running_tasks = np.array(
-        [len(_resources.running_tasks) for _resources in resources]
-    )
+    n_running_tasks = np.array([len(_resources.running_tasks) for _resources in resources])
     if (n_running_tasks[0] == n_running_tasks).all():
-        return np.array([np.nan] * len(n_running_tasks))
+        return list(np.array([np.nan] * len(n_running_tasks)))
     return list(np.argsort(n_running_tasks))
 
 
-def sort_resources_by_util(
-    resources: dict[str, Resource], eval_gpu: bool
-) -> OrderedDict[str, Resource]:
+def sort_resources_by_util(resources: dict[str, Resource], eval_gpu: bool) -> OrderedDict[str, Resource]:
     """
     Sort resources equally weighing between cpu_util, mem_util, number of tasks running and
     gpu_util, if `eval_gpu=True`.
@@ -250,9 +241,7 @@ def sort_resources_by_util(
         # usage_list x node_ip grid
         if len(np_usage_lists) > 0:
             least_used_idx = np_usage_lists[:, 0]
-            least_used_idx, least_used_freq = np.unique(
-                least_used_idx, return_counts=True
-            )
+            least_used_idx, least_used_freq = np.unique(least_used_idx, return_counts=True)
 
             idx = int(least_used_idx[np.argmax(least_used_freq)])
         else:
@@ -293,17 +282,13 @@ def sort_resources(
         the sorted list of Node IPs arranged from the least to most used.
     """
 
-    sorted_resources = sort_resources_by_util(
-        resources, gpu_util_requirement is not None
-    )
+    sorted_resources = sort_resources_by_util(resources, gpu_util_requirement is not None)
 
     def _should_sample(node_ip):
         ray_cluster_gpu_limit = gpu_util_requirement is None or any(
             np.array(resources[node_ip].gpu_free_mem) > gpu_util_requirement
         )
-        ray_cluster_cpu_limit = (
-            np.mean(resources[node_ip].cpu_usage) < cpu_util_perc_limit
-        )
+        ray_cluster_cpu_limit = np.mean(resources[node_ip].cpu_usage) < cpu_util_perc_limit
         ray_cluster_mem_limit = resources[node_ip].mem < memory_perc_limit
         return ray_cluster_mem_limit and ray_cluster_cpu_limit and ray_cluster_gpu_limit
 
@@ -377,9 +362,7 @@ def register_public_key(
     ssh_dir = Path.home().joinpath(".ssh")
     ssh_dir.mkdir(exist_ok=True)
     authorized_keys = ssh_dir.joinpath("authorized_keys")
-    if authorized_keys.exists() and public_key in authorized_keys.read_text(
-        encoding="utf-8"
-    ):
+    if authorized_keys.exists() and public_key in authorized_keys.read_text(encoding="utf-8"):
         return username
     with authorized_keys.open("a", encoding="utf-8") as f:
         f.write(f"{public_key}\n")
@@ -443,7 +426,7 @@ def utilization() -> dict[str, dict[int, int] | float | list[float] | int]:
 
     Returns
     -------
-    dict[str, int | float | list[float]]
+    dict[str, dict[int, int] | float | list[float] | int]
         a dictionary with keys:
             - gpu_free_mem : dict[int, int]
                 corresponding to the free GPU memory on the system.
@@ -492,7 +475,7 @@ def run_lambda(
         the timeout to apply when waiting for the results, by default None
     run_async : bool, optional
         whether to wait for the lambda output or schedule asynchronously, by default False
-    cuda : bool, optional
+    cuda : bool | None, optional
         whether the function requires CUDA, by default False
     fn_kwargs : dict[str, ty.Any] | None, optional
         the keyword arguments to pass to the function, by default None
@@ -500,6 +483,8 @@ def run_lambda(
         the name of the scheduled function, by default None
     max_calls : int | None, optional
         used to de-allocate memory for remotes (but is not applicable for ray actors), by default 1
+    **options : float | str | dict
+        Additional kwarg options to supply as run-time configurations to the remote function.
 
     Returns
     -------
