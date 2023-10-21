@@ -8,7 +8,7 @@
 
 
    ===================================
-   Welcome to ablator!
+   Welcome to ABLATOR!
    ===================================
 
    .. sidebar:: Right Sidebar Title
@@ -40,6 +40,15 @@
                         document.execCommand('copy');
                         document.body.removeChild(tempInput);
                   }
+                  function handleClickCopyInstallCode() {
+                        copyToClipboard("pip install ablator");
+                        const copyIcon = document.getElementById('banner-copy-icon');
+                        copyIcon.src = "./_static/img/green_check.png";
+
+                        setTimeout(() => {
+                           copyIcon.src = "./_static/img/copy-icon.png";
+                        }, 2000);
+                  }
                </script>
                <script>
                   function navToPath(path, isNewTab = false) {
@@ -68,21 +77,23 @@
                               <img class="banner-image" src="./_static/logo.png" alt="ablator-logo">
                            </div>
                            <div class="banner-texts">
-                              <h2>Welcome to Ablator Documentations!</h2>
-                              <p>Ablator is a robust horizontal-scaling platform for machine learning experiments. You can easily
-                                    create parallel-running
-                                    experiments with less efforts and less errors. Ablator will take care of the rest.</p>
-
+                              <h2>Welcome to ABLATOR Documentation!</h2>
+                              <p>ABLATOR is a machine learning library that helps you test and compare several model variants to
+                                    find the one that
+                                    performs the best; an ablation experiment. Running several experiments in parallel in
+                                    cumbersome. ABLATOR will take care
+                                    of the hard work.</p>
                               <div class="banner-btn-group">
                                     <button class="custom-btn banner-btn" onclick="window.location.href = `#getting-started`;">
                                        Getting Started
                                     </button>
 
-                                    <div class="banner-codes">
+                                    <div class="banner-codes" onclick="handleClickCopyInstallCode()">
                                        $ pip install ablator
 
-                                       <div class="banner-codes-icon" onclick="copyToClipboard(`pip install ablator`)">
-                                          <img height="100%" width="100%" src="./_static/img/copy-icon.png" alt="copy">
+                                       <div class="banner-codes-icon" onclick="handleClickCopyInstallCode()">
+                                          <img id="banner-copy-icon" height="100%" width="100%" src="./_static/img/copy-icon.png"
+                                                alt="copy">
                                        </div>
                                     </div>
                                     <div class="banner-badges-stack">
@@ -109,7 +120,7 @@
                                     Quick Overview
                               </h3>
                               <p>
-                                    Here is a quick overview of Ablator documentations' contents. Usages of Ablator are arranged as
+                                    Here is a quick overview of ABLATOR documentations' contents. Usages of ABLATOR are arranged as
                                     following
                                     sections. Please refer to each section for detailed instructions.
                               </p>
@@ -120,23 +131,23 @@
                               <div class="contents-card" onclick="navToPath(`tutorials.html`)">
                                     <div class="card-title">
                                        <h5>
-                                          Ablator Tutorials
+                                          ABLATOR Tutorials
                                        </h5>
                                     </div>
 
                                     <p>
-                                       This section will introduce the comprehensive usages of Ablator, including the basic usages and advanced usages. Please refer to this section for detailed instructions.
+                                       This section will introduce the comprehensive usages of ABLATOR, including the basic usages and advanced usages. Please refer to this section for detailed instructions.
                                     </p>
                               </div>
                               <div class="contents-card" onclick="navToPath(`modules.html`);">
                                     <div class="card-title">
                                        <h5>
-                                          Ablator Modules
+                                          ABLATOR Modules
                                        </h5>
                                     </div>
 
                                     <p>
-                                       Ablator is composed of several core modules. This is the section introducing how Ablator works with these modules.
+                                       ABLATOR is composed of several core modules. This is the section introducing how ABLATOR works with these modules.
                                     </p>
                               </div>
                               <div class="contents-card" onclick="navToPath(`api.reference.html`);">
@@ -147,7 +158,7 @@
                                     </div>
 
                                     <p>
-                                       This section is the API reference of Ablator. Please refer to this section for detailed usages of Ablator modules and functions.
+                                       This section is the API reference of ABLATOR. Please refer to this section for detailed usages of ABLATOR modules and functions.
                                     </p>
                               </div>
                               <div class="contents-card" onclick="navToPath(`/notebooks/GettingStarted-more-demos.html`);">
@@ -157,8 +168,8 @@
                                        </h5>
                                     </div>
                                     <p>
-                                       Ablator is capable of handling various types of deep learning experiments. Please visit this
-                                       section for more examples of Ablator use cases.
+                                       ABLATOR is capable of handling various types of deep learning experiments. Please visit this
+                                       section for more examples of ABLATOR use cases.
                                     </p>
                               </div>
                            </div>
@@ -196,9 +207,9 @@
                                     </div>
                                     <div class="card-texts">
                                        <p>
-                                          To get started with Ablator quickly, try it out in the demo codes below, where a simple
+                                          To get started with ABLATOR quickly, try it out in the demo codes below, where a simple
                                           CNN will be
-                                          trained and evaluated with Ablator.
+                                          trained and evaluated with ABLATOR.
                                        </p>
                                     </div>
                               </div>
@@ -210,7 +221,7 @@
                                     </div>
                                     <div class="card-texts">
                                        <p>
-                                          For more basic usages of Ablator, please refer to the Basic Tutorials section below.
+                                          For more basic usages of ABLATOR, please refer to the Basic Tutorials section below.
                                        </p>
                                     </div>
                               </div>
@@ -220,11 +231,11 @@
                         <div class="packages">
                            <div class="contents-texts">
                               <h3>
-                                    How Ablator Works
+                                    How ABLATOR Works
                               </h3>
                               <p>
-                                    Ablator is composed of several core modules. Please refer to this section for
-                                    detailed usages of each module of Ablator and learn how Ablator works.
+                                    ABLATOR is composed of several core modules. Please refer to this section for
+                                    detailed usages of each module of ABLATOR and learn how ABLATOR works.
                               </p>
                            </div>
 
@@ -240,7 +251,7 @@
 
                                     <div class="card-texts">
                                        <p>
-                                          In Ablator, the configuration system is used as a framework or structure for defining experiments. With this system, Ablator creates and sets up experiments, incorporating the appropriate configurations.
+                                          In ABLATOR, the configuration system is used as a framework or structure for defining experiments. With this system, ABLATOR creates and sets up experiments, incorporating the appropriate configurations.
                                        </p>
                                     </div>
                               </div>
@@ -253,57 +264,44 @@
 
                                     <div class="card-texts">
                                        <p>
-                                          Other building blocks of ablator are the training module, which launch the experiment that has been configured with the configuration module.
-                                       </p>
-                                    </div>
-                              </div>
-
-                              <div class="feature-card package-card" onclick="navToPath(`/results.html`)">
-                                    <div class="card-title">
-                                       <h5>
-                                          Experiment result metrics
-                                       </h5>
-                                    </div>
-
-                                    <div class="card-texts">
-                                       <p>
-                                          Experiment result metrics are used to evaluate the experiment results. Ablator provides various metrics for different types of experiments.
+                                          Other building blocks of ABLATOR are the training module, which launch the experiment that has been configured with the configuration module.
                                        </p>
                                     </div>
                               </div>
                               <div class="feature-card package-card" onclick="navToPath(`/analysis.html`)">
-                                    <div class="card-title">
-                                       <h5>
-                                          Analysis module
-                                       </h5>
-                                    </div>
+                                 <div class="card-title">
+                                    <h5>
+                                       Analysis module
+                                    </h5>
+                                 </div>
 
-                                    <div class="card-texts">
-                                       <p>
-                                          The analysis module has tools that allow you to observe the correlation between the studied hyperparameters and the model's performance.
-                                       </p>
-                                    </div>
+                                 <div class="card-texts">
+                                    <p>
+                                       The analysis module has tools that allow you to observe the correlation between the
+                                       studied hyperparameters and the model's performance.
+                                    </p>
+                                 </div>
+                              </div>
+                              <div class="feature-card package-card" onclick="navToPath(`/api.reference.html`)">
+                                 <div class="card-title">
+                                    <h5>
+                                       API Reference
+                                    </h5>
+                                 </div>
+
+                                 <div class="card-texts">
+                                    <p>
+                                       For more detailed information about ABLATOR modules and APIs, please refer to the API
+                                       Reference.
+                                    </p>
+                                 </div>
                               </div>
                            </div>
-                           <div class="feature-card package-card"
-                                    onclick="navToPath(`/api.reference.html`)">
-                                    <div class="card-title">
-                                       <h5>
-                                          API Reference
-                                       </h5>
-                                    </div>
-
-                                    <div class="card-texts">
-                                       <p>
-                                          For more detailed information about Ablator modules and APIs, please refer to the API Reference.
-                                       </p>
-                                    </div>
-                              </div>
                         </div>
                         <div class="community">
                            <div class="contents-texts">
                               <h3>
-                                    Ablator Community
+                                    ABLATOR Community
                               </h3>
 
                            </div>
@@ -315,13 +313,13 @@
                                        <div style="display: flex; align-items: center; gap: 1rem">
                                           <img src="./_static/img/github-mark.png" alt="github" style="height: 40px; width: 40px;">
                                           <h5>
-                                                Visit Ablator on Github
+                                                Visit ABLATOR on Github
                                           </h5>
                                        </div>
                                     </div>
                                     <div class="card-texts">
                                        <p>
-                                          Ablator is an open-source project. Visit Ablator on Github to learn more and feel free
+                                          ABLATOR is an open-source project. Visit ABLATOR on Github to learn more and feel free
                                           to
                                           make your contributions.
                                        </p>
@@ -339,14 +337,14 @@
                                     </div>
                                     <div class="card-texts">
                                        <p>
-                                          Ablator is developed and maintained by Deep USC Research Group from University of
+                                          ABLATOR is developed and maintained by Deep USC Research Group from University of
                                           Southern California.
                                        </p>
                                     </div>
                               </div>
                            </div>
                            <h5>
-                              Follow Ablator on social media
+                              Follow ABLATOR on social media
                            </h5>
                            <div class="features-grid social-grid">
                               <div class="contents-card social-card"
@@ -378,7 +376,7 @@
                                     </div>
                                     <div class="card-texts">
                                        <p>
-                                          Ablator Official Twitter
+                                          ABLATOR Official Twitter
                                        </p>
                                     </div>
                               </div>
