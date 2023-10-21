@@ -74,7 +74,7 @@
                   <div class="page-contents">
                         <div class="banner">
                            <div class="banner-branding">
-                              <img class="banner-image" src="./_static/logo.png" alt="ablator-logo">
+                              <img class="banner-image" src="./_static/logo.png" alt="ablator-logo" onclick="window.open(`https://ablator.org`)">
                            </div>
                            <div class="banner-texts">
                               <h2>Welcome to ABLATOR Documentation!</h2>
