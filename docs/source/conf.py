@@ -69,11 +69,17 @@ html_theme_options = {
     },
     "icon_links": [
         {
-            "name": "GitHub",
-            "url": "https://github.com/fostiropoulos/ablator",
-            "icon": "fa-brands fa-square-github",
+            "name": "ABLATOR Homepage",
+            "url": "https://ablator.org",
+            "icon": "fa-solid fa-home",
             "type": "fontawesome",
         },
+        {
+            "name": "GitHub",
+            "url": "https://github.com/fostiropoulos/ablator",
+            "icon": "fa-brands fa-github",
+            "type": "fontawesome",
+        }
     ],
     "icon_links_label": "Quick Links",
 }

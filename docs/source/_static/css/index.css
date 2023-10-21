@@ -336,6 +336,13 @@ ul {
   justify-content: center;
   align-items: flex-start;
   height: 80px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.banner-image:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 0.75rem var(--primary-300));
 }
 
 .banner-image img {
@@ -390,6 +397,7 @@ ul {
   background-color: transparent;
   border: 1px solid var(--primary-100);
   box-shadow: var(--shadow-2);
+  cursor: pointer;
   /* transition: var(--transition); */
 }
 
