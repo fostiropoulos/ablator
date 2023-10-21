@@ -161,7 +161,7 @@
                                        This section is the API reference of ABLATOR. Please refer to this section for detailed usages of ABLATOR modules and functions.
                                     </p>
                               </div>
-                              <div class="contents-card" onclick="navToPath(`/notebooks/GettingStarted-more-demos.html`);">
+                              <div class="contents-card" onclick="window.open(`https://github.com/fostiropoulos/ablator-tutorials/tree/iordanis`);">
                                     <div class="card-title">
                                        <h5>
                                           More Examples
@@ -398,7 +398,7 @@
       Tutorials <tutorials>
       Modules <modules>
       API Reference <api.reference>
-      More Examples <notebooks/GettingStarted-more-demos.ipynb>
+      More Examples <https://github.com/fostiropoulos/ablator-tutorials/tree/iordanis>
 
    * :ref:`genindex`
    * :ref:`modindex`
