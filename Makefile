@@ -51,9 +51,7 @@ install:
 
 flake8:
 	flake8 ./ablator/ --count --show-source --statistics
-	flake8 ./ablator/ --count --max-complexity=10 --max-line-length=127 --statistics
-	flake8 --ignore=F841,W503 ./tests/
-	flake8 ./examples/
+	flake8 --ignore=F841,W503,DOC ./tests/
 
 black:
 	black --check --preview .

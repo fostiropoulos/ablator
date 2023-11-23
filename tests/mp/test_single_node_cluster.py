@@ -15,7 +15,6 @@ import ray
 
 from ablator.mp.cluster import ClusterManager, get_username
 from ablator.mp.gpu import GPUError, ResourceManager
-from ablator.mp.utils import Resource
 
 MAX_TIMEOUT = 30
 
