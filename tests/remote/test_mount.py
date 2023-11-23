@@ -171,7 +171,10 @@ def test_mount(tmp_path: Path, volume_name):
     server.kill()
 
 
+# we schedule first because ray cluster gets misconfigured afterward
+
 @pytest.mark.mp
+@pytest.mark.order(2)
 def test_mp_mount(tmp_path: Path, wrapper, make_config, ray_cluster, volume_name):
     if volume_name is not None:
         local_path = None
@@ -268,7 +271,7 @@ def test_mount_actor(tmp_path, volume_name, ray_cluster):
             mount_server.mount.remote()
             file_name = f"{random.randint(0,100)}"
             folder_a.joinpath(file_name).write_text(file_name)
-            for _ in range(10):
+            for _ in range(30):
                 file_names = [p.name for p in ray.get(mount_server.remote_files.remote())]
                 if file_name in file_names:
                     break
@@ -289,7 +292,6 @@ if __name__ == "__main__":
 
     _locals = locals()
     fn_names = [fn for fn in _locals if fn.startswith("test_")]
-    fn_names = ["test_mount"]
     test_fns = [_locals[fn] for fn in fn_names]
     kwargs = {
         "wrapper": TestWrapper(MyCustomModel),

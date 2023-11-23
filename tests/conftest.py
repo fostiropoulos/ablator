@@ -473,14 +473,14 @@ def run_tests_local(
 
     if unpickable_kwargs is None:
         unpickable_kwargs = {}
-    cluster_address = ray_setup(Path(WORKING_DIR).parent)
+    cluster_address = ray_setup(Path(WORKING_DIR))
     if fns_requires_kwargs(test_fns, "ray_cluster", **unpickable_kwargs):
         n_nodes = 2 if IS_LINUX else 1
         ray_cluster = DockerRayCluster(
             nodes=n_nodes,
             build=False,
             cluster_address=cluster_address,
-            working_dir=Path(WORKING_DIR).parent,
+            working_dir=Path(WORKING_DIR),
         )
         ray_cluster.setUp()
         unpickable_kwargs["ray_cluster"] = lambda: ray_cluster.setUp()
