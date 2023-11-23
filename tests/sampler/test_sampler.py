@@ -305,7 +305,9 @@ def test_update_tpe_error():
 
     trial_id, *_ = sampler.eager_sample()
     sampler.unlock(drop=False)
-    assert len(sampler._study.trials) == 2 and trial_id == len(sampler._study.trials) - 1
+    assert (
+        len(sampler._study.trials) == 2 and trial_id == len(sampler._study.trials) - 1
+    )
     try:
         sampler.update_trial(
             trial_id,
@@ -388,12 +390,16 @@ def test_update_tpe():
     update_tpe_loss = _get_top_n(update_tpe)
     tpe_loss = _get_top_n(tpe_df)
     tpe2_loss = _get_top_n(tpe2_df)
-    assert abs(loss - update_tpe_loss) < 0.0001 and abs(update_tpe_loss - tpe_loss) > abs(tpe2_loss - tpe_loss)
+    assert abs(loss - update_tpe_loss) < 0.0001 and abs(
+        update_tpe_loss - tpe_loss
+    ) > abs(tpe2_loss - tpe_loss)
 
 
 def test_grid_sampler(assert_error_msg):
     msg = assert_error_msg(
-        lambda: GridSampler(search_space={"b": SearchSpace(value_range=(-10, 10), value_type="float")})
+        lambda: GridSampler(
+            search_space={"b": SearchSpace(value_range=(-10, 10), value_type="float")}
+        )
     )
     assert (
         msg
@@ -401,12 +407,20 @@ def test_grid_sampler(assert_error_msg):
         " SearchSpace(value_range=(-10.0, 10.0), value_type='float')."
     )
     search_space_size = 10
-    space = {"b": SearchSpace(value_range=(-10, 10), value_type="float", n_bins=search_space_size)}
+    space = {
+        "b": SearchSpace(
+            value_range=(-10, 10), value_type="float", n_bins=search_space_size
+        )
+    }
     sampler = GridSampler(search_space=space)
     n_configs = len(sampler.configs)
     assert n_configs == search_space_size
     search_space_size = 20
-    space = {"b": SearchSpace(value_range=(-10, 10), value_type="float", n_bins=search_space_size)}
+    space = {
+        "b": SearchSpace(
+            value_range=(-10, 10), value_type="float", n_bins=search_space_size
+        )
+    }
     sampler = GridSampler(search_space=space)
     n_configs = len(sampler.configs)
     assert n_configs == search_space_size
@@ -433,7 +447,10 @@ def test_grid_sampler(assert_error_msg):
         dropped_trials += 1
         assert True
     # sampled 3 times but dropped 2 configs
-    assert len(sampler.configs) == n_configs - idx and len(sampler.sampled_configs) == idx - dropped_trials
+    assert (
+        len(sampler.configs) == n_configs - idx
+        and len(sampler.sampled_configs) == idx - dropped_trials
+    )
 
     sampler = GridSampler(search_space=space)
     n_configs = len(sampler.configs)
@@ -460,7 +477,9 @@ def test_grid_sampler(assert_error_msg):
 
     assert ks_2samp(grid_df["loss"], grid2_df["loss"]).pvalue > 0.1
     assert _get_top_n(grid_df) < 0.01
-    assert _get_top_n(grid_df, top_n=BUDGET // 2) > _get_top_n(grid2_df, top_n=BUDGET // 2)
+    assert _get_top_n(grid_df, top_n=BUDGET // 2) > _get_top_n(
+        grid2_df, top_n=BUDGET // 2
+    )
 
     space = grid_search_space()
     sampler = GridSampler(space)
@@ -471,7 +490,9 @@ def test_grid_sampler(assert_error_msg):
         sampler.unlock(drop=False)
         cfgs.append(cfg)
     sampler2 = GridSampler(space, configs=cfgs)
-    assert len(sampler2.configs) == len(sampler.configs) and len(sampler.configs) == (21000 - 100)
+    assert len(sampler2.configs) == len(sampler.configs) and len(sampler.configs) == (
+        21000 - 100
+    )
 
 
 def test_optuna():

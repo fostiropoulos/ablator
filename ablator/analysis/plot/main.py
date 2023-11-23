@@ -350,7 +350,8 @@ class PlotAnalysis(Analysis):
             num_attrs = list(set(attribute_name_remap.keys()).intersection(num_attrs))
         if (save_dir := save_dir if save_dir is not None else self.save_dir) is None:
             raise ValueError(
-                "Must specify a `save_dir` either as an argument to `make_figures` or during class instantiation"
+                "Must specify a `save_dir` either as an argument to `make_figures` or"
+                " during class instantiation"
             )
         if len(cat_attrs) > 0:
             for plot_fn in ("make_violinplot",):

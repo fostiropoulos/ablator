@@ -92,9 +92,10 @@ class Display:
             self.stdscr.clear()
             self.nrows, self.ncols = self.stdscr.getmaxyx()
         else:
-            assert (
-                widgets is not None
-            ), "Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html"
+            assert widgets is not None, (
+                "Please update jupyter and ipywidgets. See"
+                " https://ipywidgets.readthedocs.io/en/stable/user_install.html"
+            )
             self.ncols = int(1e3)
             self.nrows = int(1e3)
             self.html_widget = widgets.HTML(value="")
@@ -233,7 +234,9 @@ class RemoteProgressBar:
 
 
 class RemoteDisplay(Display):
-    def __init__(self, remote_progress_bar: RemoteProgressBar, update_interval: int = 1) -> None:
+    def __init__(
+        self, remote_progress_bar: RemoteProgressBar, update_interval: int = 1
+    ) -> None:
         super().__init__()
         self._prev_update_time = time.time()
         self.update_interval = update_interval

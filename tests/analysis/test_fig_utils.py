@@ -53,17 +53,23 @@ def test_passing_ax(plot_class: ViolinPlot | LinearPlot, metric, cat_attributes)
     plt_fig = plt.figure(figsize=(4, 4))
     plt_ax = plt_fig.add_subplot(1, 1, 1)
     blank_tmp_img = fig2img(plt_fig)
-    plot = plot_class(metric=metric, attributes=cat_attributes, ax=plt_ax, metric_obj_fn="max")
+    plot = plot_class(
+        metric=metric, attributes=cat_attributes, ax=plt_ax, metric_obj_fn="max"
+    )
     plt_fig_new, plt_ax_new = plot._make_figure()
     assert plt_fig_new != plot.figure
     fig, ax = plot._make()
     tmp_img = fig2img(fig)
     assert rmse(fig, plt_fig) == 0
     assert rmse(fig, blank_tmp_img) > 30
-    assert id(get_axes_fig(plt_ax)) == id(fig) and id(get_axes_fig(plt_ax)) == id(plt_fig)
+    assert id(get_axes_fig(plt_ax)) == id(fig) and id(get_axes_fig(plt_ax)) == id(
+        plt_fig
+    )
     plot_class(metric=metric, attributes=cat_attributes, ax=plt_ax, metric_obj_fn="max")
     new_fig, new_ax = plot._make()
-    assert id(get_axes_fig(plt_ax)) == id(fig) and id(get_axes_fig(plt_ax)) == id(plt_fig)
+    assert id(get_axes_fig(plt_ax)) == id(fig) and id(get_axes_fig(plt_ax)) == id(
+        plt_fig
+    )
     assert rmse(fig, tmp_img) > 10
 
 
@@ -108,6 +114,8 @@ if __name__ == "__main__":
     test_fns = [_locals[fn] for fn in fn_names]
     kwargs = {
         "metric": pd.Series(np.random.randn(100), name="val_acc"),
-        "cat_attributes": pd.Series(np.random.randint(n_categories, size=(100)), name="attr"),
+        "cat_attributes": pd.Series(
+            np.random.randint(n_categories, size=(100)), name="attr"
+        ),
     }
     run_tests_local(test_fns, kwargs)

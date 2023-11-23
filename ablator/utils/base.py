@@ -61,11 +61,16 @@ class Lock:
             if ray.get(self.lock.acquire.remote()):
                 break
             if self.timeout is not None and time.time() - current_time > self.timeout:
-                raise TimeoutError(f"Could not obtain lock within {self.timeout:.2f} seconds")
+                raise TimeoutError(
+                    f"Could not obtain lock within {self.timeout:.2f} seconds"
+                )
             n += 1
             if n % 10000 == 0:
                 logging.warning(
-                    "Lock(%s) takes an excessive time and it could be caused by a deadlock.",
+                    (
+                        "Lock(%s) takes an excessive time and it could be caused by a"
+                        " deadlock."
+                    ),
                     id(self),
                 )
 
@@ -95,7 +100,9 @@ def iter_to_numpy(iterable: Iterable) -> ty.Any:
     )
 
 
-def iter_to_device(data_dict: Iterable, device: str) -> ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]:
+def iter_to_device(
+    data_dict: Iterable, device: str
+) -> ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]:
     """
     Moving torch.Tensor elements to the specified device.
 
@@ -111,7 +118,9 @@ def iter_to_device(data_dict: Iterable, device: str) -> ty.Union[Sequence[torch.
     ty.Union[Sequence[torch.Tensor], dict[str, torch.Tensor]]
         The input data with tensors moved to the target device.
     """
-    return apply_lambda_to_iter(data_dict, lambda v: v.to(device) if isinstance(v, torch.Tensor) else v)
+    return apply_lambda_to_iter(
+        data_dict, lambda v: v.to(device) if isinstance(v, torch.Tensor) else v
+    )
 
 
 def apply_lambda_to_iter(iterable: Iterable, fn: Callable) -> ty.Any:
@@ -136,7 +145,10 @@ def apply_lambda_to_iter(iterable: Iterable, fn: Callable) -> ty.Any:
         The type of the returned object matches the type of the input ``iterable``.
     """
     if isinstance(iterable, dict):
-        return {k: apply_lambda_to_iter(v, fn) if isinstance(v, (Iterable)) else fn(v) for k, v in iterable.items()}
+        return {
+            k: apply_lambda_to_iter(v, fn) if isinstance(v, (Iterable)) else fn(v)
+            for k, v in iterable.items()
+        }
     if isinstance(iterable, list):
         return [apply_lambda_to_iter(v, fn) for v in iterable]
 
@@ -259,10 +271,14 @@ def parse_device(device: ty.Union[str, list[str], int]) -> ty.Any:
         if device == "cpu":
             return device
         if device == "cuda" or (device.startswith("cuda:") and device[5:].isdigit()):
-            assert torch.cuda.is_available(), "Could not find a torch.cuda installation on your system."
+            assert (
+                torch.cuda.is_available()
+            ), "Could not find a torch.cuda installation on your system."
             if device.startswith("cuda:"):
                 gpu_number = int(device[5:])
-                assert gpu_number < torch.cuda.device_count(), f"gpu {device} does not exist on this machine"
+                assert (
+                    gpu_number < torch.cuda.device_count()
+                ), f"gpu {device} does not exist on this machine"
             return device
         raise ValueError
     if isinstance(device, int):
@@ -338,7 +354,9 @@ def is_oom_exception(err: RuntimeError) -> bool:
     )
 
 
-def num_format(value: str | int | float | np.integer | np.floating, width: int = 8) -> str:
+def num_format(
+    value: str | int | float | np.integer | np.floating, width: int = 8
+) -> str:
     """
     Format number to be no larger than `width` by converting to scientific
     notation when the `value` exceeds width either by informative decimal places

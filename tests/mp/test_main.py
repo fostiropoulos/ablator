@@ -49,7 +49,9 @@ def available_resources(
             gpu_free_mem=[free_mem],
             mem=mem,
             cpu_usage=cpu,
-            running_tasks=([str(i) for i in range(n_remotes)] if incremental_running_tasks else []),
+            running_tasks=(
+                [str(i) for i in range(n_remotes)] if incremental_running_tasks else []
+            ),
         )
         for i in range(mock_nodes)
     }
@@ -88,11 +90,15 @@ def error_resource(self, trial_id, trial, node_ip):
 
 
 @pytest.mark.mp
-def test_make_futures_resource_limits(tmp_path: Path, error_wrapper, make_config, working_dir):
+def test_make_futures_resource_limits(
+    tmp_path: Path, error_wrapper, make_config, working_dir
+):
     tmp_path = tmp_path.joinpath("mock_dir")
     search_space_limit = 20
     # -1 because it is zero indexed
-    config = make_config(tmp_path, search_space_limit=search_space_limit - 1, gpu_util=GPU_UTIL)
+    config = make_config(
+        tmp_path, search_space_limit=search_space_limit - 1, gpu_util=GPU_UTIL
+    )
     n_nodes = 5
     config.optim_metrics = None
     # Starts a head-node for the cluster.
@@ -138,17 +144,29 @@ def test_make_futures_resource_limits(tmp_path: Path, error_wrapper, make_config
 
         futures = trainer._make_futures(soft_limit=soft_limit)
         assert list(range(sample_upper_limit)) == futures
-        assert all(len(v) == trainer.run_config.concurrent_trials for v in trainer.running_futures.values())
+        assert all(
+            len(v) == trainer.run_config.concurrent_trials
+            for v in trainer.running_futures.values()
+        )
 
         trainer.run_config.concurrent_trials += 1
         for node in trainer.running_futures:
-            assert len(trainer.running_futures[node]) == trainer.run_config.concurrent_trials - 1
+            assert (
+                len(trainer.running_futures[node])
+                == trainer.run_config.concurrent_trials - 1
+            )
             futures = trainer._make_futures(soft_limit=1)
-            assert len(trainer.running_futures[node]) == trainer.run_config.concurrent_trials
+            assert (
+                len(trainer.running_futures[node])
+                == trainer.run_config.concurrent_trials
+            )
 
         futures = trainer._make_futures(soft_limit=1)
         futures = trainer._make_futures(soft_limit=1)
-        assert all(len(v) == trainer.run_config.concurrent_trials for v in trainer.running_futures.values())
+        assert all(
+            len(v) == trainer.run_config.concurrent_trials
+            for v in trainer.running_futures.values()
+        )
 
         sample_upper_limit = n_nodes * trainer.run_config.concurrent_trials
         futures = trainer._make_futures(soft_limit=soft_limit)
@@ -167,10 +185,15 @@ def test_make_futures_resource_limits(tmp_path: Path, error_wrapper, make_config
         assert list(range(trainer.total_trials)) == futures
         # test what happens when no additional valid trials can be added, the total_trial limit is ignored.
         soft_limit = 10
-        with mock.patch.object(trainer.experiment_state, "sample_trial", lambda: (0, config)):
+        with mock.patch.object(
+            trainer.experiment_state, "sample_trial", lambda: (0, config)
+        ):
             trainer.total_trials = 205
             futures = trainer._make_futures(soft_limit=soft_limit)
-            assert list(range(trainer.total_trials - 5)) == futures[: trainer.total_trials - 5]
+            assert (
+                list(range(trainer.total_trials - 5))
+                == futures[: trainer.total_trials - 5]
+            )
             lower = trainer.total_trials - 5
             assert [0] * soft_limit == futures[lower:]
 
@@ -223,13 +246,17 @@ def test_make_futures_resource_limits(tmp_path: Path, error_wrapper, make_config
         assert len(trainer.running_futures["2"]) == prev_2_futures
         assert (
             len(trainer.running_futures["2"])
-            < np.array([len(trainer.running_futures[str(i)]) for i in range(n_nodes) if i != 2])
+            < np.array(
+                [len(trainer.running_futures[str(i)]) for i in range(n_nodes) if i != 2]
+            )
         ).all()
     trainer.stop()
 
 
 @pytest.mark.mp
-def test_ray_init(tmp_path: Path, capture_output, error_wrapper, make_config, working_dir):
+def test_ray_init(
+    tmp_path: Path, capture_output, error_wrapper, make_config, working_dir
+):
     tmp_path = tmp_path.joinpath("mock_dir")
     config = make_config(tmp_path, search_space_limit=None)
     trainer = ParallelTrainer(wrapper=error_wrapper, run_config=config)
@@ -240,9 +267,13 @@ def test_ray_init(tmp_path: Path, capture_output, error_wrapper, make_config, wo
     trainer.stop()
 
 
-@mock.patch("ablator.ParallelTrainer._make_remote", lambda *args, **kwargs: (args, kwargs))
+@mock.patch(
+    "ablator.ParallelTrainer._make_remote", lambda *args, **kwargs: (args, kwargs)
+)
 @pytest.mark.mp
-def test_make_futures(tmp_path: Path, capture_output, error_wrapper, make_config, working_dir):
+def test_make_futures(
+    tmp_path: Path, capture_output, error_wrapper, make_config, working_dir
+):
     tmp_path = tmp_path.joinpath("mock_dir")
     config = make_config(tmp_path)
     # We remove sampling limits to test the limits in sampling
@@ -264,17 +295,23 @@ def test_make_futures(tmp_path: Path, capture_output, error_wrapper, make_config
 
     assert_bottleneck(
         trainer,
-        lambda x: available_resources(x, mem_bottleneck_step=10, cpu_bottleneck_step=10, gpu_bottleneck_step=5),
+        lambda x: available_resources(
+            x, mem_bottleneck_step=10, cpu_bottleneck_step=10, gpu_bottleneck_step=5
+        ),
         5,
     )
     assert_bottleneck(
         trainer,
-        lambda x: available_resources(x, mem_bottleneck_step=6, cpu_bottleneck_step=10, gpu_bottleneck_step=10),
+        lambda x: available_resources(
+            x, mem_bottleneck_step=6, cpu_bottleneck_step=10, gpu_bottleneck_step=10
+        ),
         6,
     )
     assert_bottleneck(
         trainer,
-        lambda x: available_resources(x, mem_bottleneck_step=10, cpu_bottleneck_step=7, gpu_bottleneck_step=10),
+        lambda x: available_resources(
+            x, mem_bottleneck_step=10, cpu_bottleneck_step=7, gpu_bottleneck_step=10
+        ),
         7,
     )
 
@@ -298,7 +335,10 @@ def test_make_futures(tmp_path: Path, capture_output, error_wrapper, make_config
 
 @pytest.mark.skipif(
     not torch.cuda.is_available(),
-    reason="The test is meant for left-over cuda memory. Not possible to evaluate without cuda support.",
+    reason=(
+        "The test is meant for left-over cuda memory. Not possible to evaluate without"
+        " cuda support."
+    ),
 )
 @pytest.mark.mp
 def test_zombie_remotes(tmp_path: Path, wrapper, make_config, working_dir):
@@ -432,7 +472,9 @@ def test_make_remote_cuda(tmp_path: Path, wrapper, make_config, working_dir):
     config.device = "cuda"
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
     ablator._init_state(working_dir)
-    with mock.patch("ablator.mp.train_remote.train_main_remote", lambda: torch.cuda.is_available()):
+    with mock.patch(
+        "ablator.mp.train_remote.train_main_remote", lambda: torch.cuda.is_available()
+    ):
         trial_id, trial = ablator.experiment_state.sample_trial()
         remote = ablator._make_remote(trial_id, config, node_ip=head_ip)
         assert ray.get(remote)
@@ -482,7 +524,9 @@ def test_train_main_remote(
         model=_wrapper,
     )
     assert _new_uid == uid and state == TrialState.COMPLETE
-    assert "val_loss" in metrics and metrics["current_epoch"] == config.train_config.epochs
+    assert (
+        "val_loss" in metrics and metrics["current_epoch"] == config.train_config.epochs
+    )
     _wrapper = copy.deepcopy(wrapper)
     out, err = capture_output(lambda: remote_fn(model=_wrapper))
     assert "Resume is set to False" in out
@@ -491,9 +535,13 @@ def test_train_main_remote(
     uid = "xxxx"
 
     _wrapper = copy.deepcopy(wrapper)
-    _new_uid, metrics, state = remote_fn(model=_wrapper, run_config=config, uid=uid, resume=resume)
+    _new_uid, metrics, state = remote_fn(
+        model=_wrapper, run_config=config, uid=uid, resume=resume
+    )
     assert _new_uid == uid and state == TrialState.COMPLETE
-    assert "val_loss" in metrics and metrics["current_epoch"] == config.train_config.epochs
+    assert (
+        "val_loss" in metrics and metrics["current_epoch"] == config.train_config.epochs
+    )
     shutil.rmtree(experiment_dir)
     # test specifying and not specifying resource_manager
     with pytest.raises(ValueError, match="Must specify or leave unspecified"):
@@ -509,7 +557,9 @@ def test_train_main_remote(
     config.train_config.optimizer_config.arguments.lr = 11.0
     uid = str(uuid.uuid4())
 
-    _new_uid, metrics, state = remote_fn(run_config=config, uid=uid, model=copy.deepcopy(error_wrapper))
+    _new_uid, metrics, state = remote_fn(
+        run_config=config, uid=uid, model=copy.deepcopy(error_wrapper)
+    )
     assert state == TrialState.FAIL and metrics is None and _new_uid == uid
 
     shutil.rmtree(experiment_dir)
@@ -679,12 +729,20 @@ def test_relative_path(tmp_path: Path, wrapper, make_config):
     assert Path().cwd().parent.joinpath("dir2").absolute() == ablator.experiment_dir
     config.experiment_dir = "~/dir2/."
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
-    assert expand_path(config.experiment_dir) == Path.home().joinpath("dir2") == ablator.experiment_dir
+    assert (
+        expand_path(config.experiment_dir)
+        == Path.home().joinpath("dir2")
+        == ablator.experiment_dir
+    )
     config.experiment_dir = "~/../dir2/."
 
     ablator.stop()
     ablator = ParallelTrainer(wrapper=wrapper, run_config=config)
-    assert expand_path(config.experiment_dir) == Path.home().parent.joinpath("dir2") == ablator.experiment_dir
+    assert (
+        expand_path(config.experiment_dir)
+        == Path.home().parent.joinpath("dir2")
+        == ablator.experiment_dir
+    )
     ablator.stop()
 
 

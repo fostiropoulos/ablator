@@ -36,7 +36,10 @@ def test_resource_manager_failing_gpu(ray_cluster):
     breakdown_time = 3
 
     def get_gpu_mem(*args, **kwargs):
-        if time.time() - start_time < MAX_TIMEOUT or time.time() - start_time > MAX_TIMEOUT + breakdown_time:
+        if (
+            time.time() - start_time < MAX_TIMEOUT
+            or time.time() - start_time > MAX_TIMEOUT + breakdown_time
+        ):
             return {}
         else:
             return None
@@ -281,7 +284,9 @@ def test_gpu_properties():
     gpu.free_mem = 1
     with pytest.raises(
         ValueError,
-        match=re.escape("Can not specify larger `free_mem` than total GPU memory `max_mem` (1000)."),
+        match=re.escape(
+            "Can not specify larger `free_mem` than total GPU memory `max_mem` (1000)."
+        ),
     ):
         gpu.free_mem = 1001
     with pytest.raises(
@@ -324,7 +329,9 @@ def test_wait_get_gpu(ray_cluster, update_gpus_fixture, update_no_gpus_fixture, 
         start_time = time.time()
         # impossible request should return immediately
         with pytest.raises(GPUError, match="No available GPU."):
-            gpu = wait_get_gpu(manager, expected_util_mb=n_gpus * 100 + 1, max_timeouts=5)
+            gpu = wait_get_gpu(
+                manager, expected_util_mb=n_gpus * 100 + 1, max_timeouts=5
+            )
         end_time = time.time()
         # a single remote is scheduled for above which should take less than 10 seconds
         # and on an overloaded system. If this test fails it could mean
@@ -345,7 +352,9 @@ def test_wait_get_gpu(ray_cluster, update_gpus_fixture, update_no_gpus_fixture, 
 
 
 @pytest.mark.mp
-def test_lock_unlock_train_main_remote(tmp_path: Path, ray_cluster, wrapper, make_config, update_gpus_fixture):
+def test_lock_unlock_train_main_remote(
+    tmp_path: Path, ray_cluster, wrapper, make_config, update_gpus_fixture
+):
     """
     End-to-end test of the unlock hook.
     """
@@ -413,7 +422,9 @@ def test_lock_unlock_train_main_remote(tmp_path: Path, ray_cluster, wrapper, mak
 
 
 @pytest.mark.mp
-def test_lock_unlock_hook(tmp_path: Path, ray_cluster, wrapper, make_config, update_gpus_fixture):
+def test_lock_unlock_hook(
+    tmp_path: Path, ray_cluster, wrapper, make_config, update_gpus_fixture
+):
     """
     targeted test to _handle_exception and _apply_unlock_hook.
     """

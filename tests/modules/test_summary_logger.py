@@ -65,7 +65,10 @@ def test_backup_config(tmp_path: Path, capture_output):
     experiment_dir = tmp_path.joinpath("experiment_dir")
     logger = SummaryLogger(config, experiment_dir)
 
-    assert len(list(experiment_dir.glob(logger.BACKUP_CONFIG_FILE_NAME.format(i="*")))) == 0
+    assert (
+        len(list(experiment_dir.glob(logger.BACKUP_CONFIG_FILE_NAME.format(i="*"))))
+        == 0
+    )
     loaded_config = RunConfig.load(experiment_dir.joinpath(logger.CONFIG_FILE_NAME))
     assert loaded_config.train_config.dataset == "x" and loaded_config == config
 
@@ -78,25 +81,38 @@ def test_backup_config(tmp_path: Path, capture_output):
     prev_config = copy.deepcopy(config)
     for i in range(10):
         config.train_config.dataset = str(i)
-        output = capture_output(lambda: SummaryLogger(config, experiment_dir, resume=True))
+        output = capture_output(
+            lambda: SummaryLogger(config, experiment_dir, resume=True)
+        )
         assert msg.format(i=f"{i:03d}") in output[0]
         backup_config = RunConfig.load(
-            experiment_dir.joinpath(logger.BACKUP_CONFIG_FILE_NAME).as_posix().format(i=f"{i:03d}")
+            experiment_dir.joinpath(logger.BACKUP_CONFIG_FILE_NAME)
+            .as_posix()
+            .format(i=f"{i:03d}")
         )
         assert backup_config == prev_config
         loaded_config = RunConfig.load(experiment_dir.joinpath(logger.CONFIG_FILE_NAME))
         assert loaded_config.train_config.dataset == str(i) and loaded_config == config
-        output = capture_output(lambda: SummaryLogger(config, experiment_dir, resume=True))
+        output = capture_output(
+            lambda: SummaryLogger(config, experiment_dir, resume=True)
+        )
         assert output[0] == ""
         prev_config = copy.deepcopy(config)
 
     configs = [
-        RunConfig.load(experiment_dir.joinpath(logger.BACKUP_CONFIG_FILE_NAME).as_posix().format(i=f"{i:03d}"))
+        RunConfig.load(
+            experiment_dir.joinpath(logger.BACKUP_CONFIG_FILE_NAME)
+            .as_posix()
+            .format(i=f"{i:03d}")
+        )
         for i in range(10)
     ]
     # test that all back-up configs are intact
     # -1 because it is offset by 1, where +1 is the current config
-    assert all(c.train_config.dataset == (str(i - 1) if i > 0 else "x") for i, c in enumerate(configs))
+    assert all(
+        c.train_config.dataset == (str(i - 1) if i > 0 else "x")
+        for i, c in enumerate(configs)
+    )
 
     loaded_config = RunConfig.load(experiment_dir.joinpath(logger.CONFIG_FILE_NAME))
     assert loaded_config.train_config.dataset == str(9)
@@ -160,20 +176,24 @@ def test_summary_logger(tmp_path: Path):
         logger.checkpoint(save_dict, "b", is_best=True)
 
     assert len(list(tmp_path.joinpath("best_checkpoints").glob("*.pt"))) == 3
-    assert sorted(list(tmp_path.joinpath("best_checkpoints").glob("*.pt")))[-1] == tmp_path.joinpath(
-        "best_checkpoints", "b_0000000099.pt"
-    )
+    assert sorted(list(tmp_path.joinpath("best_checkpoints").glob("*.pt")))[
+        -1
+    ] == tmp_path.joinpath("best_checkpoints", "b_0000000099.pt")
     logger.clean_checkpoints(0)
     assert len(list(tmp_path.joinpath("best_checkpoints").glob("*.pt"))) == 0
 
     logger = SummaryLogger(c, tmp_path, resume=True, keep_n_checkpoints=3)
 
-    def wait_for_tensorboard(event_acc, tag, tag_type="scalars", max_wait_time=50, output_fn=False):
+    def wait_for_tensorboard(
+        event_acc, tag, tag_type="scalars", max_wait_time=50, output_fn=False
+    ):
         start_time = time.time()
         while True:
             logger.dashboard.backend_logger.flush()
             if time.time() - start_time > max_wait_time:
-                raise RuntimeError(f"Timed out waiting for {tag} to appear in TensorBoard.")
+                raise RuntimeError(
+                    f"Timed out waiting for {tag} to appear in TensorBoard."
+                )
             event_acc.Reload()
             if output_fn:
                 print(event_acc.Tags())
@@ -193,7 +213,10 @@ def test_summary_logger(tmp_path: Path):
         while True:
             logger.dashboard.backend_logger.flush()
             if time.time() - start_time > max_wait_time:
-                raise RuntimeError(f"Timed out waiting for the latest value of {tag} to appear in TensorBoard.")
+                raise RuntimeError(
+                    f"Timed out waiting for the latest value of {tag} to appear in"
+                    " TensorBoard."
+                )
             event_acc.Reload()
             if tag in event_acc.Tags()[tag_type]:
                 event_list = event_acc.Scalars(tag)
@@ -203,7 +226,9 @@ def test_summary_logger(tmp_path: Path):
                     return True
             time.sleep(0.1)
 
-    event_acc = EventAccumulator(tmp_path.joinpath("dashboard", "tensorboard").as_posix())
+    event_acc = EventAccumulator(
+        tmp_path.joinpath("dashboard", "tensorboard").as_posix()
+    )
     event_acc.Reload()
     tags = event_acc.Tags()["scalars"]
     assert len(tags) == 0
@@ -237,7 +262,8 @@ def test_summary_logger(tmp_path: Path):
     wait_for_tensorboard(event_acc, "test_arr/text_summary", tag_type="tensors")
     event_acc.Reload()
     assert str(event_acc.Tensors("test_arr/text_summary")[0]).endswith(
-        'dtype: DT_STRING\ntensor_shape {\n  dim {\n    size: 1\n  }\n}\nstring_val: "100 100"\n)'
+        "dtype: DT_STRING\ntensor_shape {\n  dim {\n    size: 1\n  }\n}\nstring_val:"
+        ' "100 100"\n)'
     )
 
     logger.update({"arr": np.array([100, 101])})
@@ -258,14 +284,17 @@ def test_summary_logger(tmp_path: Path):
     wait_for_tensorboard(event_acc, "text/text_summary", tag_type="tensors")
 
     event_acc.Reload()
-    assert str(event_acc.Tensors("text/text_summary")[0]).endswith('string_val: "bb"\n)')
+    assert str(event_acc.Tensors("text/text_summary")[0]).endswith(
+        'string_val: "bb"\n)'
+    )
 
     logger.update({"df": pd.DataFrame(np.zeros(3))})
     logger.dashboard.backend_logger.flush()
     wait_for_tensorboard(event_acc, "df/text_summary", tag_type="tensors")
     event_acc.Reload()
     assert str(event_acc.Tensors("df/text_summary")[0]).endswith(
-        'string_val: "|    |   0 |\\n|---:|----:|\\n|  0 |   0 |\\n|  1 |   0 |\\n|  2 |   0 |"\n)'
+        'string_val: "|    |   0 |\\n|---:|----:|\\n|  0 |   0 |\\n|  1 |   0 |\\n|  2'
+        ' |   0 |"\n)'
     )
 
     img = Image.fromarray(np.zeros((5, 5, 3), dtype=np.uint8))

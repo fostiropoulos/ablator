@@ -8,7 +8,10 @@ def _repr(self):
         type(self).__name__
         + "("
         + ", ".join(
-            [f"{k}='{v}'" if isinstance(v, str) else f"{k}={repr(v)}" for k, v in self.to_dict(_repr=True).items()]
+            [
+                f"{k}='{v}'" if isinstance(v, str) else f"{k}={repr(v)}"
+                for k, v in self.to_dict(_repr=True).items()
+            ]
         )
         + ")"
     )

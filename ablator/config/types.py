@@ -248,7 +248,9 @@ ALLOWED_COLLECTIONS = (
     Enum,
     Literal,
 )
-Annotation = namedtuple("Annotation", ["state", "optional", "collection", "variable_type"])
+Annotation = namedtuple(
+    "Annotation", ["state", "optional", "collection", "variable_type"]
+)
 
 
 doc_type_hint_structure = f"""
@@ -379,7 +381,9 @@ def _strip_hint_collection(type_hint: type[ty.Any]) -> tuple:
     (List, int)
     """
     origin = ty.get_origin(type_hint)
-    assert origin in ALLOWED_COLLECTIONS, f"Invalid collection {origin}. type_hints must be structured as:"
+    assert (
+        origin in ALLOWED_COLLECTIONS
+    ), f"Invalid collection {origin}. type_hints must be structured as:"
     if origin is None and type_hint in ALLOWED_TYPES:
         return None, type_hint
     if origin in [Dict, List]:
@@ -403,7 +407,9 @@ def _strip_hint_collection(type_hint: type[ty.Any]) -> tuple:
     if isinstance(type(type_hint), Type) and hasattr(type_hint, "__dict__"):
         assert origin is None
         return Type, type_hint
-    raise NotImplementedError(f"{type_hint} is not a valid hint. Custom classes must implement __dict__.")
+    raise NotImplementedError(
+        f"{type_hint} is not a valid hint. Custom classes must implement __dict__."
+    )
 
 
 def parse_type_hint(cls: ty.Any, type_hint: type[ty.Any]) -> Annotation:
@@ -442,7 +448,9 @@ def parse_type_hint(cls: ty.Any, type_hint: type[ty.Any]) -> Annotation:
     )
 
 
-def _parse_class(cls: ty.Any, args_kwargs: dict | object, debug: bool = False) -> object:
+def _parse_class(
+    cls: ty.Any, args_kwargs: dict | object, debug: bool = False
+) -> object:
     """
     Parse values whose types are not  a collection or in ALLOWED_TYPES
     eg. bool, added dict(tune configs)
@@ -489,7 +497,8 @@ def _parse_class(cls: ty.Any, args_kwargs: dict | object, debug: bool = False) -
     else:
         # not sure what to do.....
         raise RuntimeError(
-            f"{cls} provided args or kwargs ({args_kwargs}) must be formatted as (args, kwargs) or (args) or (kwargs)."
+            f"{cls} provided args or kwargs ({args_kwargs}) must be formatted as (args,"
+            " kwargs) or (args) or (kwargs)."
         )
 
     params = inspect.signature(cls).parameters.keys()
@@ -499,7 +508,9 @@ def _parse_class(cls: ty.Any, args_kwargs: dict | object, debug: bool = False) -
 
 
 # pylint: disable=too-complex
-def parse_value(val: ty.Any, annot: Annotation, name: str | None = None, debug: bool = False) -> ty.Any:
+def parse_value(
+    val: ty.Any, annot: Annotation, name: str | None = None, debug: bool = False
+) -> ty.Any:
     """
     Parses a value based on the given annotation.
 
@@ -538,9 +549,13 @@ def parse_value(val: ty.Any, annot: Annotation, name: str | None = None, debug: 
             raise RuntimeError(f"Missing required value for {name}.")
         return None
     if annot.collection is Literal:
-        assert val in annot.variable_type, f"{val} is not a valid Literal {annot.variable_type}"
+        assert (
+            val in annot.variable_type
+        ), f"{val} is not a valid Literal {annot.variable_type}"
         return val
-    if annot.collection == Dict and (annot.variable_type in ALLOWED_TYPES or issubclass(annot.variable_type, Enum)):
+    if annot.collection == Dict and (
+        annot.variable_type in ALLOWED_TYPES or issubclass(annot.variable_type, Enum)
+    ):
         return {str(_k): annot.variable_type(_v) for _k, _v in val.items()}
     if annot.collection == Dict and issubclass(type(annot.variable_type), Type):
         return_dictionary = {}
@@ -555,7 +570,9 @@ def parse_value(val: ty.Any, annot: Annotation, name: str | None = None, debug: 
     if annot.collection == List:
         if not isinstance(val, list):
             raise ValueError(f"Invalid type {type(val)} for type List")
-        if annot.variable_type in ALLOWED_TYPES or issubclass(annot.variable_type, Enum):
+        if annot.variable_type in ALLOWED_TYPES or issubclass(
+            annot.variable_type, Enum
+        ):
             return_list = []
             for _v in val:
                 return_list.append(annot.variable_type(_v))
@@ -566,9 +583,10 @@ def parse_value(val: ty.Any, annot: Annotation, name: str | None = None, debug: 
             return [parse_value(_v, Annotation(**_kwargs), debug=debug) for _v in val]
         raise ValueError(f"Invalid type {type(annot.variable_type)} and field {name}")
     if annot.collection == Tuple:
-        assert len(val) == len(
-            annot.variable_type
-        ), f"Incompatible lengths for {name} between {val} and type_hint: {annot.variable_type}"
+        assert len(val) == len(annot.variable_type), (
+            f"Incompatible lengths for {name} between {val} and type_hint:"
+            f" {annot.variable_type}"
+        )
         return [tp(_v) for tp, _v in zip(annot.variable_type, val)]
     if annot.collection == Type:
         return _parse_class(annot.variable_type, val, debug=debug)
@@ -577,7 +595,9 @@ def parse_value(val: ty.Any, annot: Annotation, name: str | None = None, debug: 
     if annot.collection is None:
         return annot.variable_type(val)
     if issubclass(annot.collection, Enum):
-        assert val in annot.variable_type, f"{val} is not supported by {annot.collection}"
+        assert (
+            val in annot.variable_type
+        ), f"{val} is not supported by {annot.collection}"
         return annot.collection(val)
     raise NotImplementedError
 

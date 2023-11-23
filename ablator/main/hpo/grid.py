@@ -45,7 +45,9 @@ def _expand_configs(
     return _configs
 
 
-def _expand_search_space(search_space: dict[str, SearchSpace]) -> list[dict[str, str | int | float | dict]]:
+def _expand_search_space(
+    search_space: dict[str, SearchSpace]
+) -> list[dict[str, str | int | float | dict]]:
     configs: list[dict[str, str | int | float | dict]] = [{}]
 
     for k, v in search_space.items():
@@ -98,7 +100,9 @@ class GridSampler(BaseSampler):
             if c in self.configs:
                 self.configs.remove(c)
             else:
-                logging.warning("Invalid sampled configuration provided to GridSampler. %s", c)
+                logging.warning(
+                    "Invalid sampled configuration provided to GridSampler. %s", c
+                )
         self._lock = False
         self._rng = np.random.default_rng(seed)
         # mypy error because of nested dictionary

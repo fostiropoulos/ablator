@@ -59,7 +59,9 @@ _config = ParallelConfig(
     device="cpu",
     amp=False,
     search_space={
-        "train_config.optimizer_config.arguments.lr": SearchSpace(value_range=[0.01, 0.1], value_type="float")
+        "train_config.optimizer_config.arguments.lr": SearchSpace(
+            value_range=[0.01, 0.1], value_type="float"
+        )
     },
     optim_metrics={"val_loss": "min"},
     optim_metric_name="val_loss",
@@ -139,7 +141,9 @@ def test_proto(tmp_path: Path, config, working_dir):
 def test_proto_with_scheduler(tmp_path: Path, config, working_dir):
     wrapper = TestWrapper(MyCustomModel)
     config.experiment_dir = tmp_path.joinpath(f"{random.random()}")
-    config.train_config.scheduler_config = SchedulerConfig("step", arguments={"step_when": "val"})
+    config.train_config.scheduler_config = SchedulerConfig(
+        "step", arguments={"step_when": "val"}
+    )
     ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
     metrics = ablator.launch(working_directory=working_dir)
     val_metrics = ablator.evaluate()
@@ -190,14 +194,20 @@ def test_invalid_optim_metrics(config: ParallelConfig):
     _config.optim_metrics = None
     with pytest.raises(
         ValueError,
-        match="Invalid configuration. Must specify both `optim_metrics` and `optim_metric_name` or neither.",
+        match=(
+            "Invalid configuration. Must specify both `optim_metrics` and"
+            " `optim_metric_name` or neither."
+        ),
     ):
         metrics = TestWrapper(MyCustomModel3).train(_config)
     _config = copy.deepcopy(config)
     _config.optim_metric_name = None
     with pytest.raises(
         ValueError,
-        match="Invalid configuration. Must specify both `optim_metrics` and `optim_metric_name` or neither.",
+        match=(
+            "Invalid configuration. Must specify both `optim_metrics` and"
+            " `optim_metric_name` or neither."
+        ),
     ):
         metrics = TestWrapper(MyCustomModel3).train(_config)
 
@@ -208,7 +218,9 @@ def test_val_scheduler(config: ParallelConfig, scheduler_name, assert_error_msg)
     if scheduler_name in scheduler_args:
         arguments.update(scheduler_args[scheduler_name])
     config.train_config.scheduler_config = (
-        SchedulerConfig(scheduler_name, arguments=arguments) if scheduler_name is not None else None
+        SchedulerConfig(scheduler_name, arguments=arguments)
+        if scheduler_name is not None
+        else None
     )
     if scheduler_name == "plateau":
         _config = copy.deepcopy(config)
@@ -263,7 +275,9 @@ def test_git_diffs(
     ablator = ProtoTrainer(wrapper=TestWrapper(MyCustomModel3), run_config=config)
     repo_path = tmp_path.joinpath("repo_path")
     remote_path = tmp_path.joinpath("remote_path.git")
-    with pytest.raises(FileNotFoundError, match=f"Directory {repo_path} was not found. "):
+    with pytest.raises(
+        FileNotFoundError, match=f"Directory {repo_path} was not found. "
+    ):
         msg = ablator._get_diffs(repo_path)
     os.mkdir(repo_path)
 
@@ -358,7 +372,9 @@ def test_proto_custom_eval(tmp_path: Path, config):
     ablator = ProtoTrainer(wrapper=wrapper, run_config=config)
     train_metrics = ablator.launch(tmp_path)
     eval_metrics = ablator.evaluate()
-    assert np.isclose(train_metrics["val_mean_score"], eval_metrics["val"]["mean_score"])
+    assert np.isclose(
+        train_metrics["val_mean_score"], eval_metrics["val"]["mean_score"]
+    )
 
 
 if __name__ == "__main__":

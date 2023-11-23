@@ -180,7 +180,9 @@ class AuxWrapper(ModelWrapper):
         dl = [torch.rand(100) for i in range(100)]
         return dl
 
-    def aux_metrics(self, output_dict: dict[str, torch.Tensor] | None) -> dict[str, typing.Any] | None:
+    def aux_metrics(
+        self, output_dict: dict[str, torch.Tensor] | None
+    ) -> dict[str, typing.Any] | None:
         return {"learning_rate": 0.1}
 
 
@@ -195,7 +197,10 @@ class DummyScreen(Dummy):
 def test_error_models(assert_error_msg, config: RunConfig):
     assert_error_msg(
         lambda: TestWrapper(BadMyModel).train(config),
-        "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None.",
+        (
+            "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
+            " torch.Tensor | None."
+        ),
     )
     assert_error_msg(
         lambda: TestWrapper(MyUnstableModel).train(config),
@@ -217,8 +222,18 @@ def test_verbosity(capture_output, train_config):
         mock.patch("curses.initscr", DummyScreen),
         mock.patch("ablator.utils.progress_bar.Display.close", lambda self: None),
     ):
-        out, err = capture_output(lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True))
-        assert any([out.strip().split("\n")[i].endswith("?it/s, Remaining: ??]") for i in range(5)]) and len(err) == 0
+        out, err = capture_output(
+            lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
+        )
+        assert (
+            any(
+                [
+                    out.strip().split("\n")[i].endswith("?it/s, Remaining: ??]")
+                    for i in range(5)
+                ]
+            )
+            and len(err) == 0
+        )
         verbose_config = RunConfig(
             train_config=train_config,
             model_config=ModelConfig(),
@@ -227,7 +242,9 @@ def test_verbosity(capture_output, train_config):
             device="cpu",
             amp=False,
         )
-        out, err = capture_output(lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True))
+        out, err = capture_output(
+            lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
+        )
         assert (
             "Metrics batch-limit 32 is larger than 20% of the train dataloader length"
             " 100. You might experience slow-down during training. Consider decreasing"
@@ -241,8 +258,12 @@ def test_verbosity(capture_output, train_config):
             device="cpu",
             amp=False,
         )
-        out, err = capture_output(lambda: TestWrapper(MyCustomModel).train(console_config, debug=True))
-        assert len(err) == 0 and out.endswith("learning_rate: 0.100000 total_steps: 00000200\n")
+        out, err = capture_output(
+            lambda: TestWrapper(MyCustomModel).train(console_config, debug=True)
+        )
+        assert len(err) == 0 and out.endswith(
+            "learning_rate: 0.100000 total_steps: 00000200\n"
+        )
 
 
 def test_state(
@@ -272,7 +293,10 @@ def test_state(
 
     assert_error_msg(
         lambda: wrapper.init_state(run_config=config),
-        "Ambiguous configuration `AmbigiousModelConfig`. Must provide value for ambigious_var",
+        (
+            "Ambiguous configuration `AmbigiousModelConfig`. Must provide value for"
+            " ambigious_var"
+        ),
     )
     disambigious_wrapper = DisambigiousTestWrapper(MyCustomModel)
     disambigious_wrapper.init_state(run_config=config)
@@ -307,7 +331,8 @@ def test_train_stats(config: RunConfig):
 
     assert (
         wrapper.current_state["run_config"] == config.to_dict()
-        and wrapper.current_state["train_metrics"] == {**train_stats, **{"loss": np.nan}}
+        and wrapper.current_state["train_metrics"]
+        == {**train_stats, **{"loss": np.nan}}
         and wrapper.current_state["eval_metrics"] == {"loss": np.nan}
     )
     assert str(wrapper.model.param.device) == "cpu"
@@ -388,7 +413,9 @@ def test_load_save(tmp_path: Path, assert_error_msg, config: RunConfig):
         )
         wrapper._inc_iter()
         wrapper.checkpoint()
-        assert (wrapper.current_state["model"]["param"] == old_model.state_dict()["param"]).all()
+        assert (
+            wrapper.current_state["model"]["param"] == old_model.state_dict()["param"]
+        ).all()
 
 
 def test_train_loop(assert_error_msg, config):
@@ -396,7 +423,10 @@ def test_train_loop(assert_error_msg, config):
     wrapper.init_state(run_config=config)
     assert_error_msg(
         lambda: wrapper.train_loop(),
-        "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None.",
+        (
+            "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
+            " torch.Tensor | None."
+        ),
     )
 
 
@@ -422,7 +452,11 @@ def test_train_resume(tmp_path: Path, assert_error_msg, config: RunConfig):
     msg = assert_error_msg(
         lambda: [wrapper.train(config, resume=True)],
     )
-    assert msg == f"Could not find a valid checkpoint in {wrapper.experiment_dir.joinpath('checkpoints')}"
+    assert (
+        msg
+        == "Could not find a valid checkpoint in"
+        f" {wrapper.experiment_dir.joinpath('checkpoints')}"
+    )
 
 
 def test_create_model(tmp_path: Path, config: RunConfig):
@@ -460,7 +494,9 @@ def test_early_stopping(tmp_path: Path, config: RunConfig):
     config.experiment_dir = exp_dir
 
     config.early_stopping_iter = 1
-    with pytest.raises(ValueError, match="Must provide `optim_metrics` when using early_stopping_iter"):
+    with pytest.raises(
+        ValueError, match="Must provide `optim_metrics` when using early_stopping_iter"
+    ):
         wrapper = TestWrapper(MyCustomModel)
         wrapper.train(config)
 
@@ -471,7 +507,10 @@ def test_early_stopping(tmp_path: Path, config: RunConfig):
     config.optim_metrics = {"train_loss": "min"}
     with pytest.raises(
         TrainPlateauError,
-        match=re.escape("Early stopping. No improvement for 100 > early_stopping_iter = `1` iterations."),
+        match=re.escape(
+            "Early stopping. No improvement for 100 > early_stopping_iter = `1`"
+            " iterations."
+        ),
     ):
         wrapper = TestWrapper(MyCustomModel)
         wrapper.train(config)
@@ -485,7 +524,13 @@ def test_cached_properties(tmp_path: Path, config: RunConfig):
     wrapper = TestWrapper(MyCustomModel)
     wrapper.init_state(config)
     wrapper.train()
-    attrs = sorted([a for a in dir(wrapper) if isinstance(getattr(type(wrapper), a, type(wrapper)), cached_property)])
+    attrs = sorted(
+        [
+            a
+            for a in dir(wrapper)
+            if isinstance(getattr(type(wrapper), a, type(wrapper)), cached_property)
+        ]
+    )
     assert attrs == sorted(wrapper._cached_properties)
     config.eval_epoch = 0.1
     config.log_epoch = 0.5
@@ -514,13 +559,18 @@ def test_derived_stats_names(tmp_path: Path, config: RunConfig):
 
     wrapper = TestWrapper(MyCustomModel)
     wrapper.init_state(config)
-    assert all(attr in wrapper._derived_stats_names for attr in wrapper._overridable_stats_names)
+    assert all(
+        attr in wrapper._derived_stats_names
+        for attr in wrapper._overridable_stats_names
+    )
     for attr in wrapper._derived_stats_names:
         if attr in wrapper._overridable_stats_names:
             setattr(wrapper, attr, None)
             continue
 
-        with pytest.raises(RuntimeError, match=f"Can not set derived attribute {attr}."):
+        with pytest.raises(
+            RuntimeError, match=f"Can not set derived attribute {attr}."
+        ):
             setattr(wrapper, attr, None)
 
 

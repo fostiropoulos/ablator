@@ -18,7 +18,9 @@ class BaseSampler(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def update_trial(self, trial_id: int, metrics: OrderedDict[str, float] | None, state: TrialState):
+    def update_trial(
+        self, trial_id: int, metrics: OrderedDict[str, float] | None, state: TrialState
+    ):
         """
         Update the trial state given the trial_id, the updated metrics, and the current trial state.
 
@@ -87,7 +89,9 @@ class BaseSampler(ABC):
         StopIteration
             Can raise an error if there are no more trials to sample.
         """
-        assert not self._lock, "Must call `unlock(drop=[True,False])` after `eager_sampler`."
+        assert (
+            not self._lock
+        ), "Must call `unlock(drop=[True,False])` after `eager_sampler`."
         self._lock = True
         trial_id, config = self._eager_sample()
         kwargs = self.internal_repr(trial_id)

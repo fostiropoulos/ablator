@@ -157,13 +157,15 @@ class ParallelTrainer(ProtoTrainer):
 
         self.run_config: ParallelConfig
         super().__init__(wrapper=wrapper, run_config=run_config)
-        assert issubclass(
-            type(self.run_config), ParallelConfig
-        ), f"run_config must be of a type - { ParallelConfig.__name__} received {type(self.run_config)}"
+        assert issubclass(type(self.run_config), ParallelConfig), (
+            f"run_config must be of a type - { ParallelConfig.__name__} received"
+            f" {type(self.run_config)}"
+        )
 
-        assert issubclass(
-            type(self.wrapper), ModelWrapper
-        ), f"wrapper must be of a type - { ModelWrapper.__name__} received {self.wrapper}"
+        assert issubclass(type(self.wrapper), ModelWrapper), (
+            f"wrapper must be of a type - { ModelWrapper.__name__} received"
+            f" {self.wrapper}"
+        )
 
         self.logger: RemoteFileLogger
         self.experiment_state: ExperimentState
@@ -194,7 +196,10 @@ class ParallelTrainer(ProtoTrainer):
         if not device.startswith("cuda"):
             return 0
         if self.run_config.gpu_mb_per_experiment is None:
-            raise ValueError("config attribute `gpu_mb_per_experiment` can not be `None` when device=`cuda`")
+            raise ValueError(
+                "config attribute `gpu_mb_per_experiment` can not be `None` when"
+                " device=`cuda`"
+            )
         return 0.001
 
     @cached_property
@@ -209,7 +214,10 @@ class ParallelTrainer(ProtoTrainer):
         float
             a virtual number of _cpus to use i.e. 0.001
         """
-        if self.run_config.concurrent_trials is None or self.run_config.concurrent_trials > mp.cpu_count():
+        if (
+            self.run_config.concurrent_trials is None
+            or self.run_config.concurrent_trials > mp.cpu_count()
+        ):
             self.logger.warn(
                 "Expected CPU core util. can exceed system capacity"
                 f" {mp.cpu_count()}.\nConsider adjusting `concurrent_trials`."
@@ -228,9 +236,14 @@ class ParallelTrainer(ProtoTrainer):
         trial_uuid = f"{run_config.uid}_{str(uuid.uuid4())[:4]}"
         gpu, manager = (None, None)
         if self._gpu > 0:
-            gpu, manager = self.cluster_manager.get_gpu(node_ip=node_ip, process_name=trial_uuid)
+            gpu, manager = self.cluster_manager.get_gpu(
+                node_ip=node_ip, process_name=trial_uuid
+            )
             for node in ray.nodes():
-                if node["NodeManagerAddress"] == node_ip and "GPU" not in node["Resources"]:
+                if (
+                    node["NodeManagerAddress"] == node_ip
+                    and "GPU" not in node["Resources"]
+                ):
                     raise RuntimeError("Misconfigured Ray cluster.")
 
         wrapper = copy.deepcopy(self.wrapper)
@@ -243,9 +256,9 @@ class ParallelTrainer(ProtoTrainer):
             num_cpus=self._cpu,
             max_calls=1,
             max_retries=max_error_retries,
-        )(
-            train_main_remote
-        ).options(resources={f"node:{node_ip}": 0.001}, name=trial_uuid)
+        )(train_main_remote).options(
+            resources={f"node:{node_ip}": 0.001}, name=trial_uuid
+        )
         if node_ip == get_node_ip():
             run_config.experiment_dir = (self.experiment_dir / trial_uuid).as_posix()
         elif run_config.remote_config is None:
@@ -259,13 +272,19 @@ class ParallelTrainer(ProtoTrainer):
             )
         else:
             run_config.experiment_dir = (
-                (Path("~") / "ablator").joinpath(*Path(run_config.remote_config.local_path).parts[1:]) / trial_uuid
+                (Path("~") / "ablator").joinpath(
+                    *Path(run_config.remote_config.local_path).parts[1:]
+                )
+                / trial_uuid
             ).as_posix()
 
         list_diffs = self.run_config.diff_str(run_config)
         diffs = "\n\t".join(list_diffs)
         action = "Scheduling" if resume is False else "Resuming"
-        msg = f"{action} @ {node_ip} with uid: {trial_uuid}\nParameters: \n\t{diffs}\n-----"
+        msg = (
+            f"{action} @ {node_ip} with uid: {trial_uuid}\nParameters:"
+            f" \n\t{diffs}\n-----"
+        )
         self.logger.info(msg)
         self.experiment_state.update_trial_state(trial_id, None, TrialState.RUNNING)
         data_lock = butils.Lock()
@@ -305,12 +324,21 @@ class ParallelTrainer(ProtoTrainer):
                     and concurrent_trial_limit is not None
                     and (futures >= concurrent_trial_limit).all()
                 )
-                or (self.total_trials is not None and len(self.experiment_state.valid_trials()) >= self.total_trials)
+                or (
+                    self.total_trials is not None
+                    and len(self.experiment_state.valid_trials()) >= self.total_trials
+                )
             )
 
         def interleaved_running_futures():
             # interleaves the futures from all nodes that are running.
-            return [x for x in itertools.chain(*itertools.zip_longest(*self.running_futures.values())) if x is not None]
+            return [
+                x
+                for x in itertools.chain(
+                    *itertools.zip_longest(*self.running_futures.values())
+                )
+                if x is not None
+            ]
 
         while not is_limit():
             resources = self.cluster_manager.sorted_resources(gpu_mem=gpu_util)
@@ -321,12 +349,18 @@ class ParallelTrainer(ProtoTrainer):
                 if is_limit(node_ip):
                     return interleaved_running_futures()
 
-                if concurrent_trial_limit is not None and len(self.running_futures[node_ip]) >= concurrent_trial_limit:
+                if (
+                    concurrent_trial_limit is not None
+                    and len(self.running_futures[node_ip]) >= concurrent_trial_limit
+                ):
                     continue
                 try:
                     trial_id, trial = self.experiment_state.sample_trial()
                 except StopIteration:
-                    self.logger.warn(f"Received StopIteration signal, trial limit possibly reached {self.total_trials}")
+                    self.logger.warn(
+                        "Received StopIteration signal, trial limit possibly reached"
+                        f" {self.total_trials}"
+                    )
                     return interleaved_running_futures()
                 try:
                     trial.remote_config = remote_config
@@ -351,7 +385,11 @@ class ParallelTrainer(ProtoTrainer):
                 num_cpus=self._cpu,
                 max_calls=1,
                 max_retries=0,
-            )(lambda wrapper: wrapper.init_state(run_config=mock_config, smoke_test=True, debug=True))
+            )(
+                lambda wrapper: wrapper.init_state(
+                    run_config=mock_config, smoke_test=True, debug=True
+                )
+            )
             .options()
             .remote(ray.put(mock_wrapper))
         )
@@ -440,14 +478,22 @@ class ParallelTrainer(ProtoTrainer):
             ray_address=self.ray_address,
             remote_config=self.run_config.remote_config,
         )
-        self.logger = RemoteFileLogger(path=self.experiment_dir / "mp.log", verbose=verbose == "console")
-        self.experiment_dir.joinpath("master_config.yaml").write_text(self.run_config.to_yaml(), encoding="utf-8")
-        self.experiment_state = ExperimentState(self.experiment_dir, self.run_config, self.logger, resume=resume)
+        self.logger = RemoteFileLogger(
+            path=self.experiment_dir / "mp.log", verbose=verbose == "console"
+        )
+        self.experiment_dir.joinpath("master_config.yaml").write_text(
+            self.run_config.to_yaml(), encoding="utf-8"
+        )
+        self.experiment_state = ExperimentState(
+            self.experiment_dir, self.run_config, self.logger, resume=resume
+        )
         self.logger.to_remote()
 
         # TODO check if this causes an error because it was placed before the ray init
         if verbose == "progress":
-            raise NotImplementedError("verbose='progress' currently not supported for mp-training.")
+            raise NotImplementedError(
+                "verbose='progress' currently not supported for mp-training."
+            )
 
         if _is_ray_init:
             self.logger.warn(
@@ -528,7 +574,9 @@ class ParallelTrainer(ProtoTrainer):
         while len(futures) > 0:
             # pylint: disable=broad-exception-caught
             try:
-                done_id, futures = ray.wait(futures, num_returns=1, timeout=heart_beat_interval)
+                done_id, futures = ray.wait(
+                    futures, num_returns=1, timeout=heart_beat_interval
+                )
                 if len(done_id) > 0:
                     done_future = done_id[0]
                     for v in self.running_futures.values():
@@ -557,14 +605,27 @@ class ParallelTrainer(ProtoTrainer):
             for c in self.experiment_state.get_trials_by_state(TrialState.WAITING)
             + self.experiment_state.get_trials_by_state(TrialState.RUNNING)
         ]
-        complete_trials = [c.id for c in self.experiment_state.get_trials_by_state(TrialState.COMPLETE)]
-        errored_trials = [c.id for c in self.experiment_state.get_trials_by_state(TrialState.FAIL)]
-        self.logger.info(f"There are {len(complete_trials)} complete trials. with ids: {complete_trials}")
+        complete_trials = [
+            c.id for c in self.experiment_state.get_trials_by_state(TrialState.COMPLETE)
+        ]
+        errored_trials = [
+            c.id for c in self.experiment_state.get_trials_by_state(TrialState.FAIL)
+        ]
+        self.logger.info(
+            f"There are {len(complete_trials)} complete trials. with ids:"
+            f" {complete_trials}"
+        )
 
         if len(pending_trials) > 0:
-            self.logger.warn(f"There are {len(pending_trials)} unfinished trials. with ids: {pending_trials}")
+            self.logger.warn(
+                f"There are {len(pending_trials)} unfinished trials. with ids:"
+                f" {pending_trials}"
+            )
         if len(errored_trials) > 0:
-            self.logger.error(f"There are {len(errored_trials)} errored trials. with ids: {errored_trials}")
+            self.logger.error(
+                f"There are {len(errored_trials)} errored trials. with ids:"
+                f" {errored_trials}"
+            )
 
     def stop(self):
         super().stop()

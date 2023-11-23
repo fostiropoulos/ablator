@@ -176,7 +176,9 @@ def nested_set(dict_: dict, keys: list[str], value: ty.Any) -> dict:
 
 
 def truncate_utf8_chars(filename: Path, last_char: str):
-    assert len(last_char) == 1, f"Can not truncate up to a single character. `last_char`: {last_char}"
+    assert (
+        len(last_char) == 1
+    ), f"Can not truncate up to a single character. `last_char`: {last_char}"
     last_char_ord = ord(last_char)
     with open(filename, "rb+") as f:
         size = os.fstat(f.fileno()).st_size
@@ -188,7 +190,10 @@ def truncate_utf8_chars(filename: Path, last_char: str):
                 f.truncate()
                 return
             offset += 1
-        raise RuntimeError(f"Could not truncate {filename} since `last_char`: {last_char} was not found in the file.")
+        raise RuntimeError(
+            f"Could not truncate {filename} since `last_char`: {last_char} was not"
+            " found in the file."
+        )
 
 
 def expand_path(directory: str | Path) -> Path:

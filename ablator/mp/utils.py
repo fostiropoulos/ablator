@@ -64,9 +64,16 @@ def ray_init(**kwargs: ty.Any) -> RuntimeContext:
     RuntimeContext
         the ray run-time context
     """
-    env_cuda = "CUDA_VISIBLE_DEVICES" not in os.environ or os.environ["CUDA_VISIBLE_DEVICES"] != ""
+    env_cuda = (
+        "CUDA_VISIBLE_DEVICES" not in os.environ
+        or os.environ["CUDA_VISIBLE_DEVICES"] != ""
+    )
     sys_cuda = torch.cuda.is_available()
-    remote_connect = "address" not in kwargs or kwargs["address"] is None or kwargs["address"] == "local"
+    remote_connect = (
+        "address" not in kwargs
+        or kwargs["address"] is None
+        or kwargs["address"] == "local"
+    )
     if env_cuda and sys_cuda and remote_connect:
         # this is because WSL and other systems work poorly
         # with ray.
@@ -139,7 +146,10 @@ def sort_resource_gpu_util(resources: list[Resource]) -> list[int]:
         the sorted list of the index from the least to the most used ``Resource``
     """
     free_gpu = np.array(
-        [np.max(_resources.gpu_free_mem) if len(_resources.gpu_free_mem) else 0 for _resources in resources]
+        [
+            np.max(_resources.gpu_free_mem) if len(_resources.gpu_free_mem) else 0
+            for _resources in resources
+        ]
     )
     if (free_gpu[0] == free_gpu).all():
         return list(np.array([np.nan] * len(free_gpu)))
@@ -201,13 +211,17 @@ def sort_resource_task_util(resources: list[Resource]) -> list[int]:
     list[int]
         the sorted list of index from the least to the most used ``Resource``
     """
-    n_running_tasks = np.array([len(_resources.running_tasks) for _resources in resources])
+    n_running_tasks = np.array(
+        [len(_resources.running_tasks) for _resources in resources]
+    )
     if (n_running_tasks[0] == n_running_tasks).all():
         return list(np.array([np.nan] * len(n_running_tasks)))
     return list(np.argsort(n_running_tasks))
 
 
-def sort_resources_by_util(resources: dict[str, Resource], eval_gpu: bool) -> OrderedDict[str, Resource]:
+def sort_resources_by_util(
+    resources: dict[str, Resource], eval_gpu: bool
+) -> OrderedDict[str, Resource]:
     """
     Sort resources equally weighing between cpu_util, mem_util, number of tasks running and
     gpu_util, if `eval_gpu=True`.
@@ -241,7 +255,9 @@ def sort_resources_by_util(resources: dict[str, Resource], eval_gpu: bool) -> Or
         # usage_list x node_ip grid
         if len(np_usage_lists) > 0:
             least_used_idx = np_usage_lists[:, 0]
-            least_used_idx, least_used_freq = np.unique(least_used_idx, return_counts=True)
+            least_used_idx, least_used_freq = np.unique(
+                least_used_idx, return_counts=True
+            )
 
             idx = int(least_used_idx[np.argmax(least_used_freq)])
         else:
@@ -282,13 +298,17 @@ def sort_resources(
         the sorted list of Node IPs arranged from the least to most used.
     """
 
-    sorted_resources = sort_resources_by_util(resources, gpu_util_requirement is not None)
+    sorted_resources = sort_resources_by_util(
+        resources, gpu_util_requirement is not None
+    )
 
     def _should_sample(node_ip):
         ray_cluster_gpu_limit = gpu_util_requirement is None or any(
             np.array(resources[node_ip].gpu_free_mem) > gpu_util_requirement
         )
-        ray_cluster_cpu_limit = np.mean(resources[node_ip].cpu_usage) < cpu_util_perc_limit
+        ray_cluster_cpu_limit = (
+            np.mean(resources[node_ip].cpu_usage) < cpu_util_perc_limit
+        )
         ray_cluster_mem_limit = resources[node_ip].mem < memory_perc_limit
         return ray_cluster_mem_limit and ray_cluster_cpu_limit and ray_cluster_gpu_limit
 
@@ -362,7 +382,9 @@ def register_public_key(
     ssh_dir = Path.home().joinpath(".ssh")
     ssh_dir.mkdir(exist_ok=True)
     authorized_keys = ssh_dir.joinpath("authorized_keys")
-    if authorized_keys.exists() and public_key in authorized_keys.read_text(encoding="utf-8"):
+    if authorized_keys.exists() and public_key in authorized_keys.read_text(
+        encoding="utf-8"
+    ):
         return username
     with authorized_keys.open("a", encoding="utf-8") as f:
         f.write(f"{public_key}\n")

@@ -84,9 +84,16 @@ class Trial(Base):
     runtime_errors: Mapped[int] = mapped_column(Integer, default=0)
     # NOTE the following attributes are subject to be removed when optuna is decoupled.
     # they are for internal use ONLY
-    _opt_distributions_kwargs: Mapped[PickleType] = mapped_column(PickleType, nullable=True)
-    _opt_distributions_types: Mapped[PickleType] = mapped_column(PickleType, nullable=True)
+    _opt_distributions_kwargs: Mapped[PickleType] = mapped_column(
+        PickleType, nullable=True
+    )
+    _opt_distributions_types: Mapped[PickleType] = mapped_column(
+        PickleType, nullable=True
+    )
     _opt_params: Mapped[PickleType] = mapped_column(PickleType, nullable=True)
 
     def __repr__(self) -> str:
-        return f"Trial(id={self.id!r}, config_uid={self.config_uid!r}, fullname={self.aug_config_param!r})"
+        return (
+            f"Trial(id={self.id!r}, config_uid={self.config_uid!r},"
+            f" fullname={self.aug_config_param!r})"
+        )

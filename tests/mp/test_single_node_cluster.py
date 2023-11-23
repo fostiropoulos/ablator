@@ -103,7 +103,9 @@ def test_head_resource_error(tmp_path: Path, ray_cluster, inactive_resource):
             timeout=10,
             update_interval=1,
         )
-        with pytest.raises(RuntimeError, match="Could not read the resources of the head node."):
+        with pytest.raises(
+            RuntimeError, match="Could not read the resources of the head node."
+        ):
             manager.head_resources
     assert True
 

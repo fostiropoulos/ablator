@@ -34,7 +34,10 @@ from ablator.mp.utils import (
 )
 
 
-IS_LINUX = "microsoft-standard" not in platform.uname().release and "darwin" not in platform.system().lower()
+IS_LINUX = (
+    "microsoft-standard" not in platform.uname().release
+    and "darwin" not in platform.system().lower()
+)
 
 MAX_TIMEOUT = 30
 
@@ -96,7 +99,9 @@ def test_resource_update(tmp_path: Path, ray_cluster):
     time.sleep(2)
     # test that the resources were updated
     for k, v in manager.available_resources.items():
-        assert (np.array(flatten_resource(og_resources[k])) != np.array(flatten_resource(v))).any()
+        assert (
+            np.array(flatten_resource(og_resources[k])) != np.array(flatten_resource(v))
+        ).any()
     manager.stop()
 
 
@@ -183,7 +188,9 @@ def test_robustness(tmp_path: Path, ray_cluster, mock_actor):
     mock_remote = run_actor_node(mock_actor, cuda=False, node=child_node)
     # we test it is alive.
     assert ray.get(mock_remote.is_alive.remote())
-    assert child_node.run_cmd(f"cat {child_node.remote_dir}/{random_num}") == str(random_num)
+    assert child_node.run_cmd(f"cat {child_node.remote_dir}/{random_num}") == str(
+        random_num
+    )
     ray_cluster.kill_nodes()
     assert not child_node.restart()
     manager.stop()
@@ -208,7 +215,10 @@ def test_sort_resources():
     }
     assert (
         len(sort_resources(resources)) == n_resources
-        and (np.array(list(sort_resources(resources).keys())) == np.arange(n_resources)[::-1]).all()
+        and (
+            np.array(list(sort_resources(resources).keys()))
+            == np.arange(n_resources)[::-1]
+        ).all()
     )
     assert len(sort_resources(resources, memory_perc_limit=9)) == 0
     assert len(sort_resources(resources, cpu_util_perc_limit=9)) == 0
@@ -218,7 +228,9 @@ def test_sort_resources():
     # test excluding by gpu-util
     assert len(sort_resources(resources, gpu_util_requirement=102)) == n_resources - 1
     assert len(sort_resources(resources, gpu_util_requirement=n_resources * 100)) == 0
-    assert len(sort_resources(resources, gpu_util_requirement=n_resources * 100 - 1)) == 1
+    assert (
+        len(sort_resources(resources, gpu_util_requirement=n_resources * 100 - 1)) == 1
+    )
     base_resource = Resource(
         cpu_usage=[30, 0, 0],
         mem=10,
@@ -231,7 +243,10 @@ def test_sort_resources():
     # we test when all resources are the same that their order is maintained in the dictionary.
     # i.e. {0: x, 1:x, 2:x} -> {0:x, 1:x, 2:x}
     assert (
-        np.array(list(sort_resources_by_util(resources=resources, eval_gpu=True).keys())) == np.arange(n_resources)
+        np.array(
+            list(sort_resources_by_util(resources=resources, eval_gpu=True).keys())
+        )
+        == np.arange(n_resources)
     ).all()
     low_cpu_usage = copy.deepcopy(base_resource)
     low_cpu_usage.cpu_usage[0] -= 1
@@ -264,8 +279,12 @@ def test_sort_resources():
         continue
     assert least_used != least_used_gpu
     _resources[least_used_gpu] = low_resources["gpu_free_mem"]
-    assert least_used == next(iter(sort_resources_by_util(resources=_resources, eval_gpu=False)))
-    assert least_used_gpu == next(iter(sort_resources_by_util(resources=_resources, eval_gpu=True)))
+    assert least_used == next(
+        iter(sort_resources_by_util(resources=_resources, eval_gpu=False))
+    )
+    assert least_used_gpu == next(
+        iter(sort_resources_by_util(resources=_resources, eval_gpu=True))
+    )
 
 
 @pytest.mark.mp

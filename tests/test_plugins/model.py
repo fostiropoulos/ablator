@@ -76,7 +76,9 @@ class TestWrapper(ModelWrapper):
         return dl
 
     def config_parser(self, run_config: MyParallelConfig):
-        run_config.model_config.lr = run_config.train_config.optimizer_config.arguments.lr
+        run_config.model_config.lr = (
+            run_config.train_config.optimizer_config.arguments.lr
+        )
         return super().config_parser(run_config)
 
 

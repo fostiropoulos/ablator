@@ -105,7 +105,9 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg, capture_output):
     new_config = copy.deepcopy(config)
     new_config.experiment_dir = tmp_path.joinpath("test_exp_2")
     large_div_factor = int(((100 + 1e-5) / 1e-5 + 1) / 2 - 1)
-    new_config.divergence_factor = large_div_factor  # the eps in the check for divergence
+    new_config.divergence_factor = (
+        large_div_factor  # the eps in the check for divergence
+    )
     msg = assert_error_msg(lambda: TestWrapper(MyModel).train(new_config))
     assert (
         msg
@@ -168,7 +170,8 @@ def test_wrapper_eval(tmp_path: Path, assert_error_msg, capture_output):
 
     assert (
         str(exc_info.value.__cause__)
-        == "Mismatching loaded and current configurations. \ntrain_config.epochs:(int)5->(int)6"
+        == "Mismatching loaded and current configurations."
+        " \ntrain_config.epochs:(int)5->(int)6"
     )
 
 

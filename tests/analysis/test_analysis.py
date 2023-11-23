@@ -74,7 +74,9 @@ def test_analysis_func(tmp_path: Path):
     def _exist(p: Path, file_names):
         return (p.joinpath(f"{file_name}.png").exists() for file_name in file_names)
 
-    assert all(_exist(tmp_path.joinpath("violinplot", "val_acc"), categorical_name_remap))
+    assert all(
+        _exist(tmp_path.joinpath("violinplot", "val_acc"), categorical_name_remap)
+    )
     assert all(_exist(tmp_path.joinpath("linearplot", "val_acc"), numerical_name_remap))
     assert not tmp_path.joinpath("linearplot", "val_rmse").exists()
     assert not tmp_path.joinpath("violinplot", "val_rmse").exists()
@@ -94,8 +96,12 @@ def test_analysis_func(tmp_path: Path):
         attribute_name_remap=attribute_name_remap,
     )
 
-    assert all(_exist(tmp_path.joinpath("violinplot", "val_rmse"), categorical_name_remap))
-    assert all(_exist(tmp_path.joinpath("linearplot", "val_rmse"), numerical_name_remap))
+    assert all(
+        _exist(tmp_path.joinpath("violinplot", "val_rmse"), categorical_name_remap)
+    )
+    assert all(
+        _exist(tmp_path.joinpath("linearplot", "val_rmse"), numerical_name_remap)
+    )
     # checking whether if cache = False, clears memory.
     assert no_cache.cache is None
 
@@ -108,7 +114,9 @@ def test_analysis_func(tmp_path: Path):
             numerical_attributes=list(numerical_name_remap.keys()),
             categorical_attributes=list(categorical_name_remap.keys()),
         )
-    with pytest.raises(ValueError, match="Must provide a `save_dir` when specifying `cache=True`."):
+    with pytest.raises(
+        ValueError, match="Must provide a `save_dir` when specifying `cache=True`."
+    ):
         PlotAnalysis(
             df,
             cache=True,
@@ -118,7 +126,10 @@ def test_analysis_func(tmp_path: Path):
         )
     with pytest.raises(
         ValueError,
-        match="Must specify a `save_dir` either as an argument to `make_figures` or during class instantiation",
+        match=(
+            "Must specify a `save_dir` either as an argument to `make_figures` or"
+            " during class instantiation"
+        ),
     ):
         PlotAnalysis(
             df,
@@ -126,7 +137,9 @@ def test_analysis_func(tmp_path: Path):
             numerical_attributes=list(numerical_name_remap.keys()),
             categorical_attributes=list(categorical_name_remap.keys()),
         ).make_figures()
-    with pytest.raises(ValueError, match="No valid value was found for metric `val_acc`."):
+    with pytest.raises(
+        ValueError, match="No valid value was found for metric `val_acc`."
+    ):
         PlotAnalysis(
             df[df["val_acc"].isna()],
             optim_metrics={"val_acc": Optim.min},
@@ -139,12 +152,24 @@ def test_analysis_func(tmp_path: Path):
         numerical_attributes=list(numerical_name_remap.keys()),
         categorical_attributes=list(categorical_name_remap.keys()),
     ).make_figures(save_dir=tmp_path.joinpath("file"))
-    assert all(_exist(tmp_path.joinpath("file", "violinplot", "val_rmse"), categorical_name_remap))
-    assert all(_exist(tmp_path.joinpath("file", "linearplot", "val_rmse"), numerical_name_remap))
+    assert all(
+        _exist(
+            tmp_path.joinpath("file", "violinplot", "val_rmse"), categorical_name_remap
+        )
+    )
+    assert all(
+        _exist(
+            tmp_path.joinpath("file", "linearplot", "val_rmse"), numerical_name_remap
+        )
+    )
     assert not tmp_path.joinpath("file", "linearplot", "val_acc").exists()
     assert not tmp_path.joinpath("file", "violinplot", "val_acc").exists()
-    assert len(list(tmp_path.joinpath("file", "violinplot", "val_rmse").glob("*.png"))) == len(categorical_name_remap)
-    assert len(list(tmp_path.joinpath("file", "linearplot", "val_rmse").glob("*.png"))) == len(numerical_name_remap)
+    assert len(
+        list(tmp_path.joinpath("file", "violinplot", "val_rmse").glob("*.png"))
+    ) == len(categorical_name_remap)
+    assert len(
+        list(tmp_path.joinpath("file", "linearplot", "val_rmse").glob("*.png"))
+    ) == len(numerical_name_remap)
 
 
 class MockPlot(Plot):
@@ -156,7 +181,9 @@ class MockPlot(Plot):
 
 def test_plot(tmp_path: Path):
     metric = pd.Series(np.random.randn(100), name="val_acc")
-    cat_attributes = pd.DataFrame(np.random.randint(100, size=(100, 10)), columns=[np.arange(10)])
+    cat_attributes = pd.DataFrame(
+        np.random.randint(100, size=(100, 10)), columns=[np.arange(10)]
+    )
     with pytest.raises(ValueError, match="'x' is not a valid Optim"):
         MockPlot(metric=metric, attributes=cat_attributes, metric_obj_fn="x")
     p = MockPlot(metric=metric, attributes=cat_attributes, metric_obj_fn="min")
@@ -181,13 +208,18 @@ def test_plot(tmp_path: Path):
     assert ax.get_xlabel() == "x"
     assert ax.get_ylabel() == "y"
     assert (ax.get_xticks() == np.arange(3) + 1).all()
-    assert (np.array([b.get_text() for b in ax.get_xticklabels()]) == np.array(["a", "b", "c"])).all()
+    assert (
+        np.array([b.get_text() for b in ax.get_xticklabels()])
+        == np.array(["a", "b", "c"])
+    ).all()
 
 
 def test_linear_plot():
     metric = pd.Series(np.random.randn(100), name="val_acc")
     num_attributes = pd.DataFrame(np.random.randn(100, 10), columns=[np.arange(10)])
-    with pytest.raises(ValueError, match="LinearPlot attributes must be single dimensional."):
+    with pytest.raises(
+        ValueError, match="LinearPlot attributes must be single dimensional."
+    ):
         p = LinearPlot(metric=metric, attributes=num_attributes, metric_obj_fn="max")
         fig, ax = p._make()
 
@@ -223,11 +255,15 @@ def test_categorical_plot(capture_output, capture_logger):
     out: io.StringIO = capture_logger()
     metric = pd.Series(np.random.randn(100), name="val_acc")
     cat_attributes = pd.Series(np.random.randint(10, size=(100)), name="attr")
-    attribute_metric_map = Categorical._make_attribute_metric_map(metric, cat_attributes)
+    attribute_metric_map = Categorical._make_attribute_metric_map(
+        metric, cat_attributes
+    )
 
     assert set(attribute_metric_map.keys()) == set(range(10))
 
-    assert np.isclose(sorted(pd.concat(attribute_metric_map.values())), sorted(metric)).all()
+    assert np.isclose(
+        sorted(pd.concat(attribute_metric_map.values())), sorted(metric)
+    ).all()
     _, counts = np.unique(cat_attributes, return_counts=True)
     _counts = np.array([len(attribute_metric_map[i]) for i in range(10)])
     assert (counts == _counts).all()
@@ -252,32 +288,46 @@ def test_categorical_plot(capture_output, capture_logger):
     cat_attributes.iloc[40:50] = "nan"
     with pytest.raises(
         AssertionError,
-        match=re.escape("Type(None), and `None` are both present as categorical values. Unable to rename None value."),
+        match=re.escape(
+            "Type(None), and `None` are both present as categorical values. Unable to"
+            " rename None value."
+        ),
     ):
-        attribute_metric_map = Categorical._make_attribute_metric_map(metric, cat_attributes)
+        attribute_metric_map = Categorical._make_attribute_metric_map(
+            metric, cat_attributes
+        )
 
     cat_attributes.iloc[30:40] = "Type(None)s"
 
     metric = pd.Series(np.random.randn(100), name="val_acc")
 
-    stdout, stderr = capture_output(lambda: Categorical._make_attribute_metric_map(metric, cat_attributes))
+    stdout, stderr = capture_output(
+        lambda: Categorical._make_attribute_metric_map(metric, cat_attributes)
+    )
     assert (
-        "`None` is present as a categorical string value as well as None. Will rename None to Type(None)."
+        "`None` is present as a categorical string value as well as None. Will rename"
+        " None to Type(None)."
         in out.getvalue()
     )
 
-    attribute_metric_map = Categorical._make_attribute_metric_map(metric, cat_attributes)
+    attribute_metric_map = Categorical._make_attribute_metric_map(
+        metric, cat_attributes
+    )
 
     for i, v in enumerate(["Type(None)", np.nan, "None", "Type(None)s", "nan"]):
         upper = (i + 1) * 10
         lower = i * 10
-        assert np.isclose(attribute_metric_map[v].values, metric[lower:upper].values).all()
+        assert np.isclose(
+            attribute_metric_map[v].values, metric[lower:upper].values
+        ).all()
 
 
 def test_violin_plot():
     metric = pd.Series(np.random.randn(100), name="val_acc")
     cat_attributes = pd.DataFrame(np.random.randint(10, size=(100, 10)))
-    with pytest.raises(ValueError, match="ViolinPlot attributes must be single dimensional."):
+    with pytest.raises(
+        ValueError, match="ViolinPlot attributes must be single dimensional."
+    ):
         p = ViolinPlot(metric=metric, attributes=cat_attributes, metric_obj_fn="max")
         fig, ax = p._make()
     with pytest.raises(pd.errors.IndexingError, match="Unalignable boolean Series"):
@@ -294,7 +344,8 @@ def test_violin_plot():
     assert y_max == max(p.attribute_metric_map[0])
     assert all(
         l.get_text()
-        == f"Mean: {p.attribute_metric_map[i].mean():.2e}\nBest: {p.attribute_metric_map[i].max():.2e}\n{i}"
+        == f"Mean: {p.attribute_metric_map[i].mean():.2e}\nBest:"
+        f" {p.attribute_metric_map[i].max():.2e}\n{i}"
         for i, l in enumerate(ax.get_xticklabels())
     )
 

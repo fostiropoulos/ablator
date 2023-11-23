@@ -58,7 +58,9 @@ def _apply_unlock_hook(
         return run
 
     # pylint: disable=unnecessary-dunder-call
-    _hook_fn = hook_function(model.__getattribute__("train_step", True), lock_on_unlocked)
+    _hook_fn = hook_function(
+        model.__getattribute__("train_step", True), lock_on_unlocked
+    )
     setattr(model, "train_step", _hook_fn)
 
 
@@ -206,7 +208,9 @@ def train_main_remote(
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
     if (resource_manager is not None) ^ (gpu is not None):
-        raise ValueError("Must specify or leave unspecified `resource_manager` and `gpu`.")
+        raise ValueError(
+            "Must specify or leave unspecified `resource_manager` and `gpu`."
+        )
     handle_exception = partial(
         _handle_exception,
         model=model,
@@ -237,7 +241,9 @@ def train_main_remote(
         mp_logger.info(f"Finished training - {run_config.uid}")
         return uid, res, TrialState.COMPLETE
     except (LossDivergedError, TrainPlateauError) as e:
-        mp_logger.warn(f"Trial {run_config.uid} was pruned for poor performance. {str(e)}")
+        mp_logger.warn(
+            f"Trial {run_config.uid} was pruned for poor performance. {str(e)}"
+        )
         return (
             uid,
             model.metrics,

@@ -27,7 +27,10 @@ import ablator
 from ablator import package_dir
 from ablator.mp.utils import ray_init
 
-IS_LINUX = "microsoft-standard" not in uname().release and "darwin" not in platform.system().lower()
+IS_LINUX = (
+    "microsoft-standard" not in uname().release
+    and "darwin" not in platform.system().lower()
+)
 
 DOCKER_TAG = "ablator"
 pytest_plugins = ["test_plugins.model"]
@@ -40,11 +43,14 @@ ray_lock = Lock()
 def _assert_error_msg(fn, error_msg=None):
     try:
         fn()
-        raise RuntimeError(f"{fn} did not cause an error with. Expected message: {error_msg}")
+        raise RuntimeError(
+            f"{fn} did not cause an error with. Expected message: {error_msg}"
+        )
     except Exception as excp:
         if error_msg is not None and not error_msg == str(excp):
             raise RuntimeError(
-                f"{fn} caused a different error. Expected message: {error_msg}\nFound {str(excp)}"
+                f"{fn} caused a different error. Expected message: {error_msg}\nFound"
+                f" {str(excp)}"
             ) from excp
         else:
             return str(excp)
@@ -124,8 +130,12 @@ def make_node(docker_client: docker.DockerClient, img, cluster_address):
 
 
 def pytest_addoption(parser):
-    parser.addoption("--mp", action="store_true", default=False, help="run mp tests only")
-    parser.addoption("--fast", action="store_true", default=False, help="run fast tests only")
+    parser.addoption(
+        "--mp", action="store_true", default=False, help="run mp tests only"
+    )
+    parser.addoption(
+        "--fast", action="store_true", default=False, help="run fast tests only"
+    )
     parser.addoption(
         "--docker-tag",
         action="store",
@@ -136,13 +146,19 @@ def pytest_addoption(parser):
         "--build",
         action="store_true",
         default=False,
-        help="Whether to build the docker container used for testing prior to running the tests.",
+        help=(
+            "Whether to build the docker container used for testing prior to running"
+            " the tests."
+        ),
     )
     parser.addoption(
         "--volume-name",
         action="store",
         default=None,
-        help="the volume name to optionally use. Used only for docker-to-docker tests with shared volumes",
+        help=(
+            "the volume name to optionally use. Used only for docker-to-docker tests"
+            " with shared volumes"
+        ),
     )
 
 
@@ -152,8 +168,12 @@ def volume_name(pytestconfig):
 
 
 def pytest_collection_modifyitems(config, items):
-    skip_mp = pytest.mark.skip(reason="Slow or MP test, must not specify --fast option to run")
-    skip_fast = pytest.mark.skip(reason="Fast test, need to not specify --mp option to run")
+    skip_mp = pytest.mark.skip(
+        reason="Slow or MP test, must not specify --fast option to run"
+    )
+    skip_fast = pytest.mark.skip(
+        reason="Fast test, need to not specify --mp option to run"
+    )
     dist_arg_names = ["main_ray_cluster", "ray_cluster"]
     for item in items:
         argnames = item._fixtureinfo.argnames
@@ -207,7 +227,9 @@ class DockerRayCluster:
         # TODO check if bug is fixed. The reason we turn off multi-node cluster for
         # WSL tests is that ray nodes die randomly
         if not IS_LINUX and nodes > 1:
-            raise RuntimeError("Does not support multi-node cluster environment on Windows.")
+            raise RuntimeError(
+                "Does not support multi-node cluster environment on Windows."
+            )
         if cluster_address is None:
             cluster_address = ray_setup(working_dir)
         self.cluster_address = cluster_address
@@ -296,7 +318,9 @@ class DockerRayCluster:
         self._wait_nodes(prev_nodes, -1 * n_nodes)
 
 
-def get_main_ray_cluster(docker_tag: str, cluster_address: str, build: bool, working_dir: str) -> DockerRayCluster:
+def get_main_ray_cluster(
+    docker_tag: str, cluster_address: str, build: bool, working_dir: str
+) -> DockerRayCluster:
     n_nodes = 2 if IS_LINUX else 1
     cluster = DockerRayCluster(
         nodes=n_nodes,
@@ -311,9 +335,15 @@ def get_main_ray_cluster(docker_tag: str, cluster_address: str, build: bool, wor
 @pytest.fixture(scope="session", autouse=True)
 def is_good_os():
     if os.name == "nt":
-        raise RuntimeError("Can not run tests on Windows. Please consult DEVELOPER.md from the main repo.")
+        raise RuntimeError(
+            "Can not run tests on Windows. Please consult DEVELOPER.md from the main"
+            " repo."
+        )
     elif "microsoft-standard" in uname().release:
-        logging.warn("Running LIMITED tests due to poor compatibility of Windows with Ray and Multi-Node environments.")
+        logging.warn(
+            "Running LIMITED tests due to poor compatibility of Windows with Ray and"
+            " Multi-Node environments."
+        )
 
 
 def ray_setup(working_dir):
@@ -345,7 +375,8 @@ def main_ray_cluster(working_dir, pytestconfig, tmp_path_factory):
     docker_tag = pytestconfig.getoption("--docker-tag")
     build = pytestconfig.getoption("--build")
     subprocess.run(
-        'mount -l -t fuse.rclone | grep %s | awk -F " " \'{print "fusermount -u " $3}\' | bash'
+        'mount -l -t fuse.rclone | grep %s | awk -F " " \'{print "fusermount -u " $3}\''
+        " | bash"
         % tmp_path_factory.getbasetemp(),
         shell=True,
     )
@@ -490,7 +521,8 @@ def run_tests_local(
 
         tmp_path = Path("/tmp/test_exp")
         subprocess.run(
-            'mount -l -t fuse.rclone | grep %s | awk -F " " \'{print "fusermount -u " $3}\' | bash' % tmp_path,
+            'mount -l -t fuse.rclone | grep %s | awk -F " " \'{print "fusermount -u "'
+            " $3}' | bash" % tmp_path,
             shell=True,
         )
         default_kwargs = {
@@ -538,7 +570,8 @@ def run_tests_local(
 
         for _args in _run_args:
             subprocess.run(
-                'mount -l -t fuse.rclone | grep %s | awk -F " " \'{print "fusermount -u " $3}\' | bash' % tmp_path,
+                'mount -l -t fuse.rclone | grep %s | awk -F " " \'{print "fusermount -u'
+                " \" $3}' | bash" % tmp_path,
                 shell=True,
             )
             shutil.rmtree(tmp_path, ignore_errors=True)

@@ -87,7 +87,9 @@ class _Trial:
             study, self, self.relative_search_space  # type: ignore[arg-type]
         )
 
-    def update(self, metrics: OrderedDict[str, float] | None, state: "_state_store.TrialState"):
+    def update(
+        self, metrics: OrderedDict[str, float] | None, state: "_state_store.TrialState"
+    ):
         if state == _state_store.TrialState.COMPLETE:
             self.state = TrialState.COMPLETE
         elif state == _state_store.TrialState.FAIL:
@@ -100,8 +102,13 @@ class _Trial:
             metric_keys = set(metrics.keys())
             optim_keys = set(self.optim_metrics.keys())
             if metric_keys != optim_keys:
-                raise ValueError(f"metric keys {metric_keys} do not match optim_keys {optim_keys}")
-            values = [metrics[k] if metrics[k] is not None else float("inf") for k in self.optim_metrics]
+                raise ValueError(
+                    f"metric keys {metric_keys} do not match optim_keys {optim_keys}"
+                )
+            values = [
+                metrics[k] if metrics[k] is not None else float("inf")
+                for k in self.optim_metrics
+            ]
             self.values = values
         else:
             self.values = None
@@ -213,7 +220,9 @@ class OptunaSampler(BaseSampler):
         super().__init__()
         self.sampler: optuna.samplers.TPESampler | optuna.samplers.RandomSampler
         if len(optim_metrics) == 0:
-            raise ValueError(f"Need to specify 'optim_metrics' with sampler = `{search_algo.value}`")
+            raise ValueError(
+                f"Need to specify 'optim_metrics' with sampler = `{search_algo.value}`"
+            )
         self.optim_metrics = OrderedDict(optim_metrics)
         if search_algo == SearchAlgo.tpe:
             with warnings.catch_warnings():
@@ -295,13 +304,20 @@ class OptunaSampler(BaseSampler):
             prefix: str = "",
         ):
             if isinstance(v, dict):
-                return {_k: _sample_params(_v, prefix=f"{prefix}.{_k}") for _k, _v in v.items()}
+                return {
+                    _k: _sample_params(_v, prefix=f"{prefix}.{_k}")
+                    for _k, _v in v.items()
+                }
             if not isinstance(v, SearchSpace):
                 return v
             if v.value_range is not None and v.value_type == FieldType.discrete:
-                return self._suggest_int(trial, prefix, v.parsed_value_range(), v.log, v.n_bins)
+                return self._suggest_int(
+                    trial, prefix, v.parsed_value_range(), v.log, v.n_bins
+                )
             if v.value_range is not None and v.value_type == FieldType.continuous:
-                return self._suggest_float(trial, prefix, v.parsed_value_range(), v.log, v.n_bins)
+                return self._suggest_float(
+                    trial, prefix, v.parsed_value_range(), v.log, v.n_bins
+                )
             if v.categorical_values is not None:
                 return self._suggest_categorical(trial, prefix, v.categorical_values)
             if v.subspaces is not None:
@@ -314,7 +330,8 @@ class OptunaSampler(BaseSampler):
                 )
             if v.sub_configuration is not None:
                 return {
-                    _k: _sample_params(_v, prefix=f"{prefix}.{_k}") for _k, _v in v.sub_configuration.arguments.items()
+                    _k: _sample_params(_v, prefix=f"{prefix}.{_k}")
+                    for _k, _v in v.sub_configuration.arguments.items()
                 }
             raise ValueError(f"Invalid SearchSpace {v}.")
 
@@ -336,6 +353,10 @@ class OptunaSampler(BaseSampler):
         distributions = self._study.get_trial(trial_id).distributions
         return {
             "_opt_params": params,
-            "_opt_distributions_kwargs": {k: v.__dict__ for k, v in distributions.items()},
-            "_opt_distributions_types": {k: type(v).__name__ for k, v in distributions.items()},
+            "_opt_distributions_kwargs": {
+                k: v.__dict__ for k, v in distributions.items()
+            },
+            "_opt_distributions_types": {
+                k: type(v).__name__ for k, v in distributions.items()
+            },
         }

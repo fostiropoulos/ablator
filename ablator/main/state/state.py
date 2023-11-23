@@ -63,17 +63,26 @@ class ExperimentState:
         sampler_seed: int | None = None,
     ) -> None:
         self.config = config
-        self.logger: FileLogger | butils.Dummy = logger if logger is not None else butils.Dummy()
+        self.logger: FileLogger | butils.Dummy = (
+            logger if logger is not None else butils.Dummy()
+        )
 
         default_vals = [
-            v for v in self.config.make_dict(self.config.annotations, flatten=True) if not v.startswith("search_space")
+            v
+            for v in self.config.make_dict(self.config.annotations, flatten=True)
+            if not v.startswith("search_space")
         ]
         assert len(self.config.search_space), "Must specify a config.search_space."
-        paths = [f"{k}.{p}" if len(p) > 0 else k for k, v in self.config.search_space.items() for p in v.make_paths()]
+        paths = [
+            f"{k}.{p}" if len(p) > 0 else k
+            for k, v in self.config.search_space.items()
+            for p in v.make_paths()
+        ]
         for p in paths:
             if p not in default_vals:
                 raise RuntimeError(
-                    f"SearchSpace parameter {p} was not found in the configuration {sorted(default_vals)}."
+                    f"SearchSpace parameter {p} was not found in the configuration"
+                    f" {sorted(default_vals)}."
                 )
         study_name = config.uid
         self.experiment_dir = experiment_dir
@@ -81,18 +90,23 @@ class ExperimentState:
         experiment_state_db = experiment_dir.joinpath(f"{study_name}_state.db")
         if experiment_state_db.exists() and not resume:
             raise RuntimeError(
-                f"{experiment_state_db} exists. Please remove before starting another experiment or set `resume=True`."
+                f"{experiment_state_db} exists. Please remove before starting another"
+                " experiment or set `resume=True`."
             )
         # NullPool is slower but guarantees the engine is not left open between
         # writes / reads and can be cached to the cloud.
-        self.engine = create_engine(f"sqlite:///{experiment_state_db}", echo=False, poolclass=NullPool)
+        self.engine = create_engine(
+            f"sqlite:///{experiment_state_db}", echo=False, poolclass=NullPool
+        )
         Trial.metadata.create_all(self.engine)
 
         search_algo = self.config.search_algo
 
         search_space = self.config.search_space
         self.optim_metrics = (
-            OrderedDict(self.config.optim_metrics) if self.config.optim_metrics is not None else OrderedDict({})
+            OrderedDict(self.config.optim_metrics)
+            if self.config.optim_metrics is not None
+            else OrderedDict({})
         )
         self._ignore_errored_trials = self.config.ignore_invalid_params
         self.sampler: BaseSampler
@@ -109,7 +123,9 @@ class ExperimentState:
             if len(self.optim_metrics):
                 raise RuntimeError("Can not specify `optim_metrics` with GridSampler.")
             # TODO unit-test resuming with GridSampler for experiment state
-            aug_cs: list[dict[str, ty.Any]] = [dict(c.aug_config_param) for c in self.valid_trials()]
+            aug_cs: list[dict[str, ty.Any]] = [
+                dict(c.aug_config_param) for c in self.valid_trials()
+            ]
             self.sampler = GridSampler(search_space, aug_cs, seed=sampler_seed)
         else:
             raise NotImplementedError
@@ -139,7 +155,10 @@ class ExperimentState:
         SearchSpace(value_range=[0, 0.1], value_type="float")}
         >>> {"train_config.optimizer_config.arguments.lr": 0.1}
         """
-        return {dot_path: trial.get_val_with_dot_path(dot_path) for dot_path in trial.search_space.keys()}
+        return {
+            dot_path: trial.get_val_with_dot_path(dot_path)
+            for dot_path in trial.search_space.keys()
+        }
 
     @staticmethod
     def tune_trial_str(trial: ParallelConfig) -> str:
@@ -158,7 +177,9 @@ class ExperimentState:
         """
         trial_map = ExperimentState.search_space_dot_path(trial)
         msg = f"\n{trial.uid}:\n\t"
-        msg = "\n\t".join([f"{dot_path} -> {val} " for dot_path, val in trial_map.items()])
+        msg = "\n\t".join(
+            [f"{dot_path} -> {val} " for dot_path, val in trial_map.items()]
+        )
 
         return msg
 
@@ -231,9 +252,12 @@ class ExperimentState:
                 trial_id, config, _optuna_args = self.sampler.eager_sample()
             except StopIteration as e:
                 raise StopIteration(
-                    f"Reached maximum number of trials, for sampler `{self.sampler.__class__.__name__}`."
+                    "Reached maximum number of trials, for sampler"
+                    f" `{self.sampler.__class__.__name__}`."
                 ) from e
-            trial_kwargs = augment_trial_kwargs(trial_kwargs=self.config.to_dict(), augmentation=config)
+            trial_kwargs = augment_trial_kwargs(
+                trial_kwargs=self.config.to_dict(), augmentation=config
+            )
 
             try:
                 trial_config = type(self.config)(**trial_kwargs)
@@ -268,7 +292,8 @@ class ExperimentState:
                 return trial_id, trial_config
 
         raise StopIteration(
-            f"Reached maximum limit of misconfigured trials, {error_upper_bound} with {errored_trials} invalid trials."
+            f"Reached maximum limit of misconfigured trials, {error_upper_bound} with"
+            f" {errored_trials} invalid trials."
         )
 
     def update_trial_state(
@@ -308,9 +333,13 @@ class ExperimentState:
         try:
             self._update_internal_trial_state(trial_id, internal_metrics, state)
         except MultipleResultsFound as e:
-            raise RuntimeError("Corrupt experiment state, with repeating trials. ") from e
+            raise RuntimeError(
+                "Corrupt experiment state, with repeating trials. "
+            ) from e
 
-    def _update_internal_trial_state(self, trial_id: int, metrics: dict[str, float] | None, state: TrialState) -> bool:
+    def _update_internal_trial_state(
+        self, trial_id: int, metrics: dict[str, float] | None, state: TrialState
+    ) -> bool:
         """
         Update the state of a trial in the Experiment state database.
 
@@ -357,7 +386,10 @@ class ExperimentState:
             self.logger.warn(f"Trial {trial_id} failed {runtime_errors+1} times.")
             self.update_trial_state(trial_id, None, TrialState.WAITING)
         else:
-            self.logger.error(f"Trial {trial_id} exceed limit of runtime errors {runtime_errors}. Skipping.")
+            self.logger.error(
+                f"Trial {trial_id} exceed limit of runtime errors {runtime_errors}."
+                " Skipping."
+            )
             self.update_trial_state(trial_id, None, TrialState.FAIL)
 
     # pylint: disable=useless-type-doc,useless-param-doc
@@ -432,7 +464,8 @@ class ExperimentState:
             All the valid trials (the are not pruned [Duplicated or Invalid]).
         """
         stmt = select(Trial).where(
-            (Trial.state != TrialState.PRUNED_DUPLICATE) & (Trial.state != TrialState.PRUNED_INVALID)
+            (Trial.state != TrialState.PRUNED_DUPLICATE)
+            & (Trial.state != TrialState.PRUNED_INVALID)
         )
         trials = self._get_trials_by_stmt(stmt)
         return trials
@@ -480,9 +513,10 @@ class ExperimentState:
         list[ParallelConfig]
             List of configurations of all the trials in that state.
         """
-        assert (
-            state != TrialState.PRUNED_INVALID
-        ), "Can not return configuration for invalid trials due to configuration errors."
+        assert state != TrialState.PRUNED_INVALID, (
+            "Can not return configuration for invalid trials due to configuration"
+            " errors."
+        )
         configs = []
         trials = self.get_trials_by_state(state)
         for trial in trials:

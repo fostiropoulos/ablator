@@ -78,15 +78,24 @@ def test_metrics(assert_error_msg):
     }
     assert_error_msg(
         lambda: m.update_ma_metrics({"ma_some": 0.1, "ma_some_2": 2}),
-        "There are difference in the class metrics: ['ma_some'] and parsed metrics ['ma_some', 'ma_some_2']",
+        (
+            "There are difference in the class metrics: ['ma_some'] and parsed metrics"
+            " ['ma_some', 'ma_some_2']"
+        ),
     )
     assert_error_msg(
         lambda: m.update_ma_metrics({"a": 0.1}),
-        "There are difference in the class metrics: ['ma_some'] and parsed metrics ['a']",
+        (
+            "There are difference in the class metrics: ['ma_some'] and parsed metrics"
+            " ['a']"
+        ),
     )
     assert_error_msg(
         lambda: m.update_static_metrics({"some_2": 1}),
-        "There are difference in the class metrics: ['some'] and updated metrics ['some_2']",
+        (
+            "There are difference in the class metrics: ['some'] and updated metrics"
+            " ['some_2']"
+        ),
     )
     assert_error_msg(
         lambda: m.update_ma_metrics({"ma_some": ""}),
@@ -143,7 +152,9 @@ def test_metrics(assert_error_msg):
     )
 
     assert (
-        msg == "Inhomogeneous keys from the prediction store update. Expected: ['labels', 'preds'], received ['preds']"
+        msg
+        == "Inhomogeneous keys from the prediction store update. Expected: ['labels',"
+        " 'preds'], received ['preds']"
     )
 
     msg = assert_error_msg(
@@ -152,7 +163,9 @@ def test_metrics(assert_error_msg):
             m.append_batch(preds=np.array([[""]]), labels=np.array([[""]] * 2)),
         ]
     )
-    assert msg == "Inhomegenous batches between inputs. Sizes: {'preds': 1, 'labels': 2}"
+    assert (
+        msg == "Inhomegenous batches between inputs. Sizes: {'preds': 1, 'labels': 2}"
+    )
 
     m2 = Metrics(
         batch_limit=30,
@@ -172,7 +185,9 @@ def test_metrics(assert_error_msg):
         evaluation_functions={"mean": lambda somex: np.mean(somex)},
         moving_average_limit=100,
     )
-    assert m3.evaluate() == {}, "Expected None when there are no predictions to evaluate"
+    assert (
+        m3.evaluate() == {}
+    ), "Expected None when there are no predictions to evaluate"
     m3.append_batch(somex=np.array([[100]]))
     m3.evaluate(reset=False, update=True)
     m3.append_batch(somex=np.array([[0]] * 3))  # +3
@@ -202,30 +217,43 @@ def test_prediction_store_reset(assert_error_msg):
         batch_limit=30,
         memory_limit=100,
         moving_average_limit=3000,
-        evaluation_functions={"mean": lambda preds, labels: np.mean(preds) + np.mean(labels)},
+        evaluation_functions={
+            "mean": lambda preds, labels: np.mean(preds) + np.mean(labels)
+        },
     )
 
     # Test evaluate when no predictions have been appended.
     res = ps.evaluate()
-    assert res == {}, "Evaluate should return an empty dict when no predictions have been appended."
+    assert (
+        res == {}
+    ), "Evaluate should return an empty dict when no predictions have been appended."
 
     # Test the reset function when no predictions have been appended.
     try:
         ps.reset()
     except Exception:
-        assert False, "Reset should not raise an exception when no predictions have been appended."
+        assert (
+            False
+        ), "Reset should not raise an exception when no predictions have been appended."
 
     # Add some predictions.
     ps.append(preds=np.array([[1, 2, 3]]), labels=np.array([[1, 1, 1]]))
 
     # Test evaluate when predictions have been appended.
     res = ps.evaluate()
-    assert res == {"mean": 3.0}, "Evaluate should return the correct evaluation when predictions have been appended."
+    assert res == {"mean": 3.0}, (
+        "Evaluate should return the correct evaluation when predictions have been"
+        " appended."
+    )
 
     # Test that the reset function clears the appended predictions.
     ps.reset()
-    assert len(ps._get_arr("preds")) == 0, "Reset did not clear the appended predictions."
-    assert len(ps._get_arr("labels")) == 0, "Reset did not clear the appended predictions."
+    assert (
+        len(ps._get_arr("preds")) == 0
+    ), "Reset did not clear the appended predictions."
+    assert (
+        len(ps._get_arr("labels")) == 0
+    ), "Reset did not clear the appended predictions."
 
 
 if __name__ == "__main__":

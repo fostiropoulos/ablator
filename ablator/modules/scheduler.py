@@ -204,7 +204,9 @@ class PlateuaConfig(SchedulerArgs):
     verbose: bool = False
     step_when: StepType = "val"
 
-    def init_scheduler(self, model: nn.Module, optimizer: Optimizer) -> ReduceLROnPlateau:
+    def init_scheduler(
+        self, model: nn.Module, optimizer: Optimizer
+    ) -> ReduceLROnPlateau:
         """
         Initialize the ReduceLROnPlateau scheduler.
 

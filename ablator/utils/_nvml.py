@@ -138,12 +138,15 @@ def get_cuda_processes() -> dict[int, list[CUDA_PROCESS]]:
     for gpu in gpus:
         device_id = int(gpu["minor_number"])
         cuda_processes[device_id] = [
-            CUDA_PROCESS(p["process_name"], p["pid"], p["used_memory"]) for p in gpu["processes"]
+            CUDA_PROCESS(p["process_name"], p["pid"], p["used_memory"])
+            for p in gpu["processes"]
         ]
     return cuda_processes
 
 
-def get_gpu_mem(mem_type: ty.Literal["used", "total", "free"] = "total") -> dict[int, int]:
+def get_gpu_mem(
+    mem_type: ty.Literal["used", "total", "free"] = "total"
+) -> dict[int, int]:
     """
     Get the memory information of all available GPUs.
 

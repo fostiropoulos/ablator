@@ -143,7 +143,8 @@ class ProtoTrainer:
     def _mount(self, resume: bool = False, debug: bool = False, timeout: int = 60):
         if resume and self._is_new_experiment:
             raise RuntimeError(
-                "Can not leave `experiment_id` unspecified in the configuration when resuming an experiment."
+                "Can not leave `experiment_id` unspecified in the configuration when"
+                " resuming an experiment."
             )
         if resume or not self._is_new_experiment:
             self.stop()

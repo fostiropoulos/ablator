@@ -87,7 +87,9 @@ def test_optimizer_param_groups(model_class: typing.Type, optim_name):
         model_optim_params = [id(p) for p in model.parameters()]
     optim_config = OptimizerConfig(optim_name, {"lr": 0.1})
     optimizer = optim_config.make_optimizer(model)
-    optim_params = [id(p) for param_group in optimizer.param_groups for p in param_group["params"]]
+    optim_params = [
+        id(p) for param_group in optimizer.param_groups for p in param_group["params"]
+    ]
     assert len(optim_params) == len(model_optim_params)
     assert all(p in model_optim_params for p in optim_params)
     assert all(p in optim_params for p in model_optim_params)

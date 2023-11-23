@@ -129,7 +129,9 @@ def test_types(assert_error_msg):
     assert e.c4.a1 == 2
     assert e.a8 == "10"
     assert e.a9 is None
-    assert_error_msg(lambda: MultiTypeConfig(), "Missing required values ['a5', 'c3', 'c4'].")
+    assert_error_msg(
+        lambda: MultiTypeConfig(), "Missing required values ['a5', 'c3', 'c4']."
+    )
     assert_error_msg(
         lambda: MultiTypeConfig(a5={"a": 1}, c3={"a1": 2.4}, c4={"a1": "2.2"}),
         "invalid literal for int() with base 10: '2.2'",
@@ -149,7 +151,10 @@ def test_error_configs(assert_error_msg):
         ),
         (
             ErrorConfigTupleLen,
-            "Incompatible lengths for a4 between (10, 'a', 'a') and type_hint: (<class 'int'>, <class 'str'>)",
+            (
+                "Incompatible lengths for a4 between (10, 'a', 'a') and type_hint:"
+                " (<class 'int'>, <class 'str'>)"
+            ),
         ),
         (ErrorConfigTuple, "invalid literal for int() with base 10: '2.1'"),
         (ErrorConfigEnum, "b is not supported by <enum 'myEnum'>"),
@@ -165,7 +170,10 @@ def test_error_configs(assert_error_msg):
         ),
         (
             ErrorConfigHintOrder,
-            "Invalid collection <class 'ablator.config.types.Derived'>. type_hints must be structured as:",
+            (
+                "Invalid collection <class 'ablator.config.types.Derived'>. type_hints"
+                " must be structured as:"
+            ),
         ),
         (ErrorConfigType, "invalid literal for int() with base 10: '2.2'"),
     ]
@@ -198,9 +206,15 @@ def test_iterable(assert_error_msg):
             11,
         ]
     )
-    assert_error_msg(lambda: ErrorConfigList(a4=(11,)), "Invalid type <class 'tuple'> for type List")
-    assert_error_msg(lambda: ErrorConfigList(a4=11), "Invalid type <class 'int'> for type List")
-    assert_error_msg(lambda: ErrorConfigList(a4="11"), "Invalid type <class 'str'> for type List")
+    assert_error_msg(
+        lambda: ErrorConfigList(a4=(11,)), "Invalid type <class 'tuple'> for type List"
+    )
+    assert_error_msg(
+        lambda: ErrorConfigList(a4=11), "Invalid type <class 'int'> for type List"
+    )
+    assert_error_msg(
+        lambda: ErrorConfigList(a4="11"), "Invalid type <class 'str'> for type List"
+    )
 
 
 if __name__ == "__main__":
