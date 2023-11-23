@@ -11,13 +11,13 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build Docker
       run: |
-        make docker --build-arg="--py-3-10-12" --docker-tag="ablator-test"
+        make docker build_arg="--py-3-10-12" docker_tag="ablator-test"
     - name: Test with pytest CUDA
       run: |
-        make docker-test --docker-tag="ablator-test"
+        make docker-test docker_tag="ablator-test"
     - name: Test with pytest CPU
       run: |
-        make docker-test-cpu --docker-tag="ablator-test"
+        make docker-test-cpu docker_tag="ablator-test"
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:

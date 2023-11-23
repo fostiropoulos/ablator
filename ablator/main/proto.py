@@ -169,7 +169,6 @@ class ProtoTrainer:
         remote_config = self.run_config.remote_config
         config = remote_config.get_config()
         if remote_config.ssh is not None and remote_config.remote_path is None:
-            # TODO allow specifying a directory
             self.run_config.remote_config.remote_path = "/ablator"
         if remote_config.s3 is not None and remote_config.remote_path is None:
             raise ValueError
