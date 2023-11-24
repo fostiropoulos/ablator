@@ -427,7 +427,9 @@ def pytest_xdist_make_scheduler(config, log):
     return MPScheduler(config, log)
 
 
-def fns_requires_kwargs(test_fns, *kwarg_names, **existing_kwargs) -> bool:
+def fns_requires_kwargs(
+    test_fns: list[abc.Callable], *kwarg_names, **existing_kwargs
+) -> bool:
     """
     Check whether the fns require any of the `kwargs_names` that is not
     present in the `existing_kwargs`. Used when a kwarg_name is missing to
@@ -435,8 +437,8 @@ def fns_requires_kwargs(test_fns, *kwarg_names, **existing_kwargs) -> bool:
 
     Parameters
     ----------
-    test_fns : _type_
-        _description_
+    test_fns : list[abc.Callable]
+        the functions inspect and determine their arguments
     kwarg_names : tuple[str]
         name of the kwarg arguments to find in the function signature
     existing_kwargs : dict[str, ty.Any]
@@ -504,7 +506,7 @@ def run_tests_local(
 
     if unpickable_kwargs is None:
         unpickable_kwargs = {}
-    cluster_address = ray_setup(Path(WORKING_DIR))
+    cluster_address = ray_setup(Path(WORKING_DIR).parent)
     if fns_requires_kwargs(test_fns, "ray_cluster", **unpickable_kwargs):
         n_nodes = 2 if IS_LINUX else 1
         ray_cluster = DockerRayCluster(

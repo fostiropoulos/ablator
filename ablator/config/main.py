@@ -1,4 +1,4 @@
-from collections import ChainMap, OrderedDict, abc
+from collections import ChainMap, abc
 import copy
 import inspect
 import logging

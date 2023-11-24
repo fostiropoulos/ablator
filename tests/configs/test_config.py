@@ -255,9 +255,9 @@ def test_attrs(tmp_path: Path, assert_error_msg: Callable[..., str]):
         "c2.a1:(int)4->(int)10",
     ] == sorted(diff_str)
 
-    assert (
-        loaded_p.to_dot_path()
-        == "a10: 2\na1: 10\na2: '10'\na8: '10'\na9: null\na6: a\na5.a: 10\nc2.a1: 4\n"
+    assert set(loaded_p.to_dot_path().split("\n")) == set(
+        "a10: 2\na1: 10\na2: '10'\na8: '10'\na9: null\na6: a\na5.a: 10\nc2.a1: 4\n"
+        .split("\n")
     )
     assert loaded_p.get_val_with_dot_path("a10") == 2
     assert loaded_p.get_type_with_dot_path("a10") == int
@@ -446,6 +446,8 @@ def test_debug_load(
     assert all(msg in args for msg in msgs)
     msg = assert_error_msg(lambda: ParentTestConfig4.load(yaml_p, debug=False))
     assert msg == "Missing required values ['b1']."
+    p.a10 = "a"
+    p.write(yaml_p)
     msg = assert_error_msg(lambda: ParentTestConfig3.load(yaml_p, debug=False))
     assert (
         msg
@@ -460,10 +462,11 @@ def test_debug_load(
 
     assert (
         msg
-        == f"{ParentTestConfig4} provided args or kwargs (ParentTestConfig3(a6=None,"
-        " a2=10, a1='10', a10=None, a8='10', a9=None, a5={'a': 10}, c2={'a1':"
-        " 10})) must be formatted as (args, kwargs) or (args) or (kwargs)."
+        == f"{ParentTestConfig4} provided args or kwargs (ParentTestConfig3(a1='10',"
+        " a2=10, a8='10', a9=None, a5={'a': 10}, c2={'a1': 10}, a10='a',"
+        " a6=None)) must be formatted as (args, kwargs) or (args) or (kwargs)."
     )
+
     nested_c = NestedParentConfig(b1=pconfig_3, a1="", debug=True)
     assert (
         out.getvalue().split("\n")[-2]

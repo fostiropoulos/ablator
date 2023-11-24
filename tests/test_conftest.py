@@ -37,3 +37,12 @@ def test_ray_cluster(ray_cluster):
     ray.shutdown()
     ray_cluster.setUp()
     assert len(ray_cluster.node_ips()) == ray_cluster.nodes
+
+
+if __name__ == "__main__":
+    from tests.conftest import run_tests_local
+
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
+    run_tests_local(test_fns)
