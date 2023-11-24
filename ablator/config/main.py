@@ -1,11 +1,10 @@
-from collections import abc
+from collections import ChainMap, OrderedDict, abc
 import copy
 import inspect
 import logging
 import operator
 import typing as ty
 from typing import Any, Union
-from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing_extensions import Self
@@ -45,7 +44,7 @@ def configclass(cls: type["ConfigBase"]) -> type["ConfigBase"]:
 
     assert issubclass(cls, ConfigBase), f"{cls.__name__} must inherit from ConfigBase"
     setattr(cls, "config_class", cls)
-    return dataclass(cls, init=False, repr=False, kw_only=True, eq=False)  # type: ignore[call-overload]
+    return cls
 
 
 def _freeze_helper(obj):
@@ -94,7 +93,7 @@ class Missing:
     """
 
 
-@dataclass(repr=False)
+# @dataclass(repr=False)
 class ConfigBase:
     # NOTE: this allows for non-defined arguments to be created. It is very bug-prone and will be disabled.
     """
@@ -351,32 +350,13 @@ class ConfigBase:
         """
         annotations = {}
         if hasattr(self, "__annotations__"):
-            annotation_types = dict(self.__annotations__)
-            # pylint: disable=no-member,pointless-string-statement
-            """
-            NOTE when a class is missing @configclass decorator
-
-            e.g.
-
-            @config
-            class A():
-                attr: ConfigA
-
-            class B(A):
-                attr: ConfigB
-
-            in such cases __dataclass_fields__ will record `B.attr` as
-            ConfigA while __annotations__ will record it as ConfigB
-            __annotations__ takes priority (aka) the `if not` statement
-            and is supplemented with __dataclass_fields__
-            """
-            dataclass_types = {
-                k: v.type
-                for k, v in self.__dataclass_fields__.items()
-                if k not in annotation_types
-            }
-            annotation_types.update(dataclass_types)
-
+            annotation_types = ChainMap(
+                *(
+                    c.__annotations__
+                    for c in type(self).__mro__
+                    if "__annotations__" in c.__dict__
+                )
+            )
             annotations = {
                 field_name: parse_type_hint(type(self), annotation)
                 for field_name, annotation in annotation_types.items()
