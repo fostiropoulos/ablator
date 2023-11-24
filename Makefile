@@ -31,10 +31,10 @@ docker:
 	bash scripts/make_docker.sh ${docker_build_args} ${docker_tag}
 
 run-docker: docker
-	bash scripts/run_docker.sh --docker-tag ${docker_tag} bash
+	bash scripts/run_docker.sh --it --docker-tag ${docker_tag} bash
 
 run-docker-clean: clean-docker docker
-	bash scripts/run_docker.sh --docker-tag ${docker_tag} bash
+	bash scripts/run_docker.sh --it --docker-tag ${docker_tag} bash
 
 docker-test: clean-docker docker
 	bash scripts/run_docker.sh --docker-tag ${docker_tag} \

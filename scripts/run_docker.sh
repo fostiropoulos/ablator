@@ -4,6 +4,7 @@ GPU=(--gpus all)
 CONTAINER_NAME="ablator"
 ARGS=("${@}")
 CMD=()
+IT=""
 
 for ((i=0;i<$#;i++))
 do
@@ -11,6 +12,8 @@ do
        # -- option
        --cpu )
        GPU=();;
+       --it )
+       IT="-it";;
        --docker-tag )
        ((i++))
        CONTAINER_NAME=${ARGS[$i]};;
@@ -30,7 +33,7 @@ docker volume create --driver local \
 # --cpuset-cpus sets sufficient number of cpus
 # --pid option allows access of pids to the host for correct GPU utilization
 # --gpus all enables access to GPUs inside docker, remove the option to test without GPUs
-docker run --rm -v \
+docker run --rm ${IT} -v \
    /var/run/docker.sock:/var/run/docker.sock \
    -v ${CONTAINER_NAME}-volume:/ablator \
    -v ${PWD}/shared:/usr/src/app/shared \
