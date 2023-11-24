@@ -1,62 +1,60 @@
-# 🚀 ABLATOR
-
-|<img src="docs/source/_static/logo.png" alt="logo" width="200"/>|  [Website](https://ablator.org) \| [Docs](https://docs.ablator.org) </br></br><a href="https://join.slack.com/t/ablator/shared_invite/zt-23ak9ispz-HObgZSEZhyNcTTSGM_EERw" target="_blank"> <img class="banner-icon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Slack_Technologies_Logo.svg/1200px-Slack_Technologies_Logo.svg.png" height="20px" alt="Slack"> </a> <a href="https://twitter.com/ablator_org" target="_blank"> <img class="banner-icon" src="https://img.shields.io/twitter/url/https/twitter.com/ablator_org.svg?style=social&label=Follow%20%40ablator_org" height="20px" alt="Twitter"> </a> <a href="https://discord.gg/9dqThvGnUW" target="_blank"> <img class="banner-icon" src="https://dcbadge.vercel.app/api/server/9dqThvGnUW" height="20px" alt="Twitter"> </a> <br></br>[![Python 3.10](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![codecov](https://codecov.io/gh/fostiropoulos/ablator/graph/badge.svg?token=LUGKC1R8CG)](https://codecov.io/gh/fostiropoulos/ablator) </br>[![CI](https://github.com/fostiropoulos/ablator/actions/workflows/_linux_test.yml/badge.svg)](https://github.com/fostiropoulos/ablator/actions/workflows/_linux_test.yml) [![CI](https://github.com/fostiropoulos/ablator/actions/workflows/_mac_test.yml/badge.svg)](https://github.com/fostiropoulos/ablator/actions/workflows/_mac_test.yml)[![CI](https://github.com/fostiropoulos/ablator/actions/workflows/_wsl_test.yml/badge.svg)](https://github.com/fostiropoulos/ablator/actions/workflows/_wsl_test.yml) |
-|--|--|
 
 
-A distributed experiment execution framework for deep learning models.
+<p align="center">
+  <img alt="Ablator Image" src="assets/ablator-logo.png">
+</p>
+<p align="center">
+  <a href="https://dashboard.ablator.online/landing"><img src="https://img.shields.io/badge/docs-ABLATOR-blue" alt="Documentation"></a>
+  <a href="https://twitter.com/ABLATOR_ORG"><img src="https://img.shields.io/twitter/follow/username?label=Follow&style=social" alt="Twitter Follow"></a>
+  <a href="https://discord.com/invite/9dqThvGnUW"><img src="https://img.shields.io/discord/1153550638324650035?label=Discord&logo=discord" alt="Discord"></a>
+  <a href="https://join.slack.com/t/ablator/shared_invite/zt-28009w2fk-fXG5Io38gjM0pnK4f4nZ9w"><img src="https://img.shields.io/badge/Slack-Join%20Us-blue?logo=slack" alt="Slack"></a>
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0.1-blue" alt="Version">
+  <img src="https://img.shields.io/badge/python-3.10-blue.svg" alt="Python 3.10">
+  <a href="https://codecov.io/gh/fostiropoulos/ablator"><img src="https://codecov.io/gh/fostiropoulos/ablator/graph/badge.svg?token=LUGKC1R8CG" alt="codecov"></a>
+  <a href="https://github.com/fostiropoulos/ablator/actions/workflows/_linux_test.yml"><img src="https://github.com/fostiropoulos/ablator/actions/workflows/_linux_test.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/fostiropoulos/ablator/actions/workflows/_mac_test.yml"><img src="https://github.com/fostiropoulos/ablator/actions/workflows/_mac_test.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/fostiropoulos/ablator/actions/workflows/_wsl_test.yml"><img src="https://github.com/fostiropoulos/ablator/actions/workflows/_wsl_test.yml/badge.svg" alt="CI"></a>
+</p>
 
-ABLATOR provides an *auto-trainer* (or bring your own) for your deep learning model to help you prototype.
+🚀 ABLATOR is a <i>DISTRIBUTED EXECUTION FRAMEWORK</i> designed to enhance ablation studies in complex machine learning models. It automates the process of configuration and conducts multiple experiments in parallel.
 
-Once you are confident there are no bugs in your code, you can launch 🚀 many experiments across many machines and evaluate thousands of model variants with 1 code change.
+### What are Ablation Studies?
 
-
-
-```python
-ProtoTrainer -> ParallelTrainer
-```
-
-
-ABLATOR is designed with ablation experiments first. Ablation experiments can be used to design, improve and learn on how each component of a neural network affects performance. For example, `does X layer improve performance?`
-
-![ablator](assets/ablator.png)
+It involves removing specific parts of a neural network architecture or changing different aspects of the training process to examine their contributions to the model's performance.
 
 ## Why ABLATOR?
 
-ABLATOR is meant to be used as:
+As machine learning models grow in complexity, the number of components that need to be ablated also increases. This consequently expands the search space of possible configurations, requiring an efficient approach to horizontally scale multiple parallel experimental trials. ABLATOR is a tool that aids in the horizontal scaling of experimental trials.
 
-1. **Pedagogical tool**, for learning and understanding what helps improve a model's performance. A lot of the design choices of a Neural Network are ad-hoc. For example, the Transformer architecture was introduced in 2017 ([Attention Is All You Need](https://arxiv.org/abs/1706.03762)) but it wasn't until 2020 that the influence of the [layer-norm was thoroughly examined](https://arxiv.org/pdf/2002.04745.pdf).
+Instead of manually configuring and conducting multiple experiments with various hyperparameter settings, ABLATOR automates this process. It initializes experiments based on different hyperparameter configurations, tracks the state of each experiment, and provides experiment persistence on the cloud.
 
-2. **Research**, for rapid development and prototyping of a new idea or novel component
+## Key Features
 
-3. **Deployment**, for A / B testing of the ML model and whether the code changes improve the performance of an ML model during deployment i.e. as part of CI / CD pipeline.
+- It is a tool that simplifies the process of prototyping of models.
+- It streamlines model experimentation and evaluation.
+- It offers a flexible configuration system.
+- It facilitates result interpretation through visualization.
+- "Auto-Trainer" feature reduces redundant coding tasks.
 
-Doing all of the above **efficiently** and at **scale** requires cumbersome set-up and know-how. We remove boiler-plate code and details to help users achieve what they want.
+## ABLATOR vs. Without ABLATOR
 
-### Technical Details
- 1. Strictly typed configuration system prevents errors.
- 2. Seamless prototyping to production.
- 3. Stateful experiment design. Stop, Resume, Share your experiments
- 4. Automated analysis artifacts
- 5. Auto-Trainer: Remove boiler-plate code
+<p align='center'><b>Left</b>, ABLATOR efficiently conducts multiple trials in parallel based and log the experiment results. </p>
+<p align='center'><b>Right</b>, <b>manually</b>, one would need to run trials sequentially, demanding more effort and independent analysis.
+</p>
 
+![Comparison of ABLATOR and Manual Proces](assets/ablator.png)
 
 ## Install
-For **MacOS** and **Linux** you can directly install via pip. If you are using **Windows**, you will need to install WSL. [Using the official guide](https://learn.microsoft.com/en-us/windows/wsl/install). WSL is a Linux subsystem and for ABLATOR purposes is identical to using Linux.
+For MacOS and Linux systems directly install via pip.
 
+```pip install ablator```
 
-Use a python virtual environment to avoid version conflicts.
+<p>If you are using Windows, you will need to install WSL using the official from Microsoft. </p>
+<p> WSL is a Linux subsystem and for ABLATOR purposes is identical to using Linux. </p>
 
-```bash
-pip install ablator
-```
-
-
-### Multi-Node Cluster
-
-ABLATOR uses a distributed framework [Ray](https://ray.io) to launch experiments in Parallel. It is possible to connect several servers (nodes) in a single network to distribute the experimental trials among them. This is currently only supported for Linux servers (or Linux containers). Installing and setting up a ray cluster is an endeavor of its own and we recommend the [official guide](https://docs.ray.io/en/latest/cluster/getting-started.html) for detailed instructions.
-
-## Usage
+## Basic Concepts
 
 ### 1. Create your Configuration
 
@@ -147,15 +145,66 @@ with ParallelTrainer(mywrapper, config) as ablator:
     ablator.launch(".")
 ```
 
+## Learn More about ABLATOR Modules
+
+<table border="0">
+    <tr>
+        <td align="center">
+            <a target="_blank" href="https://docs.ablator.org/en/latest/config.html">
+                <img src="https://www.svgrepo.com/show/399136/wrench.svg" alt="Configuration Icon" width="30%">
+            </a>
+        </td>
+        <td align="center">
+            <a target="_blank" href="https://docs.ablator.org/en/latest/training.html">
+                <img src="https://www.svgrepo.com/show/407038/person-lifting-weights.svg" alt="Process Icon" width="40%">
+            </a>
+        </td>
+        <td align="center">
+            <a target="_blank" href="https://docs.ablator.org/en/latest/results.html">
+                <img src="https://www.svgrepo.com/show/398472/test-tube.svg" alt="Results Icon" width="30%">
+            </a>
+        </td>
+        <td align="center">
+            <a target="_blank" href="https://docs.ablator.org/en/latest/analysis.html">
+                <img src="https://www.svgrepo.com/show/395855/bar-chart.svg" alt="Analysis Icon" width="30%">
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td align="center">Configuration Module</td>
+        <td align="center">Training Module</td>
+        <td align="center">Experiment and Metrics Module</td>
+        <td align="center">Analysis Module</td>
+    </tr>
+</table>
+
 ## Tutorials
 
-There are several tutorials and examples on how to use ABLATOR.
+Explore a variety of tutorials and examples on how to utilize ABLATOR.
+Ready to dive in? 👉 [Ablation Tutorials](https://github.com/fostiropoulos/ablator-tutorials)
 
-We have created a [dedicated repository with them](https://github.com/fostiropoulos/ablator-tutorials)
+## Contribution Guidelines
 
-Or simply get started
+ABLATOR is open source, and we value contributions from our community!
+Check out our [Development Guide](https://github.com/fostiropoulos/ablator/blob/v0.0.1-mp-mount/DEVELOPER.md) for details on our development process and insights into the internals of the ABLATOR library.
 
-<a target="_blank" href="https://colab.research.google.com/github/fostiropoulos/ablator-tutorials/blob/6d79f47703b05f99655a717662f717d238f5dbfc/notebooks/HPO.ipynb">
-  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
-</a>
+<p>For any bugs or feature requests related to ABLATOR, please visit our GitHub Issues or reach out to slack </p>
 
+## Ablator Community
+| Platform       | Purpose                                                             | Support Level  |
+|----------------|---------------------------------------------------------------------|----------------|
+| [GitHub Issues](https://github.com/fostiropoulos/ablator/issues) | To report issues or suggest new features. | ABLATOR Team   |
+| [Slack](https://join.slack.com/t/ablator/shared_invite/zt-28009w2fk-fXG5Io38gjM0pnK4f4nZ9w)        | To collaborate with fellow ABLATOR users.  | Community      |
+| [Discord](https://discord.com/invite/9dqThvGnUW)       | To inquire about ABLATOR usage and collaborate with other ABLATOR enthusiasts. | Community      |
+| [Twitter](https://twitter.com/ABLATOR_ORG)       | For staying up-to-date on new features of Ablator.               | ABLATOR Team   |
+
+## References
+
+```tex
+@inproceedings{fostiropoulos2023ablator,
+  title={ABLATOR: Robust Horizontal-Scaling of Machine Learning Ablation Experiments},
+  author={Fostiropoulos, Iordanis and Itti, Laurent},
+  booktitle={AutoML Conference 2023 (ABCD Track)},
+  year={2023}
+}
+```
