@@ -8,6 +8,7 @@ from ablator.config.main import ConfigBase, configclass
 from ablator.config.hpo import SearchSpace
 from ablator.config.proto import Optim
 from ablator.config.proto import ModelConfig, RunConfig, TrainConfig
+from ablator.config.remote import RemoteConfig
 from ablator.config.types import (
     Annotation,
     Derived,

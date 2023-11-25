@@ -176,7 +176,8 @@ class ModelWrapper(ModelBase):
         if scheduler_state is not None:
             if scheduler is None:
                 self.logger.warn(
-                    "Supplied `scheduler_state` without `scheduler_config`. Ignoring scheduler."
+                    "Supplied `scheduler_state` without `scheduler_config`. Ignoring"
+                    " scheduler."
                 )
                 return None
             scheduler.load_state_dict(scheduler_state)
@@ -224,7 +225,8 @@ class ModelWrapper(ModelBase):
             optimizer.load_state_dict(optimizer_state)
         elif optimizer_state is not None:
             self.logger.warn(
-                "Supplied `optimizer_state` without `optimizer_config`. Ignoring optimizer."
+                "Supplied `optimizer_state` without `optimizer_config`. Ignoring"
+                " optimizer."
             )
 
         return optimizer
@@ -361,7 +363,8 @@ class ModelWrapper(ModelBase):
             )
         else:
             self.logger.warn(
-                "Validation dataloader and metrics were not set. Will be skipping `validation_loop`."
+                "Validation dataloader and metrics were not set. Will be skipping"
+                " `validation_loop`."
             )
 
         if (
@@ -370,8 +373,9 @@ class ModelWrapper(ModelBase):
         ):
             metric_names = sorted(list(self.metrics.keys()))
             raise RuntimeError(
-                f"optim_metric_name=`{self.optim_metric_name}` not found in metrics {metric_names}. "
-                "Make sure your validation loader and validation loop are configured correctly."
+                f"optim_metric_name=`{self.optim_metric_name}` not found in metrics"
+                f" {metric_names}. Make sure your validation loader and validation loop"
+                " are configured correctly."
             )
         if self.optim_metric_name is not None:
             # Use val loss for scheduling or finding best checkpoint
@@ -402,13 +406,14 @@ class ModelWrapper(ModelBase):
 
                 if div_factor is not None and (ratio > div_factor):
                     raise LossDivergedError(
-                        f"Val {self.optim_metric_name} {optim_metric:.2e} has diverged by "
-                        f"a factor larger than {self.run_config.divergence_factor:0.0f} to "
-                        f"best_{self.optim_metric_name} {best_metric:.2e}"
+                        f"Val {self.optim_metric_name} {optim_metric:.2e} has diverged"
+                        " by a factor larger than"
+                        f" {self.run_config.divergence_factor:0.0f} to"
+                        f" best_{self.optim_metric_name} {best_metric:.2e}"
                     )
         elif self.scheduler is not None and self._scheduler_requires_metric:
             raise EvaluationError(
-                f"A validation optimization argument is required with "
+                "A validation optimization argument is required with "
                 f"{self.scheduler.__class__.__name__} scheduler. "
                 "Try setting a `optim_metric_name`"
             )
@@ -430,7 +435,8 @@ class ModelWrapper(ModelBase):
         ):
             diff = self.current_iteration - self.best_iteration
             raise TrainPlateauError(
-                f"Early stopping. No improvement for {diff} > early_stopping_iter = `{early_stopping_iter}` iterations."
+                f"Early stopping. No improvement for {diff} > early_stopping_iter ="
+                f" `{early_stopping_iter}` iterations."
             )
 
     def _model_step(
@@ -449,7 +455,8 @@ class ModelWrapper(ModelBase):
                     assert isinstance(k, str) and isinstance(v, torch.Tensor)
         except Exception as exc:
             raise RuntimeError(
-                "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None."
+                "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
+                " torch.Tensor | None."
             ) from exc
         return outputs, loss
 
@@ -723,7 +730,8 @@ class ModelWrapper(ModelBase):
             )
         elif not self._is_init:
             raise ValueError(
-                f"{self.__class__.__name__} is not initialized. Must provide a `run_config`."
+                f"{self.__class__.__name__} is not initialized. Must provide a"
+                " `run_config`."
             )
         elif debug or smoke_test:
             self.init_state(
@@ -734,12 +742,13 @@ class ModelWrapper(ModelBase):
             )
         elif run_config is not None:
             raise ValueError(
-                f"Can not provide `run_config` to already initialized `{self.__class__.__name__}`"
+                "Can not provide `run_config` to already initialized"
+                f" `{self.__class__.__name__}`"
             )
         if self.current_iteration == self.total_steps:
             self.logger.warn(
-                f"Training is already complete: {self.current_iteration} / {self.total_steps}. "
-                "Returning current metrics."
+                f"Training is already complete: {self.current_iteration} /"
+                f" {self.total_steps}. Returning current metrics."
             )
             return self.metrics
         try:
@@ -930,11 +939,11 @@ class ModelWrapper(ModelBase):
                 for p in param_group["params"]
             ):
                 self.logger.error(
-                    "The loss returned by the model is `None` "
-                    "and no optimization parameter contains gradients. "
-                    "You need to perform optimization internally, either call `loss.backward()`"
-                    " in the `model.forward`, or define your own optimizer to perform `optimizer.step()` "
-                    "inside `model.forward`. "
+                    "The loss returned by the model is `None` and no optimization"
+                    " parameter contains gradients. You need to perform optimization"
+                    " internally, either call `loss.backward()` in the `model.forward`,"
+                    " or define your own optimizer to perform `optimizer.step()` inside"
+                    " `model.forward`. "
                 )
                 self._is_self_optim = True
             elif self._is_self_optim is None:
@@ -1005,7 +1014,8 @@ class ModelWrapper(ModelBase):
         cutoff_itr = len(dataloader) * subsample
         if model.training:
             self.logger.warn(
-                "Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`"
+                "Called `validation_loop` without setting the model to evaluation mode."
+                " i.e. `model.eval()`"
             )
         for i, batch in enumerate(dataloader):
             with torch.no_grad():

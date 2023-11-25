@@ -93,4 +93,7 @@ class Trial(Base):
     _opt_params: Mapped[PickleType] = mapped_column(PickleType, nullable=True)
 
     def __repr__(self) -> str:
-        return f"Trial(id={self.id!r}, config_uid={self.config_uid!r}, fullname={self.aug_config_param!r})"
+        return (
+            f"Trial(id={self.id!r}, config_uid={self.config_uid!r},"
+            f" fullname={self.aug_config_param!r})"
+        )

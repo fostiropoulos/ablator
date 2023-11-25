@@ -38,11 +38,13 @@ def _parse_results(
 
     if _categorical_attributes is None:
         raise ValueError(
-            "Must provide `categorical_attributes` when supplying a DataFrame. Otherwise provide a ``Results`` object. "
+            "Must provide `categorical_attributes` when supplying a DataFrame."
+            " Otherwise provide a ``Results`` object. "
         )
     if _numerical_attributes is None:
         raise ValueError(
-            "Must provide `_numerical_attributes` when supplying a DataFrame. Otherwise provide a ``Results`` object. "
+            "Must provide `_numerical_attributes` when supplying a DataFrame. Otherwise"
+            " provide a ``Results`` object. "
         )
     if _optim_metrics is None:
         raise ValueError(
@@ -66,7 +68,7 @@ class Analysis:
         The list of all the numerical hyperparameter names, by default ``None``.
     optim_metrics : dict[str, Optim] | None
         A dictionary mapping metric names to optimization directions, by default ``None``.
-    save_dir : str | None
+    save_dir : Path | str | None
         The directory to save analysis results to, by default ``None``.
     cache : bool
         Whether to cache results, by default ``False``.
@@ -86,12 +88,12 @@ class Analysis:
     experiment_attributes : list[str]
         The list of all the hyperparameter names
     results : pd.DataFrame
-        The dataframe extracted from the results file based on given metrics names and hyperparameter names.
+        The dataframe extracted from the results file is based on given metrics names and hyperparameter names.
 
     Raises
     ------
     FileNotFoundError
-        if the provided ``save_dir`` to save plots don't exists.
+        if the provided ``save_dir`` to save plots doesn't exist.
     ValueError
         if ``cache`` is ``True`` but no ``save_dir`` is provided.
     """
@@ -102,7 +104,7 @@ class Analysis:
         categorical_attributes: list[str] | None = None,
         numerical_attributes: list[str] | None = None,
         optim_metrics: dict[str, Optim] | None = None,
-        save_dir: str | None = None,
+        save_dir: Path | str | None = None,
         cache: bool = False,
     ) -> None:
         (

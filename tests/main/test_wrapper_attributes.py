@@ -11,7 +11,6 @@ from sklearn.metrics import accuracy_score
 from torch import nn
 
 from ablator import ModelConfig, ModelWrapper, OptimizerConfig, RunConfig, TrainConfig
-from ablator.config.proto import RunConfig
 from ablator.modules.metrics.main import LossDivergedError, Metrics
 from ablator.modules.scheduler import SchedulerConfig
 from ablator.utils.base import Lock
@@ -92,7 +91,7 @@ def test_scheduler(tmp_path: Path, config: RunConfig):
     wrapper.init_state(config, debug=True)
     assert wrapper._scheduler_step_when is None
 
-    ## EPOCH SCHEDULER
+    # EPOCH SCHEDULER
     config.train_config.scheduler_config = SchedulerConfig("step", arguments={})
     wrapper.init_state(config, debug=True)
     assert wrapper._scheduler_step_when == "epoch"
@@ -104,7 +103,7 @@ def test_scheduler(tmp_path: Path, config: RunConfig):
     wrapper.scheduler_step()
     assert wrapper.scheduler._step_count == step_count + 1
 
-    ## VAL SCHEDULER
+    # VAL SCHEDULER
     config.train_config.scheduler_config = SchedulerConfig("plateau", arguments={})
     config.optim_metric_name = "val_loss"
     config.optim_metrics = {"val_loss": "min"}
@@ -128,7 +127,7 @@ def test_scheduler(tmp_path: Path, config: RunConfig):
     wrapper.scheduler_step(0.01, is_val_step=True)
     assert wrapper.scheduler.last_epoch == step_count + 2
 
-    ## TRAIN SCHEDULER
+    # TRAIN SCHEDULER
     config.train_config.scheduler_config = SchedulerConfig(
         "cycle", arguments={"max_lr": 0.01, "total_steps": 100}
     )
@@ -182,7 +181,8 @@ def test_optim_step(tmp_path: Path, config: RunConfig, assert_error_msg):
     msg = assert_error_msg(lambda: wrapper.optim_step(optimizer, scaler, model, loss))
     assert (
         msg
-        == "Attempted unscale_ but _scale is None.  This may indicate your script did not use scaler.scale(loss or outputs) earlier in the iteration."
+        == "Attempted unscale_ but _scale is None.  This may indicate your script did"
+        " not use scaler.scale(loss or outputs) earlier in the iteration."
     )
     wrapper.backward(loss, scaler)
     wrapper.optim_step(optimizer, scaler, model, loss)
@@ -241,7 +241,8 @@ def test_validation_loop(
         )
     )
     assert (
-        "Called `validation_loop` without setting the model to evaluation mode. i.e. `model.eval()`"
+        "Called `validation_loop` without setting the model to evaluation mode. i.e."
+        " `model.eval()`"
         in stdout
     )
     wrapper.model.eval()
@@ -275,7 +276,8 @@ def test_config_parser(
     config.optim_metric_name = "loss"
     stdout, stderr = capture_output(lambda: wrapper.init_state(config, debug=True))
     assert (
-        "Different optim_metric_direction max than scheduler.arguments.mode min. Overwriting scheduler.arguments.mode."
+        "Different optim_metric_direction max than scheduler.arguments.mode min."
+        " Overwriting scheduler.arguments.mode."
         in stdout
     )
 
@@ -291,7 +293,8 @@ def test_config_parser_plateau(
     stdout, stderr = capture_output(lambda: wrapper.init_state(config))
 
     assert (
-        "Different optim_metric_direction max than scheduler.arguments.mode min. Overwriting scheduler.arguments.mode."
+        "Different optim_metric_direction max than scheduler.arguments.mode min."
+        " Overwriting scheduler.arguments.mode."
         not in stdout
     )
 
@@ -307,7 +310,10 @@ def test_wrapper_is_init(
     config.experiment_dir = tmp_path
     assert not wrapper._is_init
     msg = assert_error_msg(lambda: wrapper.apply_loss)
-    error_msg = "Can not read property %s of unitialized DeterminiticWrapper. It must be initialized with `init_state` before using."
+    error_msg = (
+        "Can not read property %s of unitialized DeterminiticWrapper. It must be"
+        " initialized with `init_state` before using."
+    )
     assert msg == (error_msg % "apply_loss")
 
     msg = assert_error_msg(lambda: wrapper.current_iteration)
@@ -366,7 +372,8 @@ def test_init_state(
     stdout, stderr = capture_output(lambda: wrapper.init_state(config, debug=True))
     assert len(stderr) == 0
     assert (
-        "If saving artifacts is unnecessary you can disable the file system by setting `run_config.experiment_dir=None`"
+        "If saving artifacts is unnecessary you can disable the file system by setting"
+        " `run_config.experiment_dir=None`"
         in stdout
     )
     msg = assert_error_msg(lambda: wrapper.init_state(config, resume=True))
@@ -374,7 +381,8 @@ def test_init_state(
     wrapper.init_state(config, smoke_test=True)
     wrapper.train()
     assert (
-        "If saving artifacts is unnecessary you can disable the file system by setting `run_config.experiment_dir=None`"
+        "If saving artifacts is unnecessary you can disable the file system by setting"
+        " `run_config.experiment_dir=None`"
         in stdout
     )
     msg = assert_error_msg(lambda: wrapper.init_state(config, resume=True))
@@ -382,7 +390,8 @@ def test_init_state(
     wrapper.init_state(config, debug=True)
     wrapper.train()
     assert (
-        "If saving artifacts is unnecessary you can disable the file system by setting `run_config.experiment_dir=None`"
+        "If saving artifacts is unnecessary you can disable the file system by setting"
+        " `run_config.experiment_dir=None`"
         in stdout
     )
     msg = assert_error_msg(lambda: wrapper.init_state(config, resume=True))
@@ -555,9 +564,9 @@ def test_save_dict(wrapper: DeterminiticWrapper, config: RunConfig):
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
 
     _config.experiment_dir = Path("/tmp/test_exp")
     kwargs = {

@@ -6,7 +6,7 @@ import typing as ty
 from collections import OrderedDict
 from pathlib import Path
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import NullPool, create_engine, select
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
@@ -81,7 +81,8 @@ class ExperimentState:
         for p in paths:
             if p not in default_vals:
                 raise RuntimeError(
-                    f"SearchSpace parameter {p} was not found in the configuration {sorted(default_vals)}."
+                    f"SearchSpace parameter {p} was not found in the configuration"
+                    f" {sorted(default_vals)}."
                 )
         study_name = config.uid
         self.experiment_dir = experiment_dir
@@ -89,10 +90,14 @@ class ExperimentState:
         experiment_state_db = experiment_dir.joinpath(f"{study_name}_state.db")
         if experiment_state_db.exists() and not resume:
             raise RuntimeError(
-                f"{experiment_state_db} exists. Please remove before starting another experiment or set `resume=True`."
+                f"{experiment_state_db} exists. Please remove before starting another"
+                " experiment or set `resume=True`."
             )
-
-        self.engine = create_engine(f"sqlite:///{experiment_state_db}", echo=False)
+        # NullPool is slower but guarantees the engine is not left open between
+        # writes / reads and can be cached to the cloud.
+        self.engine = create_engine(
+            f"sqlite:///{experiment_state_db}", echo=False, poolclass=NullPool
+        )
         Trial.metadata.create_all(self.engine)
 
         search_algo = self.config.search_algo
@@ -247,7 +252,8 @@ class ExperimentState:
                 trial_id, config, _optuna_args = self.sampler.eager_sample()
             except StopIteration as e:
                 raise StopIteration(
-                    f"Reached maximum number of trials, for sampler `{self.sampler.__class__.__name__}`."
+                    "Reached maximum number of trials, for sampler"
+                    f" `{self.sampler.__class__.__name__}`."
                 ) from e
             trial_kwargs = augment_trial_kwargs(
                 trial_kwargs=self.config.to_dict(), augmentation=config
@@ -286,10 +292,8 @@ class ExperimentState:
                 return trial_id, trial_config
 
         raise StopIteration(
-            (
-                f"Reached maximum limit of misconfigured trials, {error_upper_bound} "
-                f"with {errored_trials} invalid trials."
-            )
+            f"Reached maximum limit of misconfigured trials, {error_upper_bound} with"
+            f" {errored_trials} invalid trials."
         )
 
     def update_trial_state(
@@ -358,17 +362,15 @@ class ExperimentState:
         RuntimeError
             If the trial associated with the ``trial_id`` is not found.
         """
-
         with Session(self.engine) as session:
             stmt = select(Trial).where(Trial.trial_num == trial_id)
             if (res := session.execute(stmt).scalar_one_or_none()) is None:
                 raise RuntimeError(f"Trial {trial_id} was not found.")
             if metrics is not None:
-                res.metrics.append(metrics)
+                res.metrics = res.metrics + [metrics]  # type: ignore[operator]
             res.state = state  # type: ignore[assignment]
             session.commit()
             session.flush()
-
         return True
 
     def _inc_error_count(self, trial_id: int, state: TrialState):
@@ -380,16 +382,17 @@ class ExperimentState:
             res.runtime_errors = Trial.runtime_errors + 1
             session.commit()
             session.flush()
-
         if runtime_errors < 10:
             self.logger.warn(f"Trial {trial_id} failed {runtime_errors+1} times.")
             self.update_trial_state(trial_id, None, TrialState.WAITING)
         else:
             self.logger.error(
-                f"Trial {trial_id} exceed limit of runtime errors {runtime_errors}. Skipping."
+                f"Trial {trial_id} exceed limit of runtime errors {runtime_errors}."
+                " Skipping."
             )
             self.update_trial_state(trial_id, None, TrialState.FAIL)
 
+    # pylint: disable=useless-type-doc,useless-param-doc
     def _append_trial_internal(
         self,
         config_uid: str,
@@ -510,9 +513,10 @@ class ExperimentState:
         list[ParallelConfig]
             List of configurations of all the trials in that state.
         """
-        assert (
-            state != TrialState.PRUNED_INVALID
-        ), "Can not return configuration for invalid trials due to configuration errors."
+        assert state != TrialState.PRUNED_INVALID, (
+            "Can not return configuration for invalid trials due to configuration"
+            " errors."
+        )
         configs = []
         trials = self.get_trials_by_state(state)
         for trial in trials:

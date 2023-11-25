@@ -1,11 +1,10 @@
-from collections import abc
+from collections import ChainMap, abc
 import copy
 import inspect
 import logging
 import operator
 import typing as ty
 from typing import Any, Union
-from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing_extensions import Self
@@ -45,14 +44,15 @@ def configclass(cls: type["ConfigBase"]) -> type["ConfigBase"]:
 
     assert issubclass(cls, ConfigBase), f"{cls.__name__} must inherit from ConfigBase"
     setattr(cls, "config_class", cls)
-    return dataclass(cls, init=False, repr=False, kw_only=True, eq=False)  # type: ignore[call-overload]
+    return cls
 
 
 def _freeze_helper(obj):
     def __setattr__(self, k, v):
         if getattr(self, "_freeze", False):
             raise RuntimeError(
-                f"Can not set attribute {k} on a class of a frozen configuration ``{type(self).__name__}``."
+                f"Can not set attribute {k} on a class of a frozen configuration"
+                f" ``{type(self).__name__}``."
             )
         super(type(self), self).__setattr__(k, v)
 
@@ -93,7 +93,7 @@ class Missing:
     """
 
 
-@dataclass(repr=False)
+# @dataclass(repr=False)
 class ConfigBase:
     # NOTE: this allows for non-defined arguments to be created. It is very bug-prone and will be disabled.
     """
@@ -180,7 +180,10 @@ class ConfigBase:
                 v = getattr(self, k, None)
             if k in missing_vals:
                 logging.warning(
-                    "Loading %s in `debug` mode. Setting missing required value %s to `None`.",
+                    (
+                        "Loading %s in `debug` mode. Setting missing required value %s"
+                        " to `None`."
+                    ),
                     self._class_name,
                     k,
                 )
@@ -193,7 +196,10 @@ class ConfigBase:
                     if not debug:
                         raise e
                     logging.warning(
-                        "Loading %s in `debug` mode. Unable to parse `%s` value %s. Setting to `None`.",
+                        (
+                            "Loading %s in `debug` mode. Unable to parse `%s` value %s."
+                            " Setting to `None`."
+                        ),
                         self._class_name,
                         k,
                         v,
@@ -235,7 +241,8 @@ class ConfigBase:
             )
         if not isinstance(self, self.config_class):  # type: ignore[arg-type]
             raise RuntimeError(
-                f"You must decorate your Config class '{self._class_name}' with ablator.configclass."
+                f"You must decorate your Config class '{self._class_name}' with"
+                " ablator.configclass."
             )
         missing_vals = self._validate_missing(**kwargs)
         if len(missing_vals) != 0 and not debug:
@@ -261,7 +268,8 @@ class ConfigBase:
     def __setattr__(self, k, v):
         if self._freeze:
             raise RuntimeError(
-                f"Can not set attribute {k} on frozen configuration ``{type(self).__name__}``."
+                f"Can not set attribute {k} on frozen configuration"
+                f" ``{type(self).__name__}``."
             )
         annotation = self.annotations[k]
         v = parse_value(v, annotation, k, self._debug)
@@ -324,7 +332,7 @@ class ConfigBase:
         Self
             The loaded configuration object.
         """
-        # TODO[iordanis] remove OmegaConf dependency
+        # TODO{iordanis} remove OmegaConf dependency
         kwargs: dict = OmegaConf.to_object(  # type: ignore[assignment]
             OmegaConf.create(Path(path).read_text(encoding="utf-8"))
         )
@@ -342,23 +350,13 @@ class ConfigBase:
         """
         annotations = {}
         if hasattr(self, "__annotations__"):
-            annotation_types = dict(self.__annotations__)
-            # pylint: disable=no-member
-            # Without the if statement it will over-write new configurations
-            # e.x.
-
-            # class ReConfig(RunConfig):
-            #     train_config: SomeTrainConfig = SomeTrainConfig()
-            #     model_config: SomeModelConfig = SomeModelConfig()
-            # TODO test-me
-
-            dataclass_types = {
-                k: v.type
-                for k, v in self.__dataclass_fields__.items()
-                if k not in annotation_types
-            }
-            annotation_types.update(dataclass_types)
-
+            annotation_types = ChainMap(
+                *(
+                    c.__annotations__
+                    for c in type(self).__mro__
+                    if "__annotations__" in c.__dict__
+                )
+            )
             annotations = {
                 field_name: parse_type_hint(type(self), annotation)
                 for field_name, annotation in annotation_types.items()
@@ -663,15 +661,16 @@ class ConfigBase:
 
         Raises
         ------
-        AssertionError
+        RuntimeError
             If the configuration object is ambiguous or missing required values.
 
         """
         for k, annot in self.annotations.items():
-            if not annot.optional:
-                assert (
-                    getattr(self, k) is not None
-                ), f"Ambiguous configuration `{self._class_name}`. Must provide value for {k}"
+            if not annot.optional and getattr(self, k) is None:
+                raise RuntimeError(
+                    f"Ambiguous configuration `{self._class_name}`. Must provide value"
+                    f" for {k}"
+                )
         self._apply_lambda_recursively("assert_unambigious")
 
     def freeze(self):

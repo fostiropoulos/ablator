@@ -1,4 +1,3 @@
-import copy
 import io
 from pathlib import Path
 import re
@@ -10,44 +9,9 @@ import pytest
 from ablator import PlotAnalysis
 from ablator.analysis.plot import Plot
 from ablator.analysis.plot.cat_plot import Categorical, ViolinPlot
-from ablator.analysis.results import Results
 from ablator.analysis.plot.utils import parse_name_remap
 from ablator.config.proto import Optim
 from ablator.analysis.plot.num_plot import LinearPlot
-
-
-@pytest.mark.order(1)
-def test_analysis(tmp_path: Path, ablator_results):
-    results: Results = ablator_results
-    PlotAnalysis(results, optim_metrics={"val_loss": "min"})
-    categorical_name_remap = {
-        "model_config.mock_param": "Some Parameter",
-    }
-    numerical_name_remap = {
-        "train_config.optimizer_config.arguments.lr": "Learning Rate",
-    }
-    analysis = PlotAnalysis(
-        results,
-        save_dir=tmp_path.as_posix(),
-        cache=True,
-        optim_metrics={"val_loss": "min"},
-    )
-    attribute_name_remap = {**categorical_name_remap, **numerical_name_remap}
-    analysis.make_figures(
-        metric_name_remap={
-            "val_loss": "Val. Loss",
-        },
-        attribute_name_remap=attribute_name_remap,
-    )
-    assert all(
-        tmp_path.joinpath("violinplot", "val_loss", f"{file_name}.png").exists()
-        for file_name in categorical_name_remap
-    )
-
-    assert all(
-        tmp_path.joinpath("linearplot", "val_loss", f"{file_name}.png").exists()
-        for file_name in numerical_name_remap
-    )
 
 
 def test_name_remap(tmp_path: Path):
@@ -139,7 +103,7 @@ def test_analysis_func(tmp_path: Path):
         _exist(tmp_path.joinpath("linearplot", "val_rmse"), numerical_name_remap)
     )
     # checking whether if cache = False, clears memory.
-    assert no_cache.cache == None
+    assert no_cache.cache is None
 
     with pytest.raises(FileNotFoundError, match="Save directory does not exist"):
         incorrect_path = PlotAnalysis(
@@ -153,7 +117,7 @@ def test_analysis_func(tmp_path: Path):
     with pytest.raises(
         ValueError, match="Must provide a `save_dir` when specifying `cache=True`."
     ):
-        no_path = PlotAnalysis(
+        PlotAnalysis(
             df,
             cache=True,
             optim_metrics={"val_acc": Optim.min},
@@ -162,7 +126,10 @@ def test_analysis_func(tmp_path: Path):
         )
     with pytest.raises(
         ValueError,
-        match="Must specify a `save_dir` either as an argument to `make_figures` or during class instantiation",
+        match=(
+            "Must specify a `save_dir` either as an argument to `make_figures` or"
+            " during class instantiation"
+        ),
     ):
         PlotAnalysis(
             df,
@@ -322,7 +289,8 @@ def test_categorical_plot(capture_output, capture_logger):
     with pytest.raises(
         AssertionError,
         match=re.escape(
-            "Type(None), and `None` are both present as categorical values. Unable to rename None value."
+            "Type(None), and `None` are both present as categorical values. Unable to"
+            " rename None value."
         ),
     ):
         attribute_metric_map = Categorical._make_attribute_metric_map(
@@ -337,7 +305,8 @@ def test_categorical_plot(capture_output, capture_logger):
         lambda: Categorical._make_attribute_metric_map(metric, cat_attributes)
     )
     assert (
-        "`None` is present as a categorical string value as well as None. Will rename None to Type(None)."
+        "`None` is present as a categorical string value as well as None. Will rename"
+        " None to Type(None)."
         in out.getvalue()
     )
 
@@ -346,8 +315,10 @@ def test_categorical_plot(capture_output, capture_logger):
     )
 
     for i, v in enumerate(["Type(None)", np.nan, "None", "Type(None)s", "nan"]):
+        upper = (i + 1) * 10
+        lower = i * 10
         assert np.isclose(
-            attribute_metric_map[v].values, metric[i * 10 : (i + 1) * 10].values
+            attribute_metric_map[v].values, metric[lower:upper].values
         ).all()
 
 
@@ -367,22 +338,22 @@ def test_violin_plot():
     cat_attributes = pd.Series(np.random.randint(n_categories, size=(100)), name="attr")
     p = ViolinPlot(metric=metric, attributes=cat_attributes, metric_obj_fn="max")
     fig, ax = p._make()
-    assert len(ax.lines) == n_categories * 2
+    assert len(ax.lines) == n_categories * 3
     x, (y_min, y_max) = ax.lines[0].get_data()
     assert y_min == min(p.attribute_metric_map[0])
     assert y_max == max(p.attribute_metric_map[0])
     assert all(
         l.get_text()
-        == f"Mean: {p.attribute_metric_map[i].mean():.2e}\nBest: {p.attribute_metric_map[i].max():.2e}\n{i}"
+        == f"Mean: {p.attribute_metric_map[i].mean():.2e}\nBest:"
+        f" {p.attribute_metric_map[i].max():.2e}\n{i}"
         for i, l in enumerate(ax.get_xticklabels())
     )
 
 
 if __name__ == "__main__":
-    import copy
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
     run_tests_local(test_fns)

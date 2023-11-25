@@ -90,13 +90,13 @@ class Categorical(Plot):
             none_name = "None"
             if "None" in unique_values:
                 logger.warning(
-                    "`None` is present as a categorical string value as"
-                    " well as None. Will rename None to Type(None)."
+                    "`None` is present as a categorical string value as well as None."
+                    " Will rename None to Type(None)."
                 )
                 none_name = "Type(None)"
                 assert none_name not in unique_values, (
-                    f"{none_name}, and `None` are both present as categorical values. "
-                    "Unable to rename None value."
+                    f"{none_name}, and `None` are both present as categorical values."
+                    " Unable to rename None value."
                 )
             metrics[none_name] = metric[attributes.apply(lambda x: x is None)]
 
@@ -175,11 +175,13 @@ class ViolinPlot(Categorical):
         self.figsize = (8, 4)
         super().__init__(*args, **kwargs)
 
-    def _make_figure(self, ax: Axes | None = None) -> tuple[Figure | None, Axes]:
+    def _make_figure(self, ax: Axes | None = None) -> tuple[Figure, Axes]:
         figure = None
         if ax is None:
             figure = plt.figure(figsize=(10, 8))
             ax = figure.add_subplot(1, 1, 1)
+        else:
+            figure = plt.gcf()
         return figure, ax
 
     def _make(

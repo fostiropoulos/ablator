@@ -40,8 +40,9 @@ def _is_smi_bug() -> bool:
     driver_version = nvml.nvmlSystemGetDriverVersion()
     if driver_version.startswith("535"):
         raise RuntimeError(
-            f"Please change your nvidia-driver version `{driver_version}` as there is "
-            "critical bug for version 535: https://github.com/gpuopenanalytics/pynvml/pull/48"
+            f"Please change your nvidia-driver version `{driver_version}` as there is"
+            " critical bug for version 535:"
+            " https://github.com/gpuopenanalytics/pynvml/pull/48"
         )
     return False
 

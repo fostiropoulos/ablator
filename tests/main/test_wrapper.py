@@ -1,6 +1,5 @@
 import copy
 from functools import cached_property
-import inspect
 import re
 import typing
 from pathlib import Path
@@ -198,7 +197,10 @@ class DummyScreen(Dummy):
 def test_error_models(assert_error_msg, config: RunConfig):
     assert_error_msg(
         lambda: TestWrapper(BadMyModel).train(config),
-        "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None.",
+        (
+            "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
+            " torch.Tensor | None."
+        ),
     )
     assert_error_msg(
         lambda: TestWrapper(MyUnstableModel).train(config),
@@ -216,8 +218,9 @@ def test_verbosity(capture_output, train_config):
         amp=False,
     )
 
-    with mock.patch("curses.initscr", DummyScreen), mock.patch(
-        "ablator.utils.progress_bar.Display.close", lambda self: None
+    with (
+        mock.patch("curses.initscr", DummyScreen),
+        mock.patch("ablator.utils.progress_bar.Display.close", lambda self: None),
     ):
         out, err = capture_output(
             lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
@@ -243,7 +246,9 @@ def test_verbosity(capture_output, train_config):
             lambda: TestWrapper(MyCustomModel).train(verbose_config, debug=True)
         )
         assert (
-            "Metrics batch-limit 32 is larger than 20% of the train dataloader length 100. You might experience slow-down during training. Consider decreasing `metrics_n_batches`."
+            "Metrics batch-limit 32 is larger than 20% of the train dataloader length"
+            " 100. You might experience slow-down during training. Consider decreasing"
+            " `metrics_n_batches`."
             in out
         )
         console_config = RunConfig(
@@ -270,7 +275,8 @@ def test_state(
 
     assert (
         msg
-        == "Can not read property train_stats of unitialized TestWrapper. It must be initialized with `init_state` before using."
+        == "Can not read property train_stats of unitialized TestWrapper. It must be"
+        " initialized with `init_state` before using."
     )
 
     class AmbigiousModelConfig(ModelConfig):
@@ -287,7 +293,10 @@ def test_state(
 
     assert_error_msg(
         lambda: wrapper.init_state(run_config=config),
-        "Ambiguous configuration `AmbigiousModelConfig`. Must provide value for ambigious_var",
+        (
+            "Ambiguous configuration `AmbigiousModelConfig`. Must provide value for"
+            " ambigious_var"
+        ),
     )
     disambigious_wrapper = DisambigiousTestWrapper(MyCustomModel)
     disambigious_wrapper.init_state(run_config=config)
@@ -327,7 +336,7 @@ def test_train_stats(config: RunConfig):
         and wrapper.current_state["eval_metrics"] == {"loss": np.nan}
     )
     assert str(wrapper.model.param.device) == "cpu"
-    assert wrapper.model.param.requires_grad == True
+    assert wrapper.model.param.requires_grad
     assert wrapper.current_checkpoint is None
     assert wrapper.best_metrics["val_loss"] == float("inf")
     assert isinstance(wrapper.model, MyCustomModel)
@@ -335,7 +344,7 @@ def test_train_stats(config: RunConfig):
     assert wrapper.scheduler is None
     assert wrapper.logger is not None
     assert wrapper.device == "cpu"
-    assert wrapper.amp == False
+    assert not wrapper.amp
     assert wrapper.random_seed == 100
 
     res = wrapper.train()
@@ -369,7 +378,7 @@ def test_load_save_errors(tmp_path: Path, assert_error_msg, config: RunConfig):
         wrapper.init_state(run_config=config)
 
     msg = assert_error_msg(_run_two_wrappers)
-    assert msg == f"SummaryLogger: Resume is set to False but {tmp_path} exists."
+    assert msg == f"SummaryLogger: Resume is set to False but {tmp_path} is not empty."
 
     assert wrapper.init_state(run_config=config, debug=True) is None
     assert_error_msg(
@@ -397,7 +406,10 @@ def test_load_save(tmp_path: Path, assert_error_msg, config: RunConfig):
         wrapper.init_state(run_config=config, resume=True)
         assert_error_msg(
             lambda: wrapper.checkpoint(),
-            f"Checkpoint iteration {wrapper.current_iteration} >= training iteration {wrapper.current_iteration}. Can not overwrite checkpoint.",
+            (
+                f"Checkpoint iteration {wrapper.current_iteration} >= training"
+                f" iteration {wrapper.current_iteration}. Can not overwrite checkpoint."
+            ),
         )
         wrapper._inc_iter()
         wrapper.checkpoint()
@@ -411,7 +423,10 @@ def test_train_loop(assert_error_msg, config):
     wrapper.init_state(run_config=config)
     assert_error_msg(
         lambda: wrapper.train_loop(),
-        "Model should return outputs: dict[str, torch.Tensor] | None, loss: torch.Tensor | None.",
+        (
+            "Model should return outputs: dict[str, torch.Tensor] | None, loss:"
+            " torch.Tensor | None."
+        ),
     )
 
 
@@ -439,7 +454,8 @@ def test_train_resume(tmp_path: Path, assert_error_msg, config: RunConfig):
     )
     assert (
         msg
-        == f"Could not find a valid checkpoint in {wrapper.experiment_dir.joinpath('checkpoints')}"
+        == "Could not find a valid checkpoint in"
+        f" {wrapper.experiment_dir.joinpath('checkpoints')}"
     )
 
 
@@ -492,7 +508,8 @@ def test_early_stopping(tmp_path: Path, config: RunConfig):
     with pytest.raises(
         TrainPlateauError,
         match=re.escape(
-            "Early stopping. No improvement for 100 > early_stopping_iter = `1` iterations."
+            "Early stopping. No improvement for 100 > early_stopping_iter = `1`"
+            " iterations."
         ),
     ):
         wrapper = TestWrapper(MyCustomModel)
@@ -560,10 +577,9 @@ def test_derived_stats_names(tmp_path: Path, config: RunConfig):
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    fn_names = ["test_derived_stats_names"]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
 
     kwargs = {
         "config": copy.deepcopy(_config),

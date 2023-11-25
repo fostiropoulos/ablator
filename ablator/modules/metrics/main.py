@@ -135,7 +135,7 @@ class Metrics:
 
         Raises
         ------
-        AssertionError:
+        RuntimeError:
             If metric_dict has metrics that are not in static_aux_attributes.
 
         Notes
@@ -171,10 +171,11 @@ class Metrics:
             self.__static_aux_attributes__
         )
         metric_keys = sorted(list(metric_dict.keys()))
-        assert len(diff_metrics) == 0, (
-            "There are difference in the class metrics: "
-            f"{self.__static_aux_attributes__} and updated metrics {metric_keys}"
-        )
+        if len(diff_metrics) != 0:
+            raise RuntimeError(
+                "There are difference in the class metrics: "
+                f"{self.__static_aux_attributes__} and updated metrics {metric_keys}"
+            )
         metric_dict = butils.iter_to_numpy(metric_dict)
         for k, v in metric_dict.items():
             setattr(self, k, v)
@@ -224,8 +225,9 @@ class Metrics:
         metric_keys = set(metric_dict)
         diff_metrics = metric_keys.difference(set(self.__moving_aux_attributes__))
         assert len(diff_metrics) == 0, (
-            "There are difference in the class metrics: "
-            f"{self.__moving_aux_attributes__} and parsed metrics {sorted(list(metric_keys))}"
+            "There are difference in the class metrics:"
+            f" {self.__moving_aux_attributes__} and parsed metrics"
+            f" {sorted(list(metric_keys))}"
         )
         self._update_ma_metrics(metric_dict)
 
@@ -235,6 +237,7 @@ class Metrics:
         for k, v in metric_dict.items():
             self._get_ma(k).append(v)
 
+    # flake8: noqa: DOC201
     def reset(self, reset_ma: bool = False):
         """
         Reset to empty all prediction sequences (e.g predictions, labels).

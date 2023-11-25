@@ -197,8 +197,8 @@ class Results:
             config_type, ParallelConfig
         ):
             raise ValueError(
-                "Provided a ``RunConfig`` used for a single-trial. Analysis "
-                "is not meaningful for a single trial. Please provide a ``ParallelConfig``."
+                "Provided a ``RunConfig`` used for a single-trial. Analysis is not"
+                " meaningful for a single trial. Please provide a ``ParallelConfig``."
             )
         if not issubclass(config_type, ParallelConfig):
             raise ValueError(
@@ -208,7 +208,7 @@ class Results:
         # Need a way to derived MPConfig implementation from a pickled file.
         # We need the types of the configuration, metric map.
         self.experiment_dir = Path(experiment_dir)
-        run_config_path = self.experiment_dir.joinpath("default_config.yaml")
+        run_config_path = self.experiment_dir.joinpath("master_config.yaml")
         if not run_config_path.exists():
             raise FileNotFoundError(f"{run_config_path}")
         self.config = config_type.load(run_config_path)
@@ -262,7 +262,8 @@ class Results:
             ]
             if len(imbalanced_values) == 1:
                 warning(
-                    f"Imbalanced trials for attr {attr} and values: {unique_values} with counts {counts}."
+                    f"Imbalanced trials for attr {attr} and values:"
+                    f" {unique_values} with counts {counts}."
                 )
 
     @property
@@ -302,9 +303,10 @@ class Results:
         pd.DataFrame
             Pandas Dataframe from read_results.
         """
-        assert (
-            experiment_dir.exists()
-        ), f"Experiment directory {experiment_dir} does not exist. You can provide one as an argument `experiment_dir`"
+        assert experiment_dir.exists(), (
+            f"Experiment directory {experiment_dir} does not exist. You can provide one"
+            " as an argument `experiment_dir`"
+        )
         if init_ray and not ray.is_initialized():
             ray.init(address="local")
         return self.read_results(type(self.config), experiment_dir)
@@ -361,9 +363,12 @@ class Results:
         for json_path in json_paths:
             if ray.is_initialized():
                 futures.append(
-                    ray.remote(num_cpus=num_cpus)(read_result).remote(
-                        config_type, json_path
-                    )
+                    ray.remote(
+                        num_cpus=num_cpus,
+                        max_calls=1,
+                    )(
+                        read_result
+                    ).remote(config_type, json_path)
                 )
             else:
                 results.append(read_result(config_type, json_path))

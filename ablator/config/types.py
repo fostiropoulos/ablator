@@ -372,6 +372,8 @@ def _strip_hint_collection(type_hint: type[ty.Any]) -> tuple:
     ------
     NotImplementedError
         If the type hint is not valid or custom classes don't implement __dict__.
+    ValueError
+        If the type hint is a string such as a forward reference, e.g. "Class"
 
     Examples
     --------
@@ -397,6 +399,8 @@ def _strip_hint_collection(type_hint: type[ty.Any]) -> tuple:
 
     if origin is Literal:
         return Literal, type_hint.__args__
+    if isinstance(type_hint, str):
+        raise ValueError("Does not support forward reference configuration types.")
     if issubclass(type_hint, Enum):
         valid_values = [_v.value for _v in list(type_hint)]
         return type_hint, valid_values
@@ -493,8 +497,8 @@ def _parse_class(
     else:
         # not sure what to do.....
         raise RuntimeError(
-            f"{cls} provided args or kwargs ({args_kwargs}) must be formatted as "
-            "(args, kwargs) or (args) or (kwargs)."
+            f"{cls} provided args or kwargs ({args_kwargs}) must be formatted as (args,"
+            " kwargs) or (args) or (kwargs)."
         )
 
     params = inspect.signature(cls).parameters.keys()
@@ -579,9 +583,10 @@ def parse_value(
             return [parse_value(_v, Annotation(**_kwargs), debug=debug) for _v in val]
         raise ValueError(f"Invalid type {type(annot.variable_type)} and field {name}")
     if annot.collection == Tuple:
-        assert len(val) == len(
-            annot.variable_type
-        ), f"Incompatible lengths for {name} between {val} and type_hint: {annot.variable_type}"
+        assert len(val) == len(annot.variable_type), (
+            f"Incompatible lengths for {name} between {val} and type_hint:"
+            f" {annot.variable_type}"
+        )
         return [tp(_v) for tp, _v in zip(annot.variable_type, val)]
     if annot.collection == Type:
         return _parse_class(annot.variable_type, val, debug=debug)

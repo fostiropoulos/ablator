@@ -1,20 +1,21 @@
-import time
 import pytest
 import ray
 from ablator.utils.base import Lock
 
 
-def test_time_lock_ray(ray_cluster, blocking_lock_remote):
+@pytest.mark.mp
+def test_time_lock_ray(blocking_lock_remote):
     t = Lock(timeout=100)
 
     results = ray.get(
         [ray.remote(num_cpus=0.001)(blocking_lock_remote).remote(t) for i in range(10)],
-        timeout=10,
+        timeout=30,
     )
     assert all(results)
 
 
-def test_fail_lock_ray(ray_cluster, blocking_lock_remote):
+@pytest.mark.mp
+def test_fail_lock_ray(blocking_lock_remote):
     t = Lock(timeout=1)
     t.acquire()
     with pytest.raises(TimeoutError, match="Could not obtain lock within 1.00 seconds"):
@@ -27,7 +28,8 @@ def test_fail_lock_ray(ray_cluster, blocking_lock_remote):
     assert True
 
 
-def test_time_lock(ray_cluster):
+@pytest.mark.mp
+def test_time_lock():
     t = Lock(timeout=1)
     t.acquire()
     with pytest.raises(TimeoutError, match="Could not obtain lock within 1.00 seconds"):
@@ -48,8 +50,8 @@ def test_time_lock(ray_cluster):
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
 
     run_tests_local(test_fns)

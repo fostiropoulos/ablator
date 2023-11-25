@@ -1,10 +1,13 @@
+import os
 import shutil
 from pathlib import Path
 
 import numpy as np
 import optuna
 import pandas as pd
+import psutil
 import pytest
+from sqlalchemy import create_engine
 
 from ablator import ModelConfig, OptimizerConfig, TrainConfig
 from ablator.config.mp import ParallelConfig, SearchAlgo, SearchSpace
@@ -113,17 +116,26 @@ def test_state(tmp_path: Path, search_algo, assert_error_msg):
         lambda: SearchSpace(
             value_range=[0, 1, 2], categorical_values=[0, "1", 0.122], value_type="int"
         ),
-        "Incompatible lengths for value_range between [0, 1, 2] and type_hint: (<class 'str'>, <class 'str'>)",
+        (
+            "Incompatible lengths for value_range between [0, 1, 2] and type_hint:"
+            " (<class 'str'>, <class 'str'>)"
+        ),
     )
     assert_error_msg(
         lambda: SearchSpace(
             value_range=[0, 1], categorical_values=[0, "1", 0.122], value_type="float"
         ),
-        "Must specify only one of 'value_range', 'subspaces', 'categorical_values' and / or 'sub_configurations' for SearchSpace.",
+        (
+            "Must specify only one of 'value_range', 'subspaces', 'categorical_values'"
+            " and / or 'sub_configurations' for SearchSpace."
+        ),
     )
     assert_error_msg(
         lambda: SearchSpace(),
-        "Must specify only one of 'value_range', 'subspaces', 'categorical_values' and / or 'sub_configurations' for SearchSpace.",
+        (
+            "Must specify only one of 'value_range', 'subspaces', 'categorical_values'"
+            " and / or 'sub_configurations' for SearchSpace."
+        ),
     )
     search_space = {"some_var": SearchSpace(value_range=[0, 1], value_type="float")}
 
@@ -133,7 +145,10 @@ def test_state(tmp_path: Path, search_algo, assert_error_msg):
     _clean_path(tmp_path)
     assert_error_msg(
         lambda: ExperimentState(tmp_path, config),
-        f"SearchSpace parameter some_var was not found in the configuration {sorted(list(default_vals))}.",
+        (
+            "SearchSpace parameter some_var was not found in the configuration"
+            f" {sorted(list(default_vals))}."
+        ),
     )
 
     config.search_space = {
@@ -161,7 +176,10 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_ou
     _clean_path(tmp_path)
     assert_error_msg(
         lambda: ExperimentState(tmp_path, config).sample_trial(),
-        f"Reached maximum limit of misconfigured trials, {error_upper_bound} with {error_upper_bound} invalid trials.",
+        (
+            f"Reached maximum limit of misconfigured trials, {error_upper_bound} with"
+            f" {error_upper_bound} invalid trials."
+        ),
     )
 
     _clean_path(tmp_path)
@@ -248,7 +266,10 @@ def test_state_resume(tmp_path: Path, search_algo, assert_error_msg):
     s = ExperimentState(tmp_path, config)
     assert_error_msg(
         lambda: ExperimentState(tmp_path, config),
-        f"{tmp_path.joinpath(f'{config.uid}_state.db')} exists. Please remove before starting another experiment or set `resume=True`.",
+        (
+            f"{tmp_path.joinpath(f'{config.uid}_state.db')} exists. Please remove"
+            " before starting another experiment or set `resume=True`."
+        ),
     )
 
     prev_trials = s.valid_trials_id()
@@ -274,7 +295,10 @@ def test_state_resume(tmp_path: Path, search_algo, assert_error_msg):
             lambda: s.update_trial_state(0, {"aaa": 0}),
             # ,
         )
-        _str = "Expected to find val_acc in returned model metrics. Make sure that `optim_metric_name` corresponds to one of: {'aaa'}"
+        _str = (
+            "Expected to find val_acc in returned model metrics. Make sure that"
+            " `optim_metric_name` corresponds to one of: {'aaa'}"
+        )
         assert msg == f'"{_str}"'
         for perf in [{"val_acc": np.nan}, {"val_acc": 0}, {"val_acc": None}]:
             trial_id, config = s.sample_trial()
@@ -286,7 +310,11 @@ def test_state_resume(tmp_path: Path, search_algo, assert_error_msg):
 
         assert_error_msg(
             lambda: s.update_trial_state(0, {"val_acc": "A"}, TrialState.COMPLETE),
-            "ufunc 'isfinite' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''",
+            (
+                "ufunc 'isfinite' not supported for the input types, and the inputs"
+                " could not be safely coerced to any supported types according to the"
+                " casting rule ''safe''"
+            ),
         )
     else:
         assert_error_msg(
@@ -332,7 +360,12 @@ def _run_search_algo(s: ExperimentState):
             state=TrialState.COMPLETE,
         )
         perfs.append(perf)
-    return pd.DataFrame(perfs)
+    state_metrics = pd.DataFrame(
+        [t.metrics[0] for t in s.get_trials_by_state(TrialState.COMPLETE)]
+    )
+    perf_df = pd.DataFrame(perfs)
+    assert (perf_df[["val_acc"]] == state_metrics).all().all()
+    return perf_df
 
 
 def _get_top_n(df: pd.DataFrame):
@@ -348,7 +381,6 @@ def test_mock_run(tmp_path: Path, search_space):
         s = ExperimentState(tmp_path, config)
         dfs.append(_run_search_algo(s))
     tpe_df = pd.concat(dfs)
-
     dfs = []
     for i in range(10):
         _clean_path(tmp_path)
@@ -361,11 +393,38 @@ def test_mock_run(tmp_path: Path, search_space):
     assert abs(loss_tpe - loss_rand) > 1e-05
 
 
+def test_connection_close(tmp_path: Path, search_space):
+    config = make_config(search_space, "random")
+    s = ExperimentState(tmp_path, config)
+
+    for i in range(100):
+        trial_id, config = s.sample_trial()
+        perf = np.random.random()
+        s.update_trial_state(
+            trial_id,
+            {"val_acc": perf},
+            state=TrialState.COMPLETE,
+        )
+        p = psutil.Process(os.getpid())
+        assert all(f.path != s.engine.url.database for f in p.open_files())
+    s.engine = create_engine(str(s.engine.url), echo=False)
+    trial_id, config = s.sample_trial()
+    perf = np.random.random()
+
+    s.update_trial_state(
+        trial_id,
+        {"val_acc": perf},
+        state=TrialState.COMPLETE,
+    )
+    p = psutil.Process(os.getpid())
+    assert any(f.path != s.engine.url.database for f in p.open_files())
+
+
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
-    kwargs = dict(search_space=[_search_space], search_algo="tpe")
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
+    kwargs = dict(search_space=_search_space, search_algo="tpe")
     run_tests_local(test_fns, kwargs)

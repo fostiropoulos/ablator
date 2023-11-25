@@ -1,7 +1,39 @@
 import logging
 
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+
 
 logger = logging.getLogger(__name__)
+
+
+def get_axes_fig(ax: Axes) -> Figure:
+    """
+    Gets the Figure from the axes or the currently active figure if it fails to
+    find one attached to the axes, `ax`.
+
+    Parameters
+    ----------
+    ax : Axes
+        The axes that is attached to a Figure.
+
+    Returns
+    -------
+    Figure
+        The currently active figure or the figure to which the axes is attached.
+
+    Raises
+    ------
+    RuntimeError
+        When it is unable to find an active plot attached to the axes
+        or the matplotlib environment.
+    """
+    if (fig := ax.get_figure()) is not None:
+        return fig
+    if len(plt.get_fignums()) > 0:
+        return plt.gcf()
+    raise RuntimeError("Can not find an active plot.")
 
 
 def parse_name_remap(

@@ -1,4 +1,5 @@
 import copy
+import time
 import typing as ty
 from copy import deepcopy
 from pathlib import Path
@@ -7,8 +8,14 @@ import git
 import torch
 from git import exc
 
+try:
+    from rmount import RemoteMount
+except ImportError:
+    RemoteMount = None
+
 from ablator.config.proto import RunConfig
 from ablator.main.model.wrapper import ModelWrapper
+from ablator.utils.file import expand_path
 
 
 class ProtoTrainer:
@@ -108,12 +115,23 @@ class ProtoTrainer:
         super().__init__()
         self.wrapper = copy.deepcopy(wrapper)
         self.run_config: RunConfig = copy.deepcopy(run_config)
+        self.mount_server: None | "RemoteMount" = None
         if self.run_config.experiment_dir is None:
             raise RuntimeError("Must specify an experiment directory.")
         experiment_dir = self.run_config.experiment_dir
-        experiment_path = Path(experiment_dir).absolute().resolve()
+        experiment_path = expand_path(experiment_dir)
         self.experiment_dir = experiment_path
         self.run_config.experiment_dir = experiment_dir
+        self._is_new_experiment = False
+        if self.run_config.experiment_id is None:
+            # we choose time.time as a id as opposed to a uuid, because
+            # it is informative of the creation time, and it is almost certain
+            # to be unique, unless two experiments are created on the same
+            # moment by the same user and in the same experiment directory....
+            # unlikely. (Who is f*ing with us?)
+            self.run_config.experiment_id = f"experiment_{int(time.time())}"
+            self._is_new_experiment = True
+        self.experiment_id: str = self.run_config.experiment_id
 
     def pre_train_setup(self):
         """
@@ -121,15 +139,65 @@ class ProtoTrainer:
         shared between trainers.
         """
 
-    def _mount(self):
-        # TODO
-        # mount experiment directory
-        # https://rclone.org/commands/rclone_mount/
-        pass
+    # pylint: disable=too-complex
+    def _mount(self, resume: bool = False, debug: bool = False, timeout: int = 60):
+        if resume and self._is_new_experiment:
+            raise RuntimeError(
+                "Can not leave `experiment_id` unspecified in the configuration when"
+                " resuming an experiment."
+            )
+        if resume or not self._is_new_experiment:
+            self.stop()
+
+        self._is_new_experiment = False
+        if self.run_config.remote_config is None:
+            return False
+        # optional import that must be installed with [server]
+        # pylint: disable=import-outside-toplevel,redefined-outer-name
+        try:
+            from rmount import RemoteMount
+        except ImportError as e:
+            raise ImportError(
+                "remote_config is only supported for Linux systems."
+            ) from e
+
+        local_path = self.experiment_dir
+        if len(list(local_path.glob("*"))) > 0:
+            raise RuntimeError(
+                f"The experiment directory `{local_path}` is not empty and it"
+                " will lead to errors when synchronizing with a remote storage."
+            )
+        remote_config = self.run_config.remote_config
+        config = remote_config.get_config()
+        if remote_config.ssh is not None and remote_config.remote_path is None:
+            self.run_config.remote_config.remote_path = "/ablator"
+        if remote_config.s3 is not None and remote_config.remote_path is None:
+            raise ValueError
+
+        self.run_config.remote_config.local_path = str(local_path)
+        remote_path = self.run_config.remote_config.remote_path
+        self.mount_server = RemoteMount(
+            settings=config,
+            remote_path=Path(remote_path) / self.experiment_id,
+            local_path=local_path,
+            verbose=debug,
+            timeout=timeout,
+        )
+        try:
+            self.mount_server.mount()
+        except RuntimeError as e:
+            raise RuntimeError(
+                f"Could not mount to remote directory {remote_path}. Make sure"
+                f" that:\n\t1. The {remote_path} directory exists and it has the"
+                " correct permisions, i.e. it is writable by the provided"
+                " configuration user and/or access key. \n\t2. That the"
+                f" configuration {config} is correct."
+            ) from e
+        return True
 
     def _get_diffs(self, working_dir: str = ""):
         try:
-            repo = git.Repo(Path(working_dir).resolve().absolute().as_posix())
+            repo = git.Repo(expand_path(working_dir).as_posix())
             t = repo.head.commit.tree
             diffs = repo.git.diff(t)
             return f"Git Diffs for {repo.head.ref} @ {repo.head.commit}: \n{diffs}"
@@ -146,7 +214,10 @@ class ProtoTrainer:
                 "to keep track of changes."
             )
 
-    def launch(self, working_directory: str, debug: bool = False) -> dict[str, float]:
+    # flake8: noqa: DOC502
+    def launch(
+        self, working_directory: str, resume: bool = False, debug: bool = False
+    ) -> dict[str, float]:
         """
         Launch the prototype experiment (train, evaluate the single prototype model) and return metrics.
 
@@ -155,18 +226,29 @@ class ProtoTrainer:
         working_directory : str
             The working directory points to a git repository that is used for keeping track of
             the code differences.
+        resume : bool
+            Whether to resume training the model from existing checkpoints and
+            existing experiment state. By default False
         debug : bool, optional
             Whether to train models in debug mode, by default ``False``.
 
         Returns
         -------
-        metrics : dict[str, float]
+        dict[str, float]
             Metrics returned after training.
+
+        Raises
+        ------
+        RuntimeError
+            If the `config.experiment_id` is unspecified but resuming an experiment or the
+            experiment directory is not empty but using a remote storage configuration.
+
         """
-        self._mount()
+        self._mount(resume=resume, debug=debug)
         self.pre_train_setup()
+
         self.wrapper.init_state(
-            run_config=self.run_config, smoke_test=False, debug=debug, resume=False
+            run_config=self.run_config, smoke_test=False, debug=debug, resume=resume
         )
         diffs = self._get_diffs(working_directory)
         self.wrapper.logger.info(diffs)
@@ -176,18 +258,18 @@ class ProtoTrainer:
     def evaluate(self) -> dict[str, dict[str, ty.Any]]:
         """
         Run model evaluation on the training results, sync evaluation results to external logging services
-        (e.g Google cloud storage, other remote servers).
+        (e.g. Google cloud storage, other remote servers).
 
         Returns
         -------
-        metrics : dict[str, dict[str, ty.Any]]
+        dict[str, dict[str, ty.Any]]
             Metrics returned after evaluation.
         """
         # TODO load model if it is un-trained
         metrics = self.wrapper.evaluate(self.run_config)
         return metrics
 
-    def smoke_test(self, config: RunConfig | None = None):
+    def smoke_test(self, config: RunConfig | None = None) -> bool:
         """
         Run a smoke test training process on the model.
 
@@ -196,12 +278,17 @@ class ProtoTrainer:
         config : RunConfig | None
             Running configuration for the model.
 
+        Returns
+        -------
+        bool
+            Whether the smoke test was successful.
+
         Examples
         --------
-        try:
-            ablator.smoke_test(run_config)
-        except err:
-            raise err
+        >>> try:
+        ...    ablator.smoke_test(run_config)
+        ... except err:
+        ...    raise err
         """
         if config is None:
             config = self.run_config
@@ -211,3 +298,20 @@ class ProtoTrainer:
         del wrapper
         torch.cuda.empty_cache()
         return True
+
+    def __enter__(self, *args, **kwargs):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.stop()
+
+    def stop(self):
+        if hasattr(self, "mount_server") and self.mount_server is not None:
+            self.mount_server.unmount()
+
+    # pylint: disable=broad-exception-caught
+    def __del__(self):
+        try:
+            self.stop()
+        except Exception:
+            ...

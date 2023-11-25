@@ -170,9 +170,9 @@ def test_init_scheduler_not_implemented():
 if __name__ == "__main__":
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
 
     kwargs = {
         "model_class": [MySecondCustomModel, MyModel, MyPartialCustomModel],
