@@ -20,7 +20,8 @@ jobs:
         run: |
           conda activate test-env
           pip install -e ."[dev]" -v
-          pip uninstall grpcio; conda install grpcio
+          pip uninstall grpcio
+          conda install grpcio-tools
       - name: Make Docker
         run: |
           conda activate test-env
