@@ -32,6 +32,7 @@ def test_conftest_order():
     _assert_py_random()
     _assert_np_random()
 
+
 # TODO fix flaky test
 @pytest.mark.skip
 def test_ray_cluster(ray_cluster):
