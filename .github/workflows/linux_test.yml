@@ -11,7 +11,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build Docker
       run: |
-        make docker build_arg="--py-3-10-12" docker_tag="ablator-test"
+        make docker docker_build_args="--py-3-10-12" docker_tag="ablator-test"
     - name: Test with pytest CUDA
       run: |
         make docker-test docker_tag="ablator-test"
