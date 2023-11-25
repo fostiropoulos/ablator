@@ -14,7 +14,7 @@ jobs:
         make docker docker_build_args="--py-3-10-12" docker_tag="ablator-test"
     - name: Test with pytest CUDA
       run: |
-        make docker-test docker_tag="ablator-test"
+        make docker-test docker_build_args="--py-3-10-12" docker_tag="ablator-test"
     - name: Test with pytest CPU
       run: |
         make docker-test-cpu docker_tag="ablator-test"
