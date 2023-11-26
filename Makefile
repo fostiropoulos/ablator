@@ -62,7 +62,10 @@ pylint:
 mypy:
 	mypy ablator
 
-static-tests: black flake8 mypy pylint
+pydoclint:
+	pydoclint ablator
+
+static-tests: black flake8 mypy pylint pydoclint
 	echo "Done"
 
 package:
