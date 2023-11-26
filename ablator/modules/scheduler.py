@@ -88,9 +88,11 @@ class SchedulerConfig(ConfigBase):
     name: str
     arguments: SchedulerArgs
 
-    def __init__(self, name: str, arguments: dict[str, ty.Any]):
+    def __init__(self, name: str, arguments: dict[str, ty.Any] | None = None):
         # Initializes the scheduler configuration.
         _arguments: None | StepLRConfig | OneCycleConfig | PlateuaConfig
+        if arguments is None:
+            arguments = {}
         if (argument_cls := SCHEDULER_CONFIG_MAP[name]) is None:
             _arguments = StepLRConfig(gamma=1)
         else:
@@ -199,7 +201,7 @@ class PlateuaConfig(SchedulerArgs):
     patience: int = 10
     min_lr: float = 1e-5
     mode: str = "min"
-    factor: float = 0.0  # TODO {fixme} this is error prone -> new_lr = 0
+    factor: float = 0.1
     threshold: float = 1e-4
     verbose: bool = False
     step_when: StepType = "val"
