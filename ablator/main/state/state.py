@@ -120,8 +120,6 @@ class ExperimentState:
                 seed=sampler_seed,
             )
         elif search_algo == SearchAlgo.grid:
-            if len(self.optim_metrics):
-                raise RuntimeError("Can not specify `optim_metrics` with GridSampler.")
             # TODO unit-test resuming with GridSampler for experiment state
             aug_cs: list[dict[str, ty.Any]] = [
                 dict(c.aug_config_param) for c in self.valid_trials()
