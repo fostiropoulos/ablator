@@ -79,7 +79,7 @@ html_theme_options = {
             "url": "https://github.com/fostiropoulos/ablator",
             "icon": "fa-brands fa-github",
             "type": "fontawesome",
-        }
+        },
     ],
     "icon_links_label": "Quick Links",
 }
