@@ -233,7 +233,7 @@ def get_latest_chkpts(checkpoint_dir: Path) -> list[Path]:
     return sorted(list(checkpoint_dir.glob("*.pt")))[::-1]
 
 
-def parse_device(device: ty.Union[str, list[str], int]) -> ty.Any:
+def parse_device(device: ty.Union[str, list[str], int]) -> str:
     """
     Parse a device string, an integer, or a list of device strings or integers.
 
@@ -282,7 +282,7 @@ def parse_device(device: ty.Union[str, list[str], int]) -> ty.Any:
             return device
         raise ValueError
     if isinstance(device, int):
-        return device
+        return parse_device(f"cuda:{device}")
     if isinstance(device, Iterable):
         return [parse_device(_device) for _device in device]
 
