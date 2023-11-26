@@ -46,7 +46,7 @@ class SchedulerConfig(ConfigBase):
     ----------
     name : str
         The name of the scheduler, this can be any in ``['None', 'step', 'cycle', 'plateau']``.
-    arguments : dict[str, ty.Any]
+    arguments : dict[str, ty.Any] | None
         The arguments for the scheduler, specific to a certain type of scheduler. Refer to  `Configuration
         Basics scheduler <./notebooks/Configuration-Basics.ipynb>`_ tutorial for more details on each
         scheduler's arguments.
