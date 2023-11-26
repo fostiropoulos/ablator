@@ -59,7 +59,7 @@ def test_results_config_not_parallel():
     try:
         results = Results(config=TestConfig, experiment_dir=experiment_dir)
     except ValueError as e:
-        assert str(e) == ("Configuration must be subclassed from ``ParallelConfig``. ")
+        assert str(e) == "Configuration must be subclassed from ``ParallelConfig``. "
     else:
         raise AssertionError("ValueError was not raised")
 
@@ -77,8 +77,9 @@ def test_results_single_trial_config():
     try:
         results = Results(config=TestConfig, experiment_dir=experiment_dir)
     except ValueError as e:
-        assert str(e) == (
-            "Provided a ``RunConfig`` used for a single-trial. Analysis "
+        assert (
+            str(e)
+            == "Provided a ``RunConfig`` used for a single-trial. Analysis "
             "is not meaningful for a single trial. Please provide a ``ParallelConfig``."
         )
     else:
@@ -162,10 +163,9 @@ def test_read_result_exception_handling(tmp_path):
 
 
 if __name__ == "__main__":
-    import copy
     from tests.conftest import run_tests_local
 
-    l = locals()
-    fn_names = [fn for fn in l if fn.startswith("test_")]
-    test_fns = [l[fn] for fn in fn_names]
+    _locals = locals()
+    fn_names = [fn for fn in _locals if fn.startswith("test_")]
+    test_fns = [_locals[fn] for fn in fn_names]
     run_tests_local(test_fns)

@@ -233,18 +233,18 @@ def get_latest_chkpts(checkpoint_dir: Path) -> list[Path]:
     return sorted(list(checkpoint_dir.glob("*.pt")))[::-1]
 
 
-def parse_device(device: ty.Union[str, list[str], int]) -> str:
+def parse_device(device: ty.Union[str, int]) -> str:
     """
     Parse a device string, an integer, or a list of device strings or integers.
 
     Parameters
     ----------
-    device : ty.Union[str, list[str], int]
+    device : ty.Union[str, int]
         The target device for the tensors.
 
     Returns
     -------
-    ty.Any
+    str
         The parsed device string, integer, or list of device strings or integers.
 
     Raises
@@ -283,8 +283,6 @@ def parse_device(device: ty.Union[str, list[str], int]) -> str:
         raise ValueError
     if isinstance(device, int):
         return parse_device(f"cuda:{device}")
-    if isinstance(device, Iterable):
-        return [parse_device(_device) for _device in device]
 
     return "cuda" if torch.cuda.is_available() else "cpu"
 
