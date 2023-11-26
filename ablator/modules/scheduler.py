@@ -90,7 +90,7 @@ class SchedulerConfig(ConfigBase):
 
     def __init__(self, name: str, arguments: dict[str, ty.Any] | None = None):
         # Initializes the scheduler configuration.
-        _arguments: None | StepLRConfig | OneCycleConfig | PlateuaConfig
+        _arguments: None | StepLRConfig | OneCycleConfig | PlateauConfig
         if arguments is None:
             arguments = {}
         if (argument_cls := SCHEDULER_CONFIG_MAP[name]) is None:
@@ -175,7 +175,7 @@ class OneCycleConfig(SchedulerArgs):
 
 
 @configclass
-class PlateuaConfig(SchedulerArgs):
+class PlateauConfig(SchedulerArgs):
     """Configuration class for ReduceLROnPlateau scheduler.
 
     Attributes
@@ -229,7 +229,7 @@ class PlateuaConfig(SchedulerArgs):
         Examples
         --------
         >>> optimizer = torch.optim.SGD(model.parameters(), lr=0.7, momentum=0.9)
-        >>> scheduler = PlateuaConfig(min_lr=1e-7, mode='min')
+        >>> scheduler = PlateauConfig(min_lr=1e-7, mode='min')
         >>> scheduler.init_scheduler(model, optimizer)
 
         """
@@ -293,5 +293,5 @@ SCHEDULER_CONFIG_MAP = {
     "none": None,
     "step": StepLRConfig,
     "cycle": OneCycleConfig,
-    "plateau": PlateuaConfig,
+    "plateau": PlateauConfig,
 }

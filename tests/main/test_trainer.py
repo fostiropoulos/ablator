@@ -21,12 +21,12 @@ from ablator.config.mp import ParallelConfig
 from ablator.main.model.main import EvaluationError
 from ablator.main.mp import ParallelTrainer
 
-from ablator.modules.scheduler import SCHEDULER_CONFIG_MAP, PlateuaConfig
+from ablator.modules.scheduler import SCHEDULER_CONFIG_MAP, PlateauConfig
 
 _optimizer_config = OptimizerConfig(name="sgd", arguments={"lr": 0.1})
 
 
-class MyPlateauConfig(PlateuaConfig):
+class MyPlateauConfig(PlateauConfig):
     def __init__(self, *args, debug: bool = False, **kwargs):
         super().__init__(*args, debug=debug, **kwargs)
 

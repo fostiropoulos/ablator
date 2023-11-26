@@ -206,7 +206,7 @@ Scheduler classes
    modules.scheduler.SchedulerConfig
    modules.scheduler.StepLRConfig
    modules.scheduler.OneCycleConfig
-   modules.scheduler.PlateuaConfig
+   modules.scheduler.PlateauConfig
 
 
 
