@@ -129,7 +129,7 @@ class ExperimentState:
             raise NotImplementedError
         for trial in self.get_trials_by_state(TrialState.RUNNING):
             # mypy error for sqlalchemy types
-            trial_id: int = trial.trial_num  # type: ignore[assignment]
+            trial_id: int = trial.trial_uid  # type: ignore[assignment]
             self.update_trial_state(trial_id, None, TrialState.WAITING)
 
     @staticmethod
@@ -205,7 +205,7 @@ class ExperimentState:
         if len(pending_trials) > 0:
             trial = random.choice(pending_trials)
             # mypy errors for sqlalchemy types
-            trial_id: int = trial.trial_num  # type: ignore[assignment]
+            trial_id: int = trial.trial_uid  # type: ignore[assignment]
             trial_config = type(self.config)(**trial.config_param)
             self._update_internal_trial_state(trial_id, None, TrialState.RUNNING)
             return trial_id, trial_config
@@ -283,7 +283,7 @@ class ExperimentState:
                     config_uid=trial_uid,
                     trial_kwargs=trial_kwargs,
                     trial_aug_kwargs=config,
-                    trial_num=trial_id,
+                    trial_uid=trial_id,
                     trial_state=trial_state,
                     **_optuna_args,
                 )
@@ -361,7 +361,7 @@ class ExperimentState:
             If the trial associated with the ``trial_id`` is not found.
         """
         with Session(self.engine) as session:
-            stmt = select(Trial).where(Trial.trial_num == trial_id)
+            stmt = select(Trial).where(Trial.trial_uid == trial_id)
             if (res := session.execute(stmt).scalar_one_or_none()) is None:
                 raise RuntimeError(f"Trial {trial_id} was not found.")
             if metrics is not None:
@@ -373,7 +373,7 @@ class ExperimentState:
 
     def _inc_error_count(self, trial_id: int, state: TrialState):
         with Session(self.engine) as session:
-            stmt = select(Trial).where(Trial.trial_num == trial_id)
+            stmt = select(Trial).where(Trial.trial_uid == trial_id)
             res = session.execute(stmt).scalar_one()
             assert state == TrialState.FAIL_RECOVERABLE
             runtime_errors = copy.deepcopy(res.runtime_errors)
@@ -396,7 +396,7 @@ class ExperimentState:
         config_uid: str,
         trial_kwargs: dict[str, ty.Any],
         trial_aug_kwargs: dict[str, ty.Any],
-        trial_num: int,
+        trial_uid: int,
         trial_state: TrialState,
         _opt_distributions_kwargs: dict[str, ty.Any] | None = None,
         _opt_distributions_types: dict[str, str] | None = None,
@@ -414,7 +414,7 @@ class ExperimentState:
         trial_aug_kwargs : dict[str, ty.Any]
             the sampled trial keywords as opposed to the complete
             configuration from `trial_kwargs`
-        trial_num : int
+        trial_uid : int
             The optuna trial number.
         trial_state : TrialState
             The state of the trial.
@@ -430,7 +430,7 @@ class ExperimentState:
                 config_uid=config_uid,
                 config_param=trial_kwargs,
                 aug_config_param=trial_aug_kwargs,
-                trial_num=trial_num,
+                trial_uid=trial_uid,
                 state=trial_state,
                 metrics=[],
                 _opt_distributions_kwargs=_opt_distributions_kwargs,

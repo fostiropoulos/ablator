@@ -64,8 +64,8 @@ class Trial(Base):
     aug_config_param: Mapped[PickleType]
         The augmenting configuration as picked by the config sampler.
         It is the values only different from the default config (excl. Derived properties)
-    trial_num: Mapped[Integer]
-        The trial_num corresponding to the internal HPO sampler, used to communicate with the sampler.
+    trial_uid: Mapped[Integer]
+        The trial_uid corresponding to the internal HPO sampler, used to communicate with the sampler.
     state: Mapped[PickleType]
         The ``TrialState``
     runtime_errors: Mapped[int]
@@ -79,7 +79,7 @@ class Trial(Base):
     metrics: Mapped[PickleType] = mapped_column(PickleType)
     config_param: Mapped[PickleType] = mapped_column(PickleType)
     aug_config_param: Mapped[PickleType] = mapped_column(PickleType)
-    trial_num: Mapped[Integer] = mapped_column(Integer)
+    trial_uid: Mapped[Integer] = mapped_column(Integer)
     state: Mapped[PickleType] = mapped_column(PickleType, default=TrialState.WAITING)
     runtime_errors: Mapped[int] = mapped_column(Integer, default=0)
     # NOTE the following attributes are subject to be removed when optuna is decoupled.

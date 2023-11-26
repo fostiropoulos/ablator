@@ -234,7 +234,7 @@ def _test_tpe_continue():
             config_uid=None,
             config_param=None,
             aug_config_param=config,
-            trial_num=trial_id,
+            trial_uid=trial_id,
             state=TrialState.COMPLETE,
             metrics=[{"loss": perf["loss"]}],
             **kwargs,

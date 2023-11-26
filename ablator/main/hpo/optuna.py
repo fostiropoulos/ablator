@@ -145,7 +145,7 @@ class _Study:
         trials = [] if trials is None else trials
         self.trials: list[_Trial] = [
             _Trial(
-                id_=trial.trial_num,  # type: ignore[arg-type]
+                id_=trial.trial_uid,  # type: ignore[arg-type]
                 study=self,
                 sampler=sampler,
                 resume_trial=trial,

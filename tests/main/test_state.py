@@ -229,13 +229,13 @@ def test_sample_limits(tmp_path: Path, search_algo, assert_error_msg, capture_ou
     s.update_trial_state(53, None, state=TrialState.PRUNED)
 
     pruned_trials = s.get_trials_by_state(TrialState.PRUNED)
-    assert {t.trial_num for t in pruned_trials} == {0, 53}
+    assert {t.trial_uid for t in pruned_trials} == {0, 53}
 
     assert len(s.valid_trials()) == n_trials
     s.update_trial_state(0, None, state=TrialState.PRUNED_INVALID)
     assert len(s.valid_trials()) == n_trials - 1
     pruned_trials = s.get_trials_by_state(TrialState.PRUNED)
-    assert {t.trial_num for t in pruned_trials} == {53}
+    assert {t.trial_uid for t in pruned_trials} == {53}
 
     s.update_trial_state(
         0,
