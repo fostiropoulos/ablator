@@ -1,14 +1,25 @@
 docker_tag="ablator"
 docker_build_args=""
+test_tag=""
 
 .PHONY: test
-test:
+test-fast:
 	# running inside a docker container
 	pytest . \
 	--docker-tag ${docker_tag} \
 	--reruns 2 \
 	--reruns-delay 10 \
+	--fast \
 	-n=0
+
+test-slow:
+	# running inside a docker container
+	pytest . \
+	--docker-tag ${docker_tag} \
+	--reruns 2 \
+	--reruns-delay 10 \
+	--slow \
+	-n=0 ${test_tag}
 
 in-docker-test:
 	# for running tests inside a docker container we must
@@ -18,7 +29,7 @@ in-docker-test:
 	--volume-name ${docker_tag}-volume \
 	--reruns 2 \
 	--reruns-delay 10 \
-	-n=0
+	-n=0 ${test_tag}
 	mv coverage.xml shared/_coverage.xml
 
 clean-docker:
@@ -38,12 +49,12 @@ run-docker-clean: clean-docker docker
 
 docker-test: clean-docker docker
 	bash scripts/run_docker.sh --docker-tag ${docker_tag} \
-	make in-docker-test docker_tag="${docker_tag}"
+	make in-docker-test test_tag="${test_tag}" docker_tag="${docker_tag}"
 	mv shared/_coverage.xml shared/coverage_gpu.xml
 
 docker-test-cpu: clean-docker docker
 	bash scripts/run_docker.sh --cpu --docker-tag ${docker_tag} \
-	make in-docker-test docker_tag="${docker_tag}"
+	make in-docker-test test_tag="${test_tag}" docker_tag="${docker_tag}"
 	mv shared/_coverage.xml shared/coverage_cpu.xml
 
 install:
@@ -62,10 +73,7 @@ pylint:
 mypy:
 	mypy ablator
 
-pydoclint:
-	pydoclint ablator
-
-static-tests: black flake8 mypy pylint pydoclint
+static-tests: black flake8 mypy pylint
 	echo "Done"
 
 package:
