@@ -386,7 +386,7 @@ def generate_mock_configs(tmp_path: Path):
     with open(tmp_path / "config.yaml", "w") as file:
         yaml.dump(config, file)
 
-    with open(tmp_path / "default_config.yaml", "w") as file:
+    with open(tmp_path / "master_config.yaml", "w") as file:
         yaml.dump(default_config, file)
 
 

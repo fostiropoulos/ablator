@@ -1,21 +1,20 @@
 import io
-from pathlib import Path
 import re
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
-
-from ablator import PlotAnalysis
-from ablator.analysis.plot import Plot
-from ablator.analysis.plot.cat_plot import Categorical, ViolinPlot
-from ablator.analysis.plot.utils import parse_name_remap
-from ablator.config.proto import Optim
 from matplotlib import pyplot as plt
 from PIL import Image
-from ablator.analysis.plot.main import PlotAnalysis
-from ablator.analysis.plot.utils import parse_name_remap
-from ablator.analysis.plot.num_plot import LinearPlot
+
 from ablator.analysis.main import Analysis, _parse_results
+from ablator.analysis.plot import Plot
+from ablator.analysis.plot.cat_plot import Categorical, ViolinPlot
+from ablator.analysis.plot.main import PlotAnalysis
+from ablator.analysis.plot.num_plot import LinearPlot
+from ablator.analysis.plot.utils import parse_name_remap
+from ablator.config.proto import Optim
 
 
 def test_name_remap(tmp_path: Path):
