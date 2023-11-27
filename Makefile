@@ -1,11 +1,13 @@
 docker_tag="ablator"
 docker_build_args=""
 test_tag=""
+tests="."
+
 
 .PHONY: test
 test-fast:
 	# running inside a docker container
-	pytest . \
+	pytest ${tests} \
 	--docker-tag ${docker_tag} \
 	--reruns 2 \
 	--reruns-delay 10 \
@@ -14,7 +16,7 @@ test-fast:
 
 test-slow:
 	# running inside a docker container
-	pytest . \
+	pytest ${tests} \
 	--docker-tag ${docker_tag} \
 	--reruns 2 \
 	--reruns-delay 10 \
@@ -24,7 +26,7 @@ test-slow:
 in-docker-test:
 	# for running tests inside a docker container we must
 	# specify volume and mv coverage file on shared directory
-	pytest . \
+	pytest ${tests} \
 	--docker-tag ${docker_tag} \
 	--volume-name ${docker_tag}-volume \
 	--reruns 2 \
@@ -49,12 +51,12 @@ run-docker-clean: clean-docker docker
 
 docker-test: clean-docker docker
 	bash scripts/run_docker.sh --docker-tag ${docker_tag} \
-	make in-docker-test test_tag="${test_tag}" docker_tag="${docker_tag}"
+	make in-docker-test test_tag="${test_tag}" docker_tag="${docker_tag}" tests="${tests}"
 	mv shared/_coverage.xml shared/coverage_gpu.xml
 
 docker-test-cpu: clean-docker docker
 	bash scripts/run_docker.sh --cpu --docker-tag ${docker_tag} \
-	make in-docker-test test_tag="${test_tag}" docker_tag="${docker_tag}"
+	make in-docker-test test_tag="${test_tag}" docker_tag="${docker_tag}" tests="${tests}"
 	mv shared/_coverage.xml shared/coverage_cpu.xml
 
 install:

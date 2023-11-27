@@ -110,7 +110,7 @@ class Display:
             self.html_widget.value = self.html_value
             self.html_value = ""
 
-    def _display(self, text: str, pos: int, is_last: bool = False):
+    def _display(self, text: str, pos: int, hide_overflow: bool = False):
         if self.ncols is None or self.nrows is None:
             return
 
@@ -119,20 +119,24 @@ class Display:
 
         if self.is_terminal:
             try:
-                _text = text[: self.ncols - 1] if is_last else text
+                _text = text[: self.ncols - 1] if hide_overflow else text
                 self.stdscr.addstr(pos, 0, _text)
             except _curses.error:
                 pass
         else:
             self.html_value += html.escape(text) + "<br>"
 
+    # pylint: disable=broad-exception-caught
     def close(self):
         if self.is_terminal:
-            self._curses.nocbreak()
-            self.stdscr.keypad(0)
-            self._curses.echo()
-            self._curses.endwin()
-            self._curses.curs_set(1)  # Turn cursor back on
+            try:
+                self._curses.nocbreak()
+                self.stdscr.keypad(0)
+                self._curses.echo()
+                self._curses.endwin()
+                self._curses.curs_set(1)  # Turn cursor back on
+            except Exception:
+                ...
             self.is_terminal = False
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -149,10 +153,10 @@ class Display:
         if self.is_terminal:
             self.nrows, self.ncols = self.stdscr.getmaxyx()
 
-    def print_texts(self, texts: list[str]):
+    def print_texts(self, texts: list[str], hide_overflow=False):
         self._update_screen_dims()
         for i, text in enumerate(texts):
-            self._display(text, i)
+            self._display(text, i, hide_overflow=hide_overflow)
         self._refresh()
 
 
@@ -246,7 +250,8 @@ class RemoteDisplay(Display):
         if time.time() - self._prev_update_time > self.update_interval or force:
             self._prev_update_time = time.time()
             self.print_texts(
-                ray.get(self.remote_progress_bar.make_print_texts.remote())  # type: ignore[assignment, attr-defined]
+                ray.get(self.remote_progress_bar.make_print_texts.remote()),  # type: ignore[assignment, attr-defined]
+                hide_overflow=True,
             )
 
 
@@ -346,7 +351,7 @@ class ProgressBar:
         metrics: dict[str, ty.Any],
         nrows: int | None = None,
         ncols: int | None = None,
-    ) -> list:
+    ) -> list[str]:
         rows = tabulate(
             [[k + ":", f"{num_format(v)}"] for k, v in metrics.items()],
             disable_numparse=True,
@@ -354,20 +359,17 @@ class ProgressBar:
             stralign="right",
         ).split("\n")
         text = ""
-        texts = []
-        for row in rows:
-            row += SEPERATOR
-            if ncols is not None and len(text) + len(row) > ncols:
-                text = text[: -len(SEPERATOR)]
-                texts.append(text)
-                text = ""
+        texts: list[str] = []
+        sep_len = len(SEPERATOR)
+        while len(rows) > 0 and (nrows is None or len(texts) < nrows):
+            text = rows.pop(0)
+            while len(rows) > 0 and (
+                ncols is None or len(text) + sep_len + len(rows[0]) < ncols
+            ):
+                text += SEPERATOR + rows.pop(0)
 
-            text += row
-            if nrows is not None and len(texts) > nrows:
-                break
+            texts.append(text)
 
-        text = text[: -len(SEPERATOR)]
-        texts.append(text)
         return texts
 
     @property
