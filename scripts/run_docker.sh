@@ -33,7 +33,7 @@ docker volume create --driver local \
 # --cpuset-cpus sets sufficient number of cpus
 # --pid option allows access of pids to the host for correct GPU utilization
 # --gpus all enables access to GPUs inside docker, remove the option to test without GPUs
-docker run --rm ${IT} -v \
+DOCKER_CMD="docker run --rm ${IT} -v \
    /var/run/docker.sock:/var/run/docker.sock \
    -v ${CONTAINER_NAME}-volume:/ablator \
    -v ${PWD}/shared:/usr/src/app/shared \
@@ -43,4 +43,6 @@ docker run --rm ${IT} -v \
    --device /dev/fuse \
    --security-opt apparmor:unconfined \
    "${GPU[@]}" ${CONTAINER_NAME} \
-   ${CMD[@]}
+   "${CMD[@]}""
+
+eval "$DOCKER_CMD"
