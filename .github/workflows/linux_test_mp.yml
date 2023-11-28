@@ -4,6 +4,8 @@ on:
   push:
   pull_request:
 
+# TODO remove test_tag="--fast" when flakiness of mp tests is resolved.
+
 jobs:
   pytest:
     runs-on: [self-hosted, ubuntu]
@@ -14,10 +16,10 @@ jobs:
         make docker docker_build_args="--py-3-10-12" docker_tag="ablator-test"
     - name: Test with pytest CUDA
       run: |
-        make docker-test test_tag="--test-suite fast" docker_build_args="--py-3-10-12" docker_tag="ablator-test"
+        make docker-test test_tag="--test-suite mp" docker_build_args="--py-3-10-12" docker_tag="ablator-test"
     - name: Test with pytest CPU
       run: |
-        make docker-test-cpu test_tag="--test-suite fast" docker_build_args="--py-3-10-12" docker_tag="ablator-test"
+        make docker-test-cpu test_tag="--test-suite mp" docker_build_args="--py-3-10-12" docker_tag="ablator-test"
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:

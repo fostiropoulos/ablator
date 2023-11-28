@@ -30,6 +30,8 @@ if IS_LINUX:
     # must be imported after checking for OS. Otherwise
     # will throw an error.
     from rmount.server import RemoteServer  # noqa: E402
+
+    pytestmark = pytest.mark.remote()
 else:
     pytestmark = pytest.mark.skip(
         reason="RMount tests are only supported for Linux platforms."
@@ -178,7 +180,6 @@ def test_mount(tmp_path: Path, volume_name):
 # we schedule first because ray cluster gets misconfigured afterward
 
 
-@pytest.mark.mp
 @pytest.mark.order(2)
 def test_mp_mount(tmp_path: Path, wrapper, make_config, ray_cluster, volume_name):
     if volume_name is not None:
@@ -247,7 +248,6 @@ def test_mount_error(tmp_path: Path):
 
 
 # TODO fix flaky test
-@pytest.mark.mp
 @pytest.mark.skip
 def test_mount_actor(tmp_path, volume_name, ray_cluster):
     if volume_name is not None:

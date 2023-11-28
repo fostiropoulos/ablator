@@ -131,10 +131,10 @@ def make_node(docker_client: docker.DockerClient, img, cluster_address):
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--mp", action="store_true", default=False, help="run mp tests only"
-    )
-    parser.addoption(
-        "--fast", action="store_true", default=False, help="run fast tests only"
+        "--test-suite",
+        choices=["mp", "fast", "remote"],
+        default=None,
+        help="run mp tests only",
     )
     parser.addoption(
         "--docker-tag",
@@ -167,24 +167,40 @@ def volume_name(pytestconfig):
     return pytestconfig.getoption("--volume-name")
 
 
-def pytest_collection_modifyitems(config, items):
-    skip_mp = pytest.mark.skip(
-        reason="Slow or MP test, must not specify --fast option to run"
-    )
-    skip_fast = pytest.mark.skip(
-        reason="Fast test, need to not specify --mp option to run"
-    )
-    dist_arg_names = ["main_ray_cluster", "ray_cluster"]
-    for item in items:
-        argnames = item._fixtureinfo.argnames
+def should_skip(option_flag: str, markers: list[str], args: list[str]):
+    # mp_args = ["main_ray_cluster", "ray_cluster"]
+    is_marked = not any(m == option_flag for m in markers)
+    # if option_flag == "mp" and any(arg in mp_args for arg in args):
+    #     is_marked = False
+    if is_marked:
+        return True
+    else:
+        return False
 
-        is_mp = any(name in argnames for name in dist_arg_names) or any(
-            [mark.name == "mp" for mark in item.iter_markers()]
-        )
-        if is_mp and config.getoption("--fast"):
-            item.add_marker(skip_mp)
-        elif not is_mp and config.getoption("--mp"):
-            item.add_marker(skip_fast)
+
+def pytest_collection_modifyitems(config, items):
+    option_flag = config.getoption(f"--test-suite")
+
+    if option_flag is None:
+
+        print(f"\nRunning: {len(items)} / {len(items)} tests.")
+        return
+    run_items = []
+    for item in items:
+        args = item._fixtureinfo.argnames
+        markers = list(n.name for n in item.iter_markers())
+        if not any(m in ["mp", "remote"] for m in markers):
+            markers.append("fast")
+
+        if should_skip(option_flag, markers=markers, args=args):
+            item.add_marker(
+                pytest.mark.skip(
+                    reason=f"Test markers: {markers} does not contain the flag {option_flag}."
+                )
+            )
+        else:
+            run_items.append(item)
+    print(f"\nRunning: {len(run_items)} / {len(items)} tests.")
 
 
 def build_docker_image(docker_tag):
@@ -376,8 +392,7 @@ def main_ray_cluster(working_dir, pytestconfig, tmp_path_factory):
     build = pytestconfig.getoption("--build")
     subprocess.run(
         'mount -l -t fuse.rclone | grep %s | awk -F " " \'{print "fusermount -u " $3}\''
-        " | bash"
-        % tmp_path_factory.getbasetemp(),
+        " | bash" % tmp_path_factory.getbasetemp(),
         shell=True,
     )
     cluster_address = ray_setup(working_dir)
@@ -582,3 +597,19 @@ def run_tests_local(
                 if k in parameters:
                     _args[k] = unpickable_kwargs[k]()
             fn(**_args)
+
+
+if __name__ == "__main__":
+    # assert not should_skip("fast", ["xx", "xb", "fast"], [])
+    assert should_skip("fast", ["mp", "xb"], [])
+    assert should_skip("fast", ["xx", "xb"], [])
+    assert not should_skip("mp", ["mp", "xb"], [])
+    assert should_skip("mp", ["xx"], [])
+    assert should_skip(
+        "remote", ["mp"], ("tmp_path", "ray_cluster", "update_gpus_fixture", "n_gpus")
+    )
+    assert not should_skip(
+        "remote",
+        ["remote"],
+        ("tmp_path", "ray_cluster", "update_gpus_fixture", "n_gpus"),
+    )
