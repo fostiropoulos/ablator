@@ -52,12 +52,12 @@ run-docker-clean: clean-docker docker
 docker-test: clean-docker docker
 	bash scripts/run_docker.sh --docker-tag ${docker_tag} \
 	make in-docker-test test_tag=\"${test_tag}\" docker_tag=\"${docker_tag}\" tests=\"${tests}\"
-	mv shared/_coverage.xml shared/coverage_gpu_${test_tag}.xml
+	mv shared/_coverage.xml shared/coverage_gpu_$(lastword $(test_tag)).xml
 
 docker-test-cpu: clean-docker docker
 	bash scripts/run_docker.sh --cpu --docker-tag ${docker_tag} \
 	make in-docker-test test_tag=\"${test_tag}\" docker_tag=${docker_tag} tests=\"${tests}\"
-	mv shared/_coverage.xml shared/coverage_cpu_${test_tag}.xml
+	mv shared/_coverage.xml shared/coverage_cpu_$(lastword $(test_tag)).xml
 
 install:
 	pip install -e ."[dev]" -v
