@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 
@@ -8,6 +9,11 @@ from ablator.utils.progress_bar import ProgressBar, RemoteDisplay, RemoteProgres
 
 # All tests in this file are marked as mp
 pytestmark = pytest.mark.mp()
+
+
+@pytest.fixture(autouse=True)
+def set_custom_env_variable():
+    os.environ["TERM"] = "linux"
 
 
 def test_remote_progress_bar_make_bar_function(ray_cluster):

@@ -24,7 +24,6 @@ def test_set_seed():
 def test_parse_device():
     assert base.parse_device("cpu") == "cpu"
     if torch.cuda.is_available():
-
         assert base.parse_device(0) == "cuda:0"
         assert base.parse_device(1) == "cuda:1"
         assert base.parse_device("cuda") == "cuda"
