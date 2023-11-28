@@ -179,10 +179,9 @@ def should_skip(option_flag: str, markers: list[str], args: list[str]):
 
 
 def pytest_collection_modifyitems(config, items):
-    option_flag = config.getoption(f"--test-suite")
+    option_flag = config.getoption("--test-suite")
 
     if option_flag is None:
-
         print(f"\nRunning: {len(items)} / {len(items)} tests.")
         return
     run_items = []
@@ -195,7 +194,10 @@ def pytest_collection_modifyitems(config, items):
         if should_skip(option_flag, markers=markers, args=args):
             item.add_marker(
                 pytest.mark.skip(
-                    reason=f"Test markers: {markers} does not contain the flag {option_flag}."
+                    reason=(
+                        f"Test markers: {markers} does not contain the flag"
+                        f" {option_flag}."
+                    )
                 )
             )
         else:
@@ -392,7 +394,8 @@ def main_ray_cluster(working_dir, pytestconfig, tmp_path_factory):
     build = pytestconfig.getoption("--build")
     subprocess.run(
         'mount -l -t fuse.rclone | grep %s | awk -F " " \'{print "fusermount -u " $3}\''
-        " | bash" % tmp_path_factory.getbasetemp(),
+        " | bash"
+        % tmp_path_factory.getbasetemp(),
         shell=True,
     )
     cluster_address = ray_setup(working_dir)

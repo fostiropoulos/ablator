@@ -86,6 +86,7 @@ def test_get_gpu(tmp_path: Path, ray_cluster, update_gpus_fixture, n_gpus):
             manager.get_gpu("x", "x")
         manager.stop()
 
+
 @pytest.mark.mp
 def test_head_resource_error(tmp_path: Path, ray_cluster, inactive_resource):
     # we disable updating the other cluster nodes to avoid errors due
