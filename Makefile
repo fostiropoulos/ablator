@@ -5,22 +5,13 @@ tests="."
 
 
 .PHONY: test
-test-fast:
-	# running inside a docker container
-	pytest ${tests} \
-	--docker-tag ${docker_tag} \
-	--reruns 2 \
-	--reruns-delay 10 \
-	--fast \
-	-n=0
 
-test-slow:
+test:
 	# running inside a docker container
 	pytest ${tests} \
 	--docker-tag ${docker_tag} \
 	--reruns 2 \
 	--reruns-delay 10 \
-	--slow \
 	-n=0 ${test_tag}
 
 in-docker-test:
