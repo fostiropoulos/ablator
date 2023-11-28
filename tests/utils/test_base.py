@@ -22,10 +22,11 @@ def test_set_seed():
 
 # Test parse_device if returns the correct device
 def test_parse_device():
-    assert base.parse_device(0) == "cuda:0"
-    assert base.parse_device(1) == "cuda:1"
     assert base.parse_device("cpu") == "cpu"
     if torch.cuda.is_available():
+
+        assert base.parse_device(0) == "cuda:0"
+        assert base.parse_device(1) == "cuda:1"
         assert base.parse_device("cuda") == "cuda"
         assert base.parse_device(["cuda", "cpu"]) == "cuda"
         device_number = min(torch.cuda.device_count() - 1, 0)

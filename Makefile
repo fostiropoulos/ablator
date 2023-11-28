@@ -7,7 +7,7 @@ tests="."
 .PHONY: test
 
 test:
-	# running inside a docker container
+	# running outside a docker container
 	pytest ${tests} \
 	--docker-tag ${docker_tag} \
 	--reruns 2 \
