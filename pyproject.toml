@@ -21,7 +21,7 @@ dependencies = [
     "setproctitle>=1.3.2",
     # ray[default] as we need to use the state API
     # keeping it fixed as the API changes a lot between versions.
-    "ray[default]==2.5.1",
+    "ray[default]==2.7.0",
     # TODO when to migrate from "pydantic<2" to >2 https://github.com/ray-project/ray/issues/37019
     "pydantic==1.10.11",
     # Other pynvml cause errors
