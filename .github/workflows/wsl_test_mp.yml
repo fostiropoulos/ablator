@@ -18,13 +18,13 @@ jobs:
             conda create -y -n test-env python=3.10
       - name: Install dependencies
         run: |
-          conda activate test-env
+          source $HOME/miniconda3/bin/activate test-env
           make install
       - name: Make Docker
         run: |
-          conda activate test-env
+          source $HOME/miniconda3/bin/activate test-env
           make docker docker_tag="ablator-test"
       - name: Test with pytest
         run: |
-          conda activate test-env
+          source $HOME/miniconda3/bin/activate test-env
           make test test_tag="--test-suite mp" docker_tag="ablator-test"
