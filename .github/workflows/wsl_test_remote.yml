@@ -15,3 +15,4 @@ jobs:
       - name: Set up Conda Python 3.10
         run: |
             which conda
+            conda activate test-env
