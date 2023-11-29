@@ -24,7 +24,6 @@ def test_set_seed():
 def test_parse_device():
     assert base.parse_device("cpu") == "cpu"
     if torch.cuda.is_available():
-
         gpu_number = torch.cuda.device_count()
         for i in range(gpu_number):
             assert base.parse_device(i) == f"cuda:{i}"
