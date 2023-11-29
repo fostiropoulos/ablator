@@ -1,4 +1,4 @@
-name: wsl-test
+name: wsl-test-mp
 
 on:
   push:

@@ -1,4 +1,4 @@
-name: wsl-test
+name: windows-test
 
 on:
   push:
