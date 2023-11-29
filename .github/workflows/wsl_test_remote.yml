@@ -18,4 +18,5 @@ jobs:
       #     auto-activate-base: false
       - name: Set up Conda Python 3.10
         run: |
+            source $HOME/miniconda3/bin/activate test-env
             conda info
