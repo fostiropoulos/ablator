@@ -27,4 +27,4 @@ jobs:
       - name: Test with pytest
         run: |
           conda activate test-env
-          make test test_tag="--test-suite fast" docker_tag="ablator-test"
+          make test test_tag="--test-suite remote" docker_tag="ablator-test"
