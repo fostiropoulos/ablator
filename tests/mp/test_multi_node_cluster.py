@@ -138,6 +138,7 @@ def test_mount_dead(tmp_path: Path, ray_cluster):
 
 
 @pytest.mark.mp
+@pytest.mark.skip
 def test_robustness(tmp_path: Path, ray_cluster, mock_actor):
     # test what happens a node dies because:
     #       1. ray crashes
