@@ -22,7 +22,7 @@ from ablator.mp.utils import get_node_ip, run_lambda
 from ablator.utils._nvml import _get_gpu_info, get_gpu_mem
 from ablator.utils.base import Dummy
 
-MAX_TIMEOUT = 10
+MAX_TIMEOUT = 20
 
 IS_CUDA_AVAILABLE = torch.cuda.is_available()
 
