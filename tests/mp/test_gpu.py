@@ -1,6 +1,7 @@
 import copy
 import os
 import pickle
+import platform
 import re
 import time
 from pathlib import Path
@@ -27,6 +28,7 @@ MAX_TIMEOUT = 20
 IS_CUDA_AVAILABLE = torch.cuda.is_available()
 
 DEVICDE_COUNT = torch.cuda.device_count()
+IS_MAC = "darwin" in platform.system().lower()
 
 
 @pytest.mark.mp
@@ -87,7 +89,12 @@ def test_run_lambda_cuda():
     )
 
 
+# TODO debug / fix this
 @pytest.mark.mp
+@pytest.mark.skipif(
+    IS_MAC,
+    reason="MAC does not report accurate memory information for whatever reason.",
+)
 def test_resource_manager_process_mem(ray_cluster, remote_fn):
     head_ip = get_node_ip()
     manager = run_actor_node(
