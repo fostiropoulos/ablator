@@ -398,7 +398,7 @@
       Tutorials <tutorials>
       Modules <modules>
       API Reference <api.reference>
-      More Examples <https://github.com/fostiropoulos/ablator-tutorials/tree/iordanis>
+      More Examples <https://github.com/fostiropoulos/ablator-tutorials>
 
    * :ref:`genindex`
    * :ref:`modindex`
