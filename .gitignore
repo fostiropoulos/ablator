@@ -2,13 +2,13 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+shared/*
 # custom ignore-extension
 *.ignore
 *.whl
 # C extensions
 *.so
-
+.vscode
 # Distribution / packaging
 .Python
 build/
@@ -29,7 +29,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
+.vscode
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -130,3 +130,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.vscode

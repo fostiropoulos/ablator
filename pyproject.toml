@@ -1,0 +1,76 @@
+[project]
+name = "ablator"
+version = "0.0.1b3"
+authors = [{ name = "Iordanis Fostiropoulos", email = "mail@iordanis.me" }]
+readme = "README.md"
+license = { file = "LICENSE" }
+description = "Model Ablation Tool-Kit"
+requires-python = ">=3.10,<3.11"
+
+dependencies = [
+    "numpy>=1.22",
+    "pandas>=2.0.0",
+    "scikit-learn>=1.2.2",
+    "torch>=2.0.0",
+    "torchvision>=0.14.1",
+    "tqdm>=4.64.1",
+    "tensorboardX>=2.6",
+    "matplotlib>=3.7.1",
+    "omegaconf>=2.2.3",
+    "scipy>=1.10.1",
+    "setproctitle>=1.3.2",
+    # ray[default] as we need to use the state API
+    # keeping it fixed as the API changes a lot between versions.
+    "ray[default]==2.7.0",
+    # TODO when to migrate from "pydantic<2" to >2 https://github.com/ray-project/ray/issues/37019
+    "pydantic==1.10.11",
+    # Other pynvml cause errors
+    "pynvml==11.5.0",
+    # optuna must remain fixed because we modify the internal API and future versions
+    # break compatibility
+    "optuna==3.1.1",
+    "tabulate>=0.9.0",
+    "seaborn>=0.13",
+    "numpydoc>=1.5.0",
+    "paramiko>=3.2.0",
+    "GitPython>=3.1.32",
+    "gpustat==1.0", # must stay fixed because https://github.com/ray-project/ray/issues/35384
+    "windows-curses; platform_system=='Windows'",
+    'rmount>=0.0.6; platform_system=="Linux"',
+
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.2.0",
+    "pytest>=7.3.0",
+    "black[jupyter]==23.3.0",
+    "flake8>=6.0.0",
+    "pylint>=2.17.2",
+    "tensorboard>=2.12.2",
+    "mock>=5.0.2",
+    "types-tabulate>=0.9.0.2",
+    "types-paramiko>=3.2.0.0",
+    "docker>=6.1.3",
+    "pytest-xdist>=3.3.1",        # plug-in for distributed pytests
+    "pytest-order>=1.1.0",        # ordering is important for test_mp.py
+    "pytest-rerunfailures>=12.0", # randomness in tests can require to re-run them a few times
+    "pydoclint>=0.1.0",
+    "pytest-cov>=3.0.0",
+    "codecov-cli>=0.2.2",
+    'rmount[server]>=0.0.6; platform_system == "Linux"',
+]
+
+
+[tool.setuptools]
+py-modules = ["ablator"]
+
+[project.urls]
+homepage = "https://ablator.org"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages]
+find = {}

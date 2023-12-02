@@ -55,7 +55,7 @@ unsafe-load-any-extension=no
 extension-pkg-allow-list=
 
 # Minimum supported python version
-py-version = 3.7.2
+py-version = 3.10
 
 # Control the amount of potential inferred values when inferring a single
 # object. This can help the performance when dealing with large functions or
@@ -96,17 +96,15 @@ enable=
 # --disable=W"
 
 disable=
-    attribute-defined-outside-init,
     invalid-name,
     missing-docstring,
-    protected-access,
     too-few-public-methods,
-    # handled by black
-    format,
     # We anticipate #3512 where it will become optional
     fixme,
-    cyclic-import,
-    import-error,
+    ; R6002,
+    consider-alternative-union-syntax, # R6003
+    unsupported-binary-operation, # E1131
+    duplicate-code # R0801
 
 
 [REPORTS]
@@ -160,10 +158,10 @@ notes=FIXME,XXX,TODO
 min-similarity-lines=6
 
 # Ignore comments when computing similarities.
-ignore-comments=yes
+ignore-comments=no
 
 # Ignore docstrings when computing similarities.
-ignore-docstrings=yes
+ignore-docstrings=no
 
 # Ignore imports when computing similarities.
 ignore-imports=yes
@@ -221,7 +219,7 @@ single-line-if-stmt=no
 single-line-class-stmt=no
 
 # Maximum number of lines in a module
-max-module-lines=1000
+max-module-lines=2000
 
 # String used as indentation unit. This is usually "    " (4 spaces) or "\t" (1
 # tab).
@@ -361,7 +359,7 @@ ignored-classes=SQLObject, optparse.Values, thread._local, _thread._local
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular
 # expressions are accepted.
-generated-members=REQUEST,acl_users,aq_parent,argparse.Namespace
+generated-members=REQUEST,acl_users,aq_parent,argparse.Namespace,torch.*
 
 # List of decorators that create context managers from functions, such as
 # contextlib.contextmanager.
@@ -518,7 +516,7 @@ preferred-modules=
 
 # Exceptions that will emit a warning when being caught. Defaults to
 # "Exception"
-overgeneral-exceptions=Exception
+overgeneral-exceptions=builtins.Exception
 
 
 [TYPING]
@@ -529,7 +527,7 @@ overgeneral-exceptions=Exception
 # For libraries, evaluate if some users what to access the type hints at
 # runtime first, e.g., through ``typing.get_type_hints``. Applies to Python
 # versions 3.7 - 3.9
-runtime-typing = no
+runtime-typing = true
 
 
 [DEPRECATED_BUILTINS]

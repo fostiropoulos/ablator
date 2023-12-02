@@ -1,0 +1,30 @@
+name: wsl-test-remote
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: [self-hosted, wsl]
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Conda Python 3.10
+        run: |
+            conda remove -y --name test-env --all
+            conda create -y -n test-env python=3.10
+      - name: Install dependencies
+        run: |
+          source $HOME/miniconda3/bin/activate test-env
+          make install
+      - name: Make Docker
+        run: |
+          source $HOME/miniconda3/bin/activate test-env
+          make docker docker_tag="ablator-test"
+      - name: Test with pytest
+        run: |
+          source $HOME/miniconda3/bin/activate test-env
+          make test test_tag="--test-suite remote" docker_tag="ablator-test"

@@ -1,0 +1,8 @@
+.*/
+!.flake8
+!.mypy.ini
+!.pylintrc
+!.pytest.ini
+!.readthedocs.yaml
+Dockerfile
+shared

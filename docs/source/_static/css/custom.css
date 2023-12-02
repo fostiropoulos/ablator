@@ -1,0 +1,12 @@
+.bd-content {
+  flex-grow: 1;
+  max-width: 100%;
+}
+
+html[data-theme="light"] {
+  --pst-color-primary: #6366f1;
+}
+
+html[data-theme="dark"] {
+  --pst-color-primary: #6366f1;
+}
