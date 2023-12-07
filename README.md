@@ -4,7 +4,7 @@
   <img alt="Ablator Image" src="assets/ablator-logo.png">
 </p>
 <p align="center">
-  <a href="https://dashboard.ablator.online/landing"><img src="https://img.shields.io/badge/docs-ABLATOR-blue" alt="Documentation"></a>
+  <a href="https://docs.ablator.org/en/latest/"><img src="https://img.shields.io/badge/docs-ABLATOR-blue" alt="Documentation"></a>
   <a href="https://twitter.com/ABLATOR_ORG"><img src="https://img.shields.io/twitter/follow/username?label=Follow&style=social" alt="Twitter Follow"></a>
   <a href="https://discord.com/invite/9dqThvGnUW"><img src="https://img.shields.io/discord/1153550638324650035?label=Discord&logo=discord" alt="Discord"></a>
   <a href="https://join.slack.com/t/ablator/shared_invite/zt-28009w2fk-fXG5Io38gjM0pnK4f4nZ9w"><img src="https://img.shields.io/badge/Slack-Join%20Us-blue?logo=slack" alt="Slack"></a>
