@@ -14,11 +14,11 @@
   <img src="https://img.shields.io/badge/python-3.10-blue.svg" alt="Python 3.10">
   <a href="https://codecov.io/gh/fostiropoulos/ablator"><img src="https://codecov.io/gh/fostiropoulos/ablator/graph/badge.svg?token=LUGKC1R8CG" alt="codecov"></a>
 </p>
-<p align="center">
+<!-- <p align="center">
   <a href="https://github.com/fostiropoulos/ablator/actions/workflows/linux_test.yml"><img src="https://github.com/fostiropoulos/ablator/actions/workflows/linux_test.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/fostiropoulos/ablator/actions/workflows/mac_test.yml"><img src="https://github.com/fostiropoulos/ablator/actions/workflows/mac_test.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/fostiropoulos/ablator/actions/workflows/wsl_test.yml"><img src="https://github.com/fostiropoulos/ablator/actions/workflows/wsl_test.yml/badge.svg" alt="CI"></a>
-</p>
+</p> -->
 
 🚀 ABLATOR is a <i>DISTRIBUTED EXECUTION FRAMEWORK</i> designed to enhance ablation studies in complex machine learning models. It automates the process of configuration and conducts multiple experiments in parallel.
 
