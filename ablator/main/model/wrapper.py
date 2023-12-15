@@ -20,6 +20,7 @@ from ablator.main.model.main import EvaluationError, ModelBase, TrainPlateauErro
 from ablator.modules.metrics.main import LossDivergedError, Metrics
 from ablator.modules.optimizer import OptimizerConfig
 from ablator.modules.scheduler import Scheduler, SchedulerConfig
+from ablator.utils.progress_bar import ProgressBar
 
 
 # pylint: disable=too-many-public-methods
@@ -787,7 +788,7 @@ class ModelWrapper(ModelBase):
         dict[str, dict[str, ty.Any]]
             Metrics
         """
-        self.init_state(run_config, resume=True, from_chkpt=chkpt)
+        self.init_state(run_config, resume=not self._is_init, from_chkpt=chkpt)
         self.logger.info(f"Evaluating {self.current_checkpoint}")
         self.update_status()
         msg = self.metrics
@@ -811,6 +812,7 @@ class ModelWrapper(ModelBase):
                     dataloader=loader,
                     metrics=eval_metrics,
                     subsample=1,
+                    verbose=self.verbose,
                 )
                 metrics[tag] = eval_metrics.to_dict()
                 msg = eval_metrics.to_dict()
@@ -962,6 +964,7 @@ class ModelWrapper(ModelBase):
         metrics: Metrics,
         subsample: float = 1.0,
         smoke_test: bool = False,
+        verbose: ty.Literal["silent", "verbose", "console"] = "silent",
     ) -> dict[str, float]:
         was_training = model.training
         model.eval()
@@ -975,7 +978,7 @@ class ModelWrapper(ModelBase):
                 f"sampler=`{type(_sampler).__name__}`. The results can be biased. "
             )
         metrics_dict = self.validation_loop(
-            model, dataloader, metrics, subsample, smoke_test
+            model, dataloader, metrics, subsample, smoke_test, verbose=verbose
         )
         if was_training:
             model.train()
@@ -988,6 +991,7 @@ class ModelWrapper(ModelBase):
         metrics: Metrics,
         subsample: float = 1.0,
         smoke_test: bool = False,
+        verbose: ty.Literal["silent", "verbose", "console"] = "silent",
     ) -> dict[str, float]:
         """
         Validate the model on data on dataloader and store results on metrics.
@@ -1005,6 +1009,8 @@ class ModelWrapper(ModelBase):
         smoke_test : bool
             Whether to execute this function as a smoke test. If ``True``, only one iteration will be performed,
             which is useful for quickly checking if the code runs without errors, by default ``False``.
+        verbose: ty.Literal["silent", "verbose", "console"]
+            Whether to print the evaluation result, by default ``silent``.
 
         Returns
         -------
@@ -1017,6 +1023,16 @@ class ModelWrapper(ModelBase):
                 "Called `validation_loop` without setting the model to evaluation mode."
                 " i.e. `model.eval()`"
             )
+        if verbose == "progress" and not smoke_test:
+            progress_bar = ProgressBar(
+                epoch_len=cutoff_itr,
+                total_steps=cutoff_itr,
+                logfile=self.logger.log_file_path,
+                remote_display=None,
+                uid=self.uid,
+            )
+        else:
+            progress_bar = butils.Dummy()
         for i, batch in enumerate(dataloader):
             with torch.no_grad():
                 outputs, loss = self._model_step(model=model, batch=batch)
@@ -1027,6 +1043,7 @@ class ModelWrapper(ModelBase):
                     val_metrics["loss"] = torch.mean(loss).item()
 
                 metrics.update_ma_metrics(val_metrics)
+                progress_bar.update_metrics(metrics.to_dict(), i)
                 if i > cutoff_itr or smoke_test:
                     break
         metrics.evaluate()
