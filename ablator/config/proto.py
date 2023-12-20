@@ -32,6 +32,8 @@ class TrainConfig(ConfigBase):
         Batch size.
     epochs: int
         Number of epochs to train.
+    gradient_accumilation_steps: Stateless[int] = 1
+        Gradient accumilation steps that change the effective batch-size.
     optimizer_config: OptimizerConfig
         Optimizer configuration.
     scheduler_config: Optional[SchedulerConfig]
@@ -81,6 +83,7 @@ class TrainConfig(ConfigBase):
     dataset: str
     batch_size: int
     epochs: int
+    gradient_accumilation_steps: Stateless[int] = 1
     optimizer_config: OptimizerConfig
     scheduler_config: Optional[SchedulerConfig]
 

@@ -486,7 +486,9 @@ class ModelWrapper(ModelBase):
         optimizer = self.optimizer
         scaler = self.scaler
         # Ensure no left-over grads are in the model's parameters from custom evaluation or what-not
-        optimizer.zero_grad(set_to_none=True)
+        # NOTE This will break gradient accumilation.
+        # TODO test the effect of remove it.
+        # optimizer.zero_grad(set_to_none=True)
         outputs, loss = self._model_step(model=model, batch=batch)
 
         loss_value = self.apply_loss(model, loss, optimizer, scaler)
@@ -952,8 +954,10 @@ class ModelWrapper(ModelBase):
                 self._is_self_optim = False
 
             loss_value = None
+        # TODO test what happens when gradient accumilation is interupted by evaluation step.
+        if self.current_iteration % self.gradient_accumilation_steps == 0:
+            self.optim_step(optimizer, scaler, model, loss)
 
-        self.optim_step(optimizer, scaler, model, loss)
         return loss_value
 
     @torch.no_grad()

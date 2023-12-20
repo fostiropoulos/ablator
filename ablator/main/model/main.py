@@ -603,6 +603,17 @@ class ModelBase(ABC):
         self.optim_metric_direction, self.optim_metric_name = self._parse_optim_metrics(
             run_config
         )
+        self.gradient_accumilation_steps = int(
+            self.run_config.train_config.gradient_accumilation_steps
+        )
+        if self.gradient_accumilation_steps < 1:
+            raise ValueError("Invalid 'gradient_accumilation_steps'.")
+
+        if (self.gradient_accumilation_steps) > len(self.train_dataloader) * 0.2:
+            self.logger.warn(
+                f"Gradient Accumilation steps is larger than 20% of the train_dataloader. "
+            )
+
         if self.optim_metric_direction is not None:
             self.best_metrics = {
                 self.optim_metric_name: (
